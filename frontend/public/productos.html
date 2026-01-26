@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productos - KORE Inventory</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+
+    <!-- Mobile Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="bi bi-boxes"></i>
+                <div>
+                    <h3>KORE inventory</h3>
+                    <span>ERP SaaS</span>
+                </div>
+            </div>
+            <button class="btn-close-sidebar" id="closeSidebar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <!-- User Info with Dropdown -->
+        <div class="user-info-dropdown">
+            <div class="dropdown">
+                <button class="btn-user-dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="user-avatar">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                    <div class="user-details">
+                        <h6 id="userName">Cargando...</h6>
+                        <small id="userRole">...</small>
+                    </div>
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Mi Perfil</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configuración</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="login.html"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Company Selector -->
+        <div class="company-selector">
+            <label class="form-label text-white-50 small mb-2">Empresa Activa</label>
+            <select class="form-select form-select-sm" id="companySelector">
+                <option value="">Cargando empresas...</option>
+            </select>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-link" data-module="dashboard">
+                <i class="bi bi-grid-fill"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <div class="nav-section">OPERACIONES</div>
+
+            <a href="#" class="nav-link" data-module="punto-venta">
+                <i class="bi bi-cart-check"></i>
+                <span>Punto de Venta</span>
+                <span class="badge bg-success">POS</span>
+            </a>
+
+            <a href="dashboard.html" class="nav-link" data-module="ventas">
+                <i class="bi bi-receipt"></i>
+                <span>Ventas</span>
+            </a>
+
+            <a href="dashboard.html" class="nav-link" data-module="clientes">
+                <i class="bi bi-people"></i>
+                <span>Clientes</span>
+            </a>
+
+            <a href="dashboard.html" class="nav-link" data-module="inventario">
+                <i class="bi bi-box-seam"></i>
+                <span>Inventario</span>
+                <span class="badge bg-warning">12</span>
+            </a>
+
+            <a href="productos.html" class="nav-link active" data-module="productos">
+                <i class="bi bi-tag"></i>
+                <span>Productos</span>
+            </a>
+
+            <div class="nav-section">COMPRAS</div>
+
+            <a href="#" class="nav-link" data-module="proveedores">
+                <i class="bi bi-truck"></i>
+                <span>Proveedores</span>
+            </a>
+
+            <a href="#" class="nav-link" data-module="compras">
+                <i class="bi bi-bag-check"></i>
+                <span>Compras</span>
+            </a>
+
+            <div class="nav-section">FINANZAS</div>
+
+            <a href="#" class="nav-link" data-module="caja">
+                <i class="bi bi-cash-stack"></i>
+                <span>Caja</span>
+            </a>
+
+            <a href="#" class="nav-link" data-module="reportes">
+                <i class="bi bi-graph-up"></i>
+                <span>Reportes</span>
+            </a>
+
+            <div class="nav-section">CONFIGURACIÓN</div>
+
+            <a href="#" class="nav-link" data-module="usuarios">
+                <i class="bi bi-person-gear"></i>
+                <span>Usuarios</span>
+            </a>
+
+            <a href="#" class="nav-link" data-module="empresa">
+                <i class="bi bi-building"></i>
+                <span>Mi Empresa</span>
+            </a>
+
+            <a href="#" class="nav-link" data-module="configuracion">
+                <i class="bi bi-gear"></i>
+                <span>Configuración</span>
+            </a>
+        </nav>
+    <!-- Mobile Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Top Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+            <div class="container-fluid">
+                
+                <!-- Toggle Sidebar -->
+                <button class="btn btn-toggle-sidebar" id="toggleSidebar">
+                    <i class="bi bi-list"></i>
+                </button>
+
+                <!-- Breadcrumb -->
+                <nav aria-label="breadcrumb" class="d-none d-md-block">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="dashboard.html">Inicio</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Productos</li>
+                    </ol>
+                </nav>
+
+                <!-- Navbar Right -->
+                <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                    
+                    <!-- Search -->
+                    <div class="search-box me-3 d-none d-lg-block">
+                        <i class="bi bi-search"></i>
+                        <input type="text" class="form-control" placeholder="Buscar...">
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="dropdown me-2">
+                        <button class="btn-icon" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell"></i>
+                            <span class="badge-notification">3</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
+                            <li class="dropdown-header">
+                                <strong>Notificaciones</strong>
+                                <span class="badge bg-primary">3</span>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-center text-primary" href="#">Ver todas</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="dropdown">
+                        <button class="btn-icon" data-bs-toggle="dropdown">
+                            <i class="bi bi-plus-circle"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" id="btnNuevoProductoQuick"><i class="bi bi-box-seam me-2"></i>Nuevo Producto</a></li>
+                            <li><a class="dropdown-item" href="dashboard.html"><i class="bi bi-cart-plus me-2"></i>Nueva Venta</a></li>
+                            <li><a class="dropdown-item" href="dashboard.html"><i class="bi bi-person-plus me-2"></i>Nuevo Cliente</a></li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+        </nav>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <div class="container-fluid">
+
+                <!-- Page Header -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 class="page-title mb-1">Productos</h2>
+                                <p class="text-muted mb-0">Gestión de productos e inventario</p>
+                            </div>
+                            <button class="btn btn-primary" id="btnNuevoProducto">
+                                <i class="bi bi-plus-circle me-2"></i>Nuevo Producto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters and Search -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                            <input type="text" class="form-control" id="searchInput" placeholder="Buscar por nombre, SKU o código...">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-select" id="filterCategoria">
+                                            <option value="">Todas las categorías</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <select class="form-select" id="filterEstado">
+                                            <option value="">Todos los estados</option>
+                                            <option value="activo">Activo</option>
+                                            <option value="inactivo">Inactivo</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <button class="btn btn-outline-secondary" id="btnLimpiarFiltros">
+                                            <i class="bi bi-x-circle me-1"></i>Limpiar
+                                        </button>
+                                        <button class="btn btn-outline-primary" id="btnExportar">
+                                            <i class="bi bi-download me-1"></i>Exportar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products Table -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle" id="productosTable">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 50px;">#</th>
+                                                <th>Producto</th>
+                                                <th>SKU</th>
+                                                <th>Categoría</th>
+                                                <th>Precio Compra</th>
+                                                <th>Precio Venta</th>
+                                                <th>Stock</th>
+                                                <th>Estado</th>
+                                                <th style="width: 150px;">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="productosTableBody">
+                                            <!-- Se llenará dinámicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div class="text-center py-5" id="emptyState">
+                                    <i class="bi bi-box-seam display-1 text-muted opacity-25 d-block mb-3"></i>
+                                    <h5 class="text-muted">No hay productos registrados</h5>
+                                    <p class="text-muted">Comienza agregando tu primer producto</p>
+                                    <button class="btn btn-primary mt-3" id="btnNuevoProductoEmpty">
+                                        <i class="bi bi-plus-circle me-2"></i>Crear Primer Producto
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <div class="container-fluid">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <p class="mb-0 text-muted">© 2025 <strong>Disovi Soft</strong>. Todos los derechos reservados.</p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <a href="#" class="text-muted me-3">Términos</a>
+                        <a href="#" class="text-muted me-3">Privacidad</a>
+                        <a href="#" class="text-muted">Soporte</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- Modal Producto -->
+    <div class="modal fade" id="productoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productoModalTitle">Nuevo Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="productoForm">
+                        <input type="hidden" id="productoId">
+                        
+                        <div class="row g-3">
+                            <!-- Información Básica -->
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2">Información Básica</h6>
+                            </div>
+                            
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre del Producto <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="productoNombre" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">SKU <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="productoSku" required>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" id="productoDescripcion" rows="2"></textarea>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Categoría</label>
+                                <select class="form-select" id="productoCategoria">
+                                    <option value="">Sin categoría</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Código de Barras</label>
+                                <input type="text" class="form-control" id="productoCodigoBarras">
+                            </div>
+
+                            <!-- Precios -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Precios</h6>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Precio de Compra</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="productoPrecioCompra" step="0.01" min="0" value="0">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Precio de Venta <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="productoPrecioVenta" step="0.01" min="0" required>
+                                </div>
+                            </div>
+
+                            <!-- Inventario -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Inventario</h6>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Stock Actual</label>
+                                <input type="number" class="form-control" id="productoStockActual" min="0" value="0">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Stock Mínimo</label>
+                                <input type="number" class="form-control" id="productoStockMinimo" min="0" value="0">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Stock Máximo</label>
+                                <input type="number" class="form-control" id="productoStockMaximo" min="0">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Unidad de Medida</label>
+                                <select class="form-select" id="productoUnidadMedida">
+                                    <option value="unidad">Unidad</option>
+                                    <option value="caja">Caja</option>
+                                    <option value="paquete">Paquete</option>
+                                    <option value="kg">Kilogramo</option>
+                                    <option value="litro">Litro</option>
+                                    <option value="metro">Metro</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Ubicación en Almacén</label>
+                                <input type="text" class="form-control" id="productoUbicacion" placeholder="Ej: Pasillo A, Estante 3">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" id="productoEstado">
+                                    <option value="activo">Activo</option>
+                                    <option value="inactivo">Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarProducto">
+                        <i class="bi bi-save me-2"></i>Guardar Producto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js"></script>
+    <!-- API Client -->
+    <script src="assets/js/api.js"></script>
+    <!-- Custom JS -->
+    <script src="assets/js/productos.js"></script>
+</body>
+</html>

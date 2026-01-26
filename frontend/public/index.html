@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Kore-inventory.com - Sistema ERP SaaS para gestión de inventario, ventas y contabilidad">
+    <title>Kore Inventory - ERP SaaS Multiempresa</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#home">
+                <div class="logo-container me-2">
+                    <i class="bi bi-boxes"></i>
+                </div>
+                <span class="fw-bold">KORE<span class="text-warning">.</span>inventory</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#servicios">Servicios</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#productos">Productos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contacto">Contacto</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#soporte">Soporte</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-warning text-primary ms-2" href="login.html">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Login
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero-section">
+        <div class="container">
+            <div class="row align-items-center min-vh-100 pt-5">
+                <div class="col-lg-6 text-center text-lg-start">
+                    <h1 class="display-3 fw-bold text-primary mb-4">
+                        Gestiona tu negocio desde cualquier lugar
+                    </h1>
+                    <p class="lead text-muted mb-4">
+                        Sistema ERP SaaS completo para control de inventario, punto de venta, 
+                        contabilidad y más. Diseñado para crecer con tu empresa.
+                    </p>
+                    <div class="d-flex gap-3 justify-content-center justify-content-lg-start">
+                        <a href="#productos" class="btn btn-primary btn-lg">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Comenzar Gratis
+                        </a>
+                        <a href="#servicios" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-play-circle me-2"></i>Ver Demo
+                        </a>
+                    </div>
+                    <div class="mt-5">
+                        <div class="row g-4">
+                            <div class="col-4">
+                                <h3 class="text-primary fw-bold mb-0">99.9%</h3>
+                                <small class="text-muted">Uptime</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-primary fw-bold mb-0">24/7</h3>
+                                <small class="text-muted">Soporte</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-primary fw-bold mb-0">100%</h3>
+                                <small class="text-muted">Cloud</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mt-5 mt-lg-0">
+                    <div class="hero-image-container">
+                        <div class="floating-card card shadow-lg border-0">
+                            <div class="card-body text-center p-5">
+                                <i class="bi bi-graph-up-arrow display-1 text-success mb-3"></i>
+                                <h4 class="fw-bold">Control Total</h4>
+                                <p class="text-muted mb-0">Gestión multiempresa desde un solo lugar</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Servicios Section -->
+    <section id="servicios" class="py-5 bg-light">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold text-primary">Nuestros Servicios</h2>
+                <p class="lead text-muted">Todo lo que necesitas para gestionar tu empresa</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="service-icon mb-3">
+                                <i class="bi bi-cart-check display-4 text-primary"></i>
+                            </div>
+                            <h5 class="card-title fw-bold">Punto de Venta (POS)</h5>
+                            <p class="card-text text-muted">
+                                Sistema POS rápido e intuitivo con control de caja, facturas y reportes en tiempo real.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="service-icon mb-3">
+                                <i class="bi bi-box-seam display-4 text-success"></i>
+                            </div>
+                            <h5 class="card-title fw-bold">Gestión de Inventario</h5>
+                            <p class="card-text text-muted">
+                                Control total de stock, alertas de inventario bajo, movimientos y ajustes automatizados.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="service-icon mb-3">
+                                <i class="bi bi-calculator display-4 text-warning"></i>
+                            </div>
+                            <h5 class="card-title fw-bold">Contabilidad</h5>
+                            <p class="card-text text-muted">
+                                Sistema contable completo con comprobantes, libro mayor, balances y reportes fiscales.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="service-icon mb-3">
+                                <i class="bi bi-people display-4 text-info"></i>
+                            </div>
+                            <h5 class="card-title fw-bold">Multi-empresa</h5>
+                            <p class="card-text text-muted">
+                                Gestiona múltiples empresas desde una sola plataforma con datos aislados y seguros.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="service-icon mb-3">
+                                <i class="bi bi-shield-check display-4 text-danger"></i>
+                            </div>
+                            <h5 class="card-title fw-bold">Seguridad Avanzada</h5>
+                            <p class="card-text text-muted">
+                                Roles, permisos granulares, auditoría completa y cifrado de datos de nivel empresarial.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="service-icon mb-3">
+                                <i class="bi bi-graph-up display-4 text-primary"></i>
+                            </div>
+                            <h5 class="card-title fw-bold">Reportes Inteligentes</h5>
+                            <p class="card-text text-muted">
+                                Análisis de ventas, inventario, rentabilidad y KPIs con gráficos interactivos.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Productos Section -->
+    <section id="productos" class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold text-primary">Planes y Productos</h2>
+                <p class="lead text-muted">Escoge el plan perfecto para tu negocio</p>
+            </div>
+            <div class="row g-4 justify-content-center">
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow">
+                        <div class="card-header bg-white border-0 pt-4 pb-0">
+                            <h4 class="text-center fw-bold">Plan Básico</h4>
+                            <div class="text-center py-3">
+                                <h2 class="display-4 fw-bold text-primary">$29<small class="fs-6 text-muted">/mes</small></h2>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled">
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>1 Empresa</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>5 Usuarios</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>POS Básico</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Gestión Inventario</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Reportes Básicos</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte Email</li>
+                            </ul>
+                            <div class="d-grid">
+                                <a href="login.html" class="btn btn-outline-primary">Comenzar</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow-lg border-primary" style="transform: scale(1.05);">
+                        <div class="card-header bg-primary text-white border-0 pt-4 pb-0">
+                            <div class="badge bg-warning text-dark mb-2">MÁS POPULAR</div>
+                            <h4 class="text-center fw-bold">Plan Profesional</h4>
+                            <div class="text-center py-3">
+                                <h2 class="display-4 fw-bold">$79<small class="fs-6">/mes</small></h2>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled">
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>5 Empresas</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>20 Usuarios</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>POS Avanzado</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Inventario Multi-bodega</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Contabilidad Completa</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Reportes Avanzados</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte Prioritario</li>
+                            </ul>
+                            <div class="d-grid">
+                                <a href="login.html" class="btn btn-primary">Comenzar</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card h-100 border-0 shadow">
+                        <div class="card-header bg-white border-0 pt-4 pb-0">
+                            <h4 class="text-center fw-bold">Plan Enterprise</h4>
+                            <div class="text-center py-3">
+                                <h2 class="display-4 fw-bold text-primary">$199<small class="fs-6 text-muted">/mes</small></h2>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled">
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Empresas Ilimitadas</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Usuarios Ilimitados</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Todos los Módulos</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>API Completa</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>White Label</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte 24/7</li>
+                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Gestor Dedicado</li>
+                            </ul>
+                            <div class="d-grid">
+                                <a href="#contacto" class="btn btn-outline-primary">Contactar</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contacto Section -->
+    <section id="contacto" class="py-5 bg-light">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <h2 class="display-5 fw-bold text-primary mb-4">Contáctanos</h2>
+                    <p class="lead text-muted mb-4">
+                        ¿Tienes preguntas? Nuestro equipo está listo para ayudarte.
+                    </p>
+                    <div class="mb-3">
+                        <i class="bi bi-envelope-fill text-primary me-3"></i>
+                        <strong>Email:</strong> contacto@kore-inventory.com
+                    </div>
+                    <div class="mb-3">
+                        <i class="bi bi-telephone-fill text-primary me-3"></i>
+                        <strong>Teléfono:</strong> +1 (555) 123-4567
+                    </div>
+                    <div class="mb-3">
+                        <i class="bi bi-clock-fill text-primary me-3"></i>
+                        <strong>Horario:</strong> Lun - Vie: 9:00 AM - 6:00 PM
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow">
+                        <div class="card-body p-4">
+                            <form>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Nombre</label>
+                                    <input type="text" class="form-control" placeholder="Tu nombre completo">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Email</label>
+                                    <input type="email" class="form-control" placeholder="tu@email.com">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Empresa</label>
+                                    <input type="text" class="form-control" placeholder="Nombre de tu empresa">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Mensaje</label>
+                                    <textarea class="form-control" rows="4" placeholder="¿Cómo podemos ayudarte?"></textarea>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-send me-2"></i>Enviar Mensaje
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Soporte Section -->
+    <section id="soporte" class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold text-primary">Centro de Soporte</h2>
+                <p class="lead text-muted">Encuentra respuestas rápidas a tus preguntas</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm text-center hover-lift">
+                        <div class="card-body p-4">
+                            <i class="bi bi-book display-4 text-primary mb-3"></i>
+                            <h5 class="fw-bold">Documentación</h5>
+                            <p class="text-muted">Guías completas y tutoriales paso a paso</p>
+                            <a href="#" class="btn btn-outline-primary btn-sm">Ver Docs</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm text-center hover-lift">
+                        <div class="card-body p-4">
+                            <i class="bi bi-play-circle display-4 text-success mb-3"></i>
+                            <h5 class="fw-bold">Video Tutoriales</h5>
+                            <p class="text-muted">Aprende viendo nuestros videos explicativos</p>
+                            <a href="#" class="btn btn-outline-success btn-sm">Ver Videos</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm text-center hover-lift">
+                        <div class="card-body p-4">
+                            <i class="bi bi-headset display-4 text-warning mb-3"></i>
+                            <h5 class="fw-bold">Soporte Técnico</h5>
+                            <p class="text-muted">Nuestro equipo está listo para ayudarte</p>
+                            <a href="#" class="btn btn-outline-warning btn-sm">Abrir Ticket</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <h5 class="fw-bold mb-3">
+                        <i class="bi bi-boxes me-2"></i>KORE<span class="text-warning">.</span>inventory
+                    </h5>
+                    <p class="text-white-50">
+                        Sistema ERP SaaS completo para la gestión integral de tu negocio. 
+                        Potencia tu empresa con tecnología de clase mundial.
+                    </p>
+                    <div class="social-links">
+                        <a href="#" class="text-white me-3"><i class="bi bi-facebook fs-5"></i></a>
+                        <a href="#" class="text-white me-3"><i class="bi bi-twitter fs-5"></i></a>
+                        <a href="#" class="text-white me-3"><i class="bi bi-linkedin fs-5"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-youtube fs-5"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <h6 class="fw-bold mb-3">Producto</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#servicios" class="text-white-50 text-decoration-none">Servicios</a></li>
+                        <li class="mb-2"><a href="#productos" class="text-white-50 text-decoration-none">Precios</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Demo</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">API</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <h6 class="fw-bold mb-3">Empresa</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Nosotros</a></li>
+                        <li class="mb-2"><a href="#contacto" class="text-white-50 text-decoration-none">Contacto</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Careers</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <h6 class="fw-bold mb-3">Recursos</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#soporte" class="text-white-50 text-decoration-none">Soporte</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Documentación</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Estado del Sistema</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Changelog</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <h6 class="fw-bold mb-3">Legal</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Términos y Condiciones</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Privacidad</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Cookies</a></li>
+                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Licencias</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-4 bg-white-50">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0 text-white-50">
+                        &copy; 2025 <strong>Disovi Soft</strong>. Todos los derechos reservados.
+                    </p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <p class="mb-0 text-white-50">
+                        <i class="bi bi-code-slash me-1"></i>Hecho con 
+                        <i class="bi bi-heart-fill text-danger mx-1"></i> por Disovi Soft
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
