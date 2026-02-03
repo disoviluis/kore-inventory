@@ -62,8 +62,8 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
         `SELECT COUNT(*) as total_productos
         FROM productos 
         WHERE empresa_id = ?
-          AND stock > 0
-          AND activo = 1`,
+          AND stock_actual > 0
+          AND estado = 'activo'`,
         [empresaId]
       ),
 
@@ -72,7 +72,7 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
         `SELECT COUNT(*) as total_clientes
         FROM clientes 
         WHERE empresa_id = ?
-          AND activo = 1`,
+          AND estado = 'activo'`,
         [empresaId]
       )
     ]);
