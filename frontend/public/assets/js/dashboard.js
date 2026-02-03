@@ -5,7 +5,7 @@
  * =================================
  */
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'http://18.191.181.99:3000/api';
 
 /**
  * Verificar autenticación al cargar
