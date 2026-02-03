@@ -7,6 +7,8 @@
 
 import { Router } from 'express';
 import authRoutes from './core/auth/auth.routes';
+import empresasRoutes from './platform/empresas/empresas.routes';
+import dashboardRoutes from './core/dashboard/dashboard.routes';
 
 const router = Router();
 
@@ -16,9 +18,14 @@ const router = Router();
 router.use('/auth', authRoutes);
 
 // ============================================
+// RUTAS DE DASHBOARD
+// ============================================
+router.use('/dashboard', dashboardRoutes);
+
+// ============================================
 // RUTAS DE PLATAFORMA (Super Admin)
 // ============================================
-// router.use('/platform/empresas', empresasRoutes);
+router.use('/empresas', empresasRoutes);
 // router.use('/platform/planes', planesRoutes);
 // router.use('/platform/licencias', licenciasRoutes);
 

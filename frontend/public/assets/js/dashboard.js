@@ -5,7 +5,7 @@
  * =================================
  */
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'http://18.191.181.99:3000/api';
 
 /**
  * Verificar autenticación al cargar
@@ -82,6 +82,148 @@ function cargarDatosUsuario(usuario) {
   }
   
   console.log('Dashboard cargado para:', usuario);
+  
+  // Cargar empresas del usuario
+  cargarEmpresas(usuario.id);
+}
+
+/**
+ * Cargar empresas del usuario
+ */
+async function cargarEmpresas(usuarioId) {
+  const token = localStorage.getItem('token');
+  const companySelector = document.getElementById('companySelector');
+  
+  if (!companySelector) return;
+  
+  try {
+    const response = await fetch(`${API_URL}/empresas/usuario/${usuarioId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.data.length > 0) {
+      // Limpiar selector
+      companySelector.innerHTML = '';
+      
+      // Agregar opciones
+      data.data.forEach(empresa => {
+        const option = document.createElement('option');
+        option.value = empresa.id;
+        option.textContent = empresa.nombre;
+        companySelector.appendChild(option);
+      });
+      
+      // Seleccionar la primera empresa o la guardada
+      const empresaGuardada = localStorage.getItem('empresaActiva');
+      if (empresaGuardada) {
+        companySelector.value = empresaGuardada;
+      } else {
+        companySelector.value = data.data[0].id;
+        localStorage.setItem('empresaActiva', data.data[0].id);
+      }
+      
+      // Cargar estadísticas de la empresa seleccionada
+      cargarEstadisticas(companySelector.value);
+      
+      // Event listener para cambio de empresa
+      companySelector.addEventListener('change', (e) => {
+        const empresaId = e.target.value;
+        localStorage.setItem('empresaActiva', empresaId);
+        cargarEstadisticas(empresaId);
+      });
+      
+    } else {
+      companySelector.innerHTML = '<option value="">Sin empresas asignadas</option>';
+    }
+    
+  } catch (error) {
+    console.error('Error al cargar empresas:', error);
+    companySelector.innerHTML = '<option value="">Error al cargar empresas</option>';
+  }
+}
+
+/**
+ * Cargar estadísticas del dashboard
+ */
+async function cargarEstadisticas(empresaId) {
+  const token = localStorage.getItem('token');
+  
+  try {
+    const response = await fetch(`${API_URL}/dashboard/stats?empresaId=${empresaId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      actualizarCards(data.data);
+      actualizarVentasMensuales(data.data.ventasMensuales);
+      actualizarTopProductos(data.data.topProductos);
+      actualizarUltimasVentas(data.data.ultimasVentas);
+    }
+    
+  } catch (error) {
+    console.error('Error al cargar estadísticas:', error);
+  }
+}
+
+/**
+ * Actualizar cards de estadísticas
+ */
+function actualizarCards(stats) {
+  // Buscar elementos en el DOM y actualizar
+  const elementos = document.querySelectorAll('[data-stat]');
+  
+  elementos.forEach(elemento => {
+    const statType = elemento.getAttribute('data-stat');
+    
+    switch(statType) {
+      case 'ventas':
+        elemento.textContent = `$${stats.ventasDelMes.total.toLocaleString()}`;
+        break;
+      case 'facturas':
+        elemento.textContent = stats.facturasEmitidas.total;
+        break;
+      case 'productos':
+        elemento.textContent = stats.productosEnStock.total;
+        break;
+      case 'clientes':
+        elemento.textContent = stats.clientesActivos.total;
+        break;
+    }
+  });
+}
+
+/**
+ * Actualizar gráfico de ventas mensuales
+ */
+function actualizarVentasMensuales(ventas) {
+  console.log('Ventas mensuales:', ventas);
+  // TODO: Implementar gráfico con Chart.js
+}
+
+/**
+ * Actualizar top productos
+ */
+function actualizarTopProductos(productos) {
+  console.log('Top productos:', productos);
+  // TODO: Implementar tabla de productos
+}
+
+/**
+ * Actualizar últimas ventas
+ */
+function actualizarUltimasVentas(ventas) {
+  console.log('Últimas ventas:', ventas);
+  // TODO: Implementar tabla de ventas
 }
 
 /**
