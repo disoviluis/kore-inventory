@@ -121,26 +121,59 @@ export const getEmpresasByUsuario = async (req: Request, res: Response): Promise
   try {
     const { userId } = req.params;
 
-    const empresas = await query(
-      `SELECT 
-        e.id, 
-        e.nombre, 
-        e.razon_social, 
-        e.nit, 
-        e.email,
-        e.logo_url,
-        e.estado,
-        ue.rol_id,
-        r.nombre as rol_nombre
-      FROM empresas e
-      INNER JOIN usuario_empresa ue ON e.id = ue.empresa_id
-      LEFT JOIN roles r ON ue.rol_id = r.id
-      WHERE ue.usuario_id = ? 
-        AND e.estado = 'activa'
-        AND ue.activo = 1
-      ORDER BY e.nombre ASC`,
+    // Primero verificar si el usuario es super_admin
+    const usuarios = await query(
+      'SELECT tipo_usuario FROM usuarios WHERE id = ? LIMIT 1',
       [userId]
     );
+
+    if (usuarios.length === 0) {
+      return errorResponse(
+        res,
+        'Usuario no encontrado',
+        null,
+        CONSTANTS.HTTP_STATUS.NOT_FOUND
+      );
+    }
+
+    const usuario = usuarios[0];
+    let empresas;
+
+    // Si es super_admin, devolver todas las empresas activas
+    if (usuario.tipo_usuario === 'super_admin') {
+      empresas = await query(
+        `SELECT 
+          id, 
+          nombre, 
+          razon_social, 
+          nit, 
+          email,
+          logo_url,
+          estado
+        FROM empresas
+        WHERE estado = 'activa'
+        ORDER BY nombre ASC`
+      );
+    } else {
+      // Para usuarios normales, obtener solo sus empresas asignadas
+      empresas = await query(
+        `SELECT 
+          e.id, 
+          e.nombre, 
+          e.razon_social, 
+          e.nit, 
+          e.email,
+          e.logo_url,
+          e.estado
+        FROM empresas e
+        INNER JOIN usuario_empresa ue ON e.id = ue.empresa_id
+        WHERE ue.usuario_id = ? 
+          AND e.estado = 'activa'
+          AND ue.activo = 1
+        ORDER BY e.nombre ASC`,
+        [userId]
+      );
+    }
 
     return successResponse(
       res,
