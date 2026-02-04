@@ -126,6 +126,10 @@ async function cargarCategorias() {
         const selectCategoria = document.getElementById('filterCategoria');
         const selectCategoriaModal = document.getElementById('productoCategoria');
         
+        // IMPORTANTE: Limpiar opciones anteriores (excepto la primera que es "Sin categoría")
+        selectCategoria.innerHTML = '<option value="">Todas las categorías</option>';
+        selectCategoriaModal.innerHTML = '<option value="">Sin categoría</option>';
+        
         categorias.forEach(cat => {
             const option = `<option value="${cat.id}">${cat.nombre}</option>`;
             selectCategoria.insertAdjacentHTML('beforeend', option);
