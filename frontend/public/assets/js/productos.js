@@ -23,25 +23,28 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     try {
-        // Verificar token y obtener usuario
-        const response = await fetch(`${API_URL}/auth/verify`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('usuario');
-            window.location.href = 'login.html';
-            return;
-        }
-
-        const data = await response.json();
-        const usuario = data.data;
+        // Obtener usuario desde localStorage (ya fue validado en login/dashboard)
+        let usuario = JSON.parse(localStorage.getItem('usuario'));
         
-        // Guardar usuario en localStorage
-        localStorage.setItem('usuario', JSON.stringify(usuario));
+        // Si no hay usuario en localStorage, verificar token
+        if (!usuario) {
+            const response = await fetch(`${API_URL}/auth/verify`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('usuario');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const data = await response.json();
+            usuario = data.data;
+            localStorage.setItem('usuario', JSON.stringify(usuario));
+        }
 
         // Cargar información del usuario en la UI
         cargarInfoUsuario(usuario);
