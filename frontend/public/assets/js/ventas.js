@@ -244,13 +244,13 @@ function seleccionarCliente(cliente) {
     document.getElementById('resultadosNombre').style.display = 'none';
     
     // Mostrar info del cliente
-    document.getElementById('clienteNombre').textContent = 
+    document.getElementById('clienteNombreDisplay').textContent = 
         cliente.razon_social || `${cliente.nombre} ${cliente.apellido || ''}`.trim();
-    document.getElementById('clienteDocumento').textContent = 
+    document.getElementById('clienteDocumentoDisplay').textContent = 
         `${cliente.tipo_documento}: ${cliente.numero_documento}`;
-    document.getElementById('clienteEmail').textContent = cliente.email || 'Sin email';
-    document.getElementById('clienteTelefono').textContent = cliente.celular || cliente.telefono || 'Sin teléfono';
-    document.getElementById('clienteDireccion').textContent = 
+    document.getElementById('clienteEmailDisplay').textContent = cliente.email || 'Sin email';
+    document.getElementById('clienteTelefonoDisplay').textContent = cliente.celular || cliente.telefono || 'Sin teléfono';
+    document.getElementById('clienteDireccionDisplay').textContent = 
         cliente.direccion ? `${cliente.direccion}, ${cliente.ciudad || ''}` : 'Sin dirección';
     
     document.getElementById('clienteSeleccionado').style.display = 'block';
