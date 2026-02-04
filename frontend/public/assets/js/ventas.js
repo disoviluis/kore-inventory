@@ -610,8 +610,8 @@ async function guardarClienteRapido(e) {
     }
 
     // Validar campos requeridos
-    const numero_documento = numeroDocElement.value.trim();
-    const nombre = nombreElement.value.trim();
+    const numero_documento = (numeroDocElement.value || '').trim();
+    const nombre = (nombreElement.value || '').trim();
 
     if (!numero_documento || !nombre) {
         mostrarAlerta('Los campos Documento y Nombre son obligatorios', 'warning');
