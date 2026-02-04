@@ -587,33 +587,53 @@ function abrirModalCliente() {
 }
 
 async function guardarClienteRapido() {
-    // Validar que tenemos empresa activa
-    if (!currentEmpresa || !currentEmpresa.id) {
-        mostrarAlerta('No hay empresa activa seleccionada', 'warning');
-        return;
-    }
-
-    // Obtener valores directamente
-    const numero_documento = document.getElementById('clienteNumeroDocumento').value.trim();
-    const nombre = document.getElementById('clienteNombre').value.trim();
-
-    if (!numero_documento || !nombre) {
-        mostrarAlerta('Los campos Documento y Nombre son obligatorios', 'warning');
-        return;
-    }
-
-    const clienteData = {
-        empresa_id: currentEmpresa.id,
-        tipo_documento: document.getElementById('clienteTipoDocumento').value,
-        numero_documento: numero_documento,
-        nombre: nombre,
-        apellido: document.getElementById('clienteApellido').value.trim() || null,
-        telefono: document.getElementById('clienteTelefonoNuevo').value.trim() || null,
-        email: document.getElementById('clienteEmailNuevo').value.trim() || null,
-        estado: 'activo'
-    };
-
     try {
+        // Validar que tenemos empresa activa
+        if (!currentEmpresa || !currentEmpresa.id) {
+            mostrarAlerta('No hay empresa activa seleccionada', 'warning');
+            return;
+        }
+
+        // Obtener elementos
+        const elemNumDoc = document.getElementById('clienteNumeroDocumento');
+        const elemNombre = document.getElementById('clienteNombre');
+        const elemApellido = document.getElementById('clienteApellido');
+        const elemTelefono = document.getElementById('clienteTelefonoNuevo');
+        const elemEmail = document.getElementById('clienteEmailNuevo');
+        const elemTipoDoc = document.getElementById('clienteTipoDocumento');
+
+        // Validar que existen
+        if (!elemNumDoc || !elemNombre) {
+            console.error('Elementos del formulario no encontrados');
+            mostrarAlerta('Error: No se pudo cargar el formulario', 'danger');
+            return;
+        }
+
+        // Obtener valores
+        const numero_documento = (elemNumDoc.value || '').trim();
+        const nombre = (elemNombre.value || '').trim();
+        const apellido = (elemApellido?.value || '').trim();
+        const telefono = (elemTelefono?.value || '').trim();
+        const email = (elemEmail?.value || '').trim();
+        const tipo_documento = elemTipoDoc?.value || 'CC';
+
+        // Validar campos requeridos
+        if (!numero_documento || !nombre) {
+            mostrarAlerta('Los campos Documento y Nombre son obligatorios', 'warning');
+            return;
+        }
+
+        const clienteData = {
+            empresa_id: currentEmpresa.id,
+            tipo_documento: tipo_documento,
+            numero_documento: numero_documento,
+            nombre: nombre,
+            apellido: apellido || null,
+            telefono: telefono || null,
+            email: email || null,
+            estado: 'activo'
+        };
+
         const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/clientes`, {
             method: 'POST',
