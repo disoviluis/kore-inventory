@@ -601,14 +601,18 @@ async function guardarClienteRapido(e) {
         return;
     }
 
+    const apellidoElement = document.getElementById('clienteApellido');
+    const telefonoElement = document.getElementById('clienteTelefonoNuevo');
+    const emailElement = document.getElementById('clienteEmailNuevo');
+
     const clienteData = {
         empresa_id: currentEmpresa.id,
         tipo_documento: document.getElementById('clienteTipoDocumento').value,
         numero_documento: numero_documento,
         nombre: nombre,
-        apellido: document.getElementById('clienteApellido').value.trim() || null,
-        telefono: document.getElementById('clienteTelefonoNuevo').value.trim() || null,
-        email: document.getElementById('clienteEmailNuevo').value.trim() || null,
+        apellido: apellidoElement ? apellidoElement.value.trim() || null : null,
+        telefono: telefonoElement ? telefonoElement.value.trim() || null : null,
+        email: emailElement ? emailElement.value.trim() || null : null,
         estado: 'activo'
     };
 
