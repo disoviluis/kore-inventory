@@ -9,6 +9,8 @@ import { Router } from 'express';
 import authRoutes from './core/auth/auth.routes';
 import empresasRoutes from './platform/empresas/empresas.routes';
 import dashboardRoutes from './core/dashboard/dashboard.routes';
+import productosRoutes from './platform/productos/productos.routes';
+import categoriasRoutes from './platform/categorias/categorias.routes';
 
 const router = Router();
 
@@ -39,7 +41,8 @@ router.use('/empresas', empresasRoutes);
 // ============================================
 // RUTAS TENANT (Por empresa)
 // ============================================
-// router.use('/productos', productosRoutes);
+router.use('/productos', productosRoutes);
+router.use('/categorias', categoriasRoutes);
 // router.use('/inventario', inventarioRoutes);
 // router.use('/ventas', ventasRoutes);
 
