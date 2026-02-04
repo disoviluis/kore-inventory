@@ -36,7 +36,7 @@ export const getClientes = async (req: Request, res: Response): Promise<Response
         numero_documento,
         nombre,
         apellido,
-        nombre_comercial,
+        razon_social,
         email,
         telefono,
         celular,
@@ -107,7 +107,7 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
       numero_documento,
       nombre,
       apellido,
-      nombre_comercial,
+      razon_social,
       email,
       telefono,
       celular,
@@ -153,7 +153,7 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         numero_documento,
         nombre,
         apellido,
-        nombre_comercial,
+        razon_social,
         email,
         telefono,
         celular,
@@ -173,7 +173,7 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         numero_documento,
         nombre,
         apellido || null,
-        nombre_comercial || null,
+        razon_social || null,
         email || null,
         telefono || null,
         celular || null,
@@ -216,7 +216,7 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       numero_documento,
       nombre,
       apellido,
-      nombre_comercial,
+      razon_social,
       email,
       telefono,
       celular,
@@ -279,9 +279,9 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       updates.push('apellido = ?');
       values.push(apellido);
     }
-    if (nombre_comercial !== undefined) {
-      updates.push('nombre_comercial = ?');
-      values.push(nombre_comercial);
+    if (razon_social !== undefined) {
+      updates.push('razon_social = ?');
+      values.push(razon_social);
     }
     if (email !== undefined) {
       updates.push('email = ?');

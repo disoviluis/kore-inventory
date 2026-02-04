@@ -152,8 +152,8 @@ function renderizarClientes(items) {
             <td>${index + 1}</td>
             <td>
                 <div>
-                    <strong>${cliente.nombre_comercial || `${cliente.nombre} ${cliente.apellido || ''}`.trim()}</strong>
-                    ${cliente.nombre_comercial ? `<br><small class="text-muted">${cliente.nombre} ${cliente.apellido || ''}</small>` : ''}
+                    <strong>${cliente.razon_social || `${cliente.nombre} ${cliente.apellido || ''}`.trim()}</strong>
+                    ${cliente.razon_social ? `<br><small class="text-muted">${cliente.nombre} ${cliente.apellido || ''}</small>` : ''}
                 </div>
             </td>
             <td>${cliente.tipo_documento || 'CC'}: ${cliente.numero_documento}</td>
@@ -332,7 +332,7 @@ async function editarCliente(id) {
         document.getElementById('clienteNumeroDocumento').value = cliente.numero_documento;
         document.getElementById('clienteNombre').value = cliente.nombre;
         document.getElementById('clienteApellido').value = cliente.apellido || '';
-        document.getElementById('clienteNombreComercial').value = cliente.nombre_comercial || '';
+        document.getElementById('clienteRazonSocial').value = cliente.razon_social || '';
         document.getElementById('clienteEmail').value = cliente.email || '';
         document.getElementById('clienteTelefono').value = cliente.telefono || '';
         document.getElementById('clienteCelular').value = cliente.celular || '';
@@ -393,7 +393,7 @@ async function guardarCliente(e) {
         numero_documento: numeroDocumento,
         nombre: nombre,
         apellido: document.getElementById('clienteApellido').value.trim() || null,
-        nombre_comercial: document.getElementById('clienteNombreComercial').value.trim() || null,
+        razon_social: document.getElementById('clienteRazonSocial').value.trim() || null,
         email: email || null,
         telefono: document.getElementById('clienteTelefono').value.trim() || null,
         celular: document.getElementById('clienteCelular').value.trim() || null,
@@ -490,7 +490,7 @@ function filtrarClientes() {
         const matchSearch = !searchTerm || 
             cliente.nombre.toLowerCase().includes(searchTerm) ||
             (cliente.apellido && cliente.apellido.toLowerCase().includes(searchTerm)) ||
-            (cliente.nombre_comercial && cliente.nombre_comercial.toLowerCase().includes(searchTerm)) ||
+            (cliente.razon_social && cliente.razon_social.toLowerCase().includes(searchTerm)) ||
             cliente.numero_documento.includes(searchTerm) ||
             (cliente.email && cliente.email.toLowerCase().includes(searchTerm));
 
