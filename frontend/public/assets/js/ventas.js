@@ -592,18 +592,28 @@ async function guardarClienteRapido(e) {
         return;
     }
 
+    // Obtener elementos del formulario
+    const numeroDocElement = document.getElementById('clienteNumeroDocumento');
+    const nombreElement = document.getElementById('clienteNombre');
+    const apellidoElement = document.getElementById('clienteApellido');
+    const telefonoElement = document.getElementById('clienteTelefonoNuevo');
+    const emailElement = document.getElementById('clienteEmailNuevo');
+
+    // Validar que los elementos existen
+    if (!numeroDocElement || !nombreElement) {
+        console.error('Elementos del formulario no encontrados');
+        mostrarAlerta('Error: Formulario no cargado correctamente', 'danger');
+        return;
+    }
+
     // Validar campos requeridos
-    const numero_documento = document.getElementById('clienteNumeroDocumento').value.trim();
-    const nombre = document.getElementById('clienteNombre').value.trim();
+    const numero_documento = numeroDocElement.value.trim();
+    const nombre = nombreElement.value.trim();
 
     if (!numero_documento || !nombre) {
         mostrarAlerta('Los campos Documento y Nombre son obligatorios', 'warning');
         return;
     }
-
-    const apellidoElement = document.getElementById('clienteApellido');
-    const telefonoElement = document.getElementById('clienteTelefonoNuevo');
-    const emailElement = document.getElementById('clienteEmailNuevo');
 
     const clienteData = {
         empresa_id: currentEmpresa.id,
