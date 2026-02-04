@@ -121,7 +121,7 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
         v.total,
         v.estado,
         c.nombre as cliente_nombre,
-        c.documento as cliente_documento
+        c.numero_documento as cliente_documento
       FROM ventas v
       LEFT JOIN clientes c ON v.cliente_id = c.id
       WHERE v.empresa_id = ?
