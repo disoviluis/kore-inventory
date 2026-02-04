@@ -77,8 +77,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ============================================
 
 function cargarInfoUsuario(usuario) {
-    document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido || ''}`.trim();
-    document.getElementById('userRole').textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
+    const userName = document.getElementById('userName');
+    const userRole = document.getElementById('userRole');
+    
+    if (userName) {
+        const nombre = usuario.nombre || '';
+        const apellido = usuario.apellido || '';
+        userName.textContent = `${nombre} ${apellido}`.trim() || 'Usuario';
+    }
+    
+    if (userRole) {
+        userRole.textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
+    }
 }
 
 function getTipoUsuarioTexto(tipo) {
@@ -156,18 +166,20 @@ async function cargarProductos() {
 
 function renderizarProductos(items) {
     const tbody = document.getElementById('productosTableBody');
+    const emptyState = document.getElementById('emptyState');
+    const productosTable = document.getElementById('productosTable');
     
     if (!items || items.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="9" class="text-center py-5">
-                    <i class="bi bi-inbox fs-1 text-muted"></i>
-                    <p class="text-muted mt-2">No hay productos registrados</p>
-                </td>
-            </tr>
-        `;
+        // Ocultar tabla y mostrar empty state
+        if (productosTable) productosTable.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'block';
+        tbody.innerHTML = '';
         return;
     }
+    
+    // Mostrar tabla y ocultar empty state
+    if (productosTable) productosTable.style.display = 'table';
+    if (emptyState) emptyState.style.display = 'none';
 
     tbody.innerHTML = items.map((prod, index) => `
         <tr>
@@ -227,6 +239,15 @@ function initEventListeners() {
     const btnQuick = document.getElementById('btnNuevoProductoQuick');
     if (btnQuick) {
         btnQuick.addEventListener('click', (e) => {
+            e.preventDefault();
+            abrirModalNuevo();
+        });
+    }
+    
+    // Botón nuevo producto empty state (si existe)
+    const btnEmpty = document.getElementById('btnNuevoProductoEmpty');
+    if (btnEmpty) {
+        btnEmpty.addEventListener('click', (e) => {
             e.preventDefault();
             abrirModalNuevo();
         });
