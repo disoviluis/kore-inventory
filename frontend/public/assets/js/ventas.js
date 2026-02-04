@@ -606,6 +606,7 @@ async function guardarClienteRapido(e) {
         tipo_documento: document.getElementById('clienteTipoDocumento').value,
         numero_documento: numero_documento,
         nombre: nombre,
+        apellido: document.getElementById('clienteApellido').value.trim() || null,
         telefono: document.getElementById('clienteTelefonoNuevo').value.trim() || null,
         email: document.getElementById('clienteEmailNuevo').value.trim() || null,
         estado: 'activo'
