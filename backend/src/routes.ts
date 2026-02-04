@@ -11,6 +11,7 @@ import empresasRoutes from './platform/empresas/empresas.routes';
 import dashboardRoutes from './core/dashboard/dashboard.routes';
 import productosRoutes from './platform/productos/productos.routes';
 import categoriasRoutes from './platform/categorias/categorias.routes';
+import clientesRoutes from './platform/clientes/clientes.routes';
 
 const router = Router();
 
@@ -43,6 +44,7 @@ router.use('/empresas', empresasRoutes);
 // ============================================
 router.use('/productos', productosRoutes);
 router.use('/categorias', categoriasRoutes);
+router.use('/clientes', clientesRoutes);
 // router.use('/inventario', inventarioRoutes);
 // router.use('/ventas', ventasRoutes);
 
