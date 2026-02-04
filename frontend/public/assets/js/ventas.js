@@ -586,13 +586,28 @@ function abrirModalCliente() {
 async function guardarClienteRapido(e) {
     e.preventDefault();
 
+    // Validar que tenemos empresa activa
+    if (!currentEmpresa || !currentEmpresa.id) {
+        mostrarAlerta('No hay empresa activa seleccionada', 'warning');
+        return;
+    }
+
+    // Validar campos requeridos
+    const numero_documento = document.getElementById('clienteNumeroDocumento').value.trim();
+    const nombre = document.getElementById('clienteNombre').value.trim();
+
+    if (!numero_documento || !nombre) {
+        mostrarAlerta('Los campos Documento y Nombre son obligatorios', 'warning');
+        return;
+    }
+
     const clienteData = {
         empresa_id: currentEmpresa.id,
         tipo_documento: document.getElementById('clienteTipoDocumento').value,
-        numero_documento: document.getElementById('clienteNumeroDocumento').value,
-        nombre: document.getElementById('clienteNombre').value,
-        telefono: document.getElementById('clienteTelefonoNuevo').value || null,
-        email: document.getElementById('clienteEmailNuevo').value || null,
+        numero_documento: numero_documento,
+        nombre: nombre,
+        telefono: document.getElementById('clienteTelefonoNuevo').value.trim() || null,
+        email: document.getElementById('clienteEmailNuevo').value.trim() || null,
         estado: 'activo'
     };
 
