@@ -160,7 +160,7 @@ function renderizarProductos(items) {
     if (!items || items.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-5">
+                <td colspan="9" class="text-center py-5">
                     <i class="bi bi-inbox fs-1 text-muted"></i>
                     <p class="text-muted mt-2">No hay productos registrados</p>
                 </td>
@@ -169,9 +169,9 @@ function renderizarProductos(items) {
         return;
     }
 
-    tbody.innerHTML = items.map(prod => `
+    tbody.innerHTML = items.map((prod, index) => `
         <tr>
-            <td>${prod.sku}</td>
+            <td>${index + 1}</td>
             <td>
                 <div class="d-flex align-items-center">
                     ${prod.imagen_url ? 
@@ -181,17 +181,16 @@ function renderizarProductos(items) {
                     <span>${prod.nombre}</span>
                 </div>
             </td>
+            <td>${prod.sku}</td>
             <td>${prod.categoria_nombre || '-'}</td>
-            <td class="text-end">$${Number(prod.precio_venta).toLocaleString('es-CO')}</td>
+            <td class="text-end">$${Number(prod.precio_compra || 0).toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td class="text-end">$${Number(prod.precio_venta).toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
             <td class="text-center">
                 <span class="badge ${getStockBadgeClass(prod.stock_actual, prod.stock_minimo)}">
                     ${prod.stock_actual}
                 </span>
             </td>
             <td class="text-center">
-                <span class="badge bg-light text-dark">${prod.stock_minimo}</span>
-            </td>
-            <td>
                 <span class="badge ${prod.estado === 'activo' ? 'bg-success' : 'bg-secondary'}">
                     ${prod.estado === 'activo' ? 'Activo' : 'Inactivo'}
                 </span>
