@@ -121,10 +121,11 @@ async function cargarEmpresas(usuarioId) {
       // Seleccionar la primera empresa o la guardada
       const empresaGuardada = localStorage.getItem('empresaActiva');
       if (empresaGuardada) {
-        companySelector.value = empresaGuardada;
+        const empresaObj = JSON.parse(empresaGuardada);
+        companySelector.value = empresaObj.id;
       } else {
         companySelector.value = data.data[0].id;
-        localStorage.setItem('empresaActiva', data.data[0].id);
+        localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
       }
       
       // Cargar estadísticas de la empresa seleccionada
@@ -133,7 +134,8 @@ async function cargarEmpresas(usuarioId) {
       // Event listener para cambio de empresa
       companySelector.addEventListener('change', (e) => {
         const empresaId = e.target.value;
-        localStorage.setItem('empresaActiva', empresaId);
+        const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
+        localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
         cargarEstadisticas(empresaId);
       });
       
