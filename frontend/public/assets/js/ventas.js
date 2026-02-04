@@ -2,6 +2,7 @@
  * =================================
  * KORE INVENTORY - VENTAS/POS MODULE
  * Módulo de punto de venta
+ * Version: 1.1.0 - 2026-02-04
  * =================================
  */
 
@@ -10,6 +11,8 @@ let currentEmpresa = null;
 let currentUsuario = null;
 let clienteSeleccionado = null;
 let productosVenta = [];
+
+console.log('🚀 Ventas.js cargado - Versión 1.1.0');
 
 // ============================================
 // INICIALIZACIÓN
