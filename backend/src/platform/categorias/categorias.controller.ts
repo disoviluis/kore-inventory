@@ -34,11 +34,11 @@ export const getCategorias = async (req: Request, res: Response): Promise<Respon
         empresa_id,
         nombre,
         descripcion,
-        estado,
+        activo,
         created_at,
         updated_at
       FROM categorias
-      WHERE empresa_id = ? AND estado = 'activa'
+      WHERE empresa_id = ? AND activo = 1
       ORDER BY nombre ASC`,
       [empresaId]
     );
@@ -88,7 +88,7 @@ export const getCategoriaById = async (req: Request, res: Response): Promise<Res
  */
 export const createCategoria = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { empresa_id, nombre, descripcion, estado } = req.body;
+    const { empresa_id, nombre, descripcion, activo } = req.body;
 
     // Validaciones básicas
     if (!empresa_id || !nombre) {
@@ -120,14 +120,14 @@ export const createCategoria = async (req: Request, res: Response): Promise<Resp
         empresa_id,
         nombre,
         descripcion,
-        estado,
+        activo,
         creado_por
       ) VALUES (?, ?, ?, ?, ?)`,
       [
         empresa_id,
         nombre,
         descripcion || null,
-        estado || 'activa',
+        activo !== undefined ? activo : 1,
         req.body.userId || null
       ]
     );
@@ -154,7 +154,7 @@ export const createCategoria = async (req: Request, res: Response): Promise<Resp
 export const updateCategoria = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, estado } = req.body;
+    const { nombre, descripcion, activo } = req.body;
 
     // Verificar si la categoría existe
     const categoriaExiste = await query('SELECT id, empresa_id FROM categorias WHERE id = ?', [id]);
@@ -189,10 +189,10 @@ export const updateCategoria = async (req: Request, res: Response): Promise<Resp
       `UPDATE categorias SET
         nombre = COALESCE(?, nombre),
         descripcion = COALESCE(?, descripcion),
-        estado = COALESCE(?, estado),
+        activo = COALESCE(?, activo),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?`,
-      [nombre, descripcion, estado, id]
+      [nombre, descripcion, activo, id]
     );
 
     logger.info(`Categoría actualizada: ${id}`);
@@ -247,7 +247,7 @@ export const deleteCategoria = async (req: Request, res: Response): Promise<Resp
 
     // Eliminar la categoría (soft delete)
     await query(
-      `UPDATE categorias SET estado = 'inactiva', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      `UPDATE categorias SET activo = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
       [id]
     );
 
