@@ -198,6 +198,9 @@ function initEventListeners() {
 
     // Formulario cliente
     document.getElementById('clienteForm').addEventListener('submit', guardarCliente);
+    
+    // Validaciones en tiempo real
+    agregarValidacionesCliente();
 
     // Búsqueda y filtros
     document.getElementById('searchInput').addEventListener('input', filtrarClientes);
@@ -229,6 +232,69 @@ function initEventListeners() {
 }
 
 // ============================================
+// VALIDACIONES DEL FORMULARIO
+// ============================================
+
+function agregarValidacionesCliente() {
+    // Validación de email
+    const emailInput = document.getElementById('clienteEmail');
+    if (emailInput) {
+        emailInput.addEventListener('blur', function() {
+            if (this.value && !validarEmail(this.value)) {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            } else if (this.value) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+            } else {
+                this.classList.remove('is-invalid', 'is-valid');
+            }
+        });
+    }
+    
+    // Validación de número de documento (solo alfanumérico)
+    const docInput = document.getElementById('clienteNumeroDocumento');
+    if (docInput) {
+        docInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^a-zA-Z0-9-]/g, '');
+        });
+    }
+    
+    // Validación de teléfonos (solo números y algunos caracteres)
+    const telefonoInput = document.getElementById('clienteTelefono');
+    const celularInput = document.getElementById('clienteCelular');
+    
+    [telefonoInput, celularInput].forEach(input => {
+        if (input) {
+            input.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9+() -]/g, '');
+            });
+        }
+    });
+    
+    // Validación de límite de crédito (no negativo)
+    const limiteCreditoInput = document.getElementById('clienteLimiteCredito');
+    if (limiteCreditoInput) {
+        limiteCreditoInput.addEventListener('input', function() {
+            if (parseFloat(this.value) < 0) this.value = '0';
+        });
+    }
+    
+    // Validación de días de crédito (no negativo)
+    const diasCreditoInput = document.getElementById('clienteDiasCredito');
+    if (diasCreditoInput) {
+        diasCreditoInput.addEventListener('input', function() {
+            if (parseInt(this.value) < 0) this.value = '0';
+        });
+    }
+}
+
+function validarEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+// ============================================
 // MODAL CLIENTE
 // ============================================
 
@@ -236,7 +302,17 @@ function abrirModalNuevo() {
     document.getElementById('clienteModalTitle').textContent = 'Nuevo Cliente';
     document.getElementById('clienteForm').reset();
     document.getElementById('clienteId').value = '';
+    
+    // Establecer valores por defecto
+    document.getElementById('clienteTipoDocumento').value = 'CC';
     document.getElementById('clientePais').value = 'Colombia';
+    document.getElementById('clienteLimiteCredito').value = '0';
+    document.getElementById('clienteDiasCredito').value = '0';
+    document.getElementById('clienteEstado').value = 'activo';
+    
+    // Limpiar validaciones visuales si existen
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
     
     const modal = new bootstrap.Modal(document.getElementById('clienteModal'));
     modal.show();
@@ -286,21 +362,45 @@ async function guardarCliente(e) {
 
     const clienteId = document.getElementById('clienteId').value;
     const token = localStorage.getItem('token');
+    
+    // Validar campos requeridos
+    const numeroDocumento = document.getElementById('clienteNumeroDocumento').value.trim();
+    const nombre = document.getElementById('clienteNombre').value.trim();
+    
+    if (!numeroDocumento) {
+        mostrarAlerta('El número de documento es requerido', 'warning');
+        document.getElementById('clienteNumeroDocumento').focus();
+        return;
+    }
+    
+    if (!nombre) {
+        mostrarAlerta('El nombre es requerido', 'warning');
+        document.getElementById('clienteNombre').focus();
+        return;
+    }
+    
+    // Validar email si está presente
+    const email = document.getElementById('clienteEmail').value.trim();
+    if (email && !validarEmail(email)) {
+        mostrarAlerta('El email ingresado no es válido', 'warning');
+        document.getElementById('clienteEmail').focus();
+        return;
+    }
 
     const clienteData = {
         empresa_id: currentEmpresa.id,
         tipo_documento: document.getElementById('clienteTipoDocumento').value,
-        numero_documento: document.getElementById('clienteNumeroDocumento').value,
-        nombre: document.getElementById('clienteNombre').value,
-        apellido: document.getElementById('clienteApellido').value || null,
-        nombre_comercial: document.getElementById('clienteNombreComercial').value || null,
-        email: document.getElementById('clienteEmail').value || null,
-        telefono: document.getElementById('clienteTelefono').value || null,
-        celular: document.getElementById('clienteCelular').value || null,
-        direccion: document.getElementById('clienteDireccion').value || null,
-        ciudad: document.getElementById('clienteCiudad').value || null,
-        departamento: document.getElementById('clienteDepartamento').value || null,
-        pais: document.getElementById('clientePais').value || 'Colombia',
+        numero_documento: numeroDocumento,
+        nombre: nombre,
+        apellido: document.getElementById('clienteApellido').value.trim() || null,
+        nombre_comercial: document.getElementById('clienteNombreComercial').value.trim() || null,
+        email: email || null,
+        telefono: document.getElementById('clienteTelefono').value.trim() || null,
+        celular: document.getElementById('clienteCelular').value.trim() || null,
+        direccion: document.getElementById('clienteDireccion').value.trim() || null,
+        ciudad: document.getElementById('clienteCiudad').value.trim() || null,
+        departamento: document.getElementById('clienteDepartamento').value.trim() || null,
+        pais: document.getElementById('clientePais').value.trim() || 'Colombia',
         limite_credito: parseFloat(document.getElementById('clienteLimiteCredito').value) || 0,
         dias_credito: parseInt(document.getElementById('clienteDiasCredito').value) || 0,
         estado: document.getElementById('clienteEstado').value
