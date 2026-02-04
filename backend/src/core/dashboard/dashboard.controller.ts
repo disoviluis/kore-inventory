@@ -97,7 +97,7 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
       `SELECT 
         p.id,
         p.nombre,
-        p.codigo,
+        p.sku,
         SUM(vd.cantidad) as total_vendido,
         SUM(vd.subtotal) as total_ingresos
       FROM productos p
@@ -106,7 +106,7 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
       WHERE p.empresa_id = ?
         AND v.fecha_venta >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
         AND v.estado != 'cancelada'
-      GROUP BY p.id, p.nombre, p.codigo
+      GROUP BY p.id, p.nombre, p.sku
       ORDER BY total_vendido DESC
       LIMIT 5`,
       [empresaId]
