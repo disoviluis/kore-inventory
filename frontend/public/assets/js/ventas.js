@@ -588,11 +588,15 @@ function abrirModalCliente() {
 
 async function guardarClienteRapido() {
     try {
+        console.log('=== Iniciando guardarClienteRapido ===');
+        
         // Validar que tenemos empresa activa
         if (!currentEmpresa || !currentEmpresa.id) {
             mostrarAlerta('No hay empresa activa seleccionada', 'warning');
             return;
         }
+        
+        console.log('Empresa activa:', currentEmpresa);
 
         // Obtener elementos
         const elemNumDoc = document.getElementById('clienteNumeroDocumento');
@@ -601,6 +605,15 @@ async function guardarClienteRapido() {
         const elemTelefono = document.getElementById('clienteTelefonoNuevo');
         const elemEmail = document.getElementById('clienteEmailNuevo');
         const elemTipoDoc = document.getElementById('clienteTipoDocumento');
+
+        console.log('Elementos encontrados:', {
+            elemNumDoc: !!elemNumDoc,
+            elemNombre: !!elemNombre,
+            elemApellido: !!elemApellido,
+            elemTelefono: !!elemTelefono,
+            elemEmail: !!elemEmail,
+            elemTipoDoc: !!elemTipoDoc
+        });
 
         // Validar que existen
         if (!elemNumDoc || !elemNombre) {
@@ -617,11 +630,23 @@ async function guardarClienteRapido() {
         const email = (elemEmail?.value || '').trim();
         const tipo_documento = elemTipoDoc?.value || 'CC';
 
+        console.log('Valores obtenidos:', {
+            tipo_documento,
+            numero_documento,
+            nombre,
+            apellido,
+            telefono,
+            email
+        });
+
         // Validar campos requeridos
         if (!numero_documento || !nombre) {
             mostrarAlerta('Los campos Documento y Nombre son obligatorios', 'warning');
+            console.error('Validación fallida:', { numero_documento, nombre });
             return;
         }
+
+        console.log('Validación exitosa, preparando datos...');
 
         const clienteData = {
             empresa_id: currentEmpresa.id,
@@ -634,7 +659,11 @@ async function guardarClienteRapido() {
             estado: 'activo'
         };
 
+        console.log('Datos a enviar:', clienteData);
+
         const token = localStorage.getItem('token');
+        console.log('Enviando petición al servidor...');
+        
         const response = await fetch(`${API_URL}/clientes`, {
             method: 'POST',
             headers: {
@@ -644,16 +673,22 @@ async function guardarClienteRapido() {
             body: JSON.stringify(clienteData)
         });
 
+        console.log('Respuesta del servidor:', response.status);
+
         if (!response.ok) {
             const error = await response.json();
+            console.error('Error del servidor:', error);
             throw new Error(error.message || 'Error al guardar cliente');
         }
 
         const data = await response.json();
+        console.log('Cliente guardado exitosamente:', data);
         
         // Cerrar modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('clienteModal'));
-        modal.hide();
+        if (modal) {
+            modal.hide();
+        }
 
         mostrarAlerta('Cliente creado exitosamente', 'success');
 
@@ -663,7 +698,7 @@ async function guardarClienteRapido() {
         }, 500);
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error en guardarClienteRapido:', error);
         mostrarAlerta(error.message || 'Error al guardar cliente', 'danger');
     }
 }
