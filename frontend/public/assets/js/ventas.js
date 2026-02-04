@@ -105,8 +105,8 @@ function initEventListeners() {
     // Búsqueda de productos
     document.getElementById('buscarProducto').addEventListener('input', debounce(buscarProductos, 300));
 
-    // Formulario de cliente
-    document.getElementById('clienteForm').addEventListener('submit', guardarClienteRapido);
+    // Botón guardar cliente (ahora es click directo, no submit)
+    document.getElementById('btnGuardarClienteModal').addEventListener('click', guardarClienteRapido);
 
     // Descuento
     document.getElementById('inputDescuento').addEventListener('input', calcularTotales);
@@ -586,32 +586,16 @@ function abrirModalCliente() {
     modal.show();
 }
 
-async function guardarClienteRapido(e) {
-    e.preventDefault();
-
+async function guardarClienteRapido() {
     // Validar que tenemos empresa activa
     if (!currentEmpresa || !currentEmpresa.id) {
         mostrarAlerta('No hay empresa activa seleccionada', 'warning');
         return;
     }
 
-    // Obtener elementos del formulario
-    const numeroDocElement = document.getElementById('clienteNumeroDocumento');
-    const nombreElement = document.getElementById('clienteNombre');
-    const apellidoElement = document.getElementById('clienteApellido');
-    const telefonoElement = document.getElementById('clienteTelefonoNuevo');
-    const emailElement = document.getElementById('clienteEmailNuevo');
-
-    // Validar que los elementos existen
-    if (!numeroDocElement || !nombreElement) {
-        console.error('Elementos del formulario no encontrados');
-        mostrarAlerta('Error: Formulario no cargado correctamente', 'danger');
-        return;
-    }
-
-    // Validar campos requeridos
-    const numero_documento = (numeroDocElement.value || '').trim();
-    const nombre = (nombreElement.value || '').trim();
+    // Obtener valores directamente
+    const numero_documento = document.getElementById('clienteNumeroDocumento').value.trim();
+    const nombre = document.getElementById('clienteNombre').value.trim();
 
     if (!numero_documento || !nombre) {
         mostrarAlerta('Los campos Documento y Nombre son obligatorios', 'warning');
@@ -623,9 +607,9 @@ async function guardarClienteRapido(e) {
         tipo_documento: document.getElementById('clienteTipoDocumento').value,
         numero_documento: numero_documento,
         nombre: nombre,
-        apellido: apellidoElement ? apellidoElement.value.trim() || null : null,
-        telefono: telefonoElement ? telefonoElement.value.trim() || null : null,
-        email: emailElement ? emailElement.value.trim() || null : null,
+        apellido: document.getElementById('clienteApellido').value.trim() || null,
+        telefono: document.getElementById('clienteTelefonoNuevo').value.trim() || null,
+        email: document.getElementById('clienteEmailNuevo').value.trim() || null,
         estado: 'activo'
     };
 
