@@ -256,41 +256,83 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
       }
     }
 
+    // Construir el UPDATE dinámicamente solo con los campos que vienen en el body
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (nombre !== undefined) {
+      updates.push('nombre = ?');
+      values.push(nombre);
+    }
+    if (descripcion !== undefined) {
+      updates.push('descripcion = ?');
+      values.push(descripcion);
+    }
+    if (sku !== undefined) {
+      updates.push('sku = ?');
+      values.push(sku);
+    }
+    if (codigo_barras !== undefined) {
+      updates.push('codigo_barras = ?');
+      values.push(codigo_barras);
+    }
+    if (categoria_id !== undefined) {
+      updates.push('categoria_id = ?');
+      values.push(categoria_id);
+    }
+    if (precio_compra !== undefined) {
+      updates.push('precio_compra = ?');
+      values.push(precio_compra);
+    }
+    if (precio_venta !== undefined) {
+      updates.push('precio_venta = ?');
+      values.push(precio_venta);
+    }
+    if (stock_actual !== undefined) {
+      updates.push('stock_actual = ?');
+      values.push(stock_actual);
+    }
+    if (stock_minimo !== undefined) {
+      updates.push('stock_minimo = ?');
+      values.push(stock_minimo);
+    }
+    if (stock_maximo !== undefined) {
+      updates.push('stock_maximo = ?');
+      values.push(stock_maximo);
+    }
+    if (unidad_medida !== undefined) {
+      updates.push('unidad_medida = ?');
+      values.push(unidad_medida);
+    }
+    if (ubicacion_almacen !== undefined) {
+      updates.push('ubicacion_almacen = ?');
+      values.push(ubicacion_almacen);
+    }
+    if (imagen_url !== undefined) {
+      updates.push('imagen_url = ?');
+      values.push(imagen_url);
+    }
+    if (estado !== undefined) {
+      updates.push('estado = ?');
+      values.push(estado);
+    }
+
+    // Si no hay nada que actualizar
+    if (updates.length === 0) {
+      return errorResponse(
+        res,
+        'No se proporcionaron campos para actualizar',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(id);
+
     await query(
-      `UPDATE productos SET
-        nombre = COALESCE(?, nombre),
-        descripcion = COALESCE(?, descripcion),
-        sku = COALESCE(?, sku),
-        codigo_barras = COALESCE(?, codigo_barras),
-        categoria_id = COALESCE(?, categoria_id),
-        precio_compra = COALESCE(?, precio_compra),
-        precio_venta = COALESCE(?, precio_venta),
-        stock_actual = COALESCE(?, stock_actual),
-        stock_minimo = COALESCE(?, stock_minimo),
-        stock_maximo = COALESCE(?, stock_maximo),
-        unidad_medida = COALESCE(?, unidad_medida),
-        ubicacion_almacen = COALESCE(?, ubicacion_almacen),
-        imagen_url = COALESCE(?, imagen_url),
-        estado = COALESCE(?, estado),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?`,
-      [
-        nombre,
-        descripcion,
-        sku,
-        codigo_barras,
-        categoria_id,
-        precio_compra,
-        precio_venta,
-        stock_actual,
-        stock_minimo,
-        stock_maximo,
-        unidad_medida,
-        ubicacion_almacen,
-        imagen_url,
-        estado,
-        id
-      ]
+      `UPDATE productos SET ${updates.join(', ')} WHERE id = ?`,
+      values
     );
 
     logger.info(`Producto actualizado: ${id}`);
