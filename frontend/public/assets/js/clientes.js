@@ -409,63 +409,6 @@ function limpiarFiltros() {
     document.getElementById('filterEstado').value = '';
     renderizarClientes(clientes);
 }
-    if (!confirm('¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.')) {
-        return;
-    }
-
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/productos/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Error al eliminar producto');
-        }
-
-        mostrarAlerta('Producto eliminado exitosamente', 'success');
-        await cargarProductos();
-
-    } catch (error) {
-        console.error('Error al eliminar producto:', error);
-        mostrarAlerta(error.message || 'Error al eliminar producto', 'danger');
-    }
-}
-
-// ============================================
-// FILTROS Y BÚSQUEDA
-// ============================================
-
-function filtrarProductos() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const categoriaId = document.getElementById('filterCategoria').value;
-    const estado = document.getElementById('filterEstado').value;
-
-    let productosFiltrados = productos.filter(prod => {
-        const matchSearch = !searchTerm || 
-            prod.nombre.toLowerCase().includes(searchTerm) ||
-            prod.sku.toLowerCase().includes(searchTerm) ||
-            (prod.codigo_barras && prod.codigo_barras.toLowerCase().includes(searchTerm));
-
-        const matchCategoria = !categoriaId || prod.categoria_id == categoriaId;
-        const matchEstado = !estado || prod.estado === estado;
-
-        return matchSearch && matchCategoria && matchEstado;
-    });
-
-    renderizarProductos(productosFiltrados);
-}
-
-function limpiarFiltros() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('filterCategoria').value = '';
-    document.getElementById('filterEstado').value = '';
-    renderizarProductos(productos);
-}
 
 // ============================================
 // CERRAR SESIÓN

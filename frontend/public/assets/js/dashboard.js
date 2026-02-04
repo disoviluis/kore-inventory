@@ -268,3 +268,39 @@ document.querySelectorAll('[data-logout]').forEach(btn => {
     cerrarSesion();
   });
 });
+
+// ============================================
+// SIDEBAR TOGGLE (MOBILE)
+// ============================================
+
+// Toggle sidebar en móviles
+const toggleSidebar = document.getElementById('toggleSidebar');
+if (toggleSidebar) {
+  toggleSidebar.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.toggle('active');
+    if (overlay) overlay.classList.toggle('active');
+  });
+}
+
+// Cerrar sidebar
+const closeSidebar = document.getElementById('closeSidebar');
+if (closeSidebar) {
+  closeSidebar.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+  });
+}
+
+// Cerrar sidebar al hacer click en el overlay
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+if (sidebarOverlay) {
+  sidebarOverlay.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.remove('active');
+    sidebarOverlay.classList.remove('active');
+  });
+}
