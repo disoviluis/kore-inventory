@@ -13,7 +13,7 @@ let clienteSeleccionado = null;
 let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 
-console.log('🚀 Ventas.js cargado - Versión 1.3.0');
+console.log('🚀 Ventas.js cargado - Versión 1.4.0');
 
 // ============================================
 // INICIALIZACIÓN
@@ -382,6 +382,10 @@ function agregarProducto(producto) {
 }
 
 function renderizarProductos() {
+    console.log('=== renderizarProductos ===');
+    console.log('productosVenta.length:', productosVenta.length);
+    console.log('productosVenta:', productosVenta);
+    
     const container = document.getElementById('listaProductos');
     const empty = document.getElementById('emptyProductos');
 
@@ -393,8 +397,8 @@ function renderizarProductos() {
 
     empty.style.display = 'none';
     
-    container.innerHTML = productosVenta.map((p, index) => `
-        <div class="producto-item">
+    const html = productosVenta.map((p, index) => `
+        <div class="producto-item mb-3 p-3 border rounded">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="flex-grow-1">
                     <strong>${p.nombre}</strong><br>
@@ -407,7 +411,8 @@ function renderizarProductos() {
                         </button>
                         <input type="number" class="form-control form-control-sm input-cantidad mx-1" 
                                value="${p.cantidad}" min="1" max="${p.stock_disponible}"
-                               onchange="actualizarCantidad(${index}, this.value)">
+                               onchange="actualizarCantidad(${index}, this.value)"
+                               style="width: 60px; text-align: center;">
                         <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, 1)">
                             <i class="bi bi-plus"></i>
                         </button>
@@ -423,6 +428,11 @@ function renderizarProductos() {
             </div>
         </div>
     `).join('');
+    
+    console.log('HTML generado:', html);
+    container.innerHTML = html;
+    console.log('container.innerHTML actualizado');
+}
 }
 
 function cambiarCantidad(index, delta) {
