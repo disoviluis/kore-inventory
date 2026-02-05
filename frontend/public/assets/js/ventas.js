@@ -2,18 +2,18 @@
  * =================================
  * KORE INVENTORY - VENTAS/POS MODULE
  * Módulo de punto de venta
- * Version: 1.7.0 - Sistema de seguridad implementado
+ * Version: 1.1.0 - 2026-02-04
  * =================================
  */
 
-// API_URL viene de config.js
+const API_URL = 'http://18.191.181.99:3000/api';
 let currentEmpresa = null;
 let currentUsuario = null;
 let clienteSeleccionado = null;
 let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 
-logger.log('🚀 Ventas.js cargado - Versión 1.7.0 - Sistema de seguridad implementado');
+console.log('🚀 Ventas.js cargado - Versión 1.6.2 - Debug factura totales');
 
 // ============================================
 // INICIALIZACIÓN
@@ -245,14 +245,14 @@ function seleccionarClientePorIndice(index) {
 }
 
 function seleccionarCliente(cliente) {
-    logger.log('=== seleccionarCliente called ===');
-    logger.log('Tipo de cliente:', typeof cliente);
-    logger.log('cliente recibido:', cliente);
-    logger.log('cliente.id:', cliente?.id, 'tipo:', typeof cliente?.id);
+    console.log('=== seleccionarCliente called ===');
+    console.log('Tipo de cliente:', typeof cliente);
+    console.log('cliente recibido:', cliente);
+    console.log('cliente.id:', cliente?.id, 'tipo:', typeof cliente?.id);
     
     clienteSeleccionado = cliente;
-    logger.log('clienteSeleccionado asignado:', clienteSeleccionado);
-    logger.log('clienteSeleccionado.id:', clienteSeleccionado?.id);
+    console.log('clienteSeleccionado asignado:', clienteSeleccionado);
+    console.log('clienteSeleccionado.id:', clienteSeleccionado?.id);
     
     // Ocultar búsqueda
     document.getElementById('busquedaCliente').style.display = 'none';
@@ -383,9 +383,9 @@ function agregarProducto(producto) {
 
 function renderizarProductos() {
     try {
-        logger.log('=== renderizarProductos ===');
-        logger.log('productosVenta.length:', productosVenta.length);
-        logger.log('productosVenta:', productosVenta);
+        console.log('=== renderizarProductos ===');
+        console.log('productosVenta.length:', productosVenta.length);
+        console.log('productosVenta:', productosVenta);
         
         const container = document.getElementById('listaProductos');
 
@@ -401,7 +401,7 @@ function renderizarProductos() {
         let html = '';
         for (let index = 0; index < productosVenta.length; index++) {
             const p = productosVenta[index];
-            logger.log(`Generando HTML para producto ${index}:`, p);
+            console.log(`Generando HTML para producto ${index}:`, p);
             
             html += `
             <div class="producto-item mb-3 p-3 border rounded">
@@ -435,10 +435,10 @@ function renderizarProductos() {
             </div>`;
         }
         
-        logger.log('HTML completo generado, longitud:', html.length);
-        logger.log('Primeros 200 chars:', html.substring(0, 200));
+        console.log('HTML completo generado, longitud:', html.length);
+        console.log('Primeros 200 chars:', html.substring(0, 200));
         container.innerHTML = html;
-        logger.log('container.innerHTML actualizado, children count:', container.children.length);
+        console.log('container.innerHTML actualizado, children count:', container.children.length);
     } catch (error) {
         console.error('ERROR en renderizarProductos:', error);
         console.error('Stack:', error.stack);
@@ -520,11 +520,11 @@ function calcularTotales() {
 // ============================================
 
 async function guardarVenta() {
-    logger.log('=== Iniciando guardarVenta ===');
-    logger.log('clienteSeleccionado:', clienteSeleccionado);
-    logger.log('productosVenta:', productosVenta);
-    logger.log('currentEmpresa:', currentEmpresa);
-    logger.log('currentUsuario:', currentUsuario);
+    console.log('=== Iniciando guardarVenta ===');
+    console.log('clienteSeleccionado:', clienteSeleccionado);
+    console.log('productosVenta:', productosVenta);
+    console.log('currentEmpresa:', currentEmpresa);
+    console.log('currentUsuario:', currentUsuario);
 
     if (!clienteSeleccionado || productosVenta.length === 0) {
         mostrarAlerta('Debes seleccionar un cliente y agregar productos', 'warning');
@@ -556,7 +556,7 @@ async function guardarVenta() {
         }))
     };
 
-    logger.log('ventaData a enviar:', ventaData);
+    console.log('ventaData a enviar:', ventaData);
 
     try {
         const token = localStorage.getItem('token');
@@ -640,7 +640,7 @@ function abrirModalCliente() {
 
 async function guardarClienteRapido() {
     try {
-        logger.log('=== Iniciando guardarClienteRapido ===');
+        console.log('=== Iniciando guardarClienteRapido ===');
         
         // Validar que tenemos empresa activa
         if (!currentEmpresa || !currentEmpresa.id) {
@@ -648,7 +648,7 @@ async function guardarClienteRapido() {
             return;
         }
         
-        logger.log('Empresa activa:', currentEmpresa);
+        console.log('Empresa activa:', currentEmpresa);
 
         // Obtener elementos
         const elemNumDoc = document.getElementById('clienteNumeroDocumento');
@@ -658,7 +658,7 @@ async function guardarClienteRapido() {
         const elemEmail = document.getElementById('clienteEmailNuevo');
         const elemTipoDoc = document.getElementById('clienteTipoDocumento');
 
-        logger.log('Elementos encontrados:', {
+        console.log('Elementos encontrados:', {
             elemNumDoc: !!elemNumDoc,
             elemNombre: !!elemNombre,
             elemApellido: !!elemApellido,
@@ -682,7 +682,7 @@ async function guardarClienteRapido() {
         const email = (elemEmail?.value || '').trim();
         const tipo_documento = elemTipoDoc?.value || 'CC';
 
-        logger.log('Valores obtenidos:', {
+        console.log('Valores obtenidos:', {
             tipo_documento,
             numero_documento,
             nombre,
@@ -698,7 +698,7 @@ async function guardarClienteRapido() {
             return;
         }
 
-        logger.log('Validación exitosa, preparando datos...');
+        console.log('Validación exitosa, preparando datos...');
 
         const clienteData = {
             empresa_id: currentEmpresa.id,
@@ -711,10 +711,10 @@ async function guardarClienteRapido() {
             estado: 'activo'
         };
 
-        logger.log('Datos a enviar:', clienteData);
+        console.log('Datos a enviar:', clienteData);
 
         const token = localStorage.getItem('token');
-        logger.log('Enviando petición al servidor...');
+        console.log('Enviando petición al servidor...');
         
         const response = await fetch(`${API_URL}/clientes`, {
             method: 'POST',
@@ -725,7 +725,7 @@ async function guardarClienteRapido() {
             body: JSON.stringify(clienteData)
         });
 
-        logger.log('Respuesta del servidor:', response.status);
+        console.log('Respuesta del servidor:', response.status);
 
         if (!response.ok) {
             const error = await response.json();
@@ -734,9 +734,9 @@ async function guardarClienteRapido() {
         }
 
         const data = await response.json();
-        logger.log('Cliente guardado exitosamente:', data);
-        logger.log('data.data:', data.data);
-        logger.log('data.data.id:', data.data?.id);
+        console.log('Cliente guardado exitosamente:', data);
+        console.log('data.data:', data.data);
+        console.log('data.data.id:', data.data?.id);
         
         // Cerrar modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('clienteModal'));
@@ -748,12 +748,12 @@ async function guardarClienteRapido() {
 
         // Seleccionar el cliente recién creado directamente
         if (data.data && data.data.id) {
-            logger.log('Seleccionando cliente con ID:', data.data.id);
+            console.log('Seleccionando cliente con ID:', data.data.id);
             // El backend devuelve el cliente con ID, seleccionarlo directamente
             seleccionarCliente(data.data);
-            logger.log('clienteSeleccionado después de seleccionar:', clienteSeleccionado);
+            console.log('clienteSeleccionado después de seleccionar:', clienteSeleccionado);
         } else {
-            logger.log('data.data no tiene ID, buscando por documento');
+            console.log('data.data no tiene ID, buscando por documento');
             // Si no devuelve el objeto completo, buscar por documento
             document.getElementById('numeroDocumento').value = numero_documento;
             setTimeout(() => {
@@ -813,11 +813,11 @@ function mostrarAlerta(mensaje, tipo = 'info') {
 // ============================================
 
 function mostrarFactura(venta, ventaData) {
-    logger.log('=== mostrarFactura DEBUG ===');
-    logger.log('ventaData recibido:', ventaData);
-    logger.log('ventaData.subtotal:', ventaData.subtotal);
-    logger.log('ventaData.impuesto:', ventaData.impuesto);
-    logger.log('ventaData.total:', ventaData.total);
+    console.log('=== mostrarFactura DEBUG ===');
+    console.log('ventaData recibido:', ventaData);
+    console.log('ventaData.subtotal:', ventaData.subtotal);
+    console.log('ventaData.impuesto:', ventaData.impuesto);
+    console.log('ventaData.total:', ventaData.total);
     
     // Calcular totales correctamente
     const subtotal = ventaData.subtotal;
@@ -825,7 +825,7 @@ function mostrarFactura(venta, ventaData) {
     const impuesto = ventaData.impuesto;
     const total = ventaData.total;
     
-    logger.log('Variables extraídas - subtotal:', subtotal, 'impuesto:', impuesto, 'total:', total);
+    console.log('Variables extraídas - subtotal:', subtotal, 'impuesto:', impuesto, 'total:', total);
     
     // Formatear fecha
     const fecha = new Date().toLocaleString('es-CO', {
@@ -950,4 +950,3 @@ function imprimirFactura() {
     `);
     ventanaImpresion.document.close();
 }
-
