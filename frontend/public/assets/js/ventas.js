@@ -12,7 +12,7 @@ let currentUsuario = null;
 let clienteSeleccionado = null;
 let productosVenta = [];
 
-console.log('🚀 Ventas.js cargado - Versión 1.1.0');
+console.log('🚀 Ventas.js cargado - Versión 1.2.0');
 
 // ============================================
 // INICIALIZACIÓN
@@ -334,7 +334,8 @@ function agregarProducto(producto) {
         // Incrementar cantidad si hay stock
         if (productosVenta[index].cantidad < producto.stock_actual) {
             productosVenta[index].cantidad++;
-            productosVenta[index].subtotal = productosVenta[index].cantidad * productosVenta[index].precio_unitario;
+            const precio = parseFloat(productosVenta[index].precio_unitario);
+            productosVenta[index].subtotal = productosVenta[index].cantidad * precio;
         } else {
             mostrarAlerta('No hay suficiente stock disponible', 'warning');
         }
@@ -345,14 +346,15 @@ function agregarProducto(producto) {
             return;
         }
 
+        const precioUnitario = parseFloat(producto.precio_venta);
         productosVenta.push({
             id: producto.id,
             nombre: producto.nombre,
             sku: producto.sku,
-            precio_unitario: producto.precio_venta,
+            precio_unitario: precioUnitario,
             cantidad: 1,
             stock_disponible: producto.stock_actual,
-            subtotal: producto.precio_venta
+            subtotal: precioUnitario
         });
     }
 
@@ -423,7 +425,8 @@ function cambiarCantidad(index, delta) {
     }
 
     producto.cantidad = nuevaCantidad;
-    producto.subtotal = producto.cantidad * producto.precio_unitario;
+    const precio = parseFloat(producto.precio_unitario);
+    producto.subtotal = producto.cantidad * precio;
 
     renderizarProductos();
     calcularTotales();
@@ -444,7 +447,8 @@ function actualizarCantidad(index, valor) {
     }
 
     producto.cantidad = cantidad;
-    producto.subtotal = producto.cantidad * producto.precio_unitario;
+    const precio = parseFloat(producto.precio_unitario);
+    producto.subtotal = producto.cantidad * precio;
 
     renderizarProductos();
     calcularTotales();
@@ -691,6 +695,8 @@ async function guardarClienteRapido() {
 
         const data = await response.json();
         console.log('Cliente guardado exitosamente:', data);
+        console.log('data.data:', data.data);
+        console.log('data.data.id:', data.data?.id);
         
         // Cerrar modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('clienteModal'));
@@ -702,9 +708,12 @@ async function guardarClienteRapido() {
 
         // Seleccionar el cliente recién creado directamente
         if (data.data && data.data.id) {
+            console.log('Seleccionando cliente con ID:', data.data.id);
             // El backend devuelve el cliente con ID, seleccionarlo directamente
             seleccionarCliente(data.data);
+            console.log('clienteSeleccionado después de seleccionar:', clienteSeleccionado);
         } else {
+            console.log('data.data no tiene ID, buscando por documento');
             // Si no devuelve el objeto completo, buscar por documento
             document.getElementById('numeroDocumento').value = numero_documento;
             setTimeout(() => {
