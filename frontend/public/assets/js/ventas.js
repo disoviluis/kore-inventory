@@ -700,10 +700,17 @@ async function guardarClienteRapido() {
 
         mostrarAlerta('Cliente creado exitosamente', 'success');
 
-        // Buscar el cliente recién creado y seleccionarlo
-        setTimeout(() => {
-            buscarPorDocumento();
-        }, 500);
+        // Seleccionar el cliente recién creado directamente
+        if (data.data && data.data.id) {
+            // El backend devuelve el cliente con ID, seleccionarlo directamente
+            seleccionarCliente(data.data);
+        } else {
+            // Si no devuelve el objeto completo, buscar por documento
+            document.getElementById('numeroDocumento').value = numero_documento;
+            setTimeout(() => {
+                buscarPorDocumento();
+            }, 500);
+        }
 
     } catch (error) {
         console.error('Error en guardarClienteRapido:', error);
