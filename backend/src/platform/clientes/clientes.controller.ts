@@ -191,10 +191,16 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
 
     logger.info(`Cliente creado: ${nombre} (ID: ${result.insertId})`);
     
+    // Obtener el cliente recién creado con todos sus datos
+    const nuevoCliente = await query(
+      'SELECT * FROM clientes WHERE id = ?',
+      [result.insertId]
+    );
+    
     return successResponse(
       res,
       'Cliente creado exitosamente',
-      { id: result.insertId },
+      nuevoCliente[0],
       CONSTANTS.HTTP_STATUS.CREATED
     );
 
