@@ -13,7 +13,7 @@ let clienteSeleccionado = null;
 let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 
-console.log('🚀 Ventas.js cargado - Versión 1.5.1 - Fix emptyProductos');
+console.log('🚀 Ventas.js cargado - Versión 1.6.0 - Factura implementada');
 
 // ============================================
 // INICIALIZACIÓN
@@ -576,12 +576,17 @@ async function guardarVenta() {
 
         const data = await response.json();
         
-        mostrarAlerta(`¡Venta guardada exitosamente! Factura: ${data.data.numero_factura}`, 'success');
+        // Guardar nombres de productos antes de limpiar
+        const productosConNombres = ventaData.productos.map(p => ({
+            ...p,
+            nombre: productosVenta.find(pv => pv.id === p.producto_id)?.nombre || 'Producto'
+        }));
         
-        // Limpiar todo después de 2 segundos
-        setTimeout(() => {
-            limpiarVenta();
-        }, 2000);
+        // Mostrar factura
+        mostrarFactura(data.data, {...ventaData, productos: productosConNombres});
+        
+        // Limpiar todo
+        limpiarVenta();
 
     } catch (error) {
         console.error('Error:', error);
@@ -801,4 +806,126 @@ function mostrarAlerta(mensaje, tipo = 'info') {
     setTimeout(() => {
         alertDiv.remove();
     }, 5000);
+}
+
+// ============================================
+// FACTURA
+// ============================================
+
+function mostrarFactura(venta, ventaData) {
+    const fecha = new Date(venta.fecha_venta).toLocaleString('es-CO');
+    
+    const html = `
+        <div id="facturaPrint" class="p-4">
+            <!-- Encabezado Empresa -->
+            <div class="text-center mb-4">
+                <h3 class="mb-1">${currentEmpresa.nombre}</h3>
+                <p class="mb-1">${currentEmpresa.razon_social}</p>
+                <p class="mb-1">NIT: ${currentEmpresa.nit}</p>
+                <p class="mb-1">${currentEmpresa.direccion || ''}</p>
+                <p class="mb-1">Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email}</p>
+                <hr>
+                <h4>FACTURA DE VENTA</h4>
+                <p><strong>${venta.numero_factura}</strong></p>
+            </div>
+
+            <!-- Datos Cliente y Venta -->
+            <div class="row mb-4">
+                <div class="col-6">
+                    <strong>Cliente:</strong><br>
+                    ${clienteSeleccionado.razon_social || `${clienteSeleccionado.nombre} ${clienteSeleccionado.apellido || ''}`}<br>
+                    ${clienteSeleccionado.tipo_documento}: ${clienteSeleccionado.numero_documento}<br>
+                    ${clienteSeleccionado.telefono || clienteSeleccionado.celular || ''}<br>
+                    ${clienteSeleccionado.direccion || ''}
+                </div>
+                <div class="col-6 text-end">
+                    <strong>Fecha:</strong> ${fecha}<br>
+                    <strong>Vendedor:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}<br>
+                    <strong>Método de Pago:</strong> ${ventaData.metodo_pago}
+                </div>
+            </div>
+
+            <!-- Detalle Productos -->
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Producto</th>
+                        <th class="text-center">Cantidad</th>
+                        <th class="text-end">Precio Unit.</th>
+                        <th class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${ventaData.productos.map(p => `
+                        <tr>
+                            <td>${p.nombre}</td>
+                            <td class="text-center">${p.cantidad}</td>
+                            <td class="text-end">$${formatearNumero(p.precio_unitario)}</td>
+                            <td class="text-end">$${formatearNumero(p.subtotal)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                        <td class="text-end">$${formatearNumero(venta.subtotal)}</td>
+                    </tr>
+                    ${venta.descuento > 0 ? `
+                    <tr>
+                        <td colspan="3" class="text-end"><strong>Descuento:</strong></td>
+                        <td class="text-end">-$${formatearNumero(venta.descuento)}</td>
+                    </tr>
+                    ` : ''}
+                    <tr>
+                        <td colspan="3" class="text-end"><strong>IVA (19%):</strong></td>
+                        <td class="text-end">$${formatearNumero(venta.impuesto)}</td>
+                    </tr>
+                    <tr class="table-primary">
+                        <td colspan="3" class="text-end"><strong>TOTAL:</strong></td>
+                        <td class="text-end"><strong>$${formatearNumero(venta.total)}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <div class="text-center mt-4">
+                <p class="text-muted">¡Gracias por su compra!</p>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('facturaContent').innerHTML = html;
+    const modal = new bootstrap.Modal(document.getElementById('facturaModal'));
+    modal.show();
+}
+
+function imprimirFactura() {
+    const contenido = document.getElementById('facturaPrint').innerHTML;
+    const ventanaImpresion = window.open('', '_blank');
+    ventanaImpresion.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Factura</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                @media print {
+                    body { margin: 0; padding: 20px; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            ${contenido}
+            <script>
+                window.onload = function() {
+                    window.print();
+                    window.onafterprint = function() {
+                        window.close();
+                    };
+                };
+            </script>
+        </body>
+        </html>
+    `);
+    ventanaImpresion.document.close();
 }
