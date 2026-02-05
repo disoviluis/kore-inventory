@@ -13,7 +13,7 @@ let clienteSeleccionado = null;
 let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 
-console.log('🚀 Ventas.js cargado - Versión 1.6.0 - Factura implementada');
+console.log('🚀 Ventas.js cargado - Versión 1.6.1 - Fix cálculos factura');
 
 // ============================================
 // INICIALIZACIÓN
@@ -813,7 +813,20 @@ function mostrarAlerta(mensaje, tipo = 'info') {
 // ============================================
 
 function mostrarFactura(venta, ventaData) {
-    const fecha = new Date(venta.fecha_venta).toLocaleString('es-CO');
+    // Calcular totales correctamente
+    const subtotal = ventaData.subtotal;
+    const descuento = ventaData.descuento || 0;
+    const impuesto = ventaData.impuesto;
+    const total = ventaData.total;
+    
+    // Formatear fecha
+    const fecha = new Date().toLocaleString('es-CO', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
     
     const html = `
         <div id="facturaPrint" class="p-4">
@@ -868,21 +881,21 @@ function mostrarFactura(venta, ventaData) {
                 <tfoot>
                     <tr>
                         <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
-                        <td class="text-end">$${formatearNumero(venta.subtotal)}</td>
+                        <td class="text-end">$${formatearNumero(subtotal)}</td>
                     </tr>
-                    ${venta.descuento > 0 ? `
+                    ${descuento > 0 ? `
                     <tr>
                         <td colspan="3" class="text-end"><strong>Descuento:</strong></td>
-                        <td class="text-end">-$${formatearNumero(venta.descuento)}</td>
+                        <td class="text-end">-$${formatearNumero(descuento)}</td>
                     </tr>
                     ` : ''}
                     <tr>
                         <td colspan="3" class="text-end"><strong>IVA (19%):</strong></td>
-                        <td class="text-end">$${formatearNumero(venta.impuesto)}</td>
+                        <td class="text-end">$${formatearNumero(impuesto)}</td>
                     </tr>
                     <tr class="table-primary">
                         <td colspan="3" class="text-end"><strong>TOTAL:</strong></td>
-                        <td class="text-end"><strong>$${formatearNumero(venta.total)}</strong></td>
+                        <td class="text-end"><strong>$${formatearNumero(total)}</strong></td>
                     </tr>
                 </tfoot>
             </table>
