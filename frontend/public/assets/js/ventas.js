@@ -13,7 +13,7 @@ let clienteSeleccionado = null;
 let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 
-console.log('🚀 Ventas.js cargado - Versión 1.4.1');
+console.log('🚀 Ventas.js cargado - Versión 1.5.0');
 
 // ============================================
 // INICIALIZACIÓN
@@ -382,56 +382,67 @@ function agregarProducto(producto) {
 }
 
 function renderizarProductos() {
-    console.log('=== renderizarProductos ===');
-    console.log('productosVenta.length:', productosVenta.length);
-    console.log('productosVenta:', productosVenta);
-    
-    const container = document.getElementById('listaProductos');
-    const empty = document.getElementById('emptyProductos');
+    try {
+        console.log('=== renderizarProductos ===');
+        console.log('productosVenta.length:', productosVenta.length);
+        console.log('productosVenta:', productosVenta);
+        
+        const container = document.getElementById('listaProductos');
+        const empty = document.getElementById('emptyProductos');
 
-    if (productosVenta.length === 0) {
-        empty.style.display = 'block';
-        container.innerHTML = '';
-        return;
+        if (productosVenta.length === 0) {
+            empty.style.display = 'block';
+            container.innerHTML = '';
+            return;
+        }
+
+        empty.style.display = 'none';
+        
+        let html = '';
+        for (let index = 0; index < productosVenta.length; index++) {
+            const p = productosVenta[index];
+            console.log(`Generando HTML para producto ${index}:`, p);
+            
+            html += `
+            <div class="producto-item mb-3 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="flex-grow-1">
+                        <strong>${p.nombre}</strong><br>
+                        <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_disponible}</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, -1)">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <input type="number" class="form-control form-control-sm input-cantidad mx-1" 
+                                   value="${p.cantidad}" min="1" max="${p.stock_disponible}"
+                                   onchange="actualizarCantidad(${index}, this.value)"
+                                   style="width: 60px; text-align: center;">
+                            <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, 1)">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                        <div class="text-end" style="min-width: 100px;">
+                            <strong class="text-success">$${formatearNumero(p.subtotal)}</strong><br>
+                            <small class="text-muted">@$${formatearNumero(p.precio_unitario)}</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${index})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }
+        
+        console.log('HTML completo generado, longitud:', html.length);
+        console.log('Primeros 200 chars:', html.substring(0, 200));
+        container.innerHTML = html;
+        console.log('container.innerHTML actualizado, children count:', container.children.length);
+    } catch (error) {
+        console.error('ERROR en renderizarProductos:', error);
+        console.error('Stack:', error.stack);
     }
-
-    empty.style.display = 'none';
-    
-    const html = productosVenta.map((p, index) => `
-        <div class="producto-item mb-3 p-3 border rounded">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="flex-grow-1">
-                    <strong>${p.nombre}</strong><br>
-                    <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_disponible}</small>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="d-flex align-items-center">
-                        <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, -1)">
-                            <i class="bi bi-dash"></i>
-                        </button>
-                        <input type="number" class="form-control form-control-sm input-cantidad mx-1" 
-                               value="${p.cantidad}" min="1" max="${p.stock_disponible}"
-                               onchange="actualizarCantidad(${index}, this.value)"
-                               style="width: 60px; text-align: center;">
-                        <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, 1)">
-                            <i class="bi bi-plus"></i>
-                        </button>
-                    </div>
-                    <div class="text-end" style="min-width: 100px;">
-                        <strong class="text-success">$${formatearNumero(p.subtotal)}</strong><br>
-                        <small class="text-muted">@$${formatearNumero(p.precio_unitario)}</small>
-                    </div>
-                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${index})">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    console.log('HTML generado:', html);
-    container.innerHTML = html;
-    console.log('container.innerHTML actualizado');
 }
 
 function cambiarCantidad(index, delta) {
