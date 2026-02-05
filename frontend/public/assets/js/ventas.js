@@ -13,7 +13,7 @@ let clienteSeleccionado = null;
 let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 
-console.log('🚀 Ventas.js cargado - Versión 1.5.0');
+console.log('🚀 Ventas.js cargado - Versión 1.5.1 - Fix emptyProductos');
 
 // ============================================
 // INICIALIZACIÓN
@@ -388,15 +388,15 @@ function renderizarProductos() {
         console.log('productosVenta:', productosVenta);
         
         const container = document.getElementById('listaProductos');
-        const empty = document.getElementById('emptyProductos');
 
         if (productosVenta.length === 0) {
-            empty.style.display = 'block';
-            container.innerHTML = '';
+            container.innerHTML = `
+                <div class="text-center text-muted py-4" id="emptyProductos">
+                    <i class="bi bi-cart display-1 opacity-25"></i>
+                    <p class="mt-2">No hay productos agregados</p>
+                </div>`;
             return;
         }
-
-        empty.style.display = 'none';
         
         let html = '';
         for (let index = 0; index < productosVenta.length; index++) {
