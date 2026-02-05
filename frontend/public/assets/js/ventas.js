@@ -13,7 +13,7 @@ let clienteSeleccionado = null;
 let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 
-console.log('🚀 Ventas.js cargado - Versión 1.6.1 - Fix cálculos factura');
+console.log('🚀 Ventas.js cargado - Versión 1.6.2 - Debug factura totales');
 
 // ============================================
 // INICIALIZACIÓN
@@ -813,11 +813,19 @@ function mostrarAlerta(mensaje, tipo = 'info') {
 // ============================================
 
 function mostrarFactura(venta, ventaData) {
+    console.log('=== mostrarFactura DEBUG ===');
+    console.log('ventaData recibido:', ventaData);
+    console.log('ventaData.subtotal:', ventaData.subtotal);
+    console.log('ventaData.impuesto:', ventaData.impuesto);
+    console.log('ventaData.total:', ventaData.total);
+    
     // Calcular totales correctamente
     const subtotal = ventaData.subtotal;
     const descuento = ventaData.descuento || 0;
     const impuesto = ventaData.impuesto;
     const total = ventaData.total;
+    
+    console.log('Variables extraídas - subtotal:', subtotal, 'impuesto:', impuesto, 'total:', total);
     
     // Formatear fecha
     const fecha = new Date().toLocaleString('es-CO', {
