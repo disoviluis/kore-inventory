@@ -11,8 +11,9 @@ let currentEmpresa = null;
 let currentUsuario = null;
 let clienteSeleccionado = null;
 let productosVenta = [];
+let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 
-console.log('🚀 Ventas.js cargado - Versión 1.2.0');
+console.log('🚀 Ventas.js cargado - Versión 1.3.0');
 
 // ============================================
 // INICIALIZACIÓN
@@ -219,6 +220,7 @@ async function buscarPorNombre() {
 
 function mostrarOpcionesClientes(clientes, containerId) {
     const container = document.getElementById(containerId);
+    clientesEncontrados = clientes; // Guardar en variable global
     
     if (clientes.length === 0) {
         container.innerHTML = '<div class="p-3 text-muted">No se encontraron clientes</div>';
@@ -226,8 +228,8 @@ function mostrarOpcionesClientes(clientes, containerId) {
         return;
     }
 
-    container.innerHTML = clientes.map(c => `
-        <div class="search-result-item" onclick="seleccionarCliente(${JSON.stringify(c).replace(/"/g, '&quot;')})">
+    container.innerHTML = clientes.map((c, index) => `
+        <div class="search-result-item" onclick="seleccionarClientePorIndice(${index})">
             <strong>${c.razon_social || `${c.nombre} ${c.apellido || ''}`.trim()}</strong><br>
             <small class="text-muted">${c.tipo_documento}: ${c.numero_documento}</small>
         </div>
@@ -236,8 +238,21 @@ function mostrarOpcionesClientes(clientes, containerId) {
     container.style.display = 'block';
 }
 
+function seleccionarClientePorIndice(index) {
+    if (clientesEncontrados[index]) {
+        seleccionarCliente(clientesEncontrados[index]);
+    }
+}
+
 function seleccionarCliente(cliente) {
+    console.log('=== seleccionarCliente called ===');
+    console.log('Tipo de cliente:', typeof cliente);
+    console.log('cliente recibido:', cliente);
+    console.log('cliente.id:', cliente?.id, 'tipo:', typeof cliente?.id);
+    
     clienteSeleccionado = cliente;
+    console.log('clienteSeleccionado asignado:', clienteSeleccionado);
+    console.log('clienteSeleccionado.id:', clienteSeleccionado?.id);
     
     // Ocultar búsqueda
     document.getElementById('busquedaCliente').style.display = 'none';
