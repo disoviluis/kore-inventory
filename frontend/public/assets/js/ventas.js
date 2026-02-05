@@ -481,6 +481,12 @@ function calcularTotales() {
 // ============================================
 
 async function guardarVenta() {
+    console.log('=== Iniciando guardarVenta ===');
+    console.log('clienteSeleccionado:', clienteSeleccionado);
+    console.log('productosVenta:', productosVenta);
+    console.log('currentEmpresa:', currentEmpresa);
+    console.log('currentUsuario:', currentUsuario);
+
     if (!clienteSeleccionado || productosVenta.length === 0) {
         mostrarAlerta('Debes seleccionar un cliente y agregar productos', 'warning');
         return;
@@ -493,9 +499,9 @@ async function guardarVenta() {
     const total = baseImponible + impuesto;
 
     const ventaData = {
-        empresa_id: currentEmpresa.id,
-        cliente_id: clienteSeleccionado.id,
-        vendedor_id: currentUsuario.id,
+        empresa_id: currentEmpresa?.id,
+        cliente_id: clienteSeleccionado?.id,
+        vendedor_id: currentUsuario?.id,
         subtotal: subtotal,
         descuento: descuento,
         impuesto: impuesto,
@@ -510,6 +516,8 @@ async function guardarVenta() {
             subtotal: p.subtotal
         }))
     };
+
+    console.log('ventaData a enviar:', ventaData);
 
     try {
         const token = localStorage.getItem('token');
