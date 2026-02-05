@@ -13,7 +13,7 @@ let clienteSeleccionado = null;
 let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 
-console.log('🚀 Ventas.js cargado - Versión 1.4.0');
+console.log('🚀 Ventas.js cargado - Versión 1.4.1');
 
 // ============================================
 // INICIALIZACIÓN
@@ -432,7 +432,6 @@ function renderizarProductos() {
     console.log('HTML generado:', html);
     container.innerHTML = html;
     console.log('container.innerHTML actualizado');
-}
 }
 
 function cambiarCantidad(index, delta) {
