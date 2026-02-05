@@ -114,10 +114,8 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
       direccion,
       ciudad,
       departamento,
-      codigo_postal,
       pais,
       limite_credito,
-      dias_credito,
       estado
     } = req.body;
 
@@ -160,13 +158,11 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         direccion,
         ciudad,
         departamento,
-        codigo_postal,
         pais,
         limite_credito,
-        dias_credito,
         estado,
         creado_por
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         tipo_documento || 'CC',
@@ -180,10 +176,8 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         direccion || null,
         ciudad || null,
         departamento || null,
-        codigo_postal || null,
         pais || 'Colombia',
         limite_credito || 0,
-        dias_credito || 0,
         estado || 'activo',
         req.body.userId || null
       ]
@@ -229,10 +223,8 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       direccion,
       ciudad,
       departamento,
-      codigo_postal,
       pais,
       limite_credito,
-      dias_credito,
       estado
     } = req.body;
 
@@ -313,10 +305,6 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       updates.push('departamento = ?');
       values.push(departamento);
     }
-    if (codigo_postal !== undefined) {
-      updates.push('codigo_postal = ?');
-      values.push(codigo_postal);
-    }
     if (pais !== undefined) {
       updates.push('pais = ?');
       values.push(pais);
@@ -324,10 +312,6 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
     if (limite_credito !== undefined) {
       updates.push('limite_credito = ?');
       values.push(limite_credito);
-    }
-    if (dias_credito !== undefined) {
-      updates.push('dias_credito = ?');
-      values.push(dias_credito);
     }
     if (estado !== undefined) {
       updates.push('estado = ?');
