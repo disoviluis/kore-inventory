@@ -86,14 +86,19 @@ function setupEventListeners() {
 
     // Botones
     document.getElementById('btnNuevoProveedor').addEventListener('click', abrirModalNuevo);
-    document.getElementById('btnNuevoProveedorQuick').addEventListener('click', abrirModalNuevo);
+    const btnQuick = document.getElementById('btnNuevoProveedorQuick');
+    if (btnQuick) btnQuick.addEventListener('click', abrirModalNuevo);
     document.getElementById('btnGuardarProveedor').addEventListener('click', guardarProveedor);
     document.getElementById('btnLimpiarFiltros').addEventListener('click', limpiarFiltros);
     document.getElementById('btnExportar').addEventListener('click', exportarProveedores);
-    document.getElementById('btnLogout').addEventListener('click', cerrarSesion);
-    document.getElementById('toggleSidebar').addEventListener('click', () => {
-        document.querySelector('.sidebar').classList.toggle('active');
-    });
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) btnLogout.addEventListener('click', cerrarSesion);
+    const toggleBtn = document.getElementById('toggleSidebar');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            document.querySelector('.sidebar').classList.toggle('active');
+        });
+    }
 }
 
 // ============================================
