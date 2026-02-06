@@ -157,10 +157,25 @@ async function cargarVentas() {
         mostrarCargando(true);
 
         const token = localStorage.getItem('token');
-        const searchTerm = document.getElementById('searchInput').value;
-        const estado = document.getElementById('filterEstado').value;
-        const fechaInicio = document.getElementById('fechaInicio').value;
-        const fechaFin = document.getElementById('fechaFin').value;
+        
+        if (!token) {
+            console.error('No hay token disponible');
+            mostrarAlerta('Sesión expirada. Por favor inicia sesión nuevamente.', 'error');
+            setTimeout(() => window.location.href = 'login.html', 2000);
+            return;
+        }
+
+        if (!currentEmpresa || !currentEmpresa.id) {
+            console.error('No hay empresa seleccionada');
+            mostrarAlerta('No hay empresa seleccionada', 'error');
+            mostrarCargando(false);
+            return;
+        }
+
+        const searchTerm = document.getElementById('searchInput').value || '';
+        const estado = document.getElementById('filterEstado').value || '';
+        const fechaInicio = document.getElementById('fechaInicio').value || '';
+        const fechaFin = document.getElementById('fechaFin').value || '';
 
         let url = `${API_URL}/ventas?empresaId=${currentEmpresa.id}`;
         if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -168,27 +183,70 @@ async function cargarVentas() {
         if (fechaInicio) url += `&fechaInicio=${fechaInicio}`;
         if (fechaFin) url += `&fechaFin=${fechaFin}`;
 
+        console.log('🌐 Cargando ventas desde:', url);
+
         const response = await fetch(url, {
+            method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
 
+        console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+
         if (!response.ok) {
-            throw new Error('Error al cargar ventas');
+            if (response.status === 401) {
+                mostrarAlerta('Sesión expirada. Por favor inicia sesión nuevamente.', 'error');
+                setTimeout(() => window.location.href = 'login.html', 2000);
+                return;
+            }
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        ventasData = data.data.ventas || [];
+        console.log('✅ Datos recibidos:', data);
+
+        if (!data.success) {
+            throw new Error(data.message || 'Error al obtener ventas');
+        }
+
+        ventasData = data.data?.ventas || [];
+        console.log(`📊 Total de ventas cargadas: ${ventasData.length}`);
         
         renderVentas();
         actualizarEstadisticas();
         mostrarCargando(false);
 
     } catch (error) {
-        console.error('Error al cargar ventas:', error);
-        mostrarAlerta('Error al cargar las ventas', 'error');
+        console.error('❌ Error al cargar ventas:', error);
+        
+        // Mostrar mensaje más específico según el tipo de error
+        let mensaje = 'Error al cargar las ventas';
+        if (error.message.includes('Failed to fetch')) {
+            mensaje = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+        } else if (error.message) {
+            mensaje = error.message;
+        }
+        
+        mostrarAlerta(mensaje, 'error');
         mostrarCargando(false);
+        
+        // Mostrar mensaje amigable en la tabla
+        const tbody = document.getElementById('ventasTableBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                        <p class="mt-3 mb-0">${mensaje}</p>
+                        <button class="btn btn-primary mt-3" onclick="cargarVentas()">
+                            <i class="bi bi-arrow-clockwise"></i> Reintentar
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
     }
 }
 
