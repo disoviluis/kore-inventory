@@ -58,7 +58,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Actualizar UI
         document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido}`;
-        document.getElementById('userEmpresa').textContent = empresa.nombre;
+        document.getElementById('userRole').textContent = usuario.rol || 'Usuario';
+        document.getElementById('empresaActiva').textContent = empresa.nombre;
 
         // Inicializar modal
         proveedorModal = new bootstrap.Modal(document.getElementById('proveedorModal'));
