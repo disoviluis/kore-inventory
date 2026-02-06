@@ -922,49 +922,87 @@ function mostrarFactura(venta, ventaData) {
 }
 
 function imprimirFactura() {
-    // Ocultar elementos que no se deben imprimir
-    const elementsToHide = document.querySelectorAll('.sidebar, .navbar, .no-print, .modal-header, .modal-footer');
-    elementsToHide.forEach(el => {
-        el.style.display = 'none';
-    });
+    // Clonar el contenido de la factura
+    const facturaContent = document.getElementById('facturaPrint');
+    if (!facturaContent) {
+        mostrarAlerta('No se encontró el contenido de la factura', 'error');
+        return;
+    }
 
-    // Crear estilos de impresión
-    const printStyle = document.createElement('style');
-    printStyle.id = 'print-styles';
-    printStyle.textContent = `
-        @media print {
-            @page { margin: 1cm; }
-            body * { visibility: hidden; }
-            #facturaPrint, #facturaPrint * { visibility: visible; }
-            #facturaPrint {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                padding: 10px;
-                font-size: 12pt;
-            }
-            .modal { position: static; }
-            .modal-dialog { margin: 0; max-width: 100%; }
-            .modal-content { border: none; box-shadow: none; }
-            .no-print { display: none !important; }
-            table { page-break-inside: auto; }
-            tr { page-break-inside: avoid; page-break-after: auto; }
-        }
-    `;
-    document.head.appendChild(printStyle);
+    // Crear una nueva ventana para imprimir
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (!printWindow) {
+        mostrarAlerta('No se pudo abrir la ventana de impresión. Verifica que los popups estén permitidos.', 'warning');
+        return;
+    }
 
-    // Dar tiempo al navegador para procesar los estilos antes de imprimir
-    setTimeout(() => {
-        window.print();
-    }, 300);
-
-    // Restaurar después de imprimir
-    window.onafterprint = function() {
-        elementsToHide.forEach(el => {
-            el.style.display = '';
-        });
-        const styles = document.getElementById('print-styles');
-        if (styles) styles.remove();
-    };
+    // Escribir el contenido HTML
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Factura de Venta</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                @page {
+                    size: letter;
+                    margin: 1cm;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 12pt;
+                    color: #000;
+                    background: white;
+                    margin: 0;
+                    padding: 20px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                th, td {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #f8f9fa;
+                }
+                .text-center { text-align: center; }
+                .text-end { text-align: right; }
+                .mb-3 { margin-bottom: 1rem; }
+                .mb-2 { margin-bottom: 0.5rem; }
+                .mb-1 { margin-bottom: 0.25rem; }
+                .mt-3 { margin-top: 1rem; }
+                .row { display: flex; margin-bottom: 1rem; }
+                .col-6 { width: 50%; }
+                .col-12 { width: 100%; }
+                .table-primary { background-color: #cfe2ff; font-weight: bold; }
+                .text-muted { color: #6c757d; }
+                hr { border: 1px solid #dee2e6; margin: 1rem 0; }
+                @media print {
+                    body { padding: 0; }
+                    .no-print { display: none !important; }
+                }
+            </style>
+        </head>
+        <body>
+            ${facturaContent.innerHTML}
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                        setTimeout(function() {
+                            window.close();
+                        }, 100);
+                    }, 250);
+                };
+            </script>
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
 }
