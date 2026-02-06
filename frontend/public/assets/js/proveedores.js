@@ -94,11 +94,14 @@ function setupEventListeners() {
 
     // Botones
     document.getElementById('btnNuevoProveedor').addEventListener('click', abrirModalNuevo);
+    document.getElementById('btnNuevoProveedorQuick').addEventListener('click', abrirModalNuevo);
     document.getElementById('btnGuardarProveedor').addEventListener('click', guardarProveedor);
     document.getElementById('btnLimpiarFiltros').addEventListener('click', limpiarFiltros);
     document.getElementById('btnExportar').addEventListener('click', exportarProveedores);
     document.getElementById('btnLogout').addEventListener('click', cerrarSesion);
-    document.getElementById('btnFullscreen').addEventListener('click', toggleFullscreen);
+    document.getElementById('toggleSidebar').addEventListener('click', () => {
+        document.querySelector('.sidebar').classList.toggle('active');
+    });
 }
 
 // ============================================
