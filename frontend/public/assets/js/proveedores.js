@@ -40,26 +40,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         currentUsuario = usuario;
 
-        // Obtener empresa
-        let empresa = JSON.parse(localStorage.getItem('empresa'));
-        if (!empresa && usuario.empresas && usuario.empresas.length > 0) {
-            empresa = usuario.empresas[0];
-            localStorage.setItem('empresa', JSON.stringify(empresa));
-        }
-        currentEmpresa = empresa;
-
-        // Validar que tengamos empresa
-        if (!currentEmpresa || !currentEmpresa.id) {
-            mostrarAlerta('No se pudo cargar la información de la empresa', 'error');
-            console.error('currentEmpresa:', currentEmpresa);
-            console.error('usuario completo:', usuario);
+        // Obtener empresa activa
+        currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
+        if (!currentEmpresa) {
+            mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
+            setTimeout(() => window.location.href = 'dashboard.html', 2000);
             return;
         }
 
         // Actualizar UI
         document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido}`;
         document.getElementById('userRole').textContent = usuario.rol || 'Usuario';
-        document.getElementById('empresaActiva').textContent = empresa.nombre;
+        document.getElementById('empresaActiva').textContent = currentEmpresa.nombre;
 
         // Inicializar modal
         proveedorModal = new bootstrap.Modal(document.getElementById('proveedorModal'));
