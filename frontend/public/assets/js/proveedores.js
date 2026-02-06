@@ -48,9 +48,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         currentEmpresa = empresa;
 
+        // Validar que tengamos empresa
+        if (!currentEmpresa || !currentEmpresa.id) {
+            mostrarAlerta('No se pudo cargar la información de la empresa', 'error');
+            console.error('currentEmpresa:', currentEmpresa);
+            console.error('usuario completo:', usuario);
+            return;
+        }
+
         // Actualizar UI
         document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido}`;
-        document.getElementById('userEmpresa').textContent = empresa?.nombre || 'Sin empresa';
+        document.getElementById('userEmpresa').textContent = empresa.nombre;
 
         // Inicializar modal
         proveedorModal = new bootstrap.Modal(document.getElementById('proveedorModal'));
