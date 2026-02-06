@@ -44,15 +44,38 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Obtener empresa activa
         currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
         if (!currentEmpresa) {
-            mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
-            setTimeout(() => window.location.href = 'dashboard.html', 2000);
-            return;
+            // Si no hay empresa activa y el usuario tiene empresas, usar la primera
+            if (usuario.empresas && usuario.empresas.length > 0) {
+                currentEmpresa = usuario.empresas[0];
+                localStorage.setItem('empresaActiva', JSON.stringify(currentEmpresa));
+            } else {
+                mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
         }
 
         // Actualizar UI
         document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido}`;
         document.getElementById('userRole').textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
-        document.getElementById('empresaActiva').textContent = currentEmpresa.nombre;
+        
+        // Cargar empresas en el selector
+        const companySelector = document.getElementById('companySelector');
+        if (companySelector && usuario.empresas && usuario.empresas.length > 0) {
+            companySelector.innerHTML = usuario.empresas.map(emp => 
+                `<option value="${emp.id}" ${emp.id === currentEmpresa.id ? 'selected' : ''}>${emp.nombre}</option>`
+            ).join('');
+            
+            companySelector.addEventListener('change', (e) => {
+                const empresaId = parseInt(e.target.value);
+                const nuevaEmpresa = usuario.empresas.find(emp => emp.id === empresaId);
+                if (nuevaEmpresa) {
+                    localStorage.setItem('empresaActiva', JSON.stringify(nuevaEmpresa));
+                    currentEmpresa = nuevaEmpresa;
+                    cargarVentas();
+                }
+            });
+        }
 
         // Inicializar modal
         detalleVentaModal = new bootstrap.Modal(document.getElementById('detalleVentaModal'));
