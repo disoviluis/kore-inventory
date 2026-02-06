@@ -920,33 +920,39 @@ function mostrarFactura(venta, ventaData) {
 }
 
 function imprimirFactura() {
-    const contenido = document.getElementById('facturaPrint').innerHTML;
-    const ventanaImpresion = window.open('', '_blank');
-    ventanaImpresion.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Factura</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-            <style>
-                @media print {
-                    body { margin: 0; padding: 20px; }
-                    .no-print { display: none; }
-                }
-            </style>
-        </head>
-        <body>
-            ${contenido}
-            <script>
-                window.onload = function() {
-                    window.print();
-                    window.onafterprint = function() {
-                        window.close();
-                    };
-                };
-            </script>
-        </body>
-        </html>
-    `);
-    ventanaImpresion.document.close();
+    // Ocultar elementos que no se deben imprimir
+    document.querySelectorAll('.sidebar, .navbar, .no-print').forEach(el => {
+        el.style.display = 'none';
+    });
+
+    // Crear estilos de impresión
+    const printStyle = document.createElement('style');
+    printStyle.id = 'print-styles';
+    printStyle.textContent = `
+        @media print {
+            body * { visibility: hidden; }
+            #facturaPrint, #facturaPrint * { visibility: visible; }
+            #facturaPrint {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 20px;
+            }
+            .no-print { display: none !important; }
+        }
+    `;
+    document.head.appendChild(printStyle);
+
+    // Imprimir
+    window.print();
+
+    // Restaurar después de imprimir
+    window.onafterprint = function() {
+        document.querySelectorAll('.sidebar, .navbar, .no-print').forEach(el => {
+            el.style.display = '';
+        });
+        const styles = document.getElementById('print-styles');
+        if (styles) styles.remove();
+    };
 }
