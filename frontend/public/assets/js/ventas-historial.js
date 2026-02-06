@@ -211,7 +211,8 @@ async function cargarVentas() {
             throw new Error(data.message || 'Error al obtener ventas');
         }
 
-        ventasData = data.data?.ventas || [];
+        // El backend devuelve las ventas directamente en data.data (no data.data.ventas)
+        ventasData = Array.isArray(data.data) ? data.data : [];
         console.log(`📊 Total de ventas cargadas: ${ventasData.length}`);
         
         renderVentas();
@@ -331,8 +332,14 @@ async function verDetalleVenta(ventaId) {
         }
 
         const data = await response.json();
-        const venta = data.data.venta;
-        const detalle = data.data.detalle;
+        
+        if (!data.success) {
+            throw new Error(data.message || 'Error al obtener venta');
+        }
+
+        // El backend devuelve la venta en data.data con detalles incluidos
+        const venta = data.data;
+        const detalle = venta.detalles || [];
 
         ventaActual = venta; // Guardar venta actual
         mostrarDetalleVenta(venta, detalle);
