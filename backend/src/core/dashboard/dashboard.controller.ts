@@ -48,12 +48,12 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
         [empresaId]
       ),
 
-      // Facturas emitidas
+      // Facturas emitidas (todas excepto anuladas)
       query(
         `SELECT COUNT(*) as total_facturas
         FROM ventas 
         WHERE empresa_id = ?
-          AND estado IN ('completada', 'pendiente')`,
+          AND estado != 'anulada'`,
         [empresaId]
       ),
 

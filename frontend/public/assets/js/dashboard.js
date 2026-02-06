@@ -224,7 +224,46 @@ function actualizarVentasMensuales(ventas) {
  */
 function actualizarTopProductos(productos) {
   console.log('🏆 Top productos:', productos);
-  // TODO: Implementar tabla de productos más vendidos
+  
+  const container = document.getElementById('topProductosContainer');
+  if (!container) return;
+  
+  if (!productos || productos.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-box-seam display-4 d-block mb-3 opacity-25"></i>
+        <p class="mb-0">No hay productos vendidos aún</p>
+        <small>Los productos más vendidos aparecerán aquí</small>
+      </div>
+    `;
+    return;
+  }
+  
+  const html = productos.map((producto, index) => {
+    const totalVendido = Number(producto.total_vendido) || 0;
+    const totalIngresos = Number(producto.total_ingresos) || 0;
+    
+    return `
+      <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+        <div class="flex-shrink-0">
+          <div class="avatar-sm bg-light rounded d-flex align-items-center justify-content-center">
+            <span class="fw-bold text-primary">${index + 1}</span>
+          </div>
+        </div>
+        <div class="flex-grow-1 ms-3">
+          <h6 class="mb-1">${producto.nombre}</h6>
+          <small class="text-muted">${producto.sku || 'Sin SKU'}</small>
+        </div>
+        <div class="text-end">
+          <div class="fw-bold">${totalVendido} und</div>
+          <small class="text-success">$${totalIngresos.toLocaleString('es-CO')}</small>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  container.innerHTML = html;
+  console.log('✅ Top productos actualizados');
 }
 
 /**
