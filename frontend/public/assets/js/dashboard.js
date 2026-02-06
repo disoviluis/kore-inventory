@@ -181,34 +181,41 @@ async function cargarEstadisticas(empresaId) {
  * Actualizar cards de estadísticas
  */
 function actualizarCards(stats) {
-  // Buscar elementos en el DOM y actualizar
-  const elementos = document.querySelectorAll('[data-stat]');
+  console.log('📊 Actualizando estadísticas del dashboard:', stats);
   
-  elementos.forEach(elemento => {
-    const statType = elemento.getAttribute('data-stat');
-    
-    switch(statType) {
-      case 'ventas':
-        elemento.textContent = `$${stats.ventasDelMes.total.toLocaleString()}`;
-        break;
-      case 'facturas':
-        elemento.textContent = stats.facturasEmitidas.total;
-        break;
-      case 'productos':
-        elemento.textContent = stats.productosEnStock.total;
-        break;
-      case 'clientes':
-        elemento.textContent = stats.clientesActivos.total;
-        break;
-    }
-  });
+  // Ventas del mes
+  const ventasElement = document.querySelector('[data-stat="ventas"]');
+  if (ventasElement && stats.ventasDelMes) {
+    const total = Number(stats.ventasDelMes.total) || 0;
+    ventasElement.textContent = `$${total.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  }
+  
+  // Facturas emitidas
+  const facturasElement = document.querySelector('[data-stat="facturas"]');
+  if (facturasElement && stats.facturasEmitidas) {
+    facturasElement.textContent = Number(stats.facturasEmitidas.total) || 0;
+  }
+  
+  // Productos en stock
+  const productosElement = document.querySelector('[data-stat="productos"]');
+  if (productosElement && stats.productosEnStock) {
+    productosElement.textContent = Number(stats.productosEnStock.total) || 0;
+  }
+  
+  // Clientes activos
+  const clientesElement = document.querySelector('[data-stat="clientes"]');
+  if (clientesElement && stats.clientesActivos) {
+    clientesElement.textContent = Number(stats.clientesActivos.total) || 0;
+  }
+  
+  console.log('✅ Cards actualizados correctamente');
 }
 
 /**
  * Actualizar gráfico de ventas mensuales
  */
 function actualizarVentasMensuales(ventas) {
-  console.log('Ventas mensuales:', ventas);
+  console.log('📈 Ventas mensuales:', ventas);
   // TODO: Implementar gráfico con Chart.js
 }
 
@@ -216,16 +223,70 @@ function actualizarVentasMensuales(ventas) {
  * Actualizar top productos
  */
 function actualizarTopProductos(productos) {
-  console.log('Top productos:', productos);
-  // TODO: Implementar tabla de productos
+  console.log('🏆 Top productos:', productos);
+  // TODO: Implementar tabla de productos más vendidos
 }
 
 /**
  * Actualizar últimas ventas
  */
 function actualizarUltimasVentas(ventas) {
-  console.log('Últimas ventas:', ventas);
-  // TODO: Implementar tabla de ventas
+  console.log('🛒 Últimas ventas:', ventas);
+  
+  const tbody = document.querySelector('.table tbody');
+  if (!tbody) return;
+  
+  if (!ventas || ventas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center py-5 text-muted">
+          <i class="bi bi-receipt display-4 d-block mb-3 opacity-25"></i>
+          <p class="mb-0">No hay ventas registradas aún</p>
+          <small>Las ventas aparecerán aquí una vez que se registren</small>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  const html = ventas.map(venta => {
+    const fecha = new Date(venta.fecha_venta);
+    const fechaFormateada = fecha.toLocaleDateString('es-CO', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const total = Number(venta.total) || 0;
+    const estadoBadge = venta.estado === 'pagada' 
+      ? '<span class="badge bg-success">Pagada</span>'
+      : venta.estado === 'pendiente'
+      ? '<span class="badge bg-warning">Pendiente</span>'
+      : '<span class="badge bg-danger">Anulada</span>';
+    
+    return `
+      <tr>
+        <td><strong>${venta.numero_factura || 'N/A'}</strong></td>
+        <td>
+          ${venta.cliente_nombre || 'N/A'}
+          ${venta.cliente_documento ? `<br><small class="text-muted">${venta.cliente_documento}</small>` : ''}
+        </td>
+        <td><small>${fechaFormateada}</small></td>
+        <td><strong>$${total.toLocaleString('es-CO')}</strong></td>
+        <td>${estadoBadge}</td>
+        <td>
+          <a href="ventas-historial.html" class="btn btn-sm btn-outline-primary" title="Ver detalle">
+            <i class="bi bi-eye"></i>
+          </a>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  tbody.innerHTML = html;
+  console.log('✅ Últimas ventas actualizadas');
 }
 
 /**
