@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Actualizar UI
         document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido}`;
-        document.getElementById('userRole').textContent = usuario.rol || 'Usuario';
+        document.getElementById('userRole').textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
         document.getElementById('empresaActiva').textContent = currentEmpresa.nombre;
 
         // Inicializar modal
@@ -93,12 +93,45 @@ function setupEventListeners() {
     document.getElementById('btnExportar').addEventListener('click', exportarProveedores);
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.addEventListener('click', cerrarSesion);
+    
+    // Sidebar toggle
     const toggleBtn = document.getElementById('toggleSidebar');
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
-            document.querySelector('.sidebar').classList.toggle('active');
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
         });
     }
+
+    const closeSidebar = document.getElementById('closeSidebar');
+    if (closeSidebar) {
+        closeSidebar.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        });
+    }
+
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        });
+    }
+}
+
+// ============================================
+// UTILIDADES DE USUARIO
+// ============================================
+
+function getTipoUsuarioTexto(tipo) {
+    const tipos = {
+        'super_admin': 'Super Administrador',
+        'admin_empresa': 'Administrador',
+        'usuario': 'Usuario',
+        'soporte': 'Soporte'
+    };
+    return tipos[tipo] || tipo;
 }
 
 // ============================================
