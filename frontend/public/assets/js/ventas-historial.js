@@ -13,6 +13,7 @@ const API_URL = 'https://api.kore-inventory.xyz/api';
 let currentEmpresa = null;
 let currentUsuario = null;
 let ventasData = [];
+let ventaActual = null;
 let detalleVentaModal = null;
 
 // ============================================
@@ -275,6 +276,7 @@ async function verDetalleVenta(ventaId) {
         const venta = data.data.venta;
         const detalle = data.data.detalle;
 
+        ventaActual = venta; // Guardar venta actual
         mostrarDetalleVenta(venta, detalle);
 
     } catch (error) {
@@ -405,6 +407,10 @@ function imprimirDetalleVenta() {
         return;
     }
 
+    // Obtener el número de factura para el nombre del archivo
+    const numeroFactura = ventaActual?.numero_factura || 'factura';
+    const nombreArchivo = `Factura_${numeroFactura}`;
+
     const printWindow = window.open('', '', 'width=800,height=600');
     if (!printWindow) {
         mostrarAlerta('No se pudo abrir la ventana de impresión', 'warning');
@@ -416,7 +422,7 @@ function imprimirDetalleVenta() {
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Factura de Venta</title>
+            <title>${nombreArchivo}</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
             <style>
                 @page { size: letter; margin: 1cm; }
@@ -435,6 +441,9 @@ function imprimirDetalleVenta() {
         <body>
             ${facturaContent.innerHTML}
             <script>
+                // Configurar el nombre del archivo antes de imprimir
+                document.title = '${nombreArchivo}';
+                
                 window.onload = function() {
                     setTimeout(function() {
                         window.print();
