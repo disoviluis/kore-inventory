@@ -837,29 +837,29 @@ function mostrarFactura(venta, ventaData) {
     });
     
     const html = `
-        <div id="facturaPrint" class="p-4">
+        <div id="facturaPrint" class="p-3" style="max-width: 100%; font-size: 0.95rem;">
             <!-- Encabezado Empresa -->
-            <div class="text-center mb-4">
-                <h3 class="mb-1">${currentEmpresa.nombre}</h3>
-                <p class="mb-1">${currentEmpresa.razon_social}</p>
-                <p class="mb-1">NIT: ${currentEmpresa.nit}</p>
-                <p class="mb-1">${currentEmpresa.direccion || ''}</p>
-                <p class="mb-1">Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email}</p>
+            <div class="text-center mb-3">
+                <h4 class="mb-2" style="font-size: 1.3rem;">${currentEmpresa.nombre}</h4>
+                <p class="mb-1" style="font-size: 0.9rem;">${currentEmpresa.razon_social}</p>
+                <p class="mb-1" style="font-size: 0.9rem;">NIT: ${currentEmpresa.nit}</p>
+                <p class="mb-1" style="font-size: 0.85rem;">${currentEmpresa.direccion || ''}</p>
+                <p class="mb-1" style="font-size: 0.85rem;">Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email}</p>
                 <hr>
-                <h4>FACTURA DE VENTA</h4>
-                <p><strong>${venta.numero_factura}</strong></p>
+                <h5 style="font-size: 1.1rem;">FACTURA DE VENTA</h5>
+                <p style="font-size: 1rem;"><strong>${venta.numero_factura}</strong></p>
             </div>
 
             <!-- Datos Cliente y Venta -->
-            <div class="row mb-4">
-                <div class="col-6">
+            <div class="row mb-3" style="font-size: 0.9rem;">
+                <div class="col-12 col-md-6 mb-2">
                     <strong>Cliente:</strong><br>
                     ${clienteSeleccionado.razon_social || `${clienteSeleccionado.nombre} ${clienteSeleccionado.apellido || ''}`}<br>
                     ${clienteSeleccionado.tipo_documento}: ${clienteSeleccionado.numero_documento}<br>
                     ${clienteSeleccionado.telefono || clienteSeleccionado.celular || ''}<br>
                     ${clienteSeleccionado.direccion || ''}
                 </div>
-                <div class="col-6 text-end">
+                <div class="col-12 col-md-6 text-md-end">
                     <strong>Fecha:</strong> ${fecha}<br>
                     <strong>Vendedor:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}<br>
                     <strong>Método de Pago:</strong> ${ventaData.metodo_pago}
@@ -867,13 +867,14 @@ function mostrarFactura(venta, ventaData) {
             </div>
 
             <!-- Detalle Productos -->
-            <table class="table table-bordered">
+            <div class="table-responsive">
+            <table class="table table-bordered table-sm" style="font-size: 0.85rem;">
                 <thead class="table-light">
                     <tr>
-                        <th>Producto</th>
-                        <th class="text-center">Cantidad</th>
-                        <th class="text-end">Precio Unit.</th>
-                        <th class="text-end">Subtotal</th>
+                        <th style="min-width: 120px;">Producto</th>
+                        <th class="text-center" style="width: 70px;">Cant.</th>
+                        <th class="text-end" style="width: 90px;">P. Unit.</th>
+                        <th class="text-end" style="width: 90px;">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -907,9 +908,10 @@ function mostrarFactura(venta, ventaData) {
                     </tr>
                 </tfoot>
             </table>
+            </div>
 
-            <div class="text-center mt-4">
-                <p class="text-muted">¡Gracias por su compra!</p>
+            <div class="text-center mt-3">
+                <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 0;">¡Gracias por su compra!</p>
             </div>
         </div>
     `;
@@ -921,7 +923,8 @@ function mostrarFactura(venta, ventaData) {
 
 function imprimirFactura() {
     // Ocultar elementos que no se deben imprimir
-    document.querySelectorAll('.sidebar, .navbar, .no-print').forEach(el => {
+    const elementsToHide = document.querySelectorAll('.sidebar, .navbar, .no-print, .modal-header, .modal-footer');
+    elementsToHide.forEach(el => {
         el.style.display = 'none';
     });
 
@@ -930,6 +933,7 @@ function imprimirFactura() {
     printStyle.id = 'print-styles';
     printStyle.textContent = `
         @media print {
+            @page { margin: 1cm; }
             body * { visibility: hidden; }
             #facturaPrint, #facturaPrint * { visibility: visible; }
             #facturaPrint {
@@ -937,19 +941,27 @@ function imprimirFactura() {
                 left: 0;
                 top: 0;
                 width: 100%;
-                padding: 20px;
+                padding: 10px;
+                font-size: 12pt;
             }
+            .modal { position: static; }
+            .modal-dialog { margin: 0; max-width: 100%; }
+            .modal-content { border: none; box-shadow: none; }
             .no-print { display: none !important; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
         }
     `;
     document.head.appendChild(printStyle);
 
-    // Imprimir
-    window.print();
+    // Dar tiempo al navegador para procesar los estilos antes de imprimir
+    setTimeout(() => {
+        window.print();
+    }, 300);
 
     // Restaurar después de imprimir
     window.onafterprint = function() {
-        document.querySelectorAll('.sidebar, .navbar, .no-print').forEach(el => {
+        elementsToHide.forEach(el => {
             el.style.display = '';
         });
         const styles = document.getElementById('print-styles');
