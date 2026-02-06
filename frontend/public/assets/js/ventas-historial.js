@@ -60,26 +60,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido}`;
         document.getElementById('userRole').textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
         
-        // Cargar empresas en el selector
-        const companySelector = document.getElementById('companySelector');
-        if (companySelector && usuario.empresas && usuario.empresas.length > 0) {
-            companySelector.innerHTML = usuario.empresas.map(emp => 
-                `<option value="${emp.id}" ${emp.id === currentEmpresa.id ? 'selected' : ''}>${emp.nombre}</option>`
-            ).join('');
-            
-            companySelector.addEventListener('change', (e) => {
-                const empresaId = parseInt(e.target.value);
-                const nuevaEmpresa = usuario.empresas.find(emp => emp.id === empresaId);
-                if (nuevaEmpresa) {
-                    localStorage.setItem('empresaActiva', JSON.stringify(nuevaEmpresa));
-                    currentEmpresa = nuevaEmpresa;
-                    cargarVentas();
-                }
-            });
-        }
-
         // Inicializar modal
         detalleVentaModal = new bootstrap.Modal(document.getElementById('detalleVentaModal'));
+
+        // Cargar empresas del usuario
+        await cargarEmpresas(usuario.id);
 
         // Cargar ventas
         await cargarVentas();
@@ -146,6 +131,71 @@ function setupEventListeners() {
     document.getElementById('btnImprimirDetalle').addEventListener('click', () => {
         imprimirDetalleVenta();
     });
+}
+
+// ============================================
+// CARGAR EMPRESAS
+// ============================================
+
+async function cargarEmpresas(usuarioId) {
+    const token = localStorage.getItem('token');
+    const companySelector = document.getElementById('companySelector');
+    
+    if (!companySelector) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/empresas/usuario/${usuarioId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.data.length > 0) {
+            // Limpiar selector
+            companySelector.innerHTML = '';
+            
+            // Agregar opciones
+            data.data.forEach(empresa => {
+                const option = document.createElement('option');
+                option.value = empresa.id;
+                option.textContent = empresa.nombre;
+                companySelector.appendChild(option);
+            });
+            
+            // Seleccionar la primera empresa o la guardada
+            const empresaGuardada = localStorage.getItem('empresaActiva');
+            if (empresaGuardada) {
+                const empresaObj = JSON.parse(empresaGuardada);
+                companySelector.value = empresaObj.id;
+                currentEmpresa = empresaObj;
+            } else {
+                companySelector.value = data.data[0].id;
+                currentEmpresa = data.data[0];
+                localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+            }
+            
+            // Event listener para cambio de empresa
+            companySelector.addEventListener('change', (e) => {
+                const empresaId = parseInt(e.target.value);
+                const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
+                if (empresaSeleccionada) {
+                    localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
+                    currentEmpresa = empresaSeleccionada;
+                    cargarVentas();
+                }
+            });
+            
+        } else {
+            companySelector.innerHTML = '<option value="">Sin empresas asignadas</option>';
+        }
+        
+    } catch (error) {
+        console.error('Error al cargar empresas:', error);
+        companySelector.innerHTML = '<option value="">Error al cargar empresas</option>';
+    }
 }
 
 // ============================================
