@@ -559,18 +559,27 @@ document.querySelectorAll('[data-logout]').forEach(btn => {
 // SIDEBAR TOGGLE (MOBILE)
 // ============================================
 
-// Toggle sidebar en móviles
+// Toggle sidebar para todas las resoluciones (móvil y PC)
 const toggleSidebar = document.getElementById('toggleSidebar');
 if (toggleSidebar) {
   toggleSidebar.addEventListener('click', () => {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.toggle('active');
-    if (overlay) overlay.classList.toggle('active');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (window.innerWidth >= 992) {
+      // En desktop: colapsar sidebar
+      if (sidebar) sidebar.classList.toggle('collapsed');
+      if (mainContent) mainContent.classList.toggle('expanded');
+    } else {
+      // En móvil: mostrar con overlay
+      if (sidebar) sidebar.classList.toggle('active');
+      if (overlay) overlay.classList.toggle('active');
+    }
   });
 }
 
-// Cerrar sidebar
+// Cerrar sidebar (solo móvil)
 const closeSidebar = document.getElementById('closeSidebar');
 if (closeSidebar) {
   closeSidebar.addEventListener('click', () => {
@@ -581,7 +590,7 @@ if (closeSidebar) {
   });
 }
 
-// Cerrar sidebar al hacer click en el overlay
+// Cerrar sidebar al hacer click en el overlay (solo móvil)
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 if (sidebarOverlay) {
   sidebarOverlay.addEventListener('click', () => {
@@ -590,3 +599,20 @@ if (sidebarOverlay) {
     sidebarOverlay.classList.remove('active');
   });
 }
+
+// Manejar redimensionamiento de ventana
+window.addEventListener('resize', () => {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const mainContent = document.querySelector('.main-content');
+  
+  if (window.innerWidth >= 992) {
+    // Limpiar clases de móvil
+    if (sidebar) sidebar.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+  } else {
+    // Limpiar clases de desktop
+    if (sidebar) sidebar.classList.remove('collapsed');
+    if (mainContent) mainContent.classList.remove('expanded');
+  }
+});
