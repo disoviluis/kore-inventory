@@ -156,20 +156,34 @@ async function cargarEstadisticas(empresaId) {
   const token = localStorage.getItem('token');
   
   try {
-    const response = await fetch(`${API_URL}/dashboard/stats?empresaId=${empresaId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    // Cargar estadísticas y actividad en paralelo
+    const [statsResponse, actividadResponse] = await Promise.all([
+      fetch(`${API_URL}/dashboard/stats?empresaId=${empresaId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }),
+      fetch(`${API_URL}/dashboard/actividad?empresaId=${empresaId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+    ]);
     
-    const data = await response.json();
+    const statsData = await statsResponse.json();
+    const actividadData = await actividadResponse.json();
     
-    if (data.success) {
-      actualizarCards(data.data);
-      actualizarVentasMensuales(data.data.ventasMensuales);
-      actualizarTopProductos(data.data.topProductos);
-      actualizarUltimasVentas(data.data.ultimasVentas);
+    if (statsData.success) {
+      actualizarCards(statsData.data);
+      actualizarVentasMensuales(statsData.data.ventasMensuales);
+      actualizarTopProductos(statsData.data.topProductos);
+      actualizarUltimasVentas(statsData.data.ultimasVentas);
+    }
+    
+    if (actividadData.success) {
+      actualizarActividadReciente(actividadData.data);
     }
     
   } catch (error) {
@@ -187,6 +201,14 @@ function actualizarCards(stats) {
   const actualizarPorcentaje = (elementId, porcentaje) => {
     const element = document.getElementById(elementId);
     if (!element) return;
+    
+    // Si el porcentaje es 100% o más, significa que el mes anterior fue 0
+    // En ese caso, mejor mostrar "Nuevo" en lugar del porcentaje
+    if (porcentaje >= 100 && elementId !== 'productosTrend' && elementId !== 'clientesTrend') {
+      element.className = 'stat-trend text-primary';
+      element.innerHTML = '<i class="bi bi-star-fill"></i> Nuevo';
+      return;
+    }
     
     const esPositivo = porcentaje > 0;
     const esNegativo = porcentaje < 0;
@@ -234,7 +256,91 @@ function actualizarCards(stats) {
  */
 function actualizarVentasMensuales(ventas) {
   console.log('📈 Ventas mensuales:', ventas);
-  // TODO: Implementar gráfico con Chart.js
+  
+  // Por ahora mostrar mensaje indicando que se necesita Chart.js
+  // TODO: Implementar gráfico con Chart.js cuando se instale la librería
+  console.info('💡 Para mostrar el gráfico de ventas mensuales, se necesita instalar Chart.js');
+  
+  // Mostrar datos en consola para el desarrollador
+  if (ventas && ventas.length > 0) {
+    console.table(ventas.map(v => ({
+      Mes: v.mes,
+      Total: `$${Number(v.total).toLocaleString('es-CO')}`,
+      Cantidad: v.cantidad
+    })));
+  }
+}
+
+/**
+ * Actualizar actividad reciente
+ */
+function actualizarActividadReciente(actividades) {
+  console.log('📋 Actividad reciente:', actividades);
+  
+  const container = document.getElementById('actividadRecienteContainer');
+  if (!container) return;
+  
+  if (!actividades || actividades.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-clock-history display-4 d-block mb-3 opacity-25"></i>
+        <p class="mb-0">Sin actividad reciente</p>
+        <small>Las actividades aparecerán aquí</small>
+      </div>
+    `;
+    return;
+  }
+  
+  const html = actividades.map(actividad => {
+    const fecha = new Date(actividad.fecha);
+    const ahora = new Date();
+    const diff = ahora - fecha;
+    const minutos = Math.floor(diff / 60000);
+    const horas = Math.floor(minutos / 60);
+    const dias = Math.floor(horas / 24);
+    
+    let tiempoTexto;
+    if (minutos < 1) tiempoTexto = 'Ahora';
+    else if (minutos < 60) tiempoTexto = `Hace ${minutos}m`;
+    else if (horas < 24) tiempoTexto = `Hace ${horas}h`;
+    else tiempoTexto = `Hace ${dias}d`;
+    
+    let icono, color;
+    switch(actividad.tipo) {
+      case 'venta':
+        icono = 'bi-cart-check';
+        color = 'text-success';
+        break;
+      case 'producto':
+        icono = 'bi-box-seam';
+        color = 'text-primary';
+        break;
+      case 'cliente':
+        icono = 'bi-person-plus';
+        color = 'text-info';
+        break;
+      default:
+        icono = 'bi-circle-fill';
+        color = 'text-secondary';
+    }
+    
+    return `
+      <div class="d-flex align-items-start mb-3 pb-3 border-bottom">
+        <div class="flex-shrink-0">
+          <div class="avatar-sm bg-light rounded-circle d-flex align-items-center justify-content-center">
+            <i class="bi ${icono} ${color}"></i>
+          </div>
+        </div>
+        <div class="flex-grow-1 ms-3">
+          <p class="mb-1 small">${actividad.descripcion}</p>
+          <small class="text-muted">${tiempoTexto}</small>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  container.innerHTML = html;
+  console.log('✅ Actividad reciente actualizada');
 }
 
 /**
