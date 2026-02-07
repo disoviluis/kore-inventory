@@ -254,21 +254,83 @@ function actualizarCards(stats) {
 /**
  * Actualizar gráfico de ventas mensuales
  */
+let ventasChart = null; // Variable global para el gráfico
+
 function actualizarVentasMensuales(ventas) {
   console.log('📈 Ventas mensuales:', ventas);
   
-  // Por ahora mostrar mensaje indicando que se necesita Chart.js
-  // TODO: Implementar gráfico con Chart.js cuando se instale la librería
-  console.info('💡 Para mostrar el gráfico de ventas mensuales, se necesita instalar Chart.js');
+  const canvas = document.getElementById('salesChart');
+  if (!canvas) return;
   
-  // Mostrar datos en consola para el desarrollador
-  if (ventas && ventas.length > 0) {
-    console.table(ventas.map(v => ({
-      Mes: v.mes,
-      Total: `$${Number(v.total).toLocaleString('es-CO')}`,
-      Cantidad: v.cantidad
-    })));
+  // Destruir gráfico anterior si existe
+  if (ventasChart) {
+    ventasChart.destroy();
   }
+  
+  if (!ventas || ventas.length === 0) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#999';
+    ctx.textAlign = 'center';
+    ctx.fillText('No hay datos de ventas aún', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+  
+  // Preparar datos para el gráfico
+  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const labels = ventas.map(v => {
+    const [year, month] = v.mes.split('-');
+    return `${meses[parseInt(month) - 1]} ${year}`;
+  });
+  const data = ventas.map(v => Number(v.total) || 0);
+  
+  // Crear el gráfico
+  ventasChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Ventas',
+        data: data,
+        borderColor: '#0d6efd',
+        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `Ventas: $${context.parsed.y.toLocaleString('es-CO')}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '$' + value.toLocaleString('es-CO');
+            }
+          }
+        }
+      }
+    }
+  });
+  
+  console.log('✅ Gráfico de ventas mensuales actualizado');
 }
 
 /**
