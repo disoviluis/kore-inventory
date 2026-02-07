@@ -183,29 +183,47 @@ async function cargarEstadisticas(empresaId) {
 function actualizarCards(stats) {
   console.log('📊 Actualizando estadísticas del dashboard:', stats);
   
+  // Función auxiliar para actualizar porcentaje con color
+  const actualizarPorcentaje = (elementId, porcentaje) => {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    const esPositivo = porcentaje > 0;
+    const esNegativo = porcentaje < 0;
+    const icono = esPositivo ? 'bi-arrow-up' : esNegativo ? 'bi-arrow-down' : 'bi-dash';
+    const color = esPositivo ? 'text-success' : esNegativo ? 'text-danger' : 'text-muted';
+    
+    element.className = `stat-trend ${color}`;
+    element.innerHTML = `<i class="bi ${icono}"></i> ${Math.abs(porcentaje)}%`;
+  };
+  
   // Ventas del mes
   const ventasElement = document.querySelector('[data-stat="ventas"]');
   if (ventasElement && stats.ventasDelMes) {
     const total = Number(stats.ventasDelMes.total) || 0;
     ventasElement.textContent = `$${total.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    actualizarPorcentaje('ventasTrend', stats.ventasDelMes.porcentaje || 0);
   }
   
   // Facturas emitidas
   const facturasElement = document.querySelector('[data-stat="facturas"]');
   if (facturasElement && stats.facturasEmitidas) {
     facturasElement.textContent = Number(stats.facturasEmitidas.total) || 0;
+    actualizarPorcentaje('facturasTrend', stats.facturasEmitidas.porcentaje || 0);
   }
   
   // Productos en stock
   const productosElement = document.querySelector('[data-stat="productos"]');
   if (productosElement && stats.productosEnStock) {
     productosElement.textContent = Number(stats.productosEnStock.total) || 0;
+    actualizarPorcentaje('productosTrend', stats.productosEnStock.porcentaje || 0);
   }
   
   // Clientes activos
   const clientesElement = document.querySelector('[data-stat="clientes"]');
   if (clientesElement && stats.clientesActivos) {
     clientesElement.textContent = Number(stats.clientesActivos.total) || 0;
+    actualizarPorcentaje('clientesTrend', stats.clientesActivos.porcentaje || 0);
   }
   
   console.log('✅ Cards actualizados correctamente');

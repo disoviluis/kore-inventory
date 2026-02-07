@@ -31,7 +31,9 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
     // Obtener estadísticas en paralelo
     const [
       ventasDelMes,
+      ventasMesAnterior,
       facturasEmitidas,
+      facturasMesAnterior,
       productosEnStock,
       clientesActivos
     ] = await Promise.all([
@@ -44,15 +46,41 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
         WHERE empresa_id = ?
           AND MONTH(fecha_venta) = MONTH(CURRENT_DATE())
           AND YEAR(fecha_venta) = YEAR(CURRENT_DATE())
-          AND estado != 'cancelada'`,
+          AND estado != 'anulada'`,
         [empresaId]
       ),
 
-      // Facturas emitidas (todas excepto anuladas)
+      // Ventas del mes anterior (para comparación)
+      query(
+        `SELECT 
+          COALESCE(SUM(total), 0) as total_ventas,
+          COUNT(*) as cantidad_ventas
+        FROM ventas 
+        WHERE empresa_id = ?
+          AND MONTH(fecha_venta) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+          AND YEAR(fecha_venta) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+          AND estado != 'anulada'`,
+        [empresaId]
+      ),
+
+      // Facturas emitidas este mes
       query(
         `SELECT COUNT(*) as total_facturas
         FROM ventas 
         WHERE empresa_id = ?
+          AND MONTH(fecha_venta) = MONTH(CURRENT_DATE())
+          AND YEAR(fecha_venta) = YEAR(CURRENT_DATE())
+          AND estado != 'anulada'`,
+        [empresaId]
+      ),
+
+      // Facturas emitidas mes anterior
+      query(
+        `SELECT COUNT(*) as total_facturas
+        FROM ventas 
+        WHERE empresa_id = ?
+          AND MONTH(fecha_venta) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+          AND YEAR(fecha_venta) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
           AND estado != 'anulada'`,
         [empresaId]
       ),
@@ -130,23 +158,34 @@ export const getStats = async (req: Request, res: Response): Promise<Response> =
       [empresaId]
     );
 
+    // Calcular porcentajes de crecimiento
+    const calcularPorcentaje = (actual: number, anterior: number): number => {
+      if (anterior === 0) return actual > 0 ? 100 : 0;
+      return Number(((actual - anterior) / anterior * 100).toFixed(1));
+    };
+
+    const totalVentasActual = Number(ventasDelMes[0].total_ventas) || 0;
+    const totalVentasAnterior = Number(ventasMesAnterior[0].total_ventas) || 0;
+    const totalFacturasActual = Number(facturasEmitidas[0].total_facturas) || 0;
+    const totalFacturasAnterior = Number(facturasMesAnterior[0].total_facturas) || 0;
+
     const stats = {
       ventasDelMes: {
-        total: Number(ventasDelMes[0].total_ventas) || 0,
+        total: totalVentasActual,
         cantidad: Number(ventasDelMes[0].cantidad_ventas) || 0,
-        porcentaje: 0 // TODO: Calcular comparación con mes anterior
+        porcentaje: calcularPorcentaje(totalVentasActual, totalVentasAnterior)
       },
       facturasEmitidas: {
-        total: Number(facturasEmitidas[0].total_facturas) || 0,
-        porcentaje: 0
+        total: totalFacturasActual,
+        porcentaje: calcularPorcentaje(totalFacturasActual, totalFacturasAnterior)
       },
       productosEnStock: {
         total: Number(productosEnStock[0].total_productos) || 0,
-        porcentaje: 0
+        porcentaje: 0 // Los productos no tienen comparación temporal
       },
       clientesActivos: {
         total: Number(clientesActivos[0].total_clientes) || 0,
-        porcentaje: 0
+        porcentaje: 0 // Los clientes activos no tienen comparación temporal
       },
       ventasMensuales: ventasMensuales,
       topProductos: topProductos,
