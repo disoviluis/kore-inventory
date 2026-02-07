@@ -12,6 +12,8 @@ let currentUsuario = null;
 let clienteSeleccionado = null;
 let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
+let ultimaVentaGuardada = null; // Guardar última venta para impresión
+let ultimaVentaData = null; // Guardar datos de última venta para impresión
 
 console.log('🚀 Ventas.js cargado - Versión 1.6.2 - Debug factura totales');
 
@@ -582,11 +584,21 @@ async function guardarVenta() {
             nombre: productosVenta.find(pv => pv.id === p.producto_id)?.nombre || 'Producto'
         }));
         
-        // Mostrar factura
-        mostrarFactura(data.data, {...ventaData, productos: productosConNombres});
+        // Guardar datos de venta en variables globales para la impresión
+        ultimaVentaGuardada = data.data;
+        ultimaVentaData = {
+            ...ventaData, 
+            productos: productosConNombres,
+            cliente: clienteSeleccionado // Guardar cliente para impresión
+        };
         
-        // Limpiar todo
-        limpiarVenta();
+        // Limpiar formulario SIN confirmación (ya guardamos la venta)
+        limpiarVentaSinConfirmar();
+        
+        // Mostrar factura después de limpiar
+        mostrarFactura(ultimaVentaGuardada, ultimaVentaData);
+        
+        mostrarAlerta('Venta guardada exitosamente', 'success');
 
     } catch (error) {
         console.error('Error:', error);
@@ -598,13 +610,18 @@ async function guardarVenta() {
 // UTILIDADES
 // ============================================
 
+// Limpiar venta CON confirmación (para botón "Limpiar Todo")
 function limpiarVenta() {
     if (productosVenta.length > 0) {
         if (!confirm('¿Estás seguro de limpiar toda la venta?')) {
             return;
         }
     }
+    limpiarVentaSinConfirmar();
+}
 
+// Limpiar venta SIN confirmación (después de guardar)
+function limpiarVentaSinConfirmar() {
     clienteSeleccionado = null;
     productosVenta = [];
     
@@ -854,10 +871,10 @@ function mostrarFactura(venta, ventaData) {
             <div class="row mb-3" style="font-size: 0.9rem;">
                 <div class="col-12 col-md-6 mb-2">
                     <strong>Cliente:</strong><br>
-                    ${clienteSeleccionado.razon_social || `${clienteSeleccionado.nombre} ${clienteSeleccionado.apellido || ''}`}<br>
-                    ${clienteSeleccionado.tipo_documento}: ${clienteSeleccionado.numero_documento}<br>
-                    ${clienteSeleccionado.telefono || clienteSeleccionado.celular || ''}<br>
-                    ${clienteSeleccionado.direccion || ''}
+                    ${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>
+                    ${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}<br>
+                    ${ventaData.cliente.telefono || ventaData.cliente.celular || ''}<br>
+                    ${ventaData.cliente.direccion || ''}
                 </div>
                 <div class="col-12 col-md-6 text-md-end">
                     <strong>Fecha:</strong> ${fecha}<br>
@@ -922,94 +939,383 @@ function mostrarFactura(venta, ventaData) {
 }
 
 function imprimirFactura() {
-    // Clonar el contenido de la factura
-    const facturaContent = document.getElementById('facturaPrint');
-    if (!facturaContent) {
-        mostrarAlerta('No se encontró el contenido de la factura', 'error');
+    if (!ultimaVentaGuardada || !ultimaVentaData) {
+        mostrarAlerta('No hay factura para imprimir', 'warning');
         return;
     }
 
-    // Obtener el número de factura para el nombre del archivo
-    const numeroFactura = ventaData?.numero_factura || 'factura';
+    // Detectar si es dispositivo móvil para usar formato térmico
+    const esMovil = window.innerWidth <= 768;
+    const formatoTermico = esMovil || confirm('¿Desea imprimir en formato de tirilla térmica?\n\nOK = Tirilla térmica (58mm)\nCancelar = Tamaño carta');
+
+    const numeroFactura = ultimaVentaGuardada.numero_factura || 'factura';
     const nombreArchivo = `Factura_${numeroFactura}`;
 
-    // Crear una nueva ventana para imprimir
+    // Generar HTML de impresión
+    const htmlImpresion = generarHTMLImpresion(formatoTermico);
+
+    // Abrir ventana de impresión
     const printWindow = window.open('', '', 'width=800,height=600');
     if (!printWindow) {
         mostrarAlerta('No se pudo abrir la ventana de impresión. Verifica que los popups estén permitidos.', 'warning');
         return;
     }
 
-    // Escribir el contenido HTML con el título personalizado
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${nombreArchivo}</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-            <style>
-                @page {
-                    size: letter;
-                    margin: 1cm;
-                }
-                body {
-                    font-family: Arial, sans-serif;
-                    font-size: 12pt;
-                    color: #000;
-                    background: white;
-                    margin: 0;
-                    padding: 20px;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-                th, td {
-                    border: 1px solid #ddd;
-                    padding: 8px;
-                    text-align: left;
-                }
-                th {
-                    background-color: #f8f9fa;
-                }
-                .text-center { text-align: center; }
-                .text-end { text-align: right; }
-                .mb-3 { margin-bottom: 1rem; }
-                .mb-2 { margin-bottom: 0.5rem; }
-                .mb-1 { margin-bottom: 0.25rem; }
-                .mt-3 { margin-top: 1rem; }
-                .row { display: flex; margin-bottom: 1rem; }
-                .col-6 { width: 50%; }
-                .col-12 { width: 100%; }
-                .table-primary { background-color: #cfe2ff; font-weight: bold; }
-                .text-muted { color: #6c757d; }
-                hr { border: 1px solid #dee2e6; margin: 1rem 0; }
-                @media print {
-                    body { padding: 0; }
-                    .no-print { display: none !important; }
-                }
-            </style>
-        </head>
-        <body>
-            ${facturaContent.innerHTML}
-            <script>
-                // Configurar el nombre del archivo antes de imprimir
-                document.title = '${nombreArchivo}';
-                
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                        setTimeout(function() {
-                            window.close();
-                        }, 100);
-                    }, 250);
-                };
-            </script>
-        </body>
-        </html>
-    `);
-    
+    printWindow.document.write(htmlImpresion);
     printWindow.document.close();
+}
+
+function generarHTMLImpresion(formatoTermico = false) {
+    const venta = ultimaVentaGuardada;
+    const ventaData = ultimaVentaData;
+    const numeroFactura = venta.numero_factura;
+    
+    const subtotal = ventaData.subtotal;
+    const descuento = ventaData.descuento || 0;
+    const impuesto = ventaData.impuesto;
+    const total = ventaData.total;
+    
+    const fecha = new Date().toLocaleString('es-CO', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    if (formatoTermico) {
+        // FORMATO TÉRMICO (58mm o 80mm)
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura_${numeroFactura}</title>
+    <style>
+        @page {
+            size: 58mm auto;
+            margin: 2mm;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            width: 58mm;
+            padding: 2mm;
+            background: white;
+            color: black;
+        }
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        .line { 
+            border-top: 1px dashed #000; 
+            margin: 3mm 0;
+        }
+        .item {
+            margin: 2mm 0;
+            font-size: 8pt;
+        }
+        .item-name { 
+            font-weight: bold;
+        }
+        .item-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8pt;
+        }
+        .totals {
+            margin-top: 3mm;
+            font-size: 9pt;
+        }
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 1mm 0;
+        }
+        .total-final {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-top: 2mm;
+        }
+        @media print {
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="center bold" style="font-size: 11pt;">${currentEmpresa.nombre}</div>
+    <div class="center" style="font-size: 8pt;">${currentEmpresa.razon_social}</div>
+    <div class="center" style="font-size: 8pt;">NIT: ${currentEmpresa.nit}</div>
+    <div class="center" style="font-size: 8pt;">${currentEmpresa.telefono || ''}</div>
+    
+    <div class="line"></div>
+    
+    <div class="center bold" style="font-size: 10pt;">FACTURA DE VENTA</div>
+    <div class="center bold" style="font-size: 10pt;">${numeroFactura}</div>
+    <div class="center" style="font-size: 8pt;">${fecha}</div>
+    
+    <div class="line"></div>
+    
+    <div style="font-size: 8pt;">
+        <div><strong>Cliente:</strong></div>
+        <div>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}</div>
+        <div>${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}</div>
+    </div>
+    
+    <div class="line"></div>
+    
+    ${ventaData.productos.map(p => `
+        <div class="item">
+            <div class="item-name">${p.nombre}</div>
+            <div class="item-details">
+                <span>${p.cantidad} x $${formatearNumero(p.precio_unitario)}</span>
+                <span>$${formatearNumero(p.subtotal)}</span>
+            </div>
+        </div>
+    `).join('')}
+    
+    <div class="line"></div>
+    
+    <div class="totals">
+        <div class="totals-row">
+            <span>Subtotal:</span>
+            <span>$${formatearNumero(subtotal)}</span>
+        </div>
+        ${descuento > 0 ? `
+        <div class="totals-row">
+            <span>Descuento:</span>
+            <span>-$${formatearNumero(descuento)}</span>
+        </div>
+        ` : ''}
+        <div class="totals-row">
+            <span>IVA (19%):</span>
+            <span>$${formatearNumero(impuesto)}</span>
+        </div>
+        <div class="totals-row total-final">
+            <span>TOTAL:</span>
+            <span>$${formatearNumero(total)}</span>
+        </div>
+    </div>
+    
+    <div class="line"></div>
+    
+    <div class="center" style="font-size: 8pt; margin-top: 3mm;">
+        ¡Gracias por su compra!
+    </div>
+    <div class="center" style="font-size: 7pt;">Vendedor: ${currentUsuario.nombre} ${currentUsuario.apellido}</div>
+    <div class="center" style="font-size: 7pt;">Pago: ${ventaData.metodo_pago}</div>
+    
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+                setTimeout(function() { window.close(); }, 100);
+            }, 250);
+        };
+    </script>
+</body>
+</html>
+        `;
+    } else {
+        // FORMATO CARTA (Letter)
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura_${numeroFactura}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 15mm;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            color: #000;
+            background: white;
+            padding: 10mm;
+        }
+        .encabezado {
+            text-align: center;
+            margin-bottom: 8mm;
+        }
+        .encabezado h2 {
+            font-size: 18pt;
+            margin-bottom: 2mm;
+        }
+        .encabezado p {
+            font-size: 10pt;
+            margin: 1mm 0;
+        }
+        .titulo-factura {
+            text-align: center;
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 5mm 0;
+            padding: 3mm;
+            border: 2px solid #000;
+        }
+        .info-cliente {
+            display: flex;
+            justify-content: space-between;
+            margin: 5mm 0;
+            font-size: 10pt;
+        }
+        .info-cliente > div {
+            flex: 1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 5mm 0;
+            font-size: 10pt;
+        }
+        th {
+            background-color: #f0f0f0;
+            border: 1px solid #000;
+            padding: 3mm;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            border: 1px solid #000;
+            padding: 3mm;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .totales {
+            margin-top: 5mm;
+            float: right;
+            width: 50%;
+        }
+        .totales table {
+            width: 100%;
+            margin: 0;
+        }
+        .totales td {
+            border: none;
+            border-bottom: 1px solid #ddd;
+            padding: 2mm;
+        }
+        .total-final {
+            font-size: 12pt;
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+        .footer {
+            clear: both;
+            text-align: center;
+            margin-top: 10mm;
+            padding-top: 5mm;
+            border-top: 1px solid #ddd;
+            font-size: 9pt;
+            color: #666;
+        }
+        @media print {
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="encabezado">
+        <h2>${currentEmpresa.nombre}</h2>
+        <p>${currentEmpresa.razon_social}</p>
+        <p>NIT: ${currentEmpresa.nit}</p>
+        <p>${currentEmpresa.direccion || ''}</p>
+        <p>Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email}</p>
+    </div>
+    
+    <div class="titulo-factura">
+        FACTURA DE VENTA<br>
+        ${numeroFactura}
+    </div>
+    
+    <div class="info-cliente">
+        <div>
+            <strong>CLIENTE:</strong><br>
+            ${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>
+            ${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}<br>
+            ${ventaData.cliente.telefono || ventaData.cliente.celular || ''}<br>
+            ${ventaData.cliente.direccion || ''}
+        </div>
+        <div class="text-right">
+            <strong>FECHA:</strong> ${fecha}<br>
+            <strong>VENDEDOR:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}<br>
+            <strong>PAGO:</strong> ${ventaData.metodo_pago}
+        </div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50%;">Producto</th>
+                <th class="text-center" style="width: 10%;">Cant.</th>
+                <th class="text-right" style="width: 20%;">Precio Unit.</th>
+                <th class="text-right" style="width: 20%;">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${ventaData.productos.map(p => `
+                <tr>
+                    <td>${p.nombre}</td>
+                    <td class="text-center">${p.cantidad}</td>
+                    <td class="text-right">$${formatearNumero(p.precio_unitario)}</td>
+                    <td class="text-right">$${formatearNumero(p.subtotal)}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+    
+    <div class="totales">
+        <table>
+            <tr>
+                <td><strong>Subtotal:</strong></td>
+                <td class="text-right">$${formatearNumero(subtotal)}</td>
+            </tr>
+            ${descuento > 0 ? `
+            <tr>
+                <td><strong>Descuento:</strong></td>
+                <td class="text-right">-$${formatearNumero(descuento)}</td>
+            </tr>
+            ` : ''}
+            <tr>
+                <td><strong>IVA (19%):</strong></td>
+                <td class="text-right">$${formatearNumero(impuesto)}</td>
+            </tr>
+            <tr class="total-final">
+                <td><strong>TOTAL:</strong></td>
+                <td class="text-right"><strong>$${formatearNumero(total)}</strong></td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="footer">
+        <p>¡Gracias por su compra!</p>
+        <p>${currentEmpresa.nombre} - ${currentEmpresa.telefono || ''}</p>
+    </div>
+    
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+                setTimeout(function() { window.close(); }, 100);
+            }, 250);
+        };
+    </script>
+</body>
+</html>
+        `;
+    }
 }
