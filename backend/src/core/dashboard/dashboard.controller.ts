@@ -234,12 +234,15 @@ export const getActividad = async (req: Request, res: Response): Promise<Respons
         v.id,
         CONCAT('Nueva venta #', v.numero_factura) as descripcion,
         v.fecha_venta as fecha,
-        u.nombre as usuario_nombre
+        u.nombre as usuario_nombre,
+        c.razon_social as cliente_nombre,
+        v.total as monto
       FROM ventas v
-      LEFT JOIN usuarios u ON v.usuario_id = u.id
+      LEFT JOIN usuarios u ON v.vendedor_id = u.id
+      LEFT JOIN clientes c ON v.cliente_id = c.id
       WHERE v.empresa_id = ?
       ORDER BY v.fecha_venta DESC
-      LIMIT 20`,
+      LIMIT 10`,
       [empresaId]
     );
 
