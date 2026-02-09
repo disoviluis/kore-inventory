@@ -16,6 +16,7 @@ let productos = [];
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
+    // Verificar autenticación
     const token = localStorage.getItem('token');
     if (!token) {
         window.location.href = 'login.html';
@@ -23,17 +24,42 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     try {
-        currentUsuario = JSON.parse(localStorage.getItem('usuario'));
-        currentEmpresa = JSON.parse(localStorage.getItem('currentEmpresa'));
+        // Obtener usuario desde localStorage (ya fue validado en login/dashboard)
+        let usuario = JSON.parse(localStorage.getItem('usuario'));
+        
+        // Si no hay usuario en localStorage, verificar token
+        if (!usuario) {
+            const response = await fetch(`${API_URL}/auth/verify`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
 
+            if (!response.ok) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('usuario');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const data = await response.json();
+            usuario = data.data;
+            localStorage.setItem('usuario', JSON.stringify(usuario));
+        }
+
+        currentUsuario = usuario;
+
+        // Obtener empresa activa
+        currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
         if (!currentEmpresa) {
-            mostrarAlerta('No hay empresa seleccionada', 'warning');
+            mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
+            setTimeout(() => window.location.href = 'dashboard.html', 2000);
             return;
         }
 
         // Actualizar UI con datos del usuario y empresa
-        document.getElementById('userName').textContent = `${currentUsuario.nombre} ${currentUsuario.apellido || ''}`;
-        document.getElementById('userRole').textContent = currentUsuario.tipo_usuario;
+        document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido || ''}`;
+        document.getElementById('userRole').textContent = usuario.tipo_usuario;
         document.getElementById('empresaActiva').textContent = currentEmpresa.nombre;
 
         // Event Listeners
