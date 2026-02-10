@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         currentUsuario = usuario;
 
+        // Cargar empresas del usuario
+        await cargarEmpresas(usuario.id);
+
         // Obtener empresa activa
         currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
         if (!currentEmpresa) {
@@ -51,7 +54,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Actualizar UI
         document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido}`;
         document.getElementById('userRole').textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
-        document.getElementById('empresaActiva').textContent = currentEmpresa.nombre;
 
         // Inicializar modal
         proveedorModal = new bootstrap.Modal(document.getElementById('proveedorModal'));
@@ -134,8 +136,67 @@ function getTipoUsuarioTexto(tipo) {
     return tipos[tipo] || tipo;
 }
 
+// ============================================// CARGAR EMPRESAS DEL USUARIO
 // ============================================
-// CRUD PROVEEDORES
+
+async function cargarEmpresas(usuarioId) {
+    const token = localStorage.getItem('token');
+    const companySelector = document.getElementById('companySelector');
+    
+    if (!companySelector) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/empresas/usuario/${usuarioId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.data.length > 0) {
+            // Limpiar selector
+            companySelector.innerHTML = '';
+            
+            // Agregar opciones
+            data.data.forEach(empresa => {
+                const option = document.createElement('option');
+                option.value = empresa.id;
+                option.textContent = empresa.nombre;
+                companySelector.appendChild(option);
+            });
+            
+            // Seleccionar la primera empresa o la guardada
+            const empresaGuardada = localStorage.getItem('empresaActiva');
+            if (empresaGuardada) {
+                const empresaObj = JSON.parse(empresaGuardada);
+                companySelector.value = empresaObj.id;
+            } else {
+                companySelector.value = data.data[0].id;
+                localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+            }
+            
+            // Event listener para cambio de empresa
+            companySelector.addEventListener('change', (e) => {
+                const empresaId = e.target.value;
+                const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
+                localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
+                // Recargar datos del módulo
+                cargarProveedores();
+            });
+            
+        } else {
+            companySelector.innerHTML = '<option value="">Sin empresas asignadas</option>';
+        }
+        
+    } catch (error) {
+        console.error('Error al cargar empresas:', error);
+        companySelector.innerHTML = '<option value="">Error al cargar empresas</option>';
+    }
+}
+
+// ============================================// CRUD PROVEEDORES
 // ============================================
 
 async function cargarProveedores() {
