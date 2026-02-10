@@ -81,6 +81,14 @@ function cargarDatosUsuario(usuario) {
     tipoUsuario.textContent = tipos[usuario.tipo_usuario] || usuario.tipo_usuario;
   }
   
+  // Mostrar sección PLATAFORMA solo para super_admin
+  const plataformaSection = document.getElementById('plataformaSection');
+  if (plataformaSection && usuario.tipo_usuario === 'super_admin') {
+    plataformaSection.style.display = 'block';
+  }
+    tipoUsuario.textContent = tipos[usuario.tipo_usuario] || usuario.tipo_usuario;
+  }
+  
   console.log('Dashboard cargado para:', usuario);
   
   // Cargar empresas del usuario

@@ -863,3 +863,89 @@ body {
 .stat-card:nth-child(4) {
     animation-delay: 0.3s;
 }
+
+/* ===================================
+   COLLAPSIBLE SIDEBAR SECTIONS
+   =================================== */
+
+/* Section Headers */
+.nav-section {
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.7) !important;
+    padding: 12px 20px !important;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.nav-section:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.nav-section i.bi:first-child {
+    font-size: 1.1rem;
+    margin-right: 12px;
+}
+
+/* Collapse Icon Animation */
+.collapse-icon {
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+.nav-section[aria-expanded="true"] .collapse-icon {
+    transform: rotate(180deg);
+}
+
+/* Submenu Items */
+.sidebar-nav .collapse .nav {
+    padding: 5px 0;
+}
+
+.sidebar-nav .collapse .nav-item {
+    margin-bottom: 2px;
+}
+
+.sidebar-nav .collapse .nav-link {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    border-left: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.sidebar-nav .collapse .nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-left-color: var(--primary-color);
+    padding-left: 25px;
+}
+
+.sidebar-nav .collapse .nav-link.active {
+    background: linear-gradient(90deg, rgba(30, 64, 175, 0.3), rgba(37, 99, 235, 0.2));
+    border-left-color: #F59E0B;
+    font-weight: 600;
+}
+
+/* Disabled Links (Próximamente) */
+.nav-link.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.nav-link.disabled .badge {
+    font-size: 0.65rem;
+}
+
+/* Smooth Collapse Animation */
+.collapse {
+    transition: height 0.35s ease;
+}
+
+.collapsing {
+    transition: height 0.35s ease;
+}
