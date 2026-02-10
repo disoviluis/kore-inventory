@@ -42,20 +42,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         currentUsuario = usuario;
 
-        // Obtener empresa activa
-        currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
-        if (!currentEmpresa) {
-            // Si no hay empresa activa y el usuario tiene empresas, usar la primera
-            if (usuario.empresas && usuario.empresas.length > 0) {
-                currentEmpresa = usuario.empresas[0];
-                localStorage.setItem('empresaActiva', JSON.stringify(currentEmpresa));
-            } else {
-                mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
-                setTimeout(() => window.location.href = 'dashboard.html', 2000);
-                return;
-            }
-        }
-
         // Actualizar UI
         document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido}`;
         document.getElementById('userRole').textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
@@ -65,6 +51,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Cargar empresas del usuario
         await cargarEmpresas(usuario.id);
+
+        // Obtener empresa activa (después de cargar empresas)
+        currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
+        if (!currentEmpresa) {
+            mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
+            setTimeout(() => window.location.href = 'dashboard.html', 2000);
+            return;
+        }
 
         // Cargar ventas
         await cargarVentas();
