@@ -128,83 +128,167 @@
             </div>
         </div>
 
-        <!-- Navigation -->
+        <!-- Navigation Menu -->
         <nav class="sidebar-nav">
-            <a href="dashboard.html" class="nav-link" data-module="dashboard">
-                <i class="bi bi-grid-fill"></i>
-                <span>Dashboard</span>
-            </a>
+            <ul class="nav flex-column">
+                
+                <!-- Dashboard -->
+                <li class="nav-item">
+                    <a class="nav-link" href="dashboard.html" data-module="dashboard">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
 
-            <div class="nav-section">OPERACIONES</div>
+                <!-- Divider -->
+                <li class="nav-divider">
+                    <span>OPERACIONES</span>
+                </li>
 
-            <a href="ventas.html" class="nav-link active" data-module="punto-venta">
-                <i class="bi bi-cart-check"></i>
-                <span>Punto de Venta</span>
-                <span class="badge bg-success">POS</span>
-            </a>
+                <!-- POS -->
+                <li class="nav-item">
+                    <a class="nav-link active" href="ventas.html" data-module="pos">
+                        <i class="bi bi-cart-check"></i>
+                        <span>Punto de Venta</span>
+                        <span class="badge bg-success">POS</span>
+                    </a>
+                </li>
 
-            <a href="ventas-historial.html" class="nav-link" data-module="ventas">
-                <i class="bi bi-receipt"></i>
-                <span>Ventas</span>
-            </a>
+                <!-- Ventas -->
+                <li class="nav-item">
+                    <a class="nav-link" href="ventas-historial.html" data-module="ventas">
+                        <i class="bi bi-receipt"></i>
+                        <span>Ventas</span>
+                    </a>
+                </li>
 
-            <a href="clientes.html" class="nav-link" data-module="clientes">
-                <i class="bi bi-people"></i>
-                <span>Clientes</span>
-            </a>
+                <!-- Clientes -->
+                <li class="nav-item">
+                    <a class="nav-link" href="clientes.html" data-module="clientes">
+                        <i class="bi bi-people"></i>
+                        <span>Clientes</span>
+                    </a>
+                </li>
 
-            <a href="inventario.html" class="nav-link" data-module="inventario">
-                <i class="bi bi-box-seam"></i>
-                <span>Inventario</span>
-            </a>
+                <!-- Inventario -->
+                <li class="nav-item">
+                    <a class="nav-link" href="inventario.html" data-module="inventario">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Inventario</span>
+                        <span class="badge bg-warning text-dark">12</span>
+                    </a>
+                </li>
 
-            <a href="productos.html" class="nav-link" data-module="productos">
-                <i class="bi bi-tag"></i>
-                <span>Productos</span>
-            </a>
+                <!-- Productos -->
+                <li class="nav-item">
+                    <a class="nav-link" href="productos.html">
+                        <i class="bi bi-tags"></i>
+                        <span>Productos</span>
+                    </a>
+                </li>
 
-            <div class="nav-section">COMPRAS</div>
+                <!-- Proveedores -->
+                <li class="nav-item">
+                    <a class="nav-link" href="proveedores.html">
+                        <i class="bi bi-truck"></i>
+                        <span>Proveedores</span>
+                    </a>
+                </li>
 
-            <a href="proveedores.html" class="nav-link">
-                <i class="bi bi-truck"></i>
-                <span>Proveedores</span>
-            </a>
+                <!-- Divider -->
+                <li class="nav-divider">
+                    <span>FINANZAS</span>
+                </li>
 
-            <a href="#" class="nav-link" data-module="compras">
-                <i class="bi bi-bag-check"></i>
-                <span>Compras</span>
-            </a>
+                <!-- Caja -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#caja" data-module="caja">
+                        <i class="bi bi-cash-stack"></i>
+                        <span>Caja</span>
+                    </a>
+                </li>
 
-            <div class="nav-section">FINANZAS</div>
+                <!-- Contabilidad -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#contabilidad" data-module="contabilidad">
+                        <i class="bi bi-calculator"></i>
+                        <span>Contabilidad</span>
+                    </a>
+                </li>
 
-            <a href="#" class="nav-link" data-module="caja">
-                <i class="bi bi-cash-stack"></i>
-                <span>Caja</span>
-            </a>
+                <!-- Reportes -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#reportes" data-module="reportes">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Reportes</span>
+                    </a>
+                </li>
 
-            <a href="#" class="nav-link" data-module="reportes">
-                <i class="bi bi-graph-up"></i>
-                <span>Reportes</span>
-            </a>
+                <!-- Divider -->
+                <li class="nav-divider">
+                    <span>ADMINISTRACIÓN</span>
+                </li>
 
-            <div class="nav-section">CONFIGURACIÓN</div>
+                <!-- Usuarios -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#usuarios" data-module="usuarios">
+                        <i class="bi bi-person-gear"></i>
+                        <span>Usuarios</span>
+                    </a>
+                </li>
 
-            <a href="#" class="nav-link" data-module="usuarios">
-                <i class="bi bi-person-gear"></i>
-                <span>Usuarios</span>
-            </a>
+                <!-- Roles y Permisos -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#roles" data-module="roles">
+                        <i class="bi bi-shield-check"></i>
+                        <span>Roles y Permisos</span>
+                    </a>
+                </li>
 
-            <a href="#" class="nav-link" data-module="empresa">
-                <i class="bi bi-building"></i>
-                <span>Mi Empresa</span>
-            </a>
+                <!-- Configuración -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#configuracion" data-module="configuracion">
+                        <i class="bi bi-gear"></i>
+                        <span>Configuración</span>
+                    </a>
+                </li>
 
-            <a href="#" class="nav-link" data-module="configuracion">
-                <i class="bi bi-gear"></i>
-                <span>Configuración</span>
-            </a>
+                <!-- Divider (Super Admin Only) -->
+                <li class="nav-divider super-admin-only">
+                    <span>PLATAFORMA</span>
+                </li>
+
+                <!-- Empresas (Super Admin) -->
+                <li class="nav-item super-admin-only">
+                    <a class="nav-link" href="#empresas" data-module="empresas">
+                        <i class="bi bi-building"></i>
+                        <span>Empresas</span>
+                    </a>
+                </li>
+
+                <!-- Planes y Licencias (Super Admin) -->
+                <li class="nav-item super-admin-only">
+                    <a class="nav-link" href="#licencias" data-module="licencias">
+                        <i class="bi bi-key"></i>
+                        <span>Planes y Licencias</span>
+                    </a>
+                </li>
+
+            </ul>
         </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <div class="license-status">
+                <i class="bi bi-check-circle-fill text-success"></i>
+                <small>Licencia Activa</small>
+            </div>
+            <small class="text-white-50">v1.0.0 - © Disovi Soft</small>
+        </div>
     </aside>
+
+    <!-- Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Main Content -->
     <main class="main-content">
