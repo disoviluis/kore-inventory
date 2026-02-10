@@ -47,7 +47,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             localStorage.setItem('usuario', JSON.stringify(usuario));
         }
 
-        currentUsuario = usuario;
+        // Cargar información del usuario en la UI
+        cargarInfoUsuario(usuario);
 
         // Obtener empresa activa
         currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
@@ -57,10 +58,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        // Actualizar UI con datos del usuario y empresa
-        document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido || ''}`;
-        document.getElementById('userRole').textContent = usuario.tipo_usuario;
+        // Actualizar UI con empresa activa
         document.getElementById('empresaActiva').textContent = currentEmpresa.nombre;
+        
+        // Guardar usuario actual
+        currentUsuario = usuario;
 
         // Event Listeners
         document.getElementById('logoutBtn').addEventListener('click', cerrarSesion);
@@ -103,6 +105,35 @@ document.addEventListener('DOMContentLoaded', async function() {
         mostrarAlerta('Error al cargar el módulo', 'danger');
     }
 });
+
+// ============================================
+// CARGAR INFORMACIÓN DEL USUARIO
+// ============================================
+
+function cargarInfoUsuario(usuario) {
+    const userName = document.getElementById('userName');
+    const userRole = document.getElementById('userRole');
+    
+    if (userName) {
+        const nombre = usuario.nombre || '';
+        const apellido = usuario.apellido || '';
+        userName.textContent = `${nombre} ${apellido}`.trim() || 'Usuario';
+    }
+    
+    if (userRole) {
+        userRole.textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
+    }
+}
+
+function getTipoUsuarioTexto(tipo) {
+    const tipos = {
+        'super_admin': 'Super Administrador',
+        'admin_empresa': 'Administrador',
+        'usuario': 'Usuario',
+        'soporte': 'Soporte'
+    };
+    return tipos[tipo] || tipo;
+}
 
 // ============================================
 // CARGAR DATOS
