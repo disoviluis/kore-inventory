@@ -86,8 +86,6 @@ function cargarDatosUsuario(usuario) {
   if (plataformaSection && usuario.tipo_usuario === 'super_admin') {
     plataformaSection.style.display = 'block';
   }
-    tipoUsuario.textContent = tipos[usuario.tipo_usuario] || usuario.tipo_usuario;
-  }
   
   console.log('Dashboard cargado para:', usuario);
   
