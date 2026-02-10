@@ -30,7 +30,7 @@ export const getCompras = async (req: Request, res: Response) => {
         let sql = `
             SELECT 
                 c.*,
-                p.nombre as proveedor_nombre,
+                p.razon_social as proveedor_nombre,
                 p.tipo_documento as proveedor_tipo_doc,
                 p.numero_documento as proveedor_documento,
                 u.nombre as usuario_nombre,
@@ -91,7 +91,7 @@ export const getCompra = async (req: Request, res: Response) => {
         const [compra]: any = await query(
             `SELECT 
                 c.*,
-                p.nombre as proveedor_nombre,
+                p.razon_social as proveedor_nombre,
                 p.tipo_documento as proveedor_tipo_doc,
                 p.numero_documento as proveedor_documento,
                 p.telefono as proveedor_telefono,
