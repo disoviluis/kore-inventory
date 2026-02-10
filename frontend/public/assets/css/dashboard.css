@@ -914,6 +914,7 @@ body {
 .sidebar-nav .collapse .nav-link {
     padding: 10px 20px;
     font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8) !important;
     border-left: 2px solid transparent;
     transition: all 0.2s ease;
 }
@@ -922,19 +923,22 @@ body {
     background: rgba(255, 255, 255, 0.08);
     border-left-color: var(--primary-color);
     padding-left: 25px;
+    color: white !important;
 }
 
 .sidebar-nav .collapse .nav-link.active {
     background: linear-gradient(90deg, rgba(30, 64, 175, 0.3), rgba(37, 99, 235, 0.2));
     border-left-color: #F59E0B;
     font-weight: 600;
+    color: white !important;
 }
 
 /* Disabled Links (Próximamente) */
 .nav-link.disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
     pointer-events: none;
+    color: rgba(255, 255, 255, 0.5) !important;
 }
 
 .nav-link.disabled .badge {
