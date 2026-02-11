@@ -516,7 +516,7 @@ function validarJerarquiaPrecios(minorista, mayorista, distribuidor) {
 }
 
 function updateTablaResumenPrecios() {
-    const tbody = document.getElementById('tbodyResumenPrecios');
+    const tbody = document.getElementById('tablaResumenPrecios');
     if (!tbody) return;
 
     const precioCompra = parseFloat(document.getElementById('productoPrecioCompra').value) || 0;
