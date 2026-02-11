@@ -72,131 +72,230 @@
                 
                 <!-- Dashboard -->
                 <li class="nav-item">
-                    <a class="nav-link" href="dashboard.html" data-module="dashboard">
+                    <a class="nav-link" href="dashboard.html">
                         <i class="bi bi-speedometer2"></i>
                         <span>Dashboard</span>
                     </a>
                 </li>
 
-                <!-- Divider -->
-                <li class="nav-divider">
-                    <span>OPERACIONES</span>
-                </li>
-
-                <!-- POS -->
+                <!-- OPERACIONES Section -->
                 <li class="nav-item">
-                    <a class="nav-link" href="ventas.html" data-module="pos">
-                        <i class="bi bi-cart-check"></i>
-                        <span>Punto de Venta</span>
-                        <span class="badge bg-success">POS</span>
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#operacionesCollapse" role="button" aria-expanded="true">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>OPERACIONES</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
                     </a>
+                    <div class="collapse show" id="operacionesCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link" href="ventas.html">
+                                    <i class="bi bi-cart-check"></i>
+                                    <span>Punto de Venta</span>
+                                    <span class="badge bg-success">POS</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="ventas-historial.html">
+                                    <i class="bi bi-receipt"></i>
+                                    <span>Ventas</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="clientes.html">
+                                    <i class="bi bi-people"></i>
+                                    <span>Clientes</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="inventario.html">
+                                    <i class="bi bi-box-seam"></i>
+                                    <span>Inventario</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="productos.html">
+                                    <i class="bi bi-tags"></i>
+                                    <span>Productos</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="proveedores.html">
+                                    <i class="bi bi-truck"></i>
+                                    <span>Proveedores</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="compras.html">
+                                    <i class="bi bi-bag-check"></i>
+                                    <span>Compras</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                    <span>Cotizaciones</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
 
-                <!-- Ventas -->
+                <!-- FINANZAS Section -->
                 <li class="nav-item">
-                    <a class="nav-link" href="ventas-historial.html" data-module="ventas">
-                        <i class="bi bi-receipt"></i>
-                        <span>Ventas</span>
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#finanzasCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-cash-coin"></i>
+                        <span>FINANZAS</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
                     </a>
+                    <div class="collapse" id="finanzasCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-wallet2"></i>
+                                    <span>Cuentas por Cobrar</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-credit-card"></i>
+                                    <span>Cuentas por Pagar</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-cash-stack"></i>
+                                    <span>Caja</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-bank"></i>
+                                    <span>Bancos</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-receipt-cutoff"></i>
+                                    <span>Gastos</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
 
-                <!-- Clientes -->
+                <!-- REPORTES Section -->
                 <li class="nav-item">
-                    <a class="nav-link" href="clientes.html" data-module="clientes">
-                        <i class="bi bi-people"></i>
-                        <span>Clientes</span>
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#reportesCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        <span>REPORTES</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
                     </a>
+                    <div class="collapse" id="reportesCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-bar-chart"></i>
+                                    <span>Ventas</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-box"></i>
+                                    <span>Inventario</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-wallet"></i>
+                                    <span>Cartera</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-calculator"></i>
+                                    <span>Financieros</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
 
-                <!-- Inventario -->
+                <!-- ADMINISTRACIÓN Section -->
                 <li class="nav-item">
-                    <a class="nav-link" href="inventario.html" data-module="inventario">
-                        <i class="bi bi-box-seam"></i>
-                        <span>Inventario</span>
-                        <span class="badge bg-warning text-dark">12</span>
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#administracionCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-gear-fill"></i>
+                        <span>ADMINISTRACIÓN</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
                     </a>
+                    <div class="collapse" id="administracionCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-person-gear"></i>
+                                    <span>Usuarios</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-shield-check"></i>
+                                    <span>Roles y Permisos</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-gear"></i>
+                                    <span>Configuración</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
 
-                <!-- Productos -->
-                <li class="nav-item">
-                    <a class="nav-link active" href="productos.html">
-                        <i class="bi bi-tags"></i>
-                        <span>Productos</span>
+                <!-- PLATAFORMA Section (solo super_admin) -->
+                <li class="nav-item" id="plataformaSection" style="display: none;">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#plataformaCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-globe"></i>
+                        <span>PLATAFORMA</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
                     </a>
-                </li>
-
-                <!-- Proveedores -->
-                <li class="nav-item">
-                    <a class="nav-link" href="proveedores.html">
-                        <i class="bi bi-truck"></i>
-                        <span>Proveedores</span>
-                    </a>
-                </li>
-
-                <!-- Compras -->
-                <li class="nav-item">
-                    <a class="nav-link" href="compras.html">
-                        <i class="bi bi-bag-check"></i>
-                        <span>Compras</span>
-                    </a>
-                </li>
-
-                <!-- Divider -->
-                <li class="nav-divider">
-                    <span>FINANZAS</span>
-                </li>
-
-                <!-- Caja -->
-                <li class="nav-item">
-                    <a class="nav-link" href="#caja" data-module="caja">
-                        <i class="bi bi-cash-stack"></i>
-                        <span>Caja</span>
-                    </a>
-                </li>
-
-                <!-- Contabilidad -->
-                <li class="nav-item">
-                    <a class="nav-link" href="#contabilidad" data-module="contabilidad">
-                        <i class="bi bi-calculator"></i>
-                        <span>Contabilidad</span>
-                    </a>
-                </li>
-
-                <!-- Reportes -->
-                <li class="nav-item">
-                    <a class="nav-link" href="#reportes" data-module="reportes">
-                        <i class="bi bi-graph-up"></i>
-                        <span>Reportes</span>
-                    </a>
-                </li>
-
-                <!-- Divider -->
-                <li class="nav-divider">
-                    <span>ADMINISTRACIÓN</span>
-                </li>
-
-                <!-- Usuarios -->
-                <li class="nav-item">
-                    <a class="nav-link" href="#usuarios" data-module="usuarios">
-                        <i class="bi bi-person-gear"></i>
-                        <span>Usuarios</span>
-                    </a>
-                </li>
-
-                <!-- Roles y Permisos -->
-                <li class="nav-item">
-                    <a class="nav-link" href="#roles" data-module="roles">
-                        <i class="bi bi-shield-check"></i>
-                        <span>Roles y Permisos</span>
-                    </a>
-                </li>
-
-                <!-- Configuración -->
-                <li class="nav-item">
-                    <a class="nav-link" href="#configuracion" data-module="configuracion">
-                        <i class="bi bi-gear"></i>
-                        <span>Configuración</span>
-                    </a>
+                    <div class="collapse" id="plataformaCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-building"></i>
+                                    <span>Empresas</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-card-checklist"></i>
+                                    <span>Planes y Licencias</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-sliders"></i>
+                                    <span>Configuración Global</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
 
                 <!-- Divider (Super Admin Only) -->
@@ -430,17 +529,32 @@
                         <div class="row g-3">
                             <!-- Información Básica -->
                             <div class="col-12">
-                                <h6 class="border-bottom pb-2">Información Básica</h6>
+                                <h6 class="border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Información Básica</h6>
                             </div>
                             
-                            <div class="col-md-8">
-                                <label class="form-label">Nombre del Producto <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="productoNombre" required>
+                            <!-- Tipo -->
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo <span class="text-danger">*</span></label>
+                                <select class="form-select" id="productoTipo" required>
+                                    <option value="producto">Producto</option>
+                                    <option value="servicio">Servicio</option>
+                                </select>
+                                <small class="text-muted">Servicios no manejan inventario</small>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">SKU <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="productoSku" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Código de Barras</label>
+                                <input type="text" class="form-control" id="productoCodigoBarras">
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="productoNombre" required>
                             </div>
 
                             <div class="col-12">
@@ -456,74 +570,174 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Código de Barras</label>
-                                <input type="text" class="form-control" id="productoCodigoBarras">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" id="productoEstado">
+                                    <option value="activo">Activo</option>
+                                    <option value="inactivo">Inactivo</option>
+                                </select>
                             </div>
 
                             <!-- Precios -->
                             <div class="col-12 mt-4">
-                                <h6 class="border-bottom pb-2">Precios</h6>
+                                <h6 class="border-bottom pb-2"><i class="bi bi-cash-stack me-2"></i>Precios y Márgenes</h6>
+                                <!-- Alerta de validación de jerarquía -->
+                                <div class="alert alert-warning alert-sm py-2" id="alertJerarquiaPrecios" style="display: none;">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    <span id="alertJerarquiaPreciosTexto"></span>
+                                </div>
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Precio de Compra</label>
+                                <label class="form-label">Precio de Compra (Costo)</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
                                     <input type="number" class="form-control" id="productoPrecioCompra" step="0.01" min="0" value="0">
                                 </div>
+                                <small class="text-muted">Costo del producto</small>
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Precio de Venta <span class="text-danger">*</span></label>
+                                <label class="form-label">
+                                    Precio Minorista <span class="text-danger">*</span>
+                                    <span class="badge bg-primary ms-1" id="margenMinorista">Margen: 0%</span>
+                                </label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" id="productoPrecioVenta" step="0.01" min="0" required>
+                                    <input type="number" class="form-control" id="productoPrecioMinorista" step="0.01" min="0" required>
+                                </div>
+                                <small class="text-muted">Precio público (venta al detal)</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Precio Mayorista
+                                    <span class="badge bg-success ms-1" id="margenMayorista">Margen: 0%</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="productoPrecioMayorista" step="0.01" min="0">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnCalcMayorista" title="Calcular automático (10% descuento)">
+                                        <i class="bi bi-calculator"></i> -10%
+                                    </button>
+                                </div>
+                                <small class="text-muted">Para clientes que compran en cantidad</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Precio Distribuidor
+                                    <span class="badge bg-warning ms-1" id="margenDistribuidor">Margen: 0%</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="productoPrecioDistribuidor" step="0.01" min="0">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnCalcDistribuidor" title="Calcular automático (20% descuento)">
+                                        <i class="bi bi-calculator"></i> -20%
+                                    </button>
+                                </div>
+                                <small class="text-muted">Para revendedores autorizados</small>
+                            </div>
+
+                            <!-- IVA -->
+                            <div class="col-12 mt-3">
+                                <h6 class="border-bottom pb-2"><i class="bi bi-receipt me-2"></i>Impuestos (IVA)</h6>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="productoAplicaIVA" checked>
+                                    <label class="form-check-label" for="productoAplicaIVA">
+                                        Aplica IVA
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Porcentaje IVA</label>
+                                <select class="form-select" id="productoPorcentajeIVA">
+                                    <option value="0">0%</option>
+                                    <option value="5">5%</option>
+                                    <option value="19" selected>19%</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de Impuesto</label>
+                                <select class="form-select" id="productoTipoImpuesto">
+                                    <option value="gravado">Gravado</option>
+                                    <option value="exento">Exento</option>
+                                    <option value="excluido">Excluido</option>
+                                </select>
+                            </div>
+
+                            <!-- Tabla Resumen -->
+                            <div class="col-12 mt-3">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Resumen de Precios con IVA</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-borderless mb-0">
+                                                <thead>
+                                                    <tr class="border-bottom">
+                                                        <th>Nivel</th>
+                                                        <th>Precio Base</th>
+                                                        <th>IVA</th>
+                                                        <th>Precio Final</th>
+                                                        <th>Margen</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tablaResumenPrecios">
+                                                    <tr><td colspan="5" class="text-center text-muted">Ingrese los precios para ver el resumen</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Inventario -->
-                            <div class="col-12 mt-4">
-                                <h6 class="border-bottom pb-2">Inventario</h6>
+                            <div class="col-12 mt-4" id="seccionInventario">
+                                <h6 class="border-bottom pb-2"><i class="bi bi-box-seam me-2"></i>Inventario</h6>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-4" id="campoStockActual">
                                 <label class="form-label">Stock Actual</label>
                                 <input type="number" class="form-control" id="productoStockActual" min="0" value="0">
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-4" id="campoStockMinimo">
                                 <label class="form-label">Stock Mínimo</label>
                                 <input type="number" class="form-control" id="productoStockMinimo" min="0" value="0">
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-4" id="campoStockMaximo">
                                 <label class="form-label">Stock Máximo</label>
                                 <input type="number" class="form-control" id="productoStockMaximo" min="0">
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="campoUnidadMedida">
                                 <label class="form-label">Unidad de Medida</label>
                                 <select class="form-select" id="productoUnidadMedida">
                                     <option value="unidad">Unidad</option>
                                     <option value="caja">Caja</option>
                                     <option value="paquete">Paquete</option>
                                     <option value="kg">Kilogramo</option>
+                                    <option value="gramo">Gramo</option>
+                                    <option value="tonelada">Tonelada</option>
                                     <option value="litro">Litro</option>
+                                    <option value="galon">Galón</option>
                                     <option value="metro">Metro</option>
+                                    <option value="bulto">Bulto</option>
+                                    <option value="saco">Saco</option>
+                                    <option value="arroba">Arroba</option>
+                                    <option value="hora">Hora</option>
+                                    <option value="servicio">Servicio</option>
                                 </select>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="campoUbicacion">
                                 <label class="form-label">Ubicación en Almacén</label>
                                 <input type="text" class="form-control" id="productoUbicacion" placeholder="Ej: Pasillo A, Estante 3">
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Estado</label>
-                                <select class="form-select" id="productoEstado">
-                                    <option value="activo">Activo</option>
-                                    <option value="inactivo">Inactivo</option>
-                                </select>
                             </div>
                         </div>
                     </form>

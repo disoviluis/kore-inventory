@@ -32,6 +32,8 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
       `SELECT 
         p.id,
         p.empresa_id,
+        p.tipo,
+        p.maneja_inventario,
         p.nombre,
         p.descripcion,
         p.sku,
@@ -39,7 +41,12 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         p.categoria_id,
         c.nombre as categoria_nombre,
         p.precio_compra,
-        p.precio_venta,
+        p.precio_minorista,
+        p.precio_mayorista,
+        p.precio_distribuidor,
+        p.aplica_iva,
+        p.porcentaje_iva,
+        p.tipo_impuesto,
         p.stock_actual,
         p.stock_minimo,
         p.stock_maximo,
@@ -47,8 +54,25 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         p.ubicacion_almacen,
         p.imagen_url,
         p.estado,
+        p.cuenta_ingreso,
+        p.cuenta_costo,
+        p.cuenta_inventario,
+        p.cuenta_gasto,
         p.created_at,
-        p.updated_at
+        p.updated_at,
+        p.fecha_ultimo_cambio_precio,
+        -- Cálculo de márgenes
+        ROUND(((p.precio_minorista - p.precio_compra) / p.precio_compra) * 100, 2) as margen_minorista,
+        CASE 
+          WHEN p.precio_mayorista IS NOT NULL AND p.precio_compra > 0 THEN
+            ROUND(((p.precio_mayorista - p.precio_compra) / p.precio_compra) * 100, 2)
+          ELSE NULL
+        END as margen_mayorista,
+        CASE 
+          WHEN p.precio_distribuidor IS NOT NULL AND p.precio_compra > 0 THEN
+            ROUND(((p.precio_distribuidor - p.precio_compra) / p.precio_compra) * 100, 2)
+          ELSE NULL
+        END as margen_distribuidor
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
       WHERE p.empresa_id = ?
@@ -108,30 +132,70 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
   try {
     const {
       empresa_id,
+      tipo,
+      maneja_inventario,
       nombre,
       descripcion,
       sku,
       codigo_barras,
       categoria_id,
       precio_compra,
-      precio_venta,
+      precio_minorista,
+      precio_mayorista,
+      precio_distribuidor,
+      aplica_iva,
+      porcentaje_iva,
+      tipo_impuesto,
       stock_actual,
       stock_minimo,
       stock_maximo,
       unidad_medida,
       ubicacion_almacen,
       imagen_url,
-      estado
+      estado,
+      cuenta_ingreso,
+      cuenta_costo,
+      cuenta_inventario,
+      cuenta_gasto
     } = req.body;
 
     // Validaciones básicas
-    if (!empresa_id || !nombre || !sku || !precio_venta) {
+    if (!empresa_id || !nombre || !sku || !precio_minorista) {
       return errorResponse(
         res,
-        'Campos requeridos: empresa_id, nombre, sku, precio_venta',
+        'Campos requeridos: empresa_id, nombre, sku, precio_minorista',
         null,
         CONSTANTS.HTTP_STATUS.BAD_REQUEST
       );
+    }
+
+    // Validación: Servicios no deben manejar inventario
+    const tipoProducto = tipo || 'producto';
+    const manejaInv = tipoProducto === 'servicio' ? false : (maneja_inventario !== false);
+
+    // Validación: Jerarquía de precios
+    if (precio_mayorista && precio_mayorista > precio_minorista) {
+      return errorResponse(
+        res,
+        'El precio mayorista debe ser menor o igual al precio minorista',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    if (precio_distribuidor && precio_mayorista && precio_distribuidor > precio_mayorista) {
+      return errorResponse(
+        res,
+        'El precio distribuidor debe ser menor o igual al precio mayorista',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    // Validación: IVA válido para Colombia
+    const porcIVA = porcentaje_iva !== undefined ? porcentaje_iva : 19.00;
+    if (![0, 5, 19].includes(porcIVA) && porcIVA !== null) {
+      logger.info(`IVA no estándar: ${porcIVA}%. Se recomienda 0%, 5% o 19%`);
     }
 
     // Verificar si el SKU ya existe para esta empresa
@@ -152,13 +216,20 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
     const result = await query(
       `INSERT INTO productos (
         empresa_id,
+        tipo,
+        maneja_inventario,
         nombre,
         descripcion,
         sku,
         codigo_barras,
         categoria_id,
         precio_compra,
-        precio_venta,
+        precio_minorista,
+        precio_mayorista,
+        precio_distribuidor,
+        aplica_iva,
+        porcentaje_iva,
+        tipo_impuesto,
         stock_actual,
         stock_minimo,
         stock_maximo,
@@ -166,24 +237,39 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         ubicacion_almacen,
         imagen_url,
         estado,
+        cuenta_ingreso,
+        cuenta_costo,
+        cuenta_inventario,
+        cuenta_gasto,
         creado_por
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
+        tipoProducto,
+        manejaInv,
         nombre,
         descripcion || null,
         sku,
         codigo_barras || null,
         categoria_id || null,
         precio_compra || 0,
-        precio_venta,
-        stock_actual || 0,
-        stock_minimo || 0,
-        stock_maximo || null,
+        precio_minorista,
+        precio_mayorista || null,
+        precio_distribuidor || null,
+        aplica_iva !== false,
+        porcIVA,
+        tipo_impuesto || 'gravado',
+        manejaInv ? (stock_actual || 0) : null,
+        manejaInv ? (stock_minimo || 0) : null,
+        manejaInv ? (stock_maximo || null) : null,
         unidad_medida || 'unidad',
-        ubicacion_almacen || null,
+        manejaInv ? (ubicacion_almacen || null) : null,
         imagen_url || null,
         estado || 'activo',
+        cuenta_ingreso || null,
+        cuenta_costo || null,
+        cuenta_inventario || null,
+        cuenta_gasto || null,
         req.body.userId || null // Asumiendo que el userId viene del middleware de auth
       ]
     );
@@ -211,20 +297,31 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
   try {
     const { id } = req.params;
     const {
+      tipo,
+      maneja_inventario,
       nombre,
       descripcion,
       sku,
       codigo_barras,
       categoria_id,
       precio_compra,
-      precio_venta,
+      precio_minorista,
+      precio_mayorista,
+      precio_distribuidor,
+      aplica_iva,
+      porcentaje_iva,
+      tipo_impuesto,
       stock_actual,
       stock_minimo,
       stock_maximo,
       unidad_medida,
       ubicacion_almacen,
       imagen_url,
-      estado
+      estado,
+      cuenta_ingreso,
+      cuenta_costo,
+      cuenta_inventario,
+      cuenta_gasto
     } = req.body;
 
     // Verificar si el producto existe
@@ -236,6 +333,25 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
         'Producto no encontrado',
         null,
         CONSTANTS.HTTP_STATUS.NOT_FOUND
+      );
+    }
+
+    // Validación: Jerarquía de precios si se actualizan
+    if (precio_mayorista && precio_minorista && precio_mayorista > precio_minorista) {
+      return errorResponse(
+        res,
+        'El precio mayorista debe ser menor o igual al precio minorista',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    if (precio_distribuidor && precio_mayorista && precio_distribuidor > precio_mayorista) {
+      return errorResponse(
+        res,
+        'El precio distribuidor debe ser menor o igual al precio mayorista',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
       );
     }
 
@@ -260,6 +376,14 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
     const updates: string[] = [];
     const values: any[] = [];
 
+    if (tipo !== undefined) {
+      updates.push('tipo = ?');
+      values.push(tipo);
+    }
+    if (maneja_inventario !== undefined) {
+      updates.push('maneja_inventario = ?');
+      values.push(maneja_inventario);
+    }
     if (nombre !== undefined) {
       updates.push('nombre = ?');
       values.push(nombre);
@@ -284,9 +408,29 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
       updates.push('precio_compra = ?');
       values.push(precio_compra);
     }
-    if (precio_venta !== undefined) {
-      updates.push('precio_venta = ?');
-      values.push(precio_venta);
+    if (precio_minorista !== undefined) {
+      updates.push('precio_minorista = ?');
+      values.push(precio_minorista);
+    }
+    if (precio_mayorista !== undefined) {
+      updates.push('precio_mayorista = ?');
+      values.push(precio_mayorista);
+    }
+    if (precio_distribuidor !== undefined) {
+      updates.push('precio_distribuidor = ?');
+      values.push(precio_distribuidor);
+    }
+    if (aplica_iva !== undefined) {
+      updates.push('aplica_iva = ?');
+      values.push(aplica_iva);
+    }
+    if (porcentaje_iva !== undefined) {
+      updates.push('porcentaje_iva = ?');
+      values.push(porcentaje_iva);
+    }
+    if (tipo_impuesto !== undefined) {
+      updates.push('tipo_impuesto = ?');
+      values.push(tipo_impuesto);
     }
     if (stock_actual !== undefined) {
       updates.push('stock_actual = ?');
@@ -315,6 +459,28 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
     if (estado !== undefined) {
       updates.push('estado = ?');
       values.push(estado);
+    }
+    if (cuenta_ingreso !== undefined) {
+      updates.push('cuenta_ingreso = ?');
+      values.push(cuenta_ingreso);
+    }
+    if (cuenta_costo !== undefined) {
+      updates.push('cuenta_costo = ?');
+      values.push(cuenta_costo);
+    }
+    if (cuenta_inventario !== undefined) {
+      updates.push('cuenta_inventario = ?');
+      values.push(cuenta_inventario);
+    }
+    if (cuenta_gasto !== undefined) {
+      updates.push('cuenta_gasto = ?');
+      values.push(cuenta_gasto);
+    }
+    
+    // Agregar modificado_por si viene en el body
+    if (req.body.userId) {
+      updates.push('modificado_por = ?');
+      values.push(req.body.userId);
     }
 
     // Si no hay nada que actualizar

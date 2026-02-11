@@ -249,49 +249,83 @@ function renderizarProductos(items) {
     if (productosTable) productosTable.style.display = 'table';
     if (emptyState) emptyState.style.display = 'none';
 
-    tbody.innerHTML = items.map((prod, index) => `
-        <tr>
-            <td>${index + 1}</td>
-            <td>
-                <div class="d-flex align-items-center">
-                    ${prod.imagen_url ? 
-                        `<img src="${prod.imagen_url}" alt="${prod.nombre}" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">` : 
-                        `<div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-box text-muted"></i></div>`
+    tbody.innerHTML = items.map((prod, index) => {
+        // Determinar qué precio mostrar (prioridad: minorista > venta viejo)
+        const precioVenta = prod.precio_minorista || prod.precio_venta || 0;
+        const tipoBadge = prod.tipo === 'servicio' ? 
+            '<span class="badge bg-info me-1">Servicio</span>' : 
+            '<span class="badge bg-primary me-1">Producto</span>';
+        
+        // Badge de IVA
+        const ivaBadge = prod.aplica_iva ? 
+            `<span class="badge bg-success me-1" title="IVA ${prod.porcentaje_iva}%">IVA</span>` : '';
+        
+        // Calcular margen minorista
+        const margenMinorista = prod.precio_compra > 0 ? 
+            ((precioVenta - prod.precio_compra) / prod.precio_compra * 100) : 0;
+        const margenBadge = `<span class="badge ${getMargenBadgeClass(margenMinorista)}" title="Margen">${margenMinorista.toFixed(0)}%</span>`;
+        
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        ${prod.imagen_url ? 
+                            `<img src="${prod.imagen_url}" alt="${prod.nombre}" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">` : 
+                            `<div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-box text-muted"></i></div>`
+                        }
+                        <div>
+                            <div>${prod.nombre}</div>
+                            <small class="text-muted">${tipoBadge}${ivaBadge}${margenBadge}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>${prod.sku}</td>
+                <td>${prod.categoria_nombre || '-'}</td>
+                <td class="text-end">
+                    <div>$${Number(prod.precio_compra || 0).toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                </td>
+                <td class="text-end">
+                    <div class="text-primary fw-bold">$${Number(precioVenta).toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    ${prod.precio_mayorista ? `<small class="text-muted">May: $${Number(prod.precio_mayorista).toLocaleString('es-CO', {minimumFractionDigits: 0})}</small><br>` : ''}
+                    ${prod.precio_distribuidor ? `<small class="text-muted">Dist: $${Number(prod.precio_distribuidor).toLocaleString('es-CO', {minimumFractionDigits: 0})}</small>` : ''}
+                </td>
+                <td class="text-center">
+                    ${prod.tipo === 'servicio' ? 
+                        '<span class="text-muted">N/A</span>' :
+                        `<span class="badge ${getStockBadgeClass(prod.stock_actual, prod.stock_minimo)}">${prod.stock_actual}</span>`
                     }
-                    <span>${prod.nombre}</span>
-                </div>
-            </td>
-            <td>${prod.sku}</td>
-            <td>${prod.categoria_nombre || '-'}</td>
-            <td class="text-end">$${Number(prod.precio_compra || 0).toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            <td class="text-end">$${Number(prod.precio_venta).toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            <td class="text-center">
-                <span class="badge ${getStockBadgeClass(prod.stock_actual, prod.stock_minimo)}">
-                    ${prod.stock_actual}
-                </span>
-            </td>
-            <td class="text-center">
-                <span class="badge ${prod.estado === 'activo' ? 'bg-success' : 'bg-secondary'}">
-                    ${prod.estado === 'activo' ? 'Activo' : 'Inactivo'}
-                </span>
-            </td>
-            <td>
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary" onclick="editarProducto(${prod.id})" title="Editar">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-outline-danger" onclick="eliminarProducto(${prod.id})" title="Eliminar">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+                </td>
+                <td class="text-center">
+                    <span class="badge ${prod.estado === 'activo' ? 'bg-success' : 'bg-secondary'}">
+                        ${prod.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="editarProducto(${prod.id})" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="eliminarProducto(${prod.id})" title="Eliminar">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function getStockBadgeClass(actual, minimo) {
     if (actual === 0) return 'bg-danger';
     if (actual <= minimo) return 'bg-warning text-dark';
+    return 'bg-success';
+}
+
+function getMargenBadgeClass(margen) {
+    if (margen < 10) return 'bg-danger';
+    if (margen < 20) return 'bg-warning text-dark';
+    if (margen < 30) return 'bg-info';
     return 'bg-success';
 }
 
@@ -324,6 +358,65 @@ function initEventListeners() {
     // Formulario producto
     document.getElementById('productoForm').addEventListener('submit', guardarProducto);
 
+    // Event listeners para cálculos de precios y márgenes
+    const precioCompra = document.getElementById('productoPrecioCompra');
+    const precioMinorista = document.getElementById('productoPrecioMinorista');
+    const precioMayorista = document.getElementById('productoPrecioMayorista');
+    const precioDistribuidor = document.getElementById('productoPrecioDistribuidor');
+    
+    if (precioCompra) precioCompra.addEventListener('input', calcularMargenes);
+    if (precioMinorista) precioMinorista.addEventListener('input', calcularMargenes);
+    if (precioMayorista) precioMayorista.addEventListener('input', calcularMargenes);
+    if (precioDistribuidor) precioDistribuidor.addEventListener('input', calcularMargenes);
+
+    // Calculadoras de precios
+    const btnCalcMayorista = document.getElementById('btnCalcMayorista');
+    const btnCalcDistribuidor = document.getElementById('btnCalcDistribuidor');
+    
+    if (btnCalcMayorista) {
+        btnCalcMayorista.addEventListener('click', () => {
+            const minorista = parseFloat(precioMinorista.value) || 0;
+            if (minorista > 0) {
+                precioMayorista.value = (minorista * 0.9).toFixed(2); // 10% descuento
+                calcularMargenes();
+            }
+        });
+    }
+    
+    if (btnCalcDistribuidor) {
+        btnCalcDistribuidor.addEventListener('click', () => {
+            const minorista = parseFloat(precioMinorista.value) || 0;
+            if (minorista > 0) {
+                precioDistribuidor.value = (minorista * 0.8).toFixed(2); // 20% descuento
+                calcularMargenes();
+            }
+        });
+    }
+
+    // Event listeners para IVA
+    const aplicaIVA = document.getElementById('productoAplicaIVA');
+    const porcentajeIVA = document.getElementById('productoPorcentajeIVA');
+    
+    if (aplicaIVA) aplicaIVA.addEventListener('change', updateTablaResumenPrecios);
+    if (porcentajeIVA) porcentajeIVA.addEventListener('input', updateTablaResumenPrecios);
+
+    // Event listener para tipo de producto
+    const productoTipo = document.getElementById('productoTipo');
+    if (productoTipo) {
+        productoTipo.addEventListener('change', (e) => {
+            const seccionInventario = document.getElementById('seccionInventario');
+            const manejaInventario = document.getElementById('productoManejaInventario');
+            
+            if (e.target.value === 'servicio') {
+                if (seccionInventario) seccionInventario.style.display = 'none';
+                if (manejaInventario) manejaInventario.value = '0';
+            } else {
+                if (seccionInventario) seccionInventario.style.display = 'block';
+                if (manejaInventario) manejaInventario.value = '1';
+            }
+        });
+    }
+
     // Búsqueda y filtros
     document.getElementById('searchInput').addEventListener('input', filtrarProductos);
     document.getElementById('filterCategoria').addEventListener('change', filtrarProductos);
@@ -354,6 +447,118 @@ function initEventListeners() {
 }
 
 // ============================================
+// CÁLCULOS DE PRECIOS Y MÁRGENES
+// ============================================
+
+function calcularMargenes() {
+    const precioCompra = parseFloat(document.getElementById('productoPrecioCompra').value) || 0;
+    const precioMinorista = parseFloat(document.getElementById('productoPrecioMinorista').value) || 0;
+    const precioMayorista = parseFloat(document.getElementById('productoPrecioMayorista').value) || 0;
+    const precioDistribuidor = parseFloat(document.getElementById('productoPrecioDistribuidor').value) || 0;
+
+    // Calcular márgenes
+    const margenMinorista = precioCompra > 0 ? ((precioMinorista - precioCompra) / precioCompra * 100) : 0;
+    const margenMayorista = precioCompra > 0 ? ((precioMayorista - precioCompra) / precioCompra * 100) : 0;
+    const margenDistribuidor = precioCompra > 0 ? ((precioDistribuidor - precioCompra) / precioCompra * 100) : 0;
+
+    // Actualizar badges de margen
+    actualizarBadgeMargen('margenMinorista', margenMinorista);
+    actualizarBadgeMargen('margenMayorista', margenMayorista);
+    actualizarBadgeMargen('margenDistribuidor', margenDistribuidor);
+
+    // Validar jerarquía de precios
+    validarJerarquiaPrecios(precioMinorista, precioMayorista, precioDistribuidor);
+
+    // Actualizar tabla resumen
+    updateTablaResumenPrecios();
+}
+
+function actualizarBadgeMargen(elementId, margen) {
+    const badge = document.getElementById(elementId);
+    if (!badge) return;
+
+    badge.textContent = `${margen.toFixed(1)}%`;
+    
+    // Colorear según el margen
+    badge.className = 'badge';
+    if (margen < 10) {
+        badge.classList.add('bg-danger');
+    } else if (margen < 20) {
+        badge.classList.add('bg-warning');
+    } else if (margen < 30) {
+        badge.classList.add('bg-info');
+    } else {
+        badge.classList.add('bg-success');
+    }
+}
+
+function validarJerarquiaPrecios(minorista, mayorista, distribuidor) {
+    let mensaje = '';
+    
+    // Validar que distribuidor < mayorista < minorista
+    if (distribuidor > 0 && mayorista > 0 && distribuidor >= mayorista) {
+        mensaje = 'El precio distribuidor debe ser menor que el precio mayorista';
+    } else if (mayorista > 0 && minorista > 0 && mayorista >= minorista) {
+        mensaje = 'El precio mayorista debe ser menor que el precio minorista';
+    } else if (distribuidor > 0 && minorista > 0 && distribuidor >= minorista) {
+        mensaje = 'El precio distribuidor debe ser menor que el precio minorista';
+    }
+
+    const alertDiv = document.getElementById('alertJerarquiaPrecios');
+    if (mensaje) {
+        if (alertDiv) {
+            alertDiv.textContent = mensaje;
+            alertDiv.style.display = 'block';
+        }
+    } else {
+        if (alertDiv) alertDiv.style.display = 'none';
+    }
+}
+
+function updateTablaResumenPrecios() {
+    const tbody = document.getElementById('tbodyResumenPrecios');
+    if (!tbody) return;
+
+    const precioCompra = parseFloat(document.getElementById('productoPrecioCompra').value) || 0;
+    const precioMinorista = parseFloat(document.getElementById('productoPrecioMinorista').value) || 0;
+    const precioMayorista = parseFloat(document.getElementById('productoPrecioMayorista').value) || 0;
+    const precioDistribuidor = parseFloat(document.getElementById('productoPrecioDistribuidor').value) || 0;
+    
+    const aplicaIVA = document.getElementById('productoAplicaIVA').checked;
+    const porcentajeIVA = aplicaIVA ? (parseFloat(document.getElementById('productoPorcentajeIVA').value) || 0) : 0;
+
+    if (precioMinorista === 0 && precioMayorista === 0 && precioDistribuidor === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Ingrese los precios para ver el resumen</td></tr>';
+        return;
+    }
+
+    const precios = [
+        { nivel: 'Minorista', base: precioMinorista },
+        { nivel: 'Mayorista', base: precioMayorista },
+        { nivel: 'Distribuidor', base: precioDistribuidor }
+    ];
+
+    tbody.innerHTML = precios.map(p => {
+        if (p.base === 0) return '';
+        
+        const iva = p.base * (porcentajeIVA / 100);
+        const total = p.base + iva;
+        const margen = precioCompra > 0 ? ((p.base - precioCompra) / precioCompra * 100) : 0;
+        const margenClass = margen < 10 ? 'text-danger' : margen < 20 ? 'text-warning' : margen < 30 ? 'text-info' : 'text-success';
+        
+        return `
+            <tr>
+                <td>${p.nivel}</td>
+                <td>$${p.base.toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td>$${iva.toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td><strong>$${total.toLocaleString('es-CO', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                <td><span class="${margenClass} fw-bold">${margen.toFixed(1)}%</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ============================================
 // MODAL PRODUCTO
 // ============================================
 
@@ -361,6 +566,34 @@ function abrirModalNuevo() {
     document.getElementById('productoModalTitle').textContent = 'Nuevo Producto';
     document.getElementById('productoForm').reset();
     document.getElementById('productoId').value = '';
+    
+    // Valores por defecto
+    document.getElementById('productoTipo').value = 'producto';
+    document.getElementById('productoManejaInventario').value = '1';
+    document.getElementById('productoAplicaIVA').checked = false;
+    document.getElementById('productoPorcentajeIVA').value = '19';
+    document.getElementById('productoTipoImpuesto').value = 'IVA';
+    
+    // Mostrar sección de inventario
+    const seccionInventario = document.getElementById('seccionInventario');
+    if (seccionInventario) seccionInventario.style.display = 'block';
+    
+    // Limpiar alertas
+    const alertDiv = document.getElementById('alertJerarquiaPrecios');
+    if (alertDiv) alertDiv.style.display = 'none';
+    
+    // Limpiar badges
+    const badges = ['margenMinorista', 'margenMayorista', 'margenDistribuidor'];
+    badges.forEach(id => {
+        const badge = document.getElementById(id);
+        if (badge) {
+            badge.textContent = '0%';
+            badge.className = 'badge bg-secondary';
+        }
+    });
+    
+    // Limpiar tabla resumen
+    updateTablaResumenPrecios();
     
     const modal = new bootstrap.Modal(document.getElementById('productoModal'));
     modal.show();
@@ -376,19 +609,60 @@ async function editarProducto(id) {
 
         document.getElementById('productoModalTitle').textContent = 'Editar Producto';
         document.getElementById('productoId').value = producto.id;
+        
+        // Campos básicos
         document.getElementById('productoNombre').value = producto.nombre;
         document.getElementById('productoSku').value = producto.sku;
         document.getElementById('productoDescripcion').value = producto.descripcion || '';
         document.getElementById('productoCategoria').value = producto.categoria_id || '';
         document.getElementById('productoCodigoBarras').value = producto.codigo_barras || '';
+        
+        // Tipo y configuración
+        document.getElementById('productoTipo').value = producto.tipo || 'producto';
+        document.getElementById('productoManejaInventario').value = producto.maneja_inventario || '1';
+        
+        // Precios
         document.getElementById('productoPrecioCompra').value = producto.precio_compra;
-        document.getElementById('productoPrecioVenta').value = producto.precio_venta;
+        document.getElementById('productoPrecioMinorista').value = producto.precio_minorista || producto.precio_venta; // Compatibilidad
+        document.getElementById('productoPrecioMayorista').value = producto.precio_mayorista || '';
+        document.getElementById('productoPrecioDistribuidor').value = producto.precio_distribuidor || '';
+        
+        // IVA
+        document.getElementById('productoAplicaIVA').checked = producto.aplica_iva === 1;
+        document.getElementById('productoPorcentajeIVA').value = producto.porcentaje_iva || '19';
+        document.getElementById('productoTipoImpuesto').value = producto.tipo_impuesto || 'IVA';
+        
+        // Inventario
         document.getElementById('productoStockActual').value = producto.stock_actual;
         document.getElementById('productoStockMinimo').value = producto.stock_minimo;
         document.getElementById('productoStockMaximo').value = producto.stock_maximo || '';
         document.getElementById('productoUnidadMedida').value = producto.unidad_medida || 'unidad';
         document.getElementById('productoUbicacion').value = producto.ubicacion_almacen || '';
+        
+        // Cuentas contables (opcionales)
+        if (document.getElementById('productoCuentaIngreso')) {
+            document.getElementById('productoCuentaIngreso').value = producto.cuenta_ingreso || '';
+        }
+        if (document.getElementById('productoCuentaCosto')) {
+            document.getElementById('productoCuentaCosto').value = producto.cuenta_costo || '';
+        }
+        if (document.getElementById('productoCuentaInventario')) {
+            document.getElementById('productoCuentaInventario').value = producto.cuenta_inventario || '';
+        }
+        if (document.getElementById('productoCuentaGasto')) {
+            document.getElementById('productoCuentaGasto').value = producto.cuenta_gasto || '';
+        }
+        
         document.getElementById('productoEstado').value = producto.estado;
+
+        // Mostrar/ocultar sección de inventario según tipo
+        const seccionInventario = document.getElementById('seccionInventario');
+        if (seccionInventario) {
+            seccionInventario.style.display = producto.tipo === 'servicio' ? 'none' : 'block';
+        }
+        
+        // Calcular márgenes
+        calcularMargenes();
 
         const modal = new bootstrap.Modal(document.getElementById('productoModal'));
         modal.show();
@@ -409,6 +683,20 @@ async function guardarProducto(e) {
     const productoId = document.getElementById('productoId').value;
     const token = localStorage.getItem('token');
 
+    // Validar jerarquía de precios antes de guardar
+    const precioMinorista = parseFloat(document.getElementById('productoPrecioMinorista').value) || 0;
+    const precioMayorista = parseFloat(document.getElementById('productoPrecioMayorista').value) || 0;
+    const precioDistribuidor = parseFloat(document.getElementById('productoPrecioDistribuidor').value) || 0;
+
+    if (precioDistribuidor > 0 && precioMayorista > 0 && precioDistribuidor >= precioMayorista) {
+        mostrarAlerta('El precio distribuidor debe ser menor que el precio mayorista', 'danger');
+        return;
+    }
+    if (precioMayorista > 0 && precioMinorista > 0 && precioMayorista >= precioMinorista) {
+        mostrarAlerta('El precio mayorista debe ser menor que el precio minorista', 'danger');
+        return;
+    }
+
     const productoData = {
         empresa_id: currentEmpresa.id,
         nombre: document.getElementById('productoNombre').value,
@@ -416,15 +704,47 @@ async function guardarProducto(e) {
         descripcion: document.getElementById('productoDescripcion').value,
         categoria_id: document.getElementById('productoCategoria').value || null,
         codigo_barras: document.getElementById('productoCodigoBarras').value,
+        
+        // Tipo y configuración
+        tipo: document.getElementById('productoTipo').value,
+        maneja_inventario: document.getElementById('productoManejaInventario').value === '1' ? 1 : 0,
+        
+        // Precios
         precio_compra: parseFloat(document.getElementById('productoPrecioCompra').value) || 0,
-        precio_venta: parseFloat(document.getElementById('productoPrecioVenta').value),
+        precio_minorista: precioMinorista,
+        precio_mayorista: precioMayorista || null,
+        precio_distribuidor: precioDistribuidor || null,
+        
+        // IVA
+        aplica_iva: document.getElementById('productoAplicaIVA').checked ? 1 : 0,
+        porcentaje_iva: document.getElementById('productoAplicaIVA').checked ? 
+            parseFloat(document.getElementById('productoPorcentajeIVA').value) : null,
+        tipo_impuesto: document.getElementById('productoAplicaIVA').checked ? 
+            document.getElementById('productoTipoImpuesto').value : null,
+        
+        // Inventario
         stock_actual: parseInt(document.getElementById('productoStockActual').value) || 0,
         stock_minimo: parseInt(document.getElementById('productoStockMinimo').value) || 0,
         stock_maximo: parseInt(document.getElementById('productoStockMaximo').value) || null,
         unidad_medida: document.getElementById('productoUnidadMedida').value,
         ubicacion_almacen: document.getElementById('productoUbicacion').value,
+        
         estado: document.getElementById('productoEstado').value
     };
+
+    // Agregar cuentas contables si existen en el formulario
+    if (document.getElementById('productoCuentaIngreso')) {
+        productoData.cuenta_ingreso = document.getElementById('productoCuentaIngreso').value || null;
+    }
+    if (document.getElementById('productoCuentaCosto')) {
+        productoData.cuenta_costo = document.getElementById('productoCuentaCosto').value || null;
+    }
+    if (document.getElementById('productoCuentaInventario')) {
+        productoData.cuenta_inventario = document.getElementById('productoCuentaInventario').value || null;
+    }
+    if (document.getElementById('productoCuentaGasto')) {
+        productoData.cuenta_gasto = document.getElementById('productoCuentaGasto').value || null;
+    }
 
     try {
         const url = productoId ? 
