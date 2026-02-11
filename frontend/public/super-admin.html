@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Admin - KORE Inventory</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --dark-color: #1f2937;
+        }
+
+        .metric-card {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .metric-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+
+        .metric-label {
+            color: #6b7280;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-change {
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .metric-change.positive {
+            color: var(--success-color);
+        }
+
+        .metric-change.negative {
+            color: var(--danger-color);
+        }
+
+        .bg-primary-light {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+        }
+
+        .bg-success-light {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .bg-warning-light {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .bg-danger-light {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .bg-info-light {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--info-color);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--dark-color);
+        }
+
+        .table-card {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge-status {
+            padding: 0.35rem 0.75rem;
+            font-weight: 600;
+            border-radius: 6px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .quick-action-btn {
+            border-radius: 8px;
+            padding: 1rem;
+            border: 2px dashed #e5e7eb;
+            transition: all 0.2s;
+        }
+
+        .quick-action-btn:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(99, 102, 241, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="bi bi-shield-check me-2"></i>KORE Super Admin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#dashboard"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#empresas"><i class="bi bi-building me-1"></i>Empresas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#usuarios"><i class="bi bi-people me-1"></i>Usuarios</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#actividad"><i class="bi bi-clock-history me-1"></i>Actividad</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i>Super Admin
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="dashboard.html"><i class="bi bi-arrow-left me-2"></i>Ir a Dashboard Normal</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="login.html"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+
+        <!-- Métricas Principales -->
+        <div class="row g-4 mb-4">
+            <!-- Empresas Totales -->
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="metric-label mb-0">Total Empresas</p>
+                                <h2 class="metric-value" id="metricEmpresasTotal">0</h2>
+                                <span class="metric-change positive" id="metricEmpresasChange">
+                                    <i class="bi bi-arrow-up"></i> +0 este mes
+                                </span>
+                            </div>
+                            <div class="metric-icon bg-primary-light">
+                                <i class="bi bi-building"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usuarios Activos -->
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="metric-label mb-0">Usuarios Activos</p>
+                                <h2 class="metric-value" id="metricUsuariosActivos">0</h2>
+                                <span class="metric-change positive" id="metricUsuariosChange">
+                                    <i class="bi bi-arrow-up"></i> +0 nuevos
+                                </span>
+                            </div>
+                            <div class="metric-icon bg-success-light">
+                                <i class="bi bi-people"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ingresos MRR -->
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="metric-label mb-0">MRR</p>
+                                <h2 class="metric-value" id="metricMRR">$0</h2>
+                                <span class="metric-change positive" id="metricMRRChange">
+                                    <i class="bi bi-arrow-up"></i> +0%
+                                </span>
+                            </div>
+                            <div class="metric-icon bg-success-light">
+                                <i class="bi bi-currency-dollar"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Licencias por Vencer -->
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="metric-label mb-0">Por Vencer</p>
+                                <h2 class="metric-value text-warning" id="metricLicenciasPorVencer">0</h2>
+                                <span class="metric-label">Próximos 15 días</span>
+                            </div>
+                            <div class="metric-icon bg-warning-light">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas Secundarias -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-8">
+                <!-- Distribución por Estado de Empresas -->
+                <div class="card table-card">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0">Estado de Empresas</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <div class="mb-2">
+                                    <h3 class="text-success mb-0" id="empresasActivas">0</h3>
+                                    <span class="badge bg-success-light text-success mt-2">Activas</span>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="mb-2">
+                                    <h3 class="text-info mb-0" id="empresasTrial">0</h3>
+                                    <span class="badge bg-info-light text-info mt-2">En Trial</span>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="mb-2">
+                                    <h3 class="text-warning mb-0" id="empresasSuspendidas">0</h3>
+                                    <span class="badge bg-warning-light text-warning mt-2">Suspendidas</span>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="mb-2">
+                                    <h3 class="text-danger mb-0" id="empresasCanceladas">0</h3>
+                                    <span class="badge bg-danger-light text-danger mt-2">Canceladas</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Empresas Recientes -->
+                <div class="card table-card mt-4" id="section-empresas">
+                    <div class="card-header bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Empresas Registradas</h5>
+                            <button class="btn btn-primary btn-sm" onclick="abrirModalCrearEmpresa()">
+                                <i class="bi bi-plus-circle me-1"></i>Nueva Empresa
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filtros -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="searchEmpresas" placeholder="Buscar por nombre, NIT o email...">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="filterEstado">
+                                    <option value="">Todos los estados</option>
+                                    <option value="activa">Activas</option>
+                                    <option value="trial">En Trial</option>
+                                    <option value="suspendida">Suspendidas</option>
+                                    <option value="cancelada">Canceladas</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="filterPlan">
+                                    <option value="">Todos los planes</option>
+                                    <option value="1">Básico</option>
+                                    <option value="2">Profesional</option>
+                                    <option value="3">Enterprise</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-primary w-100" onclick="buscarEmpresas()">
+                                    <i class="bi bi-search"></i> Buscar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabla -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Empresa</th>
+                                        <th>Plan</th>
+                                        <th>Estado</th>
+                                        <th>Usuarios</th>
+                                        <th>Productos</th>
+                                        <th>Registro</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaEmpresas">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Paginación -->
+                        <nav>
+                            <ul class="pagination justify-content-center mb-0" id="paginacionEmpresas">
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Distribución por Planes -->
+                <div class="card table-card mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0">Distribución por Plan</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span><i class="bi bi-circle-fill text-primary me-2"></i>Básico</span>
+                                <strong id="planBasico">0</strong>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-primary" id="planBasicoBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span><i class="bi bi-circle-fill text-success me-2"></i>Profesional</span>
+                                <strong id="planProfesional">0</strong>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success" id="planProfesionalBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span><i class="bi bi-circle-fill text-warning me-2"></i>Enterprise</span>
+                                <strong id="planEnterprise">0</strong>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-warning" id="planEnterpriseBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones Rápidas -->
+                <div class="card table-card mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0">Acciones Rápidas</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn quick-action-btn w-100 text-start mb-2" onclick="abrirModalCrearEmpresa()">
+                            <i class="bi bi-plus-circle text-primary me-2"></i> Nueva Empresa
+                        </button>
+                        <button class="btn quick-action-btn w-100 text-start mb-2" onclick="abrirModalCrearUsuario()">
+                            <i class="bi bi-person-plus text-success me-2"></i> Nuevo Usuario
+                        </button>
+                        <button class="btn quick-action-btn w-100 text-start" onclick="verActividad()">
+                            <i class="bi bi-clock-history text-info me-2"></i> Ver Actividad
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Actividad Reciente -->
+                <div class="card table-card" id="section-actividad">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0">Actividad Reciente</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <div id="listaActividad">
+                            <div class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Crear Empresa -->
+    <div class="modal fade" id="modalCrearEmpresa" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-building me-2"></i>
+                        <span id="tituloModalEmpresa">Nueva Empresa</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEmpresa">
+                        <input type="hidden" id="empresaId">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre de la Empresa *</label>
+                                <input type="text" class="form-control" id="empresaNombre" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">NIT *</label>
+                                <input type="text" class="form-control" id="empresaNit" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="empresaEmail" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Teléfono</label>
+                                <input type="text" class="form-control" id="empresaTelefono">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" class="form-control" id="empresaDireccion">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ciudad</label>
+                                <input type="text" class="form-control" id="empresaCiudad" value="Bogotá">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">País</label>
+                                <input type="text" class="form-control" id="empresaPais" value="Colombia">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Régimen Tributario *</label>
+                                <select class="form-select" id="empresaRegimen" required>
+                                    <option value="comun">Común</option>
+                                    <option value="simplificado">Simplificado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipo Contribuyente *</label>
+                                <select class="form-select" id="empresaTipoContribuyente" required>
+                                    <option value="responsable_iva">Responsable IVA</option>
+                                    <option value="no_responsable_iva">No Responsable IVA</option>
+                                    <option value="gran_contribuyente">Gran Contribuyente</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Plan *</label>
+                                <select class="form-select" id="empresaPlan" required>
+                                    <option value="1">Básico - $29/mes</option>
+                                    <option value="2" selected>Profesional - $79/mes</option>
+                                    <option value="3">Enterprise - $199/mes</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Días de Trial</label>
+                                <input type="number" class="form-control" id="empresaDiasTrial" value="15" min="0" max="90">
+                                <small class="text-muted">0 = Sin trial (activa directamente)</small>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo Facturación</label>
+                                <select class="form-select" id="empresaTipoFacturacion">
+                                    <option value="mensual" selected>Mensual</option>
+                                    <option value="anual">Anual</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="empresaAutoRenovacion" checked>
+                            <label class="form-check-label" for="empresaAutoRenovacion">
+                                Auto-renovación de licencia
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEmpresa()">
+                        <i class="bi bi-check-circle me-1"></i>Guardar Empresa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/super-admin.js"></script>
+
+</body>
+</html>

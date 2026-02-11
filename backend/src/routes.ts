@@ -16,6 +16,7 @@ import ventasRoutes from './platform/ventas/ventas.routes';
 import proveedoresRoutes from './platform/proveedores/proveedores.routes';
 import inventarioRoutes from './platform/inventario/inventario.routes';
 import comprasRoutes from './platform/compras/compras.routes';
+import superAdminRoutes from './platform/super-admin/super-admin.routes';
 
 const router = Router();
 
@@ -28,6 +29,11 @@ router.use('/auth', authRoutes);
 // RUTAS DE DASHBOARD
 // ============================================
 router.use('/dashboard', dashboardRoutes);
+
+// ============================================
+// RUTAS DE SUPER ADMIN
+// ============================================
+router.use('/super-admin', superAdminRoutes);
 
 // ============================================
 // RUTAS DE PLATAFORMA (Super Admin)
