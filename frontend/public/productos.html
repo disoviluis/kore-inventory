@@ -652,16 +652,16 @@
                                 <h6 class="border-bottom pb-2"><i class="bi bi-receipt me-2"></i>Impuestos (IVA)</h6>
                             </div>
 
-                            <div class="col-md-4">
-                                <div class="form-check form-switch mt-2">
-                                    <input class="form-check-input" type="checkbox" id="productoAplicaIVA" checked>
-                                    <label class="form-check-label" for="productoAplicaIVA">
-                                        Aplica IVA
-                                    </label>
-                                </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo de Impuesto</label>
+                                <select class="form-select" id="productoTipoImpuesto">
+                                    <option value="gravado">Gravado</option>
+                                    <option value="exento">Exento</option>
+                                    <option value="excluido">Excluido</option>
+                                </select>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Porcentaje IVA</label>
                                 <select class="form-select" id="productoPorcentajeIVA">
                                     <option value="0">0%</option>
@@ -670,13 +670,29 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label">Tipo de Impuesto</label>
-                                <select class="form-select" id="productoTipoImpuesto">
-                                    <option value="gravado">Gravado</option>
-                                    <option value="exento">Exento</option>
-                                    <option value="excluido">Excluido</option>
-                                </select>
+                            <div class="col-md-3">
+                                <label class="form-label d-block">IVA Incluido</label>
+                                <div class="btn-group w-100" role="group" id="btnGroupIVAIncluido">
+                                    <input type="radio" class="btn-check" name="ivaIncluido" id="ivaIncluidoNo" value="false" checked>
+                                    <label class="btn btn-outline-secondary" for="ivaIncluidoNo">
+                                        <i class="bi bi-x-circle me-1"></i>No
+                                    </label>
+                                    
+                                    <input type="radio" class="btn-check" name="ivaIncluido" id="ivaIncluidoSi" value="true">
+                                    <label class="btn btn-outline-success" for="ivaIncluidoSi">
+                                        <i class="bi bi-check-circle me-1"></i>Sí
+                                    </label>
+                                </div>
+                                <small class="text-muted">¿El precio ya incluye IVA?</small>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="productoAplicaIVA" checked>
+                                    <label class="form-check-label" for="productoAplicaIVA">
+                                        <i class="bi bi-receipt me-1"></i>Aplica IVA
+                                    </label>
+                                </div>
                             </div>
 
                             <!-- Tabla Resumen -->
@@ -742,6 +758,17 @@
                                     <option value="hora">Hora</option>
                                     <option value="servicio">Servicio</option>
                                 </select>
+                            </div>
+
+                            <div class="col-md-6" id="campoVentaSinStock">
+                                <label class="form-label d-block">Ventas sin Stock</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="productoPermiteVentaSinStock">
+                                    <label class="form-check-label" for="productoPermiteVentaSinStock">
+                                        <i class="bi bi-cart-plus me-1"></i>Permitir venta aunque no haya stock
+                                    </label>
+                                </div>
+                                <small class="text-muted">Útil para ventas contra pedido o pre-órdenes</small>
                             </div>
 
                             <div class="col-md-6" id="campoUbicacion">

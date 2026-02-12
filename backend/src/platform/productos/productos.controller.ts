@@ -47,11 +47,13 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         p.aplica_iva,
         p.porcentaje_iva,
         p.tipo_impuesto,
+        p.iva_incluido_en_precio,
         p.stock_actual,
         p.stock_minimo,
         p.stock_maximo,
         p.unidad_medida,
         p.ubicacion_almacen,
+        p.permite_venta_sin_stock,
         p.imagen_url,
         p.estado,
         p.cuenta_ingreso,
@@ -173,24 +175,8 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
     const tipoProducto = tipo || 'producto';
     const manejaInv = tipoProducto === 'servicio' ? false : (maneja_inventario !== false);
 
-    // Validación: Jerarquía de precios
-    if (precio_mayorista && precio_mayorista > precio_minorista) {
-      return errorResponse(
-        res,
-        'El precio mayorista debe ser menor o igual al precio minorista',
-        null,
-        CONSTANTS.HTTP_STATUS.BAD_REQUEST
-      );
-    }
-
-    if (precio_distribuidor && precio_mayorista && precio_distribuidor > precio_mayorista) {
-      return errorResponse(
-        res,
-        'El precio distribuidor debe ser menor o igual al precio mayorista',
-        null,
-        CONSTANTS.HTTP_STATUS.BAD_REQUEST
-      );
-    }
+    // NOTA: Se eliminaron las validaciones de jerarquía de precios
+    // El administrador tiene libertad total para establecer los precios
 
     // Validación: IVA válido para Colombia
     const porcIVA = porcentaje_iva !== undefined ? porcentaje_iva : 19.00;
@@ -230,11 +216,13 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         aplica_iva,
         porcentaje_iva,
         tipo_impuesto,
+        iva_incluido_en_precio,
         stock_actual,
         stock_minimo,
         stock_maximo,
         unidad_medida,
         ubicacion_almacen,
+        permite_venta_sin_stock,
         imagen_url,
         estado,
         cuenta_ingreso,
@@ -242,7 +230,7 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         cuenta_inventario,
         cuenta_gasto,
         creado_por
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         tipoProducto,
@@ -259,11 +247,13 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         aplica_iva !== false,
         porcIVA,
         tipo_impuesto || 'gravado',
+        req.body.iva_incluido_en_precio || false,
         manejaInv ? (stock_actual || 0) : null,
         manejaInv ? (stock_minimo || 0) : null,
         manejaInv ? (stock_maximo || null) : null,
         unidad_medida || 'unidad',
         manejaInv ? (ubicacion_almacen || null) : null,
+        req.body.permite_venta_sin_stock || false,
         imagen_url || null,
         estado || 'activo',
         cuenta_ingreso || null,
@@ -336,24 +326,8 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
       );
     }
 
-    // Validación: Jerarquía de precios si se actualizan
-    if (precio_mayorista && precio_minorista && precio_mayorista > precio_minorista) {
-      return errorResponse(
-        res,
-        'El precio mayorista debe ser menor o igual al precio minorista',
-        null,
-        CONSTANTS.HTTP_STATUS.BAD_REQUEST
-      );
-    }
-
-    if (precio_distribuidor && precio_mayorista && precio_distribuidor > precio_mayorista) {
-      return errorResponse(
-        res,
-        'El precio distribuidor debe ser menor o igual al precio mayorista',
-        null,
-        CONSTANTS.HTTP_STATUS.BAD_REQUEST
-      );
-    }
+    // NOTA: Se eliminaron las validaciones de jerarquía de precios
+    // El administrador tiene libertad total para establecer los precios
 
     // Verificar si el SKU ya existe para otro producto de la misma empresa
     if (sku) {
@@ -432,6 +406,10 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
       updates.push('tipo_impuesto = ?');
       values.push(tipo_impuesto);
     }
+    if (req.body.iva_incluido_en_precio !== undefined) {
+      updates.push('iva_incluido_en_precio = ?');
+      values.push(req.body.iva_incluido_en_precio);
+    }
     if (stock_actual !== undefined) {
       updates.push('stock_actual = ?');
       values.push(stock_actual);
@@ -451,6 +429,10 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
     if (ubicacion_almacen !== undefined) {
       updates.push('ubicacion_almacen = ?');
       values.push(ubicacion_almacen);
+    }
+    if (req.body.permite_venta_sin_stock !== undefined) {
+      updates.push('permite_venta_sin_stock = ?');
+      values.push(req.body.permite_venta_sin_stock);
     }
     if (imagen_url !== undefined) {
       updates.push('imagen_url = ?');

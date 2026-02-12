@@ -410,22 +410,39 @@ function agregarProducto(producto) {
     const index = productosVenta.findIndex(p => p.id === producto.id);
     
     if (index >= 0) {
-        // Incrementar cantidad si hay stock
-        if (productosVenta[index].cantidad < producto.stock_actual) {
+        // Incrementar cantidad si hay stock O si permite venta sin stock
+        const productoActual = productosVenta[index];
+        const permiteVentaSinStock = producto.permite_venta_sin_stock === 1 || producto.permite_venta_sin_stock === true;
+        
+        if (productoActual.cantidad < producto.stock_actual) {
+            // Hay stock disponible, incrementar normalmente
             productosVenta[index].cantidad++;
             const precio = parseFloat(productosVenta[index].precio_unitario);
             productosVenta[index].subtotal = productosVenta[index].cantidad * precio;
+        } else if (permiteVentaSinStock) {
+            // No hay stock pero permite venta sin stock
+            mostrarModalVentaSinStock(producto, index);
+            return;
         } else {
-            mostrarAlerta('No hay suficiente stock disponible', 'warning');
+            mostrarAlerta('No hay suficiente stock disponible y este producto no permite ventas sin stock', 'warning');
+            return;
         }
     } else {
         // Agregar nuevo producto
+        const permiteVentaSinStock = producto.permite_venta_sin_stock === 1 || producto.permite_venta_sin_stock === true;
+        
         if (producto.stock_actual < 1) {
-            mostrarAlerta('Producto sin stock disponible', 'warning');
-            return;
+            if (permiteVentaSinStock) {
+                // Mostrar modal para confirmar venta contra pedido
+                mostrarModalVentaSinStock(producto, -1);
+                return;
+            } else {
+                mostrarAlerta('Producto sin stock disponible. Contacte con administración para habilitar ventas sin stock.', 'warning');
+                return;
+            }
         }
 
-        const precioUnitario = parseFloat(producto.precio_venta);
+        const precioUnitario = parseFloat(producto.precio_venta || producto.precio_minorista);
         productosVenta.push({
             id: producto.id,
             nombre: producto.nombre,
@@ -433,7 +450,9 @@ function agregarProducto(producto) {
             precio_unitario: precioUnitario,
             cantidad: 1,
             stock_disponible: producto.stock_actual,
-            subtotal: precioUnitario
+            subtotal: precioUnitario,
+            tipo_venta: 'normal',
+            estado_entrega: 'entregado'
         });
     }
 
@@ -467,12 +486,24 @@ function renderizarProductos() {
             const p = productosVenta[index];
             console.log(`Generando HTML para producto ${index}:`, p);
             
+            // Badge para venta contra pedido
+            const badgeContraPedido = p.tipo_venta === 'contra_pedido' ? 
+                `<span class="badge bg-warning text-dark ms-2">
+                    <i class="bi bi-clock-history"></i> Contra Pedido
+                 </span>` : '';
+            
+            // Información de entrega si es contra pedido
+            const infoEntrega = p.tipo_venta === 'contra_pedido' && p.fecha_entrega_estimada ?
+                `<br><small class="text-warning">
+                    <i class="bi bi-calendar-event"></i> Entrega estimada: ${formatearFecha(p.fecha_entrega_estimada)}
+                 </small>` : '';
+            
             html += `
-            <div class="producto-item mb-3 p-3 border rounded">
+            <div class="producto-item mb-3 p-3 border rounded ${p.tipo_venta === 'contra_pedido' ? 'border-warning' : ''}">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="flex-grow-1">
-                        <strong>${p.nombre}</strong><br>
-                        <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_disponible}</small>
+                        <strong>${p.nombre}</strong>${badgeContraPedido}<br>
+                        <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_disponible}</small>${infoEntrega}
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <div class="d-flex align-items-center">
@@ -480,7 +511,7 @@ function renderizarProductos() {
                                 <i class="bi bi-dash"></i>
                             </button>
                             <input type="number" class="form-control form-control-sm input-cantidad mx-1" 
-                                   value="${p.cantidad}" min="1" max="${p.stock_disponible}"
+                                   value="${p.cantidad}" min="1" max="${p.tipo_venta === 'contra_pedido' ? 9999 : p.stock_disponible}"
                                    onchange="actualizarCantidad(${index}, this.value)"
                                    style="width: 60px; text-align: center;">
                             <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, 1)">
@@ -518,7 +549,8 @@ function cambiarCantidad(index, delta) {
         return;
     }
 
-    if (nuevaCantidad > producto.stock_disponible) {
+    // Permitir cantidades mayores al stock solo si es contra pedido
+    if (producto.tipo_venta !== 'contra_pedido' && nuevaCantidad > producto.stock_disponible) {
         mostrarAlerta('No hay suficiente stock disponible', 'warning');
         return;
     }
@@ -539,7 +571,9 @@ function actualizarCantidad(index, valor) {
     }
 
     const producto = productosVenta[index];
-    if (cantidad > producto.stock_disponible) {
+    
+    // Permitir cantidades mayores al stock solo si es contra pedido
+    if (producto.tipo_venta !== 'contra_pedido' && cantidad > producto.stock_disponible) {
         mostrarAlerta('No hay suficiente stock disponible', 'warning');
         renderizarProductos();
         return;
@@ -616,7 +650,12 @@ async function guardarVenta() {
             cantidad: p.cantidad,
             precio_unitario: p.precio_unitario,
             descuento: 0,
-            subtotal: p.subtotal
+            subtotal: p.subtotal,
+            // Campos para ventas contra pedido
+            tipo_venta: p.tipo_venta || 'inmediata',
+            estado_entrega: p.estado_entrega || null,
+            fecha_entrega_estimada: p.fecha_entrega_estimada || null,
+            notas_entrega: p.notas_entrega || null
         }))
     };
 
@@ -1380,4 +1419,110 @@ function generarHTMLImpresion(formatoTermico = false) {
 </html>
         `;
     }
+}
+
+// ============================================
+// FUNCIONES PARA VENTA SIN STOCK (CONTRA PEDIDO)
+// ============================================
+
+let productoSinStockActual = null;
+let indexProductoSinStock = -1;
+
+/**
+ * Mostrar modal para confirmar venta sin stock
+ */
+function mostrarModalVentaSinStock(producto, index) {
+    productoSinStockActual = producto;
+    indexProductoSinStock = index;
+    
+    const stockDisponible = producto.stock_actual || 0;
+    const cantidadActual = index >= 0 ? productosVenta[index].cantidad : 0;
+    const cantidadFaltante = index >= 0 ? (cantidadActual + 1 - stockDisponible) : 1;
+    
+    const mensaje = `
+        <strong>${producto.nombre}</strong><br>
+        <small class="text-muted">SKU: ${producto.sku}</small><br><br>
+        Stock disponible: <strong>${stockDisponible}</strong><br>
+        Cantidad solicitada: <strong>${index >= 0 ? cantidadActual + 1 : 1}</strong><br>
+        Faltante: <strong class="text-danger">${cantidadFaltante}</strong>
+    `;
+    
+    document.getElementById('mensajeStockInsuficiente').innerHTML = mensaje;
+    
+    // Establecer fecha mínima como mañana
+    const mañana = new Date();
+    mañana.setDate(mañana.getDate() + 1);
+    const fechaMin = mañana.toISOString().split('T')[0];
+    document.getElementById('fechaEntregaEstimada').setAttribute('min', fechaMin);
+    document.getElementById('fechaEntregaEstimada').value = fechaMin;
+    
+    // Limpiar notas
+    document.getElementById('notasEntrega').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalVentaSinStock'));
+    modal.show();
+}
+
+/**
+ * Confirmar venta contra pedido
+ */
+document.getElementById('btnConfirmarContraPedido').addEventListener('click', function() {
+    const fechaEntrega = document.getElementById('fechaEntregaEstimada').value;
+    const notasEntrega = document.getElementById('notasEntrega').value;
+    
+    if (!fechaEntrega) {
+        mostrarAlerta('Debe indicar una fecha estimada de entrega', 'warning');
+        return;
+    }
+    
+    const producto = productoSinStockActual;
+    const precioUnitario = parseFloat(producto.precio_venta || producto.precio_minorista);
+    
+    if (indexProductoSinStock >= 0) {
+        // Incrementar cantidad de producto existente
+        productosVenta[indexProductoSinStock].cantidad++;
+        productosVenta[indexProductoSinStock].subtotal = productosVenta[indexProductoSinStock].cantidad * precioUnitario;
+        productosVenta[indexProductoSinStock].tipo_venta = 'contra_pedido';
+        productosVenta[indexProductoSinStock].estado_entrega = 'pendiente';
+        productosVenta[indexProductoSinStock].fecha_entrega_estimada = fechaEntrega;
+        productosVenta[indexProductoSinStock].notas_entrega = notasEntrega;
+    } else {
+        // Agregar nuevo producto contra pedido
+        productosVenta.push({
+            id: producto.id,
+            nombre: producto.nombre,
+            sku: producto.sku,
+            precio_unitario: precioUnitario,
+            cantidad: 1,
+            stock_disponible: producto.stock_actual || 0,
+            subtotal: precioUnitario,
+            tipo_venta: 'contra_pedido',
+            estado_entrega: 'pendiente',
+            fecha_entrega_estimada: fechaEntrega,
+            notas_entrega: notasEntrega
+        });
+    }
+    
+    // Cerrar modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalVentaSinStock'));
+    modal.hide();
+    
+    // Limpiar búsqueda
+    document.getElementById('buscarProducto').value = '';
+    document.getElementById('resultadosProducto').style.display = 'none';
+    
+    // Actualizar vista
+    renderizarProductos();
+    calcularTotales();
+    
+    mostrarAlerta(`Producto agregado como venta contra pedido. Entrega estimada: ${formatearFecha(fechaEntrega)}`, 'success');
+});
+
+/**
+ * Formatear fecha para mostrar
+ */
+function formatearFecha(fecha) {
+    const date = new Date(fecha + 'T00:00:00');
+    const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('es-ES', opciones);
 }

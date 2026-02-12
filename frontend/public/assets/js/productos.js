@@ -369,6 +369,17 @@ function initEventListeners() {
     if (precioMayorista) precioMayorista.addEventListener('input', calcularMargenes);
     if (precioDistribuidor) precioDistribuidor.addEventListener('input', calcularMargenes);
 
+    // Event listeners para cambios en configuración de IVA
+    const aplicaIVA = document.getElementById('productoAplicaIVA');
+    const porcentajeIVA = document.getElementById('productoPorcentajeIVA');
+    const ivaIncluidoSi = document.getElementById('ivaIncluidoSi');
+    const ivaIncluidoNo = document.getElementById('ivaIncluidoNo');
+    
+    if (aplicaIVA) aplicaIVA.addEventListener('change', calcularMargenes);
+    if (porcentajeIVA) porcentajeIVA.addEventListener('change', calcularMargenes);
+    if (ivaIncluidoSi) ivaIncluidoSi.addEventListener('change', calcularMargenes);
+    if (ivaIncluidoNo) ivaIncluidoNo.addEventListener('change', calcularMargenes);
+
     // Calculadoras de precios
     const btnCalcMayorista = document.getElementById('btnCalcMayorista');
     const btnCalcDistribuidor = document.getElementById('btnCalcDistribuidor');
@@ -466,10 +477,10 @@ function calcularMargenes() {
     actualizarBadgeMargen('margenMayorista', margenMayorista);
     actualizarBadgeMargen('margenDistribuidor', margenDistribuidor);
 
-    // Validar jerarquía de precios
-    validarJerarquiaPrecios(precioMinorista, precioMayorista, precioDistribuidor);
+    // NOTA: Se eliminó la validación de jerarquía de precios
+    // El administrador tiene libertad total para establecer precios
 
-    // Actualizar tabla resumen
+    // Actualizar tabla resumen con cálculo de IVA
     updateTablaResumenPrecios();
 }
 
@@ -492,29 +503,6 @@ function actualizarBadgeMargen(elementId, margen) {
     }
 }
 
-function validarJerarquiaPrecios(minorista, mayorista, distribuidor) {
-    let mensaje = '';
-    
-    // Validar que distribuidor < mayorista < minorista
-    if (distribuidor > 0 && mayorista > 0 && distribuidor >= mayorista) {
-        mensaje = 'El precio distribuidor debe ser menor que el precio mayorista';
-    } else if (mayorista > 0 && minorista > 0 && mayorista >= minorista) {
-        mensaje = 'El precio mayorista debe ser menor que el precio minorista';
-    } else if (distribuidor > 0 && minorista > 0 && distribuidor >= minorista) {
-        mensaje = 'El precio distribuidor debe ser menor que el precio minorista';
-    }
-
-    const alertDiv = document.getElementById('alertJerarquiaPrecios');
-    if (mensaje) {
-        if (alertDiv) {
-            alertDiv.textContent = mensaje;
-            alertDiv.style.display = 'block';
-        }
-    } else {
-        if (alertDiv) alertDiv.style.display = 'none';
-    }
-}
-
 function updateTablaResumenPrecios() {
     const tbody = document.getElementById('tablaResumenPrecios');
     if (!tbody) return;
@@ -526,6 +514,7 @@ function updateTablaResumenPrecios() {
     
     const aplicaIVA = document.getElementById('productoAplicaIVA').checked;
     const porcentajeIVA = aplicaIVA ? (parseFloat(document.getElementById('productoPorcentajeIVA').value) || 0) : 0;
+    const ivaIncluido = document.querySelector('input[name="ivaIncluido"]:checked')?.value === 'true';
 
     if (precioMinorista === 0 && precioMayorista === 0 && precioDistribuidor === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Ingrese los precios para ver el resumen</td></tr>';
@@ -541,9 +530,21 @@ function updateTablaResumenPrecios() {
     tbody.innerHTML = precios.map(p => {
         if (p.base === 0) return '';
         
-        const iva = p.base * (porcentajeIVA / 100);
-        const total = p.base + iva;
-        const margen = precioCompra > 0 ? ((p.base - precioCompra) / precioCompra * 100) : 0;
+        let precioBase, iva, total;
+        
+        if (ivaIncluido) {
+            // Si el IVA está incluido, calculamos el precio base
+            total = p.base;
+            precioBase = p.base / (1 + (porcentajeIVA / 100));
+            iva = total - precioBase;
+        } else {
+            // Si el IVA no está incluido, calculamos el total
+            precioBase = p.base;
+            iva = p.base * (porcentajeIVA / 100);
+            total = precioBase + iva;
+        }
+        
+        const margen = precioCompra > 0 ? ((precioBase - precioCompra) / precioCompra * 100) : 0;
         const margenClass = margen < 10 ? 'text-danger' : margen < 20 ? 'text-warning' : margen < 30 ? 'text-info' : 'text-success';
         
         return `
@@ -630,7 +631,11 @@ async function editarProducto(id) {
         // IVA
         document.getElementById('productoAplicaIVA').checked = producto.aplica_iva === 1;
         document.getElementById('productoPorcentajeIVA').value = producto.porcentaje_iva || '19';
-        document.getElementById('productoTipoImpuesto').value = producto.tipo_impuesto || 'IVA';
+        document.getElementById('productoTipoImpuesto').value = producto.tipo_impuesto || 'gravado';
+        
+        // IVA Incluido en Precio
+        const ivaIncluido = producto.iva_incluido_en_precio === 1 || producto.iva_incluido_en_precio === true;
+        document.getElementById(ivaIncluido ? 'ivaIncluidoSi' : 'ivaIncluidoNo').checked = true;
         
         // Inventario
         document.getElementById('productoStockActual').value = producto.stock_actual;
@@ -638,6 +643,7 @@ async function editarProducto(id) {
         document.getElementById('productoStockMaximo').value = producto.stock_maximo || '';
         document.getElementById('productoUnidadMedida').value = producto.unidad_medida || 'unidad';
         document.getElementById('productoUbicacion').value = producto.ubicacion_almacen || '';
+        document.getElementById('productoPermiteVentaSinStock').checked = producto.permite_venta_sin_stock === 1 || producto.permite_venta_sin_stock === true;
         
         // Cuentas contables (opcionales)
         if (document.getElementById('productoCuentaIngreso')) {
@@ -683,19 +689,8 @@ async function guardarProducto(e) {
     const productoId = document.getElementById('productoId').value;
     const token = localStorage.getItem('token');
 
-    // Validar jerarquía de precios antes de guardar
-    const precioMinorista = parseFloat(document.getElementById('productoPrecioMinorista').value) || 0;
-    const precioMayorista = parseFloat(document.getElementById('productoPrecioMayorista').value) || 0;
-    const precioDistribuidor = parseFloat(document.getElementById('productoPrecioDistribuidor').value) || 0;
-
-    if (precioDistribuidor > 0 && precioMayorista > 0 && precioDistribuidor >= precioMayorista) {
-        mostrarAlerta('El precio distribuidor debe ser menor que el precio mayorista', 'danger');
-        return;
-    }
-    if (precioMayorista > 0 && precioMinorista > 0 && precioMayorista >= precioMinorista) {
-        mostrarAlerta('El precio mayorista debe ser menor que el precio minorista', 'danger');
-        return;
-    }
+    // NOTA: Se eliminaron las validaciones de jerarquía de precios
+    // El administrador tiene libertad total para establecer precios
 
     const productoData = {
         empresa_id: currentEmpresa.id,
@@ -711,9 +706,9 @@ async function guardarProducto(e) {
         
         // Precios
         precio_compra: parseFloat(document.getElementById('productoPrecioCompra').value) || 0,
-        precio_minorista: precioMinorista,
-        precio_mayorista: precioMayorista || null,
-        precio_distribuidor: precioDistribuidor || null,
+        precio_minorista: parseFloat(document.getElementById('productoPrecioMinorista').value) || 0,
+        precio_mayorista: parseFloat(document.getElementById('productoPrecioMayorista').value) || null,
+        precio_distribuidor: parseFloat(document.getElementById('productoPrecioDistribuidor').value) || null,
         
         // IVA
         aplica_iva: document.getElementById('productoAplicaIVA').checked ? 1 : 0,
@@ -721,6 +716,7 @@ async function guardarProducto(e) {
             parseFloat(document.getElementById('productoPorcentajeIVA').value) : null,
         tipo_impuesto: document.getElementById('productoAplicaIVA').checked ? 
             document.getElementById('productoTipoImpuesto').value : null,
+        iva_incluido_en_precio: document.querySelector('input[name="ivaIncluido"]:checked').value === 'true',
         
         // Inventario
         stock_actual: parseInt(document.getElementById('productoStockActual').value) || 0,
@@ -728,6 +724,7 @@ async function guardarProducto(e) {
         stock_maximo: parseInt(document.getElementById('productoStockMaximo').value) || null,
         unidad_medida: document.getElementById('productoUnidadMedida').value,
         ubicacion_almacen: document.getElementById('productoUbicacion').value,
+        permite_venta_sin_stock: document.getElementById('productoPermiteVentaSinStock').checked,
         
         estado: document.getElementById('productoEstado').value
     };

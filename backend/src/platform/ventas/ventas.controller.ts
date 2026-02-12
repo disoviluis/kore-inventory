@@ -289,26 +289,33 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
 
     // Insertar detalles y actualizar stock
     for (const producto of productos) {
-      // Insertar detalle
+      // Insertar detalle con nuevos campos para ventas contra pedido
       await query(
         `INSERT INTO venta_detalle (
-          venta_id, producto_id, cantidad, precio_unitario, descuento, subtotal
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
+          venta_id, producto_id, cantidad, precio_unitario, descuento, subtotal,
+          tipo_venta, estado_entrega, fecha_entrega_estimada, notas_entrega
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           ventaId,
           producto.producto_id,
           producto.cantidad,
           producto.precio_unitario,
           producto.descuento || 0,
-          producto.subtotal
+          producto.subtotal,
+          producto.tipo_venta || 'inmediata',
+          producto.estado_entrega || null,
+          producto.fecha_entrega_estimada || null,
+          producto.notas_entrega || null
         ]
       );
 
-      // Actualizar stock del producto
-      await query(
-        'UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?',
-        [producto.cantidad, producto.producto_id]
-      );
+      // Actualizar stock solo si NO es venta contra pedido
+      if (producto.tipo_venta !== 'contra_pedido') {
+        await query(
+          'UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?',
+          [producto.cantidad, producto.producto_id]
+        );
+      }
     }
 
     logger.info(`Venta creada: ${numeroFactura} (ID: ${ventaId})`);
