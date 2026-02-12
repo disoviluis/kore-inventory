@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import pool from '../../shared/database';
-import { logger } from '../../shared/logger';
+import logger from '../../shared/logger';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 /**
  * ========================================
@@ -161,7 +161,7 @@ export const getUsuarioById = async (req: Request, res: Response) => {
       WHERE ur.usuario_id = ?
     `, [id]);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         ...usuario,
@@ -172,7 +172,7 @@ export const getUsuarioById = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     logger.error('Error al obtener detalle de usuario:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error al obtener detalle de usuario',
       error: error.message
@@ -341,14 +341,14 @@ export const updateUsuario = async (req: Request, res: Response) => {
 
     logger.info(`Usuario actualizado: ${email} (ID: ${id})`);
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Usuario actualizado exitosamente'
     });
 
   } catch (error: any) {
     logger.error('Error al actualizar usuario:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error al actualizar usuario',
       error: error.message

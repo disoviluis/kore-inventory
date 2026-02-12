@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../../shared/database';
-import { logger } from '../../shared/logger';
+import logger from '../../shared/logger';
 import { RowDataPacket } from 'mysql2';
 
 /**

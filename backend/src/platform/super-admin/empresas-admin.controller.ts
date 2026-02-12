@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../../shared/database';
-import { logger } from '../../shared/logger';
+import logger from '../../shared/logger';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 /**
@@ -169,7 +169,7 @@ export const getEmpresaById = async (req: Request, res: Response) => {
       ORDER BY categoria, clave
     `, [id]);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         ...empresas[0],
@@ -180,7 +180,7 @@ export const getEmpresaById = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     logger.error('Error al obtener detalle de empresa:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error al obtener detalle de empresa',
       error: error.message
@@ -392,14 +392,14 @@ export const updateEmpresa = async (req: Request, res: Response) => {
 
     logger.info(`Empresa actualizada: ${nombre} (ID: ${id})`);
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Empresa actualizada exitosamente'
     });
 
   } catch (error: any) {
     logger.error('Error al actualizar empresa:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error al actualizar empresa',
       error: error.message

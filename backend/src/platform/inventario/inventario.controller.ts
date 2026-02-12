@@ -163,7 +163,7 @@ export const getAlertas = async (req: Request, res: Response): Promise<Response>
         stock_maximo,
         unidad_medida,
         precio_compra,
-        precio_venta,
+        precio_minorista as precio_venta,
         ubicacion_almacen
       FROM productos
       WHERE empresa_id = ? 
