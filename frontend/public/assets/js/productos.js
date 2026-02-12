@@ -404,13 +404,6 @@ function initEventListeners() {
         });
     }
 
-    // Event listeners para IVA
-    const aplicaIVA = document.getElementById('productoAplicaIVA');
-    const porcentajeIVA = document.getElementById('productoPorcentajeIVA');
-    
-    if (aplicaIVA) aplicaIVA.addEventListener('change', updateTablaResumenPrecios);
-    if (porcentajeIVA) porcentajeIVA.addEventListener('input', updateTablaResumenPrecios);
-
     // Event listener para tipo de producto
     const productoTipo = document.getElementById('productoTipo');
     if (productoTipo) {
