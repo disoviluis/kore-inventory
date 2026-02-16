@@ -736,3 +736,196 @@ document.addEventListener('DOMContentLoaded', () => {
   // Módulo inicial: dashboard
   cambiarModulo('dashboard');
 });
+
+/**
+ * ========================================
+ * FUNCIONES SUPER ADMIN
+ * ========================================
+ */
+
+// Cargar empresas para Super Admin
+async function cargarEmpresasSuperAdmin() {
+  try {
+    const response = await fetch(`${API_URL}/super-admin/empresas`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!response.ok) throw new Error('Error al cargar empresas');
+    
+    const data = await response.json();
+    renderizarTablaEmpresas(data.data || []);
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError('Error al cargar empresas');
+  }
+}
+
+// Renderizar tabla de empresas
+function renderizarTablaEmpresas(empresas) {
+  const tbody = document.getElementById('empresasTableBody');
+  if (!tbody) return;
+
+  if (!empresas || empresas.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay empresas registradas</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = empresas.map(empresa => `
+    <tr>
+      <td>${empresa.id}</td>
+      <td>${empresa.nombre || ''}</td>
+      <td>${empresa.nit || ''}</td>
+      <td>${empresa.plan_nombre || 'Sin plan'}</td>
+      <td>
+        <span class="badge bg-${empresa.estado === 'activa' ? 'success' : 'danger'}">
+          ${empresa.estado === 'activa' ? 'Activa' : 'Suspendida'}
+        </span>
+      </td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="verDetalleEmpresa(${empresa.id})">
+          <i class="bi bi-eye"></i>
+        </button>
+        <button class="btn btn-sm btn-warning" onclick="editarEmpresa(${empresa.id})">
+          <i class="bi bi-pencil"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Cargar usuarios para Super Admin
+async function cargarUsuarios() {
+  try {
+    const response = await fetch(`${API_URL}/super-admin/usuarios`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!response.ok) throw new Error('Error al cargar usuarios');
+    
+    const data = await response.json();
+    renderizarTablaUsuarios(data.data || []);
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError('Error al cargar usuarios');
+  }
+}
+
+// Renderizar tabla de usuarios
+function renderizarTablaUsuarios(usuarios) {
+  const tbody = document.getElementById('usuariosTableBody');
+  if (!tbody) return;
+
+  if (!usuarios || usuarios.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay usuarios registrados</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = usuarios.map(usuario => `
+    <tr>
+      <td>${usuario.id}</td>
+      <td>${usuario.nombre || ''}</td>
+      <td>${usuario.email || ''}</td>
+      <td>${usuario.empresa_nombre || 'Sin empresa'}</td>
+      <td>
+        <span class="badge bg-${usuario.estado === 'activo' ? 'success' : 'danger'}">
+          ${usuario.estado === 'activo' ? 'Activo' : 'Inactivo'}
+        </span>
+      </td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="verDetalleUsuario(${usuario.id})">
+          <i class="bi bi-eye"></i>
+        </button>
+        <button class="btn btn-sm btn-warning" onclick="editarUsuario(${usuario.id})">
+          <i class="bi bi-pencil"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Cargar planes para Super Admin
+async function cargarPlanes() {
+  try {
+    const response = await fetch(`${API_URL}/super-admin/planes`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!response.ok) throw new Error('Error al cargar planes');
+    
+    const data = await response.json();
+    renderizarTablaPlanes(data.data || []);
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError('Error al cargar planes');
+  }
+}
+
+// Renderizar tabla de planes
+function renderizarTablaPlanes(planes) {
+  const tbody = document.getElementById('planesTableBody');
+  if (!tbody) return;
+
+  if (!planes || planes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay planes registrados</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = planes.map(plan => `
+    <tr>
+      <td>${plan.id}</td>
+      <td>${plan.nombre || ''}</td>
+      <td>$${parseFloat(plan.precio_mensual || 0).toLocaleString()}</td>
+      <td>${plan.limite_usuarios || 'Ilimitado'}</td>
+      <td>
+        <span class="badge bg-${plan.estado === 'activo' ? 'success' : 'danger'}">
+          ${plan.estado === 'activo' ? 'Activo' : 'Inactivo'}
+        </span>
+      </td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="verDetallePlan(${plan.id})">
+          <i class="bi bi-eye"></i>
+        </button>
+        <button class="btn btn-sm btn-warning" onclick="editarPlan(${plan.id})">
+          <i class="bi bi-pencil"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Placeholders para funciones de detalle/edición (implementar más tarde)
+function verDetalleEmpresa(id) {
+  console.log('Ver detalle empresa:', id);
+  // TODO: Implementar modal de detalle
+}
+
+function editarEmpresa(id) {
+  console.log('Editar empresa:', id);
+  // TODO: Implementar modal de edición
+}
+
+function verDetalleUsuario(id) {
+  console.log('Ver detalle usuario:', id);
+  // TODO: Implementar modal de detalle
+}
+
+function editarUsuario(id) {
+  console.log('Editar usuario:', id);
+  // TODO: Implementar modal de edición
+}
+
+function verDetallePlan(id) {
+  console.log('Ver detalle plan:', id);
+  // TODO: Implementar modal de detalle
+}
+
+function editarPlan(id) {
+  console.log('Editar plan:', id);
+  // TODO: Implementar modal de edición
+}
