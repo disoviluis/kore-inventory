@@ -784,31 +784,51 @@ function renderizarTablaEmpresas(empresas) {
   if (!tbody) return;
 
   if (!empresas || empresas.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay empresas registradas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay empresas registradas</td></tr>';
     return;
   }
 
-  tbody.innerHTML = empresas.map(empresa => `
-    <tr>
-      <td>${empresa.id}</td>
-      <td>${empresa.nombre || ''}</td>
-      <td>${empresa.nit || ''}</td>
-      <td>${empresa.plan_nombre || 'Sin plan'}</td>
-      <td>
-        <span class="badge bg-${empresa.estado === 'activa' ? 'success' : 'danger'}">
-          ${empresa.estado === 'activa' ? 'Activa' : 'Suspendida'}
-        </span>
-      </td>
-      <td>
-        <button class="btn btn-sm btn-primary" onclick="verDetalleEmpresa(${empresa.id})">
-          <i class="bi bi-eye"></i>
-        </button>
-        <button class="btn btn-sm btn-warning" onclick="editarEmpresa(${empresa.id})">
-          <i class="bi bi-pencil"></i>
-        </button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = empresas.map(empresa => {
+    const estadoBadge = {
+      'activa': 'success',
+      'trial': 'info',
+      'suspendida': 'warning',
+      'cancelada': 'danger'
+    }[empresa.estado] || 'secondary';
+
+    const estadoTexto = {
+      'activa': 'Activa',
+      'trial': 'Trial',
+      'suspendida': 'Suspendida',
+      'cancelada': 'Cancelada'
+    }[empresa.estado] || empresa.estado;
+
+    return `
+      <tr>
+        <td>
+          <div class="fw-bold">${empresa.nombre || ''}</div>
+          <small class="text-muted">${empresa.nit || 'Sin NIT'}</small>
+        </td>
+        <td>${empresa.plan_nombre || 'Sin plan'}</td>
+        <td>
+          <span class="badge bg-${estadoBadge}">
+            ${estadoTexto}
+          </span>
+        </td>
+        <td>${empresa.usuarios_activos || 0}</td>
+        <td>${empresa.total_productos || 0}</td>
+        <td>${new Date(empresa.created_at).toLocaleDateString()}</td>
+        <td>
+          <button class="btn btn-sm btn-primary" onclick="verDetalleEmpresa(${empresa.id})" title="Ver detalle">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button class="btn btn-sm btn-warning" onclick="editarEmpresa(${empresa.id})" title="Editar">
+            <i class="bi bi-pencil"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 // Cargar usuarios para Super Admin
@@ -836,31 +856,51 @@ function renderizarTablaUsuarios(usuarios) {
   if (!tbody) return;
 
   if (!usuarios || usuarios.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay usuarios registrados</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay usuarios registrados</td></tr>';
     return;
   }
 
-  tbody.innerHTML = usuarios.map(usuario => `
-    <tr>
-      <td>${usuario.id}</td>
-      <td>${usuario.nombre || ''}</td>
-      <td>${usuario.email || ''}</td>
-      <td>${usuario.empresa_nombre || 'Sin empresa'}</td>
-      <td>
-        <span class="badge bg-${usuario.estado === 'activo' ? 'success' : 'danger'}">
-          ${usuario.estado === 'activo' ? 'Activo' : 'Inactivo'}
-        </span>
-      </td>
-      <td>
-        <button class="btn btn-sm btn-primary" onclick="verDetalleUsuario(${usuario.id})">
-          <i class="bi bi-eye"></i>
-        </button>
-        <button class="btn btn-sm btn-warning" onclick="editarUsuario(${usuario.id})">
-          <i class="bi bi-pencil"></i>
-        </button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = usuarios.map(usuario => {
+    const tipoUsuario = {
+      'super_admin': 'Super Admin',
+      'admin_empresa': 'Admin Empresa',
+      'usuario': 'Usuario',
+      'soporte': 'Soporte'
+    }[usuario.tipo_usuario] || usuario.tipo_usuario;
+
+    const ultimoLogin = usuario.ultimo_login 
+      ? new Date(usuario.ultimo_login).toLocaleDateString() 
+      : 'Nunca';
+
+    return `
+      <tr>
+        <td>
+          <div class="fw-bold">${usuario.nombre || ''} ${usuario.apellido || ''}</div>
+        </td>
+        <td>${usuario.email || ''}</td>
+        <td>
+          <span class="badge bg-primary">${tipoUsuario}</span>
+        </td>
+        <td>
+          <small>${usuario.empresas || 'Sin asignar'}</small>
+        </td>
+        <td>
+          <span class="badge bg-${usuario.activo ? 'success' : 'danger'}">
+            ${usuario.activo ? 'Activo' : 'Inactivo'}
+          </span>
+        </td>
+        <td>${ultimoLogin}</td>
+        <td>
+          <button class="btn btn-sm btn-primary" onclick="verDetalleUsuario(${usuario.id})" title="Ver detalle">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button class="btn btn-sm btn-warning" onclick="editarUsuario(${usuario.id})" title="Editar">
+            <i class="bi bi-pencil"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 // Cargar planes para Super Admin
