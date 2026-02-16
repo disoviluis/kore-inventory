@@ -784,9 +784,9 @@ function actualizarEstadoPago() {
     const pendiente = totalVentaActual - totalPagado;
     
     // Actualizar resumen de pagos
-    document.getElementById('totalVentaPago').textContent = `$${formatearNumero(totalVentaActual)}`;
+    document.getElementById('totalVentaPagos').textContent = `$${formatearNumero(totalVentaActual)}`;
     document.getElementById('totalPagado').textContent = `$${formatearNumero(totalPagado)}`;
-    document.getElementById('pendientePago').textContent = `$${formatearNumero(pendiente)}`;
+    document.getElementById('montoPendiente').textContent = `$${formatearNumero(pendiente)}`;
     
     // Mostrar/ocultar alerta
     const alertaPendiente = document.getElementById('alertaPendiente');
