@@ -14,6 +14,8 @@ let productosVenta = [];
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 let ultimaVentaGuardada = null; // Guardar última venta para impresión
 let ultimaVentaData = null; // Guardar datos de última venta para impresión
+let impuestosDisponibles = [];
+let impuestosSeleccionados = [];
 
 console.log('🚀 Ventas.js cargado - Versión 1.6.2 - Debug factura totales');
 
@@ -59,6 +61,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             setTimeout(() => window.location.href = 'dashboard.html', 2000);
             return;
         }
+
+        // Cargar impuestos activos de la empresa
+        await cargarImpuestosActivos();
 
         initEventListeners();
         deshabilitarSeccionProductos();
@@ -602,10 +607,60 @@ function calcularTotales() {
     const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
     const baseImponible = subtotal - descuento;
     const impuesto = baseImponible * 0.19; // IVA 19%
-    const total = baseImponible + impuesto;
+    
+    // Calcular impuestos adicionales
+    let totalImpuestosAdicionales = 0;
+    const detalleImpuestos = [];
+    
+    impuestosSeleccionados.forEach(impId => {
+        const imp = impuestosDisponibles.find(i => i.id === impId);
+        if (imp) {
+            let base = 0;
+            switch(imp.aplica_sobre) {
+                case 'subtotal': base = baseImponible; break;
+                case 'iva': base = impuesto; break;
+                case 'total': base = baseImponible + impuesto; break;
+            }
+            
+            const valor = imp.tipo === 'porcentaje' 
+                ? base * (imp.tasa / 100)
+                : parseFloat(imp.tasa);
+            
+            const valorConSigno = imp.afecta_total === 'resta' ? -valor : valor;
+            totalImpuestosAdicionales += valorConSigno;
+            
+            detalleImpuestos.push({
+                impuesto_id: imp.id,
+                nombre: imp.nombre,
+                base_calculo: base,
+                tasa: imp.tasa,
+                tipo: imp.tipo,
+                valor: Math.abs(valor),
+                afecta_total: imp.afecta_total
+            });
+        }
+    });
+    
+    const total = baseImponible + impuesto + totalImpuestosAdicionales;
 
     document.getElementById('resumenSubtotal').textContent = `$${formatearNumero(subtotal)}`;
     document.getElementById('resumenImpuesto').textContent = `$${formatearNumero(impuesto)}`;
+    
+    // Mostrar impuestos adicionales
+    const resumenImpuestos = document.getElementById('resumenImpuestosAdicionales');
+    if (detalleImpuestos.length > 0) {
+        resumenImpuestos.innerHTML = detalleImpuestos.map(imp => `
+            <div class="d-flex justify-content-between mb-1">
+                <span class="${imp.afecta_total === 'resta' ? 'text-danger' : 'text-success'}">
+                    ${imp.afecta_total === 'resta' ? '-' : '+'} ${imp.nombre}:
+                </span>
+                <strong>$${formatearNumero(imp.valor)}</strong>
+            </div>
+        `).join('');
+    } else {
+        resumenImpuestos.innerHTML = '';
+    }
+    
     document.getElementById('resumenTotal').textContent = `$${formatearNumero(total)}`;
 
     // Habilitar/deshabilitar botón de guardar
@@ -633,7 +688,39 @@ async function guardarVenta() {
     const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
     const baseImponible = subtotal - descuento;
     const impuesto = baseImponible * 0.19;
-    const total = baseImponible + impuesto;
+    
+    // Calcular impuestos adicionales
+    let totalImpuestosAdicionales = 0;
+    const impuestosVenta = [];
+    
+    impuestosSeleccionados.forEach(impId => {
+        const imp = impuestosDisponibles.find(i => i.id === impId);
+        if (imp) {
+            let base = 0;
+            switch(imp.aplica_sobre) {
+                case 'subtotal': base = baseImponible; break;
+                case 'iva': base = impuesto; break;
+                case 'total': base = baseImponible + impuesto; break;
+            }
+            
+            const valor = imp.tipo === 'porcentaje' 
+                ? base * (imp.tasa / 100)
+                : parseFloat(imp.tasa);
+            
+            const valorConSigno = imp.afecta_total === 'resta' ? -valor : valor;
+            totalImpuestosAdicionales += valorConSigno;
+            
+            impuestosVenta.push({
+                impuesto_id: imp.id,
+                base_calculo: base,
+                tasa: imp.tasa,
+                valor: Math.abs(valor),
+                afecta_total: imp.afecta_total
+            });
+        }
+    });
+    
+    const total = baseImponible + impuesto + totalImpuestosAdicionales;
 
     const ventaData = {
         empresa_id: currentEmpresa?.id,
@@ -645,6 +732,7 @@ async function guardarVenta() {
         total: total,
         metodo_pago: document.getElementById('metodoPago').value,
         notas: document.getElementById('notasVenta').value || null,
+        impuestos: impuestosVenta,
         productos: productosVenta.map(p => ({
             producto_id: p.id,
             cantidad: p.cantidad,
@@ -687,10 +775,21 @@ async function guardarVenta() {
         
         // Guardar datos de venta en variables globales para la impresión
         ultimaVentaGuardada = data.data;
+        
+        // Agregar nombres a los impuestos para la factura
+        const impuestosConNombres = ventaData.impuestos.map(impVenta => {
+            const impuesto = impuestosDisponibles.find(i => i.id === impVenta.impuesto_id);
+            return {
+                ...impVenta,
+                nombre: impuesto ? impuesto.nombre : 'Impuesto'
+            };
+        });
+        
         ultimaVentaData = {
             ...ventaData, 
             productos: productosConNombres,
-            cliente: clienteSeleccionado // Guardar cliente para impresión
+            cliente: clienteSeleccionado, // Guardar cliente para impresión
+            impuestos: impuestosConNombres // Agregar impuestos con nombres
         };
         
         // Limpiar formulario SIN confirmación (ya guardamos la venta)
@@ -725,6 +824,17 @@ function limpiarVenta() {
 function limpiarVentaSinConfirmar() {
     clienteSeleccionado = null;
     productosVenta = [];
+    
+    // Resetear impuestos a los automáticos
+    impuestosSeleccionados = impuestosDisponibles
+        .filter(imp => imp.aplica_automaticamente)
+        .map(imp => imp.id);
+    
+    // Actualizar UI de impuestos
+    if (impuestosDisponibles.length > 0) {
+        renderizarImpuestosDisponibles();
+        document.getElementById('impuestosCount').textContent = impuestosSeleccionados.length;
+    }
     
     document.getElementById('busquedaCliente').style.display = 'block';
     document.getElementById('clienteSeleccionado').style.display = 'none';
@@ -1020,6 +1130,20 @@ function mostrarFactura(venta, ventaData) {
                         <td colspan="3" class="text-end"><strong>IVA (19%):</strong></td>
                         <td class="text-end">$${formatearNumero(impuesto)}</td>
                     </tr>
+                    ${ventaData.impuestos && ventaData.impuestos.length > 0 ? 
+                        ventaData.impuestos.map(imp => `
+                            <tr>
+                                <td colspan="3" class="text-end">
+                                    <strong class="${imp.afecta_total === 'resta' ? 'text-danger' : 'text-success'}">
+                                        ${imp.afecta_total === 'resta' ? '-' : '+'} ${imp.nombre}:
+                                    </strong>
+                                </td>
+                                <td class="text-end ${imp.afecta_total === 'resta' ? 'text-danger' : 'text-success'}">
+                                    ${imp.afecta_total === 'resta' ? '-' : ''}$${formatearNumero(imp.valor)}
+                                </td>
+                            </tr>
+                        `).join('') : ''
+                    }
                     <tr class="table-primary">
                         <td colspan="3" class="text-end"><strong>TOTAL:</strong></td>
                         <td class="text-end"><strong>$${formatearNumero(total)}</strong></td>
@@ -1526,3 +1650,96 @@ function formatearFecha(fecha) {
     const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('es-ES', opciones);
 }
+
+// ============================================
+// FUNCIONES PARA IMPUESTOS ADICIONALES
+// ============================================
+
+/**
+ * Cargar impuestos activos de la empresa
+ */
+async function cargarImpuestosActivos() {
+    try {
+        const empresaId = currentEmpresa?.id;
+        if (!empresaId) return;
+
+        const response = await fetch(`${API_URL}/impuestos/activos?empresaId=${empresaId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+
+        if (!response.ok) throw new Error('Error al cargar impuestos');
+        
+        const data = await response.json();
+        impuestosDisponibles = data.data || [];
+        
+        if (impuestosDisponibles.length > 0) {
+            // Mostrar contenedor de impuestos
+            document.getElementById('impuestosAdicionalesContainer').style.display = 'block';
+            
+            // Cargar impuestos automáticos
+            impuestosSeleccionados = impuestosDisponibles
+                .filter(imp => imp.aplica_automaticamente)
+                .map(imp => imp.id);
+            
+            // Renderizar lista
+            renderizarImpuestosDisponibles();
+            
+            // Actualizar contador
+            document.getElementById('impuestosCount').textContent = impuestosSeleccionados.length;
+        }
+    } catch (error) {
+        console.error('Error al cargar impuestos:', error);
+    }
+}
+
+/**
+ * Renderizar lista de impuestos disponibles
+ */
+function renderizarImpuestosDisponibles() {
+    const lista = document.getElementById('listaImpuestosDisponibles');
+    if (!lista) return;
+
+    lista.innerHTML = impuestosDisponibles.map(imp => {
+        const isSelected = impuestosSeleccionados.includes(imp.id);
+        const isAutomatic = imp.aplica_automaticamente;
+        const tasaTexto = imp.tipo === 'porcentaje' ? `${imp.tasa}%` : `$${formatearNumero(imp.tasa)}`;
+        
+        return `
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" 
+                       id="impuesto_${imp.id}" 
+                       value="${imp.id}"
+                       ${isSelected ? 'checked' : ''}
+                       ${isAutomatic && imp.requiere_autorizacion ? 'disabled' : ''}
+                       onchange="toggleImpuesto(${imp.id})">
+                <label class="form-check-label d-flex justify-content-between" for="impuesto_${imp.id}">
+                    <span>
+                        ${imp.nombre}
+                        ${isAutomatic ? '<span class="badge bg-info ms-1" style="font-size: 0.65rem;">Auto</span>' : ''}
+                        ${imp.afecta_total === 'resta' ? '<span class="badge bg-warning ms-1" style="font-size: 0.65rem;">Resta</span>' : ''}
+                    </span>
+                    <span class="text-muted">${tasaTexto}</span>
+                </label>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Toggle selección de impuesto
+ */
+function toggleImpuesto(impuestoId) {
+    const index = impuestosSeleccionados.indexOf(impuestoId);
+    if (index > -1) {
+        impuestosSeleccionados.splice(index, 1);
+    } else {
+        impuestosSeleccionados.push(impuestoId);
+    }
+    
+    // Actualizar contador
+    document.getElementById('impuestosCount').textContent = impuestosSeleccionados.length;
+    
+    // Recalcular totales
+    calcularTotales();
+}
+

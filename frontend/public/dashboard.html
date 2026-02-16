@@ -253,9 +253,15 @@
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link" href="#" onclick="cambiarModulo('impuestos'); return false;">
+                                    <i class="bi bi-calculator"></i>
+                                    <span>Impuestos</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link disabled" href="#">
                                     <i class="bi bi-gear"></i>
-                                    <span>Configuración</span>
+                                    <span>Configuración General</span>
                                     <span class="badge bg-secondary">Próximamente</span>
                                 </a>
                             </li>
@@ -1057,6 +1063,76 @@
 
         </div><!-- END PRODUCTOS MODULE -->
 
+        <!-- IMPUESTOS MODULE -->
+        <div id="impuestosModule" class="module-content" style="display: none;">
+            <div id="alertContainerImpuestos"></div>
+            
+            <!-- Page Header -->
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="page-title mb-1">Gestión de Impuestos</h2>
+                        <p class="text-muted mb-0">Configuración de impuestos adicionales (Retenciones, ICA, etc.)</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <button class="btn btn-primary" onclick="abrirModalImpuesto()">
+                            <i class="bi bi-plus-circle me-2"></i>Nuevo Impuesto
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>¿Qué son los impuestos adicionales?</strong><br>
+                        Son tributos que se pueden aplicar automáticamente a las ventas según el tipo de cliente:
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Retención en la Fuente:</strong> Se resta del total a pagar (normalmente 2.5%)</li>
+                            <li><strong>Retención de IVA:</strong> Se resta del IVA (normalmente 15%)</li>
+                            <li><strong>ICA:</strong> Impuesto de Industria y Comercio (se suma al total)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Impuestos -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Impuestos Configurados</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Tasa</th>
+                                    <th>Aplica Sobre</th>
+                                    <th>Efecto</th>
+                                    <th>Automático</th>
+                                    <th>Estado</th>
+                                    <th style="width: 150px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="impuestosTableBody">
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div><!-- END IMPUESTOS MODULE -->
+
         <!-- Footer -->
         <footer class="main-footer">
             <div class="container-fluid">
@@ -1549,6 +1625,131 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" form="planForm" class="btn btn-primary">
                         <i class="bi bi-save me-2"></i>Guardar Plan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Impuesto -->
+    <div class="modal fade" id="impuestoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="impuestoModalTitle">Nuevo Impuesto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="impuestoForm">
+                        <input type="hidden" id="impuestoId">
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2">Información del Impuesto</h6>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">Código <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="impuestoCodigo" required placeholder="RTE_FTE">
+                                <small class="text-muted">Código único (sin espacios)</small>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="impuestoNombre" required>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" id="impuestoDescripcion" rows="2"></textarea>
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Configuración de Cálculo</h6>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo <span class="text-danger">*</span></label>
+                                <select class="form-select" id="impuestoTipo" required>
+                                    <option value="porcentaje">Porcentaje</option>
+                                    <option value="valor_fijo">Valor Fijo</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Tasa/Valor <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="impuestoTasa" step="0.01" required>
+                                    <span class="input-group-text" id="tasaSymbol">%</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Orden de Aplicación</label>
+                                <input type="number" class="form-control" id="impuestoOrden" value="0">
+                                <small class="text-muted">0 = primero</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Aplica Sobre <span class="text-danger">*</span></label>
+                                <select class="form-select" id="impuestoAplicaSobre" required>
+                                    <option value="subtotal">Subtotal</option>
+                                    <option value="iva">IVA</option>
+                                    <option value="total">Total (Subtotal + IVA)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Efecto en Total <span class="text-danger">*</span></label>
+                                <select class="form-select" id="impuestoAfectaTotal" required>
+                                    <option value="resta">Resta (Retención)</option>
+                                    <option value="suma">Suma (Impuesto)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Opciones Adicionales</h6>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="impuestoAutomatico">
+                                    <label class="form-check-label" for="impuestoAutomatico">
+                                        Aplicar Automáticamente
+                                    </label>
+                                </div>
+                                <small class="text-muted">Se aplicará según configuración del cliente</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="impuestoRequiereAuth">
+                                    <label class="form-check-label" for="impuestoRequiereAuth">
+                                        Requiere Autorización
+                                    </label>
+                                </div>
+                                <small class="text-muted">Necesita aprobación para aplicarse</small>
+                            </div>
+
+                            <div class="col-md-6 mt-3">
+                                <label class="form-label">Cuenta Contable</label>
+                                <input type="text" class="form-control" id="impuestoCuentaContable" placeholder="236525">
+                            </div>
+
+                            <div class="col-md-6 mt-3">
+                                <label class="form-label">Estado <span class="text-danger">*</span></label>
+                                <select class="form-select" id="impuestoActivo" required>
+                                    <option value="1">Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="impuestoForm" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Guardar Impuesto
                     </button>
                 </div>
             </div>

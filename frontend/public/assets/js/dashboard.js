@@ -675,6 +675,10 @@ function cambiarModulo(nombreModulo) {
         // Cargar módulo Super Admin - Planes y Licencias
         cargarPlanes();
         break;
+      case 'impuestos':
+        // Cargar módulo de Impuestos
+        cargarImpuestos();
+        break;
       case 'productos':
         if (typeof cargarProductos === 'function') {
           cargarProductos();
@@ -706,6 +710,9 @@ function actualizarBreadcrumb(nombreModulo) {
   const nombreModulos = {
     'dashboard': 'Dashboard',
     'empresas': 'Gestión de Empresas',
+    'usuarios': 'Usuarios',
+    'planes': 'Planes y Licencias',
+    'impuestos': 'Configuración de Impuestos',
     'productos': 'Productos',
     'inventario': 'Inventario',
     'ventas': 'Ventas',
@@ -770,6 +777,22 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       await guardarPlan();
     });
+  }
+  
+  // Event listeners para filtros de impuestos
+  const searchImpuestos = document.getElementById('searchImpuestos');
+  if (searchImpuestos) {
+    searchImpuestos.addEventListener('input', filtrarImpuestos);
+  }
+  
+  const filterImpuestoTipo = document.getElementById('filterImpuestoTipo');
+  if (filterImpuestoTipo) {
+    filterImpuestoTipo.addEventListener('change', filtrarImpuestos);
+  }
+  
+  const filterImpuestoActivo = document.getElementById('filterImpuestoActivo');
+  if (filterImpuestoActivo) {
+    filterImpuestoActivo.addEventListener('change', filtrarImpuestos);
   }
 });
 
@@ -1832,4 +1855,367 @@ async function guardarPlan() {
     console.error('Error:', error);
     mostrarError(error.message || 'Error al guardar plan');
   }
+}
+
+// ========================================
+// FUNCIONES PARA IMPUESTOS
+// ========================================
+
+async function cargarImpuestos() {
+  try {
+    const empresaId = localStorage.getItem('empresa_activa') || currentEmpresa?.id;
+    if (!empresaId) {
+      mostrarError('No hay empresa seleccionada');
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/impuestos?empresaId=${empresaId}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    if (!response.ok) throw new Error('Error al cargar impuestos');
+    const data = await response.json();
+    
+    renderizarTablaImpuestos(data.data);
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError('Error al cargar impuestos');
+  }
+}
+
+function renderizarTablaImpuestos(impuestos) {
+  const tbody = document.getElementById('impuestosTableBody');
+  if (!tbody) return;
+
+  if (!impuestos || impuestos.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" class="text-center py-4">
+          <i class="bi bi-calculator display-4 d-block mb-3 text-muted opacity-25"></i>
+          <p class="text-muted">No hay impuestos configurados</p>
+          <button class="btn btn-sm btn-primary" onclick="abrirModalImpuesto()">
+            <i class="bi bi-plus-circle me-2"></i>Crear Primer Impuesto
+          </button>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = impuestos.map(imp => `
+    <tr>
+      <td><code>${imp.codigo}</code></td>
+      <td>${imp.nombre}</td>
+      <td>${imp.tipo === 'porcentaje' ? imp.tasa + '%' : '$' + parseFloat(imp.tasa).toLocaleString()}</td>
+      <td>
+        <span class="badge bg-info">
+          ${imp.aplica_sobre === 'subtotal' ? 'Subtotal' : 
+            imp.aplica_sobre === 'iva' ? 'IVA' : 'Total'}
+        </span>
+      </td>
+      <td>
+        <span class="badge bg-${imp.afecta_total === 'resta' ? 'warning' : 'success'}">
+          ${imp.afecta_total === 'resta' ? 'Resta' : 'Suma'}
+        </span>
+      </td>
+      <td>
+        ${imp.aplica_automaticamente ? 
+          '<i class="bi bi-check-circle-fill text-success" title="Automático"></i>' : 
+          '<i class="bi bi-x-circle text-muted" title="Manual"></i>'}
+      </td>
+      <td>
+        <span class="badge bg-${imp.activo ? 'success' : 'secondary'}">
+          ${imp.activo ? 'Activo' : 'Inactivo'}
+        </span>
+      </td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="verDetalleImpuesto(${imp.id})" title="Ver detalle">
+          <i class="bi bi-eye"></i>
+        </button>
+        <button class="btn btn-sm btn-warning" onclick="editarImpuesto(${imp.id})" title="Editar">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarImpuesto(${imp.id}, '${imp.nombre}')" title="Eliminar">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function abrirModalImpuesto(impuestoId = null) {
+  const modal = new bootstrap.Modal(document.getElementById('impuestoModal'));
+  const title = document.getElementById('impuestoModalTitle');
+  
+  // Listener para cambiar símbolo según tipo
+  document.getElementById('impuestoTipo').addEventListener('change', function() {
+    document.getElementById('tasaSymbol').textContent = this.value === 'porcentaje' ? '%' : '$';
+  });
+  
+  if (impuestoId) {
+    title.textContent = 'Editar Impuesto';
+    cargarDatosImpuesto(impuestoId);
+  } else {
+    title.textContent = 'Nuevo Impuesto';
+    document.getElementById('impuestoForm').reset();
+    document.getElementById('impuestoId').value = '';
+    document.getElementById('impuestoActivo').value = '1';
+    document.getElementById('impuestoTipo').value = 'porcentaje';
+    document.getElementById('tasaSymbol').textContent = '%';
+  }
+  
+  modal.show();
+}
+
+async function cargarDatosImpuesto(id) {
+  try {
+    const response = await fetch(`${API_URL}/impuestos/${id}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar impuesto');
+    const data = await response.json();
+    const imp = data.data;
+    
+    document.getElementById('impuestoId').value = imp.id;
+    document.getElementById('impuestoCodigo').value = imp.codigo;
+    document.getElementById('impuestoNombre').value = imp.nombre;
+    document.getElementById('impuestoDescripcion').value = imp.descripcion || '';
+    document.getElementById('impuestoTipo').value = imp.tipo;
+    document.getElementById('impuestoTasa').value = imp.tasa;
+    document.getElementById('impuestoOrden').value = imp.orden || 0;
+    document.getElementById('impuestoAplicaSobre').value = imp.aplica_sobre;
+    document.getElementById('impuestoAfectaTotal').value = imp.afecta_total;
+    document.getElementById('impuestoAutomatico').checked = imp.aplica_automaticamente;
+    document.getElementById('impuestoRequiereAuth').checked = imp.requiere_autorizacion;
+    document.getElementById('impuestoCuentaContable').value = imp.cuenta_contable || '';
+    document.getElementById('impuestoActivo').value = imp.activo ? '1' : '0';
+    document.getElementById('tasaSymbol').textContent = imp.tipo === 'porcentaje' ? '%' : '$';
+    
+    // Deshabilitar código en edición
+    document.getElementById('impuestoCodigo').setAttribute('readonly', 'readonly');
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError('Error al cargar datos del impuesto');
+  }
+}
+
+// Event listener para formulario de impuesto
+document.addEventListener('DOMContentLoaded', () => {
+  const impuestoForm = document.getElementById('impuestoForm');
+  if (impuestoForm) {
+    impuestoForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await guardarImpuesto();
+    });
+  }
+});
+
+async function guardarImpuesto() {
+  const id = document.getElementById('impuestoId').value;
+  const empresaId = localStorage.getItem('empresa_activa') || currentEmpresa?.id;
+  
+  const impuesto = {
+    empresa_id: parseInt(empresaId),
+    codigo: document.getElementById('impuestoCodigo').value.toUpperCase(),
+    nombre: document.getElementById('impuestoNombre').value,
+    descripcion: document.getElementById('impuestoDescripcion').value,
+    tipo: document.getElementById('impuestoTipo').value,
+    tasa: parseFloat(document.getElementById('impuestoTasa').value),
+    orden: parseInt(document.getElementById('impuestoOrden').value) || 0,
+    aplica_sobre: document.getElementById('impuestoAplicaSobre').value,
+    afecta_total: document.getElementById('impuestoAfectaTotal').value,
+    aplica_automaticamente: document.getElementById('impuestoAutomatico').checked ? 1 : 0,
+    requiere_autorizacion: document.getElementById('impuestoRequiereAuth').checked ? 1 : 0,
+    cuenta_contable: document.getElementById('impuestoCuentaContable').value || null,
+    activo: parseInt(document.getElementById('impuestoActivo').value)
+  };
+  
+  try {
+    const url = id 
+      ? `${API_URL}/impuestos/${id}`
+      : `${API_URL}/impuestos`;
+    
+    const response = await fetch(url, {
+      method: id ? 'PUT' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(impuesto)
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Error al guardar impuesto');
+    }
+    
+    mostrarExito(id ? 'Impuesto actualizado exitosamente' : 'Impuesto creado exitosamente');
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('impuestoModal'));
+    modal.hide();
+    cargarImpuestos();
+    
+    // Habilitar código de nuevo para próximas creaciones
+    document.getElementById('impuestoCodigo').removeAttribute('readonly');
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError(error.message || 'Error al guardar impuesto');
+  }
+}
+
+async function verDetalleImpuesto(id) {
+  try {
+    const response = await fetch(`${API_URL}/impuestos/${id}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar impuesto');
+    const data = await response.json();
+    const imp = data.data;
+    
+    const modalHtml = `
+      <div class="modal fade" id="detalleImpuestoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Detalle del Impuesto</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <strong>Código:</strong><br><code>${imp.codigo}</code>
+                </div>
+                <div class="col-md-6">
+                  <strong>Nombre:</strong><br>${imp.nombre}
+                </div>
+                <div class="col-md-12">
+                  <strong>Descripción:</strong><br>${imp.descripcion || 'Sin descripción'}
+                </div>
+                <div class="col-md-4">
+                  <strong>Tipo:</strong><br>${imp.tipo === 'porcentaje' ? 'Porcentaje' : 'Valor Fijo'}
+                </div>
+                <div class="col-md-4">
+                  <strong>Tasa:</strong><br>${imp.tipo === 'porcentaje' ? imp.tasa + '%' : '$' + parseFloat(imp.tasa).toLocaleString()}
+                </div>
+                <div class="col-md-4">
+                  <strong>Orden:</strong><br>${imp.orden}
+                </div>
+                <div class="col-md-6">
+                  <strong>Aplica Sobre:</strong><br>
+                  ${imp.aplica_sobre === 'subtotal' ? 'Subtotal' : 
+                    imp.aplica_sobre === 'iva' ? 'IVA' : 'Total'}
+                </div>
+                <div class="col-md-6">
+                  <strong>Efecto:</strong><br>
+                  <span class="badge bg-${imp.afecta_total === 'resta' ? 'warning' : 'success'}">
+                    ${imp.afecta_total === 'resta' ? 'Resta del Total' : 'Suma al Total'}
+                  </span>
+                </div>
+                <div class="col-md-6">
+                  <strong>Aplicación Automática:</strong><br>
+                  ${imp.aplica_automaticamente ? 
+                    '<span class="badge bg-success">Sí</span>' : 
+                    '<span class="badge bg-secondary">No</span>'}
+                </div>
+                <div class="col-md-6">
+                  <strong>Requiere Autorización:</strong><br>
+                  ${imp.requiere_autorizacion ? 
+                    '<span class="badge bg-warning">Sí</span>' : 
+                    '<span class="badge bg-secondary">No</span>'}
+                </div>
+                <div class="col-md-6">
+                  <strong>Cuenta Contable:</strong><br>${imp.cuenta_contable || 'No configurada'}
+                </div>
+                <div class="col-md-6">
+                  <strong>Estado:</strong><br>
+                  <span class="badge bg-${imp.activo ? 'success' : 'secondary'}">
+                    ${imp.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    const oldModal = document.getElementById('detalleImpuestoModal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('detalleImpuestoModal'));
+    modal.show();
+    
+    document.getElementById('detalleImpuestoModal').addEventListener('hidden.bs.modal', function() {
+      this.remove();
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError('Error al cargar detalle del impuesto');
+  }
+}
+
+function editarImpuesto(id) {
+  abrirModalImpuesto(id);
+}
+
+async function eliminarImpuesto(id, nombre) {
+  if (!confirm(`¿Está seguro de eliminar el impuesto "${nombre}"?\n\nSolo se puede eliminar si no tiene ventas asociadas.`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/impuestos/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Error al eliminar impuesto');
+    }
+    
+    mostrarExito('Impuesto eliminado exitosamente');
+    cargarImpuestos();
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError(error.message || 'Error al eliminar impuesto');
+  }
+}
+
+// Funciones de filtrado para impuestos
+function filtrarImpuestos() {
+  const searchText = document.getElementById('searchImpuestos')?.value.toLowerCase() || '';
+  const tipoFilter = document.getElementById('filterImpuestoTipo')?.value || '';
+  const activoFilter = document.getElementById('filterImpuestoActivo')?.value || '';
+  
+  const rows = document.querySelectorAll('#impuestosTableBody tr');
+  
+  rows.forEach(row => {
+    const codigo = row.cells[0]?.textContent.toLowerCase() || '';
+    const nombre = row.cells[1]?.textContent.toLowerCase() || '';
+    const tipo = row.cells[2]?.textContent || '';
+    const activo = row.cells[6]?.textContent || '';
+    
+    // Filtro de búsqueda
+    const matchSearch = !searchText || codigo.includes(searchText) || nombre.includes(searchText);
+    
+    // Filtro de tipo
+    const matchTipo = !tipoFilter || 
+      (tipoFilter === 'porcentaje' && tipo.includes('%')) ||
+      (tipoFilter === 'valor_fijo' && tipo.includes('$'));
+    
+    // Filtro de estado activo
+    const matchActivo = !activoFilter || 
+      (activoFilter === '1' && activo.includes('Activo')) ||
+      (activoFilter === '0' && activo.includes('Inactivo'));
+    
+    // Mostrar/ocultar fila según filtros
+    row.style.display = (matchSearch && matchTipo && matchActivo) ? '' : 'none';
+  });
 }

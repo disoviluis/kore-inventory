@@ -552,6 +552,28 @@
                                         <span>IVA (19%):</span>
                                         <strong id="resumenImpuesto">$0</strong>
                                     </div>
+                                    
+                                    <!-- Impuestos Adicionales -->
+                                    <div id="impuestosAdicionalesContainer" style="display: none;">
+                                        <div class="mb-2">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary w-100" 
+                                                    data-bs-toggle="collapse" data-bs-target="#impuestosCollapse">
+                                                <i class="bi bi-calculator me-2"></i>Impuestos Adicionales
+                                                <span class="badge bg-primary ms-2" id="impuestosCount">0</span>
+                                            </button>
+                                        </div>
+                                        <div class="collapse" id="impuestosCollapse">
+                                            <div class="border rounded p-2 mb-2">
+                                                <div id="listaImpuestosDisponibles" class="small">
+                                                    <!-- Se cargarán dinámicamente -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="resumenImpuestosAdicionales" class="small">
+                                            <!-- Se mostrarán los impuestos aplicados -->
+                                        </div>
+                                    </div>
+                                    
                                     <hr>
                                     <div class="d-flex justify-content-between">
                                         <h5 class="mb-0">TOTAL:</h5>

@@ -238,7 +238,8 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       total,
       metodo_pago,
       notas,
-      vendedor_id
+      vendedor_id,
+      impuestos
     } = req.body;
 
     // Validaciones
@@ -319,6 +320,26 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
           [producto.cantidad, producto.producto_id]
         );
       }
+    }
+
+    // Insertar impuestos adicionales si existen
+    if (impuestos && Array.isArray(impuestos) && impuestos.length > 0) {
+      for (const impuesto of impuestos) {
+        await query(
+          `INSERT INTO venta_impuestos (
+            venta_id, impuesto_id, base_calculo, tasa, valor, afecta_total
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            ventaId,
+            impuesto.impuesto_id,
+            impuesto.base_calculo || 0,
+            impuesto.tasa || 0,
+            impuesto.valor || 0,
+            impuesto.afecta_total || 'suma'
+          ]
+        );
+      }
+      logger.info(`${impuestos.length} impuestos adicionales registrados para venta ${ventaId}`);
     }
 
     logger.info(`Venta creada: ${numeroFactura} (ID: ${ventaId})`);
