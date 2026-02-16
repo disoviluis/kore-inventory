@@ -216,9 +216,112 @@ function abrirModalCrearEmpresa() {
     modal.show();
 }
 
-function verEmpresa(id) {
-    // Redirigir a página de detalles o mostrar modal con información completa
-    window.location.href = `empresa-detalle.html?id=${id}`;
+async function verEmpresa(id) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/super-admin/empresas/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar empresa');
+        
+        const data = await response.json();
+        const empresa = data.data;
+        
+        // Crear modal con detalles
+        const modalHtml = `
+            <div class="modal fade" id="modalDetalleEmpresa" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Detalles de Empresa</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Nombre:</label>
+                                    <p>${empresa.nombre}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">NIT:</label>
+                                    <p>${empresa.nit || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Email:</label>
+                                    <p>${empresa.email}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Teléfono:</label>
+                                    <p>${empresa.telefono || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="fw-bold">Dirección:</label>
+                                    <p>${empresa.direccion || 'N/A'}, ${empresa.ciudad || 'N/A'}, ${empresa.pais || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Plan:</label>
+                                    <p><span class="badge bg-${getPlanColor(empresa.plan_nombre)}">${empresa.plan_nombre || 'Sin plan'}</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Estado:</label>
+                                    <p><span class="badge bg-${getEstadoColor(empresa.estado)}">${getEstadoTexto(empresa.estado)}</span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="fw-bold">Usuarios:</label>
+                                    <p>${empresa.usuarios?.length || 0}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="fw-bold">Licencia:</label>
+                                    <p>${empresa.licencia_estado || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="fw-bold">Días restantes:</label>
+                                    <p>${empresa.dias_restantes !== null ? empresa.dias_restantes : 'N/A'} días</p>
+                                </div>
+                                ${empresa.usuarios && empresa.usuarios.length > 0 ? `
+                                <div class="col-12 mt-3">
+                                    <label class="fw-bold">Usuarios asignados:</label>
+                                    <ul class="list-group">
+                                        ${empresa.usuarios.map(u => `
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                ${u.nombre} ${u.apellido} (${u.email})
+                                                <span class="badge bg-${u.activo ? 'success' : 'secondary'}">${u.activo ? 'Activo' : 'Inactivo'}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                                ` : ''}
+                                <div class="col-12">
+                                    <label class="fw-bold">Fecha de registro:</label>
+                                    <p>${formatearFecha(empresa.created_at)}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            <button type="button" class="btn btn-primary" onclick="editarEmpresa(${id})" data-bs-dismiss="modal">Editar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remover modal anterior si existe
+        const oldModal = document.getElementById('modalDetalleEmpresa');
+        if (oldModal) oldModal.remove();
+        
+        // Agregar modal al body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalleEmpresa'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlertaSuperAdmin('Error al cargar detalles de la empresa', 'danger');
+    }
 }
 
 async function editarEmpresa(id) {
