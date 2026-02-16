@@ -154,6 +154,9 @@
                         <a class="nav-link" href="#usuarios"><i class="bi bi-people me-1"></i>Usuarios</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="#planes"><i class="bi bi-box-seam me-1"></i>Planes y Licencias</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#actividad"><i class="bi bi-clock-history me-1"></i>Actividad</a>
                     </li>
                     <li class="nav-item dropdown">
@@ -438,6 +441,122 @@
             </div>
         </div>
 
+        <!-- SECCIÓN: USUARIOS -->
+        <div class="row g-4 mb-4 d-none" id="section-usuarios-container">
+            <div class="col-12">
+                <div class="card table-card">
+                    <div class="card-header bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Gestión de Usuarios</h5>
+                            <button class="btn btn-primary btn-sm" onclick="abrirModalCrearUsuario()">
+                                <i class="bi bi-person-plus me-1"></i>Nuevo Usuario
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filtros -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="searchUsuarios" placeholder="Buscar por nombre o email...">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="filterTipoUsuario">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="super_admin">Super Admin</option>
+                                    <option value="admin_empresa">Admin Empresa</option>
+                                    <option value="usuario">Usuario</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="filterActivoUsuario">
+                                    <option value="">Todos</option>
+                                    <option value="1" selected>Activos</option>
+                                    <option value="0">Inactivos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-primary w-100" onclick="buscarUsuarios()">
+                                    <i class="bi bi-search"></i> Buscar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabla -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Email</th>
+                                        <th>Tipo</th>
+                                        <th>Empresas</th>
+                                        <th>Estado</th>
+                                        <th>Último Login</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaUsuarios">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Paginación -->
+                        <nav>
+                            <ul class="pagination justify-content-center mb-0" id="paginacionUsuarios">
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN: PLANES Y LICENCIAS -->
+        <div class="row g-4 mb-4 d-none" id="section-planes-container">
+            <div class="col-md-6">
+                <!-- Planes -->
+                <div class="card table-card">
+                    <div class="card-header bg-white border-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Planes Disponibles</h5>
+                            <button class="btn btn-primary btn-sm" onclick="abrirModalCrearPlan()">
+                                <i class="bi bi-plus-circle me-1"></i>Nuevo Plan
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="listaPlanes">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <!-- Licencias por Vencer -->
+                <div class="card table-card">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0">Licencias Próximas a Vencer</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                        <div id="listaLicenciasPorVencer">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Modal Crear Empresa -->
@@ -548,6 +667,204 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" onclick="guardarEmpresa()">
                         <i class="bi bi-check-circle me-1"></i>Guardar Empresa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear Usuario -->
+    <div class="modal fade" id="modalCrearUsuario" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus me-2"></i>
+                        <span id="tituloModalUsuario">Nuevo Usuario</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formUsuario">
+                        <input type="hidden" id="usuarioId">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre *</label>
+                                <input type="text" class="form-control" id="usuarioNombre" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Apellido *</label>
+                                <input type="text" class="form-control" id="usuarioApellido" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="usuarioEmail" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Contraseña *</label>
+                                <input type="password" class="form-control" id="usuarioPassword" required>
+                                <small class="text-muted">Mínimo 6 caracteres</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipo de Usuario *</label>
+                                <select class="form-select" id="usuarioTipo" required>
+                                    <option value="usuario">Usuario</option>
+                                    <option value="admin_empresa">Admin Empresa</option>
+                                    <option value="super_admin">Super Admin</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" id="usuarioActivo">
+                                    <option value="1" selected>Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Asignar a Empresas (opcional)</label>
+                            <select class="form-select" id="usuarioEmpresas" multiple size="4">
+                                <!-- Se llena dinámicamente -->
+                            </select>
+                            <small class="text-muted">Mantén Ctrl para seleccionar múltiples</small>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="usuarioEmailVerificado">
+                            <label class="form-check-label" for="usuarioEmailVerificado">
+                                Email verificado
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarUsuario()">
+                        <i class="bi bi-check-circle me-1"></i>Guardar Usuario
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear/Editar Plan -->
+    <div class="modal fade" id="modalCrearPlan" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-seam me-2"></i>
+                        <span id="tituloModalPlan">Nuevo Plan</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formPlan">
+                        <input type="hidden" id="planId">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre del Plan *</label>
+                                <input type="text" class="form-control" id="planNombre" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Descripción</label>
+                                <input type="text" class="form-control" id="planDescripcion">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Precio Mensual *</label>
+                                <input type="number" class="form-control" id="planPrecioMensual" step="0.01" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Precio Anual</label>
+                                <input type="number" class="form-control" id="planPrecioAnual" step="0.01">
+                            </div>
+                        </div>
+
+                        <h6 class="mb-3">Límites del Plan</h6>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Máx. Usuarios</label>
+                                <input type="number" class="form-control" id="planMaxUsuarios" value="5">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Máx. Productos</label>
+                                <input type="number" class="form-control" id="planMaxProductos" value="100">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Máx. Facturas/Mes</label>
+                                <input type="number" class="form-control" id="planMaxFacturas" value="50">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Máx. Empresas</label>
+                                <input type="number" class="form-control" id="planMaxEmpresas" value="1">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Almacenamiento (MB)</label>
+                                <input type="number" class="form-control" id="planAlmacenamiento" value="500">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Estado</label>
+                                <select class="form-select" id="planActivo">
+                                    <option value="1" selected>Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h6 class="mb-3">Características</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="planSoporte" checked>
+                                    <label class="form-check-label" for="planSoporte">Soporte técnico</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="planReportes" checked>
+                                    <label class="form-check-label" for="planReportes">Reportes avanzados</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="planApi">
+                                    <label class="form-check-label" for="planApi">Acceso API</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="planMultiEmpresa">
+                                    <label class="form-check-label" for="planMultiEmpresa">Multi-empresa</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="planIntegraciones">
+                                    <label class="form-check-label" for="planIntegraciones">Integraciones</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="planPersonalizacion">
+                                    <label class="form-check-label" for="planPersonalizacion">Personalización</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarPlan()">
+                        <i class="bi bi-check-circle me-1"></i>Guardar Plan
                     </button>
                 </div>
             </div>

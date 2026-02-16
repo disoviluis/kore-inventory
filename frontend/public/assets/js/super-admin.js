@@ -49,6 +49,10 @@ function cargarDashboardSuperAdmin() {
     
     // Inicializar event listeners solo una vez
     inicializarEventListenersSuperAdmin();
+    
+    // Manejar navegación por hash
+    manejarNavegacionSuperAdmin();
+    window.addEventListener('hashchange', manejarNavegacionSuperAdmin);
 }
 
 /**
@@ -109,6 +113,84 @@ function inicializarEventListenersSuperAdmin() {
     const filterPlan = document.getElementById('filterPlan');
     if (filterEstado) filterEstado.addEventListener('change', cargarEmpresasSuperAdmin);
     if (filterPlan) filterPlan.addEventListener('change', cargarEmpresasSuperAdmin);
+    
+    // Event listeners para usuarios
+    const searchUsuarios = document.getElementById('searchUsuarios');
+    if (searchUsuarios) {
+        searchUsuarios.addEventListener('input', debounce(() => cargarUsuarios(), 500));
+    }
+    
+    const filterTipoUsuario = document.getElementById('filterTipoUsuario');
+    const filterActivoUsuario = document.getElementById('filterActivoUsuario');
+    if (filterTipoUsuario) filterTipoUsuario.addEventListener('change', cargarUsuarios);
+    if (filterActivoUsuario) filterActivoUsuario.addEventListener('change', cargarUsuarios);
+}
+
+/**
+ * Manejar navegación entre secciones
+ */
+function manejarNavegacionSuperAdmin() {
+    const hash = window.location.hash || '#dashboard';
+    
+    // Ocultar todas las secciones
+    const secciones = ['dashboard', 'empresas', 'usuarios', 'planes', 'actividad'];
+    secciones.forEach(seccion => {
+        const container = document.getElementById(`section-${seccion}-container`);
+        if (container) {
+            container.classList.add('d-none');
+        }
+    });
+    
+    // También manejar las métricas principales y sección empresas que no tienen -container
+    const metricasPrincipales = document.querySelectorAll('.row.g-4.mb-4')[0]; // Primera fila de métricas
+    if (metricasPrincipales && !hash.includes('empresas') && !hash.includes('dashboard')) {
+        metricasPrincipales.classList.add('d-none');
+    } else if (metricasPrincipales) {
+        metricasPrincipales.classList.remove('d-none');
+    }
+    
+    // Activar enlaces del navbar
+    document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === hash) {
+            link.classList.add('active');
+        }
+    });
+    
+    // Mostrar sección correspondiente y cargar datos
+    switch(hash) {
+        case '#dashboard':
+            cargarDashboardSuperAdmin();
+            cargarEmpresasSuperAdmin();
+            break;
+            
+        case '#empresas':
+            const metricasRow = document.querySelectorAll('.row.g-4.mb-4')[1]; // Segunda fila (estado empresas)
+            if (metricasRow) metricasRow.classList.remove('d-none');
+            cargarEmpresasSuperAdmin();
+            break;
+            
+        case '#usuarios':
+            const usuariosContainer = document.getElementById('section-usuarios-container');
+            if (usuariosContainer) {
+                usuariosContainer.classList.remove('d-none');
+                cargarUsuarios();
+            }
+            break;
+            
+        case '#planes':
+            const planesContainer = document.getElementById('section-planes-container');
+            if (planesContainer) {
+                planesContainer.classList.remove('d-none');
+                cargarPlanes();
+            }
+            break;
+            
+        case '#actividad':
+            // TODO: Implementar vista de actividad
+            mostrarAlertaSuperAdmin('Vista de actividad en desarrollo', 'info');
+            break;
+    }
 }
 
 // ========================================
@@ -554,6 +636,537 @@ function mostrarAlertaSuperAdmin(mensaje, tipo = 'info') {
     setTimeout(() => {
         alert.remove();
     }, 5000);
+}
+
+// ========================================
+// GESTIÓN DE USUARIOS
+// ========================================
+
+async function cargarUsuarios() {
+    try {
+        const token = localStorage.getItem('token');
+        const search = document.getElementById('searchUsuarios')?.value || '';
+        const tipo = document.getElementById('filterTipoUsuario')?.value || '';
+        const activo = document.getElementById('filterActivoUsuario')?.value || '';
+        
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (tipo) params.append('tipo_usuario', tipo);
+        if (activo) params.append('activo', activo);
+        
+        const response = await fetch(`${API_URL}/super-admin/usuarios?${params}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar usuarios');
+        
+        const data = await response.json();
+        renderizarTablaUsuarios(data.data);
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlertaSuperAdmin('Error al cargar usuarios', 'danger');
+    }
+}
+
+function renderizarTablaUsuarios(usuarios) {
+    const tbody = document.getElementById('tablaUsuarios');
+    
+    if (!tbody) return;
+    
+    if (usuarios.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                    No se encontraron usuarios
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = usuarios.map(usr => `
+        <tr>
+            <td>
+                <div class="fw-bold">${usr.nombre} ${usr.apellido}</div>
+                <small class="text-muted">ID: ${usr.id}</small>
+            </td>
+            <td>${usr.email}</td>
+            <td>
+                <span class="badge bg-${getTipoUsuarioColor(usr.tipo_usuario)}">
+                    ${getTipoUsuarioTexto(usr.tipo_usuario)}
+                </span>
+            </td>
+            <td>
+                <small>${usr.empresas || 'Sin asignar'}</small>
+            </td>
+            <td>
+                <span class="badge bg-${usr.activo ? 'success' : 'secondary'}">
+                    ${usr.activo ? 'Activo' : 'Inactivo'}
+                </span>
+            </td>
+            <td>
+                <small>${usr.ultimo_login ? formatearFecha(usr.ultimo_login) : 'Nunca'}</small>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" onclick="verUsuario(${usr.id})" title="Ver">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-outline-info" onclick="editarUsuario(${usr.id})" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="confirmarEliminarUsuario(${usr.id})" title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function abrirModalCrearUsuario() {
+    document.getElementById('tituloModalUsuario').textContent = 'Nuevo Usuario';
+    document.getElementById('usuarioId').value = '';
+    document.getElementById('formUsuario').reset();
+    
+    // Cargar empresas disponibles
+    cargarEmpresasParaUsuario();
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalCrearUsuario'));
+    modal.show();
+}
+
+async function cargarEmpresasParaUsuario() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/super-admin/empresas?limit=1000`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar empresas');
+        
+        const data = await response.json();
+        const select = document.getElementById('usuarioEmpresas');
+        
+        select.innerHTML = data.data.map(emp => 
+            `<option value="${emp.id}">${emp.nombre}</option>`
+        ).join('');
+        
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function verUsuario(id) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/super-admin/usuarios/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar usuario');
+        
+        const data = await response.json();
+        const usuario = data.data;
+        
+        // Crear modal con detalles
+        const modalHtml = `
+            <div class="modal fade" id="modalDetalleUsuario" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Detalles de Usuario</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Nombre:</label>
+                                    <p>${usuario.nombre} ${usuario.apellido}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Email:</label>
+                                    <p>${usuario.email}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Tipo:</label>
+                                    <p><span class="badge bg-${getTipoUsuarioColor(usuario.tipo_usuario)}">${getTipoUsuarioTexto(usuario.tipo_usuario)}</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Estado:</label>
+                                    <p><span class="badge bg-${usuario.activo ? 'success' : 'secondary'}">${usuario.activo ? 'Activo' : 'Inactivo'}</span></p>
+                                </div>
+                                ${usuario.empresas && usuario.empresas.length > 0 ? `
+                                <div class="col-12 mt-3">
+                                    <label class="fw-bold">Empresas asignadas:</label>
+                                    <ul class="list-group">
+                                        ${usuario.empresas.map(e => `
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                ${e.nombre}
+                                                <span class="badge bg-${getEstadoColor(e.estado)}">${getEstadoTexto(e.estado)}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                                ` : '<div class="col-12"><p class="text-muted">Sin empresas asignadas</p></div>'}
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Último login:</label>
+                                    <p>${usuario.ultimo_login ? formatearFecha(usuario.ultimo_login) : 'Nunca'}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="fw-bold">Fecha de registro:</label>
+                                    <p>${formatearFecha(usuario.created_at)}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            <button type="button" class="btn btn-primary" onclick="editarUsuario(${id})" data-bs-dismiss="modal">Editar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remover modal anterior si existe
+        const oldModal = document.getElementById('modalDetalleUsuario');
+        if (oldModal) oldModal.remove();
+        
+        // Agregar modal al body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalleUsuario'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlertaSuperAdmin('Error al cargar detalles del usuario', 'danger');
+    }
+}
+
+async function editarUsuario(id) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/super-admin/usuarios/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar usuario');
+        
+        const data = await response.json();
+        const usuario = data.data;
+        
+        document.getElementById('tituloModalUsuario').textContent = 'Editar Usuario';
+        document.getElementById('usuarioId').value = usuario.id;
+        document.getElementById('usuarioNombre').value = usuario.nombre;
+        document.getElementById('usuarioApellido').value = usuario.apellido;
+        document.getElementById('usuarioEmail').value = usuario.email;
+        document.getElementById('usuarioTipo').value = usuario.tipo_usuario;
+        document.getElementById('usuarioActivo').value = usuario.activo ? '1' : '0';
+        document.getElementById('usuarioEmailVerificado').checked = usuario.email_verificado;
+        
+        // Contraseña no se muestra por seguridad
+        document.getElementById('usuarioPassword').value = '';
+        document.getElementById('usuarioPassword').removeAttribute('required');
+        document.getElementById('usuarioPassword').placeholder = 'Dejar en blanco para no cambiar';
+        
+        await cargarEmpresasParaUsuario();
+        
+        // Seleccionar empresas asignadas
+        if (usuario.empresas && usuario.empresas.length > 0) {
+            const empresasIds = usuario.empresas.map(e => e.id.toString());
+            const options = document.getElementById('usuarioEmpresas').options;
+            for (let i = 0; i < options.length; i++) {
+                if (empresasIds.includes(options[i].value)) {
+                    options[i].selected = true;
+                }
+            }
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalCrearUsuario'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlertaSuperAdmin('Error al cargar usuario', 'danger');
+    }
+}
+
+async function guardarUsuario() {
+    try {
+        const id = document.getElementById('usuarioId').value;
+        const nombre = document.getElementById('usuarioNombre').value;
+        const apellido = document.getElementById('usuarioApellido').value;
+        const email = document.getElementById('usuarioEmail').value;
+        const password = document.getElementById('usuarioPassword').value;
+        const tipo = document.getElementById('usuarioTipo').value;
+        const activo = document.getElementById('usuarioActivo').value === '1';
+        const emailVerificado = document.getElementById('usuarioEmailVerificado').checked;
+        
+        // Validaciones
+        if (!nombre || !apellido || !email) {
+            throw new Error('Por favor completa todos los campos requeridos');
+        }
+        
+        if (!id && !password) {
+            throw new Error('La contraseña es requerida para nuevos usuarios');
+        }
+        
+        // Obtener empresas seleccionadas
+        const empresasSelect = document.getElementById('usuarioEmpresas');
+        const empresasIds = Array.from(empresasSelect.selectedOptions).map(opt => opt.value);
+        
+        const body = {
+            nombre,
+            apellido,
+            email,
+            tipo_usuario: tipo,
+            activo,
+            email_verificado: emailVerificado,
+            empresas_ids: empresasIds
+        };
+        
+        // Solo incluir password si se proporcionó
+        if (password) {
+            body.password = password;
+        }
+        
+        const token = localStorage.getItem('token');
+        const url = id ? `${API_URL}/super-admin/usuarios/${id}` : `${API_URL}/super-admin/usuarios`;
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Error al guardar usuario');
+        }
+        
+        mostrarAlertaSuperAdmin(`Usuario ${id ? 'actualizado' : 'creado'} exitosamente`, 'success');
+        
+        // Cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById('modalCrearUsuario')).hide();
+        
+        // Recargar lista
+        cargarUsuarios();
+        cargarDashboardSuperAdmin();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlertaSuperAdmin(error.message || 'Error al guardar usuario', 'danger');
+    }
+}
+
+function confirmarEliminarUsuario(id) {
+    if (confirm('¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.')) {
+        eliminarUsuario(id);
+    }
+}
+
+async function eliminarUsuario(id) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/super-admin/usuarios/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Error al eliminar usuario');
+        }
+        
+        mostrarAlertaSuperAdmin('Usuario eliminado exitosamente', 'success');
+        cargarUsuarios();
+        cargarDashboardSuperAdmin();
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlertaSuperAdmin(error.message || 'Error al eliminar usuario', 'danger');
+    }
+}
+
+function buscarUsuarios() {
+    cargarUsuarios();
+}
+
+// ========================================
+// GESTIÓN DE PLANES Y LICENCIAS
+// ========================================
+
+async function cargarPlanes() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/super-admin/dashboard`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar planes');
+        
+        const data = await response.json();
+        
+        // Por ahora mostramos un placeholder hasta que tengamos endpoint específico
+        renderizarPlanes();
+        cargarLicenciasPorVencer();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlertaSuperAdmin('Error al cargar planes', 'danger');
+    }
+}
+
+function renderizarPlanes() {
+    const container = document.getElementById('listaPlanes');
+    
+    // Planes predefinidos - Cuando tengas endpoint de planes, reemplazar con datos reales
+    const planes = [
+        { id: 1, nombre: 'Básico', precio_mensual: 29, empresas_activas: 0, color: 'info' },
+        { id: 2, nombre: 'Profesional', precio_mensual: 79, empresas_activas: 0, color: 'primary' },
+        { id: 3, nombre: 'Enterprise', precio_mensual: 199, empresas_activas: 0, color: 'success' }
+    ];
+    
+    container.innerHTML = planes.map(plan => `
+        <div class="card mb-3 border-${plan.color}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="card-title text-${plan.color}">${plan.nombre}</h5>
+                        <p class="h3 mb-0">$${plan.precio_mensual}<small class="text-muted">/mes</small></p>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-${plan.color}" onclick="editarPlan(${plan.id})" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Empresas activas:</span>
+                    <strong>${plan.empresas_activas}</strong>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function cargarLicenciasPorVencer() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/super-admin/empresas?limit=100`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar licencias');
+        
+        const data = await response.json();
+        
+        // Filtrar empresas con licencias próximas a vencer (menos de 15 días)
+        const empresasConLicenciaPorVencer = data.data
+            .filter(emp => emp.dias_restantes !== null && emp.dias_restantes <= 15 && emp.dias_restantes >= 0)
+            .sort((a, b) => a.dias_restantes - b.dias_restantes);
+        
+        renderizarLicenciasPorVencer(empresasConLicenciaPorVencer);
+        
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function renderizarLicenciasPorVencer(empresas) {
+    const container = document.getElementById('listaLicenciasPorVencer');
+    
+    if (!container) return;
+    
+    if (empresas.length === 0) {
+        container.innerHTML = '<p class="text-center text-muted py-4">No hay licencias próximas a vencer</p>';
+        return;
+    }
+    
+    container.innerHTML = empresas.map(emp => `
+        <div class="card mb-2 border-${emp.dias_restantes <= 3 ? 'danger' : 'warning'}">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">${emp.nombre}</h6>
+                        <small class="text-muted">${emp.plan_nombre}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-${emp.dias_restantes <= 3 ? 'danger' : 'warning'}">
+                            ${emp.dias_restantes} días
+                        </span>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="renovarLicencia(${emp.id})">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Renovar
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" onclick="verEmpresa(${emp.id})">
+                        <i class="bi bi-eye me-1"></i>Ver
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function abrirModalCrearPlan() {
+    document.getElementById('tituloModalPlan').textContent = 'Nuevo Plan';
+    document.getElementById('planId').value = '';
+    document.getElementById('formPlan').reset();
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalCrearPlan'));
+    modal.show();
+}
+
+async function editarPlan(id) {
+    // TODO: Implementar cuando tengamos endpoint GET /api/super-admin/planes/:id
+    mostrarAlertaSuperAdmin('Función en desarrollo', 'info');
+}
+
+async function guardarPlan() {
+    // TODO: Implementar cuando tengamos endpoints de planes
+    mostrarAlertaSuperAdmin('Función en desarrollo - Endpoint de planes pendiente', 'info');
+}
+
+async function renovarLicencia(empresaId) {
+    if (!confirm('¿Renovar la licencia de esta empresa por 1 mes adicional?')) return;
+    
+    try {
+        // TODO: Implementar endpoint PUT /api/super-admin/licencias/:id/renovar
+        mostrarAlertaSuperAdmin('Función en desarrollo', 'info');
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlertaSuperAdmin('Error al renovar licencia', 'danger');
+    }
+}
+
+// ========================================
+// UTILIDADES ADICIONALES
+// ========================================
+
+function getTipoUsuarioColor(tipo) {
+    const colores = {
+        'super_admin': 'danger',
+        'admin_empresa': 'primary',
+        'usuario': 'secondary'
+    };
+    return colores[tipo] || 'secondary';
+}
+
+function getTipoUsuarioTexto(tipo) {
+    const textos = {
+        'super_admin': 'Super Admin',
+        'admin_empresa': 'Admin Empresa',
+        'usuario': 'Usuario'
+    };
+    return textos[tipo] || tipo;
 }
 
 function debounce(func, wait) {
