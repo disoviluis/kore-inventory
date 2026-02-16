@@ -327,11 +327,14 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       for (const impuesto of impuestos) {
         await query(
           `INSERT INTO venta_impuestos (
-            venta_id, impuesto_id, base_calculo, tasa, valor, afecta_total
-          ) VALUES (?, ?, ?, ?, ?, ?)`,
+            venta_id, impuesto_id, codigo_impuesto, nombre_impuesto, 
+            base_gravable, tasa, valor, tipo_afectacion
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             ventaId,
             impuesto.impuesto_id,
+            impuesto.codigo || '',
+            impuesto.nombre || '',
             impuesto.base_calculo || 0,
             impuesto.tasa || 0,
             impuesto.valor || 0,

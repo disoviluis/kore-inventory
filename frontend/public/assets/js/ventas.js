@@ -712,6 +712,8 @@ async function guardarVenta() {
             
             impuestosVenta.push({
                 impuesto_id: imp.id,
+                codigo: imp.codigo,
+                nombre: imp.nombre,
                 base_calculo: base,
                 tasa: imp.tasa,
                 valor: Math.abs(valor),
@@ -825,15 +827,13 @@ function limpiarVentaSinConfirmar() {
     clienteSeleccionado = null;
     productosVenta = [];
     
-    // Resetear impuestos a los automáticos
-    impuestosSeleccionados = impuestosDisponibles
-        .filter(imp => imp.aplica_automaticamente)
-        .map(imp => imp.id);
+    // Resetear impuestos a ninguno - el vendedor debe seleccionarlos manualmente
+    impuestosSeleccionados = [];
     
     // Actualizar UI de impuestos
     if (impuestosDisponibles.length > 0) {
         renderizarImpuestosDisponibles();
-        document.getElementById('impuestosCount').textContent = impuestosSeleccionados.length;
+        document.getElementById('impuestosCount').textContent = 0;
     }
     
     document.getElementById('busquedaCliente').style.display = 'block';
@@ -1676,16 +1676,14 @@ async function cargarImpuestosActivos() {
             // Mostrar contenedor de impuestos
             document.getElementById('impuestosAdicionalesContainer').style.display = 'block';
             
-            // Cargar impuestos automáticos
-            impuestosSeleccionados = impuestosDisponibles
-                .filter(imp => imp.aplica_automaticamente)
-                .map(imp => imp.id);
+            // NO cargar impuestos automáticos - el vendedor debe seleccionarlos manualmente
+            impuestosSeleccionados = [];
             
             // Renderizar lista
             renderizarImpuestosDisponibles();
             
             // Actualizar contador
-            document.getElementById('impuestosCount').textContent = impuestosSeleccionados.length;
+            document.getElementById('impuestosCount').textContent = 0;
         }
     } catch (error) {
         console.error('Error al cargar impuestos:', error);
@@ -1710,7 +1708,6 @@ function renderizarImpuestosDisponibles() {
                        id="impuesto_${imp.id}" 
                        value="${imp.id}"
                        ${isSelected ? 'checked' : ''}
-                       ${isAutomatic && imp.requiere_autorizacion ? 'disabled' : ''}
                        onchange="toggleImpuesto(${imp.id})">
                 <label class="form-check-label d-flex justify-content-between" for="impuesto_${imp.id}">
                     <span>
