@@ -16,8 +16,10 @@ let ultimaVentaGuardada = null; // Guardar última venta para impresión
 let ultimaVentaData = null; // Guardar datos de última venta para impresión
 let impuestosDisponibles = [];
 let impuestosSeleccionados = [];
+let pagosPendientes = []; // Array de pagos múltiples
+let totalVentaActual = 0; // Total de la venta actual
 
-console.log('🚀 Ventas.js cargado - Versión 1.6.2 - Debug factura totales');
+console.log('🚀 Ventas.js cargado - Versión 1.7.0 - Pagos Múltiples');
 
 // ============================================
 // INICIALIZACIÓN
@@ -642,6 +644,9 @@ function calcularTotales() {
     });
     
     const total = baseImponible + impuesto + totalImpuestosAdicionales;
+    
+    // Actualizar variable global para gestión de pagos
+    totalVentaActual = total;
 
     document.getElementById('resumenSubtotal').textContent = `$${formatearNumero(subtotal)}`;
     document.getElementById('resumenImpuesto').textContent = `$${formatearNumero(impuesto)}`;
@@ -663,13 +668,145 @@ function calcularTotales() {
     
     document.getElementById('resumenTotal').textContent = `$${formatearNumero(total)}`;
 
-    // Habilitar/deshabilitar botón de guardar
-    const btnGuardar = document.getElementById('btnGuardarVenta');
-    btnGuardar.disabled = !clienteSeleccionado || productosVenta.length === 0;
+    // Actualizar estado de pagos
+    actualizarEstadoPago();
 }
 
 // ============================================
 // GUARDAR VENTA
+// ============================================
+
+// ============================================
+// GESTIÓN DE PAGOS MÚLTIPLES
+// ============================================
+
+function agregarPago() {
+    const selectMetodo = document.getElementById('metodoPago');
+    const inputMonto = document.getElementById('montoPago');
+    const inputReferencia = document.getElementById('referenciaPago');
+    const inputBanco = document.getElementById('bancoPago');
+    
+    const metodo = selectMetodo.value;
+    const monto = parseFloat(inputMonto.value);
+    const referencia = inputReferencia.value.trim();
+    const banco = inputBanco.value.trim();
+    
+    // Validaciones
+    if (!metodo) {
+        mostrarAlerta('Selecciona un método de pago', 'warning');
+        return;
+    }
+    
+    if (!monto || monto <= 0) {
+        mostrarAlerta('Ingresa un monto válido', 'warning');
+        inputMonto.focus();
+        return;
+    }
+    
+    const totalPagado = calcularTotalPagado();
+    const pendiente = totalVentaActual - totalPagado;
+    
+    if (monto > pendiente) {
+        mostrarAlerta(`El monto excede lo pendiente ($${formatearNumero(pendiente)})`, 'warning');
+        return;
+    }
+    
+    // Agregar pago al array
+    const pago = {
+        id: Date.now(),
+        metodo_pago: metodo,
+        monto: monto,
+        referencia: referencia || null,
+        banco: banco || null,
+        notas: null
+    };
+    
+    pagosPendientes.push(pago);
+    
+    // Limpiar formulario
+    inputMonto.value = '';
+    inputReferencia.value = '';
+    inputBanco.value = '';
+    selectMetodo.selectedIndex = 0;
+    
+    // Actualizar UI
+    renderizarPagos();
+    actualizarEstadoPago();
+}
+
+function renderizarPagos() {
+    const lista = document.getElementById('listaPagos');
+    
+    if (pagosPendientes.length === 0) {
+        lista.innerHTML = '<div class="text-muted text-center py-3">No hay pagos agregados</div>';
+        return;
+    }
+    
+    const nombresMetodos = {
+        'efectivo': 'Efectivo',
+        'tarjeta_debito': 'Tarjeta Débito',
+        'tarjeta_credito': 'Tarjeta Crédito',
+        'transferencia': 'Transferencia',
+        'nequi': 'Nequi',
+        'daviplata': 'Daviplata',
+        'cheque': 'Cheque'
+    };
+    
+    lista.innerHTML = pagosPendientes.map(pago => `
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+            <div class="flex-grow-1">
+                <strong>${nombresMetodos[pago.metodo_pago] || pago.metodo_pago}</strong>
+                ${pago.referencia ? `<br><small class="text-muted">Ref: ${pago.referencia}</small>` : ''}
+                ${pago.banco ? `<br><small class="text-muted">Banco: ${pago.banco}</small>` : ''}
+            </div>
+            <div class="text-end">
+                <div class="fw-bold text-success">$${formatearNumero(pago.monto)}</div>
+                <button class="btn btn-sm btn-outline-danger mt-1" onclick="eliminarPago(${pago.id})">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function eliminarPago(pagoId) {
+    pagosPendientes = pagosPendientes.filter(p => p.id !== pagoId);
+    renderizarPagos();
+    actualizarEstadoPago();
+}
+
+function calcularTotalPagado() {
+    return pagosPendientes.reduce((sum, p) => sum + p.monto, 0);
+}
+
+function actualizarEstadoPago() {
+    const totalPagado = calcularTotalPagado();
+    const pendiente = totalVentaActual - totalPagado;
+    
+    // Actualizar resumen de pagos
+    document.getElementById('totalVentaPago').textContent = `$${formatearNumero(totalVentaActual)}`;
+    document.getElementById('totalPagado').textContent = `$${formatearNumero(totalPagado)}`;
+    document.getElementById('pendientePago').textContent = `$${formatearNumero(pendiente)}`;
+    
+    // Mostrar/ocultar alerta
+    const alertaPendiente = document.getElementById('alertaPendiente');
+    if (pendiente > 0.01) {
+        alertaPendiente.style.display = 'block';
+    } else {
+        alertaPendiente.style.display = 'none';
+    }
+    
+    // Habilitar/deshabilitar botón de guardar
+    const btnGuardar = document.getElementById('btnGuardarVenta');
+    const pagoCompleto = Math.abs(pendiente) < 0.01;
+    const tieneCliente = !!clienteSeleccionado;
+    const tieneProductos = productosVenta.length > 0;
+    
+    btnGuardar.disabled = !tieneCliente || !tieneProductos || !pagoCompleto;
+}
+
+// ============================================
+// GUARDAR VENTA (ACTUALIZADA)
 // ============================================
 
 async function guardarVenta() {
@@ -732,9 +869,9 @@ async function guardarVenta() {
         descuento: descuento,
         impuesto: impuesto,
         total: total,
-        metodo_pago: document.getElementById('metodoPago').value,
         notas: document.getElementById('notasVenta').value || null,
         impuestos: impuestosVenta,
+        pagos: pagosPendientes,
         productos: productosVenta.map(p => ({
             producto_id: p.id,
             cantidad: p.cantidad,
@@ -826,6 +963,8 @@ function limpiarVenta() {
 function limpiarVentaSinConfirmar() {
     clienteSeleccionado = null;
     productosVenta = [];
+    pagosPendientes = [];
+    totalVentaActual = 0;
     
     // Resetear impuestos a ninguno - el vendedor debe seleccionarlos manualmente
     impuestosSeleccionados = [];
@@ -842,9 +981,15 @@ function limpiarVentaSinConfirmar() {
     document.getElementById('buscarNombre').value = '';
     document.getElementById('inputDescuento').value = '0';
     document.getElementById('notasVenta').value = '';
-    document.getElementById('metodoPago').value = 'efectivo';
+    
+    // Limpiar campos de pago
+    document.getElementById('montoPago').value = '';
+    document.getElementById('referenciaPago').value = '';
+    document.getElementById('bancoPago').value = '';
+    document.getElementById('metodoPago').selectedIndex = 0;
     
     renderizarProductos();
+    renderizarPagos();
     calcularTotales();
     deshabilitarSeccionProductos();
 }
@@ -1329,11 +1474,32 @@ function generarHTMLImpresion(formatoTermico = false) {
     
     <div class="line"></div>
     
+    ${ventaData.pagos && ventaData.pagos.length > 0 ? `
+    <div style="font-size: 8pt;">
+        <div class="bold">FORMA DE PAGO:</div>
+        ${ventaData.pagos.map(pago => {
+            const nombres = {
+                'efectivo': 'Efectivo',
+                'tarjeta_debito': 'T. Débito',
+                'tarjeta_credito': 'T. Crédito',
+                'transferencia': 'Transferencia',
+                'nequi': 'Nequi',
+                'daviplata': 'Daviplata',
+                'cheque': 'Cheque'
+            };
+            return `<div class="totals-row">
+                <span>${nombres[pago.metodo_pago] || pago.metodo_pago}:</span>
+                <span>$${formatearNumero(pago.monto)}</span>
+            </div>`;
+        }).join('')}
+    </div>
+    <div class="line"></div>
+    ` : ''}
+    
     <div class="center" style="font-size: 8pt; margin-top: 3mm;">
         ¡Gracias por su compra!
     </div>
     <div class="center" style="font-size: 7pt;">Vendedor: ${currentUsuario.nombre} ${currentUsuario.apellido}</div>
-    <div class="center" style="font-size: 7pt;">Pago: ${ventaData.metodo_pago}</div>
     
     <script>
         window.onload = function() {
@@ -1477,8 +1643,7 @@ function generarHTMLImpresion(formatoTermico = false) {
         </div>
         <div class="text-right">
             <strong>FECHA:</strong> ${fecha}<br>
-            <strong>VENDEDOR:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}<br>
-            <strong>PAGO:</strong> ${ventaData.metodo_pago}
+            <strong>VENDEDOR:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}
         </div>
     </div>
     
@@ -1523,6 +1688,26 @@ function generarHTMLImpresion(formatoTermico = false) {
                 <td><strong>TOTAL:</strong></td>
                 <td class="text-right"><strong>$${formatearNumero(total)}</strong></td>
             </tr>
+            ${ventaData.pagos && ventaData.pagos.length > 0 ? `
+            <tr style="border-top: 2px solid #000;">
+                <td colspan="2" style="padding-top: 3mm;"><strong>FORMA DE PAGO:</strong></td>
+            </tr>
+            ${ventaData.pagos.map(pago => {
+                const nombres = {
+                    'efectivo': 'Efectivo',
+                    'tarjeta_debito': 'Tarjeta Débito',
+                    'tarjeta_credito': 'Tarjeta Crédito',
+                    'transferencia': 'Transferencia',
+                    'nequi': 'Nequi',
+                    'daviplata': 'Daviplata',
+                    'cheque': 'Cheque'
+                };
+                return `<tr>
+                    <td>${nombres[pago.metodo_pago] || pago.metodo_pago}${pago.referencia ? ` (Ref: ${pago.referencia})` : ''}</td>
+                    <td class="text-right">$${formatearNumero(pago.monto)}</td>
+                </tr>`;
+            }).join('')}
+            ` : ''}
         </table>
     </div>
     

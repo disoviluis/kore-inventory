@@ -237,6 +237,7 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       impuesto,
       total,
       metodo_pago,
+      pagos,
       notas,
       vendedor_id,
       impuestos
@@ -250,6 +251,21 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         null,
         CONSTANTS.HTTP_STATUS.BAD_REQUEST
       );
+    }
+
+    // Validar pagos múltiples
+    if (pagos && Array.isArray(pagos) && pagos.length > 0) {
+      const totalPagos = pagos.reduce((sum: number, p: any) => sum + parseFloat(p.monto), 0);
+      
+      // Tolerancia de 1 centavo para evitar errores de redondeo
+      if (Math.abs(totalPagos - total) > 0.01) {
+        return errorResponse(
+          res,
+          `La suma de pagos ($${totalPagos.toFixed(2)}) no coincide con el total de la venta ($${total})`,
+          null,
+          CONSTANTS.HTTP_STATUS.BAD_REQUEST
+        );
+      }
     }
 
     // Generar número de factura único
@@ -343,6 +359,26 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         );
       }
       logger.info(`${impuestos.length} impuestos adicionales registrados para venta ${ventaId}`);
+    }
+
+    // Insertar pagos múltiples
+    if (pagos && Array.isArray(pagos) && pagos.length > 0) {
+      for (const pago of pagos) {
+        await query(
+          `INSERT INTO venta_pagos (
+            venta_id, metodo_pago, monto, referencia, banco, notas
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            ventaId,
+            pago.metodo,
+            pago.monto,
+            pago.referencia || null,
+            pago.banco || null,
+            pago.notas || null
+          ]
+        );
+      }
+      logger.info(`${pagos.length} métodos de pago registrados para venta ${ventaId}`);
     }
 
     logger.info(`Venta creada: ${numeroFactura} (ID: ${ventaId})`);
