@@ -117,30 +117,30 @@ function inicializarEventListenersSuperAdmin() {
 function actualizarMetricasSuperAdmin(metricas) {
     // Métricas principales
     if (document.getElementById('metricEmpresasActivas')) {
-        document.getElementById('metricEmpresasActivas').textContent = metricas.empresas_activas || 0;
+        document.getElementById('metricEmpresasActivas').textContent = metricas.empresas?.activas || 0;
     }
     if (document.getElementById('metricUsuariosActivos')) {
-        document.getElementById('metricUsuariosActivos').textContent = metricas.total_usuarios || 0;
+        document.getElementById('metricUsuariosActivos').textContent = metricas.usuarios?.activos || 0;
     }
     if (document.getElementById('metricMRR')) {
-        document.getElementById('metricMRR').textContent = `$${formatearNumero(metricas.mrr || 0)}`;
+        document.getElementById('metricMRR').textContent = `$${formatearNumero(metricas.ingresos?.mrr || 0)}`;
     }
     if (document.getElementById('metricLicenciasPorVencer')) {
-        document.getElementById('metricLicenciasPorVencer').textContent = metricas.licencias_por_vencer || 0;
+        document.getElementById('metricLicenciasPorVencer').textContent = metricas.licencias?.por_vencer || 0;
     }
     
     // Estado de empresas
     if (document.getElementById('empresasActivas')) {
-        document.getElementById('empresasActivas').textContent = metricas.empresas_activas || 0;
+        document.getElementById('empresasActivas').textContent = metricas.empresas?.activas || 0;
     }
     if (document.getElementById('empresasTrial')) {
-        document.getElementById('empresasTrial').textContent = metricas.empresas_trial || 0;
+        document.getElementById('empresasTrial').textContent = metricas.empresas?.en_trial || 0;
     }
     if (document.getElementById('empresasSuspendidas')) {
-        document.getElementById('empresasSuspendidas').textContent = metricas.empresas_suspendidas || 0;
+        document.getElementById('empresasSuspendidas').textContent = metricas.empresas?.suspendidas || 0;
     }
     if (document.getElementById('empresasCanceladas')) {
-        document.getElementById('empresasCanceladas').textContent = metricas.empresas_canceladas || 0;
+        document.getElementById('empresasCanceladas').textContent = metricas.empresas?.canceladas || 0;
     }
 }
 

@@ -161,20 +161,11 @@ export const getEmpresaById = async (req: Request, res: Response) => {
       WHERE ue.empresa_id = ?
     `, [id, id]);
 
-    // Obtener configuraciones
-    const [configuraciones] = await pool.query<RowDataPacket[]>(`
-      SELECT clave, valor, tipo, categoria, descripcion
-      FROM empresa_configuracion
-      WHERE empresa_id = ?
-      ORDER BY categoria, clave
-    `, [id]);
-
     return res.json({
       success: true,
       data: {
         ...empresas[0],
-        usuarios,
-        configuraciones
+        usuarios
       }
     });
 
@@ -276,23 +267,23 @@ export const createEmpresa = async (req: Request, res: Response) => {
       plan.max_facturas_mes
     ]);
 
-    // Crear configuraciones por defecto
-    const configuracionesDefault = [
-      ['moneda_simbolo', '$', 'texto', 'general', 'Símbolo de la moneda'],
-      ['moneda_codigo', 'COP', 'texto', 'general', 'Código de moneda ISO'],
-      ['formato_fecha', 'dd/mm/yyyy', 'texto', 'general', 'Formato de fecha'],
-      ['requiere_autorizacion_descuentos', '1', 'boolean', 'ventas', 'Requiere autorización para descuentos'],
-      ['maximo_descuento_sin_autorizacion', '5', 'numero', 'ventas', 'Máximo descuento sin autorización (%)'],
-      ['permite_ventas_credito', '1', 'boolean', 'ventas', 'Permite ventas a crédito'],
-      ['dias_credito_default', '30', 'numero', 'ventas', 'Días de crédito por defecto']
-    ];
+    // TODO: Crear configuraciones por defecto cuando la tabla exista
+    // const configuracionesDefault = [
+    //   ['moneda_simbolo', '$', 'texto', 'general', 'Símbolo de la moneda'],
+    //   ['moneda_codigo', 'COP', 'texto', 'general', 'Código de moneda ISO'],
+    //   ['formato_fecha', 'dd/mm/yyyy', 'texto', 'general', 'Formato de fecha'],
+    //   ['requiere_autorizacion_descuentos', '1', 'boolean', 'ventas', 'Requiere autorización para descuentos'],
+    //   ['maximo_descuento_sin_autorizacion', '5', 'numero', 'ventas', 'Máximo descuento sin autorización (%)'],
+    //   ['permite_ventas_credito', '1', 'boolean', 'ventas', 'Permite ventas a crédito'],
+    //   ['dias_credito_default', '30', 'numero', 'ventas', 'Días de crédito por defecto']
+    // ];
 
-    for (const [clave, valor, tipo, categoria, descripcion] of configuracionesDefault) {
-      await connection.query(`
-        INSERT INTO empresa_configuracion (empresa_id, clave, valor, tipo, categoria, descripcion)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [empresaId, clave, valor, tipo, categoria, descripcion]);
-    }
+    // for (const [clave, valor, tipo, categoria, descripcion] of configuracionesDefault) {
+    //   await connection.query(`
+    //     INSERT INTO empresa_configuracion (empresa_id, clave, valor, tipo, categoria, descripcion)
+    //     VALUES (?, ?, ?, ?, ?, ?)
+    //   `, [empresaId, clave, valor, tipo, categoria, descripcion]);
+    // }
 
     // Auditoría
     await connection.query(`
