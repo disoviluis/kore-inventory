@@ -597,7 +597,7 @@
                         <p class="text-muted mb-0">Administración de empresas, planes y licencias</p>
                     </div>
                     <div class="col-md-4 text-md-end">
-                        <button class="btn btn-primary" onclick="abrirModalCrearEmpresa()">
+                        <button class="btn btn-primary" onclick="abrirModalEmpresa()">
                             <i class="bi bi-plus-circle me-2"></i>Nueva Empresa
                         </button>
                     </div>
@@ -755,7 +755,7 @@
                         <p class="text-muted mb-0">Administración de usuarios del sistema</p>
                     </div>
                     <div class="col-md-4 text-md-end">
-                        <button class="btn btn-primary" onclick="abrirModalCrearUsuario()">
+                        <button class="btn btn-primary" onclick="abrirModalUsuario()">
                             <i class="bi bi-person-plus me-2"></i>Nuevo Usuario
                         </button>
                     </div>
@@ -896,7 +896,7 @@
                         <div class="card-header">
                             <div class="d-flex justify-content-between align-items-center">
                                 <h5 class="card-title mb-0">Planes Disponibles</h5>
-                                <button class="btn btn-primary btn-sm" onclick="abrirModalCrearPlan()">
+                                <button class="btn btn-primary btn-sm" onclick="abrirModalPlan()">
                                     <i class="bi bi-plus-circle me-1"></i>Nuevo Plan
                                 </button>
                             </div>
@@ -1346,6 +1346,209 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="btnGuardarProducto">
                         <i class="bi bi-save me-2"></i>Guardar Producto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Usuario -->
+    <div class="modal fade" id="usuarioModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="usuarioModalTitle">Nuevo Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="usuarioForm">
+                        <input type="hidden" id="usuarioId">
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2">Información Personal</h6>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="usuarioNombre" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Apellido</label>
+                                <input type="text" class="form-control" id="usuarioApellido">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="usuarioEmail" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="usuarioTelefono">
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Configuración de Cuenta</h6>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Usuario <span class="text-danger">*</span></label>
+                                <select class="form-select" id="usuarioTipo" required>
+                                    <option value="super_admin">Super Admin</option>
+                                    <option value="admin_empresa">Admin Empresa</option>
+                                    <option value="usuario">Usuario Regular</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Estado <span class="text-danger">*</span></label>
+                                <select class="form-select" id="usuarioActivo" required>
+                                    <option value="1">Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label">Empresa por Defecto</label>
+                                <select class="form-select" id="usuarioEmpresaDefault">
+                                    <option value="">Sin empresa asignada</option>
+                                </select>
+                                <small class="text-muted">Solo para usuarios tipo Admin Empresa o Usuario Regular</small>
+                            </div>
+
+                            <div class="col-12" id="passwordSection">
+                                <h6 class="border-bottom pb-2 mt-3">Contraseña</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nueva Contraseña <span class="text-danger" id="passwordRequired">*</span></label>
+                                        <input type="password" class="form-control" id="usuarioPassword">
+                                        <small class="text-muted">Mínimo 6 caracteres</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Confirmar Contraseña <span class="text-danger" id="passwordConfirmRequired">*</span></label>
+                                        <input type="password" class="form-control" id="usuarioPasswordConfirm">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="usuarioForm" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Guardar Usuario
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Plan -->
+    <div class="modal fade" id="planModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="planModalTitle">Nuevo Plan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="planForm">
+                        <input type="hidden" id="planId">
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2">Información del Plan</h6>
+                            </div>
+                            
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre del Plan <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="planNombre" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Estado <span class="text-danger">*</span></label>
+                                <select class="form-select" id="planActivo" required>
+                                    <option value="1">Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" id="planDescripcion" rows="2"></textarea>
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Precios</h6>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Precio Mensual <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="planPrecioMensual" step="0.01" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Precio Anual</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="planPrecioAnual" step="0.01">
+                                </div>
+                                <small class="text-muted">Opcional - Descuento por pago anual</small>
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Límites y Características</h6>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Máx. Usuarios por Empresa</label>
+                                <input type="number" class="form-control" id="planMaxUsuarios">
+                                <small class="text-muted">Dejar vacío = ilimitado</small>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Máx. Productos</label>
+                                <input type="number" class="form-control" id="planMaxProductos">
+                                <small class="text-muted">Dejar vacío = ilimitado</small>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Máx. Facturas/Mes</label>
+                                <input type="number" class="form-control" id="planMaxFacturas">
+                                <small class="text-muted">Dejar vacío = ilimitado</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Nivel de Soporte</label>
+                                <select class="form-select" id="planSoporteNivel">
+                                    <option value="basico">Básico (Email)</option>
+                                    <option value="estandar">Estándar (Email + Chat)</option>
+                                    <option value="premium">Premium (24/7 + Teléfono)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Duración Trial (días)</label>
+                                <input type="number" class="form-control" id="planDuracionTrial" value="30">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Módulos Incluidos</label>
+                                <textarea class="form-control" id="planModulosIncluidos" rows="2" placeholder='["inventario", "ventas", "compras", "clientes"]'></textarea>
+                                <small class="text-muted">JSON array con los módulos disponibles</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="planForm" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Guardar Plan
                     </button>
                 </div>
             </div>
