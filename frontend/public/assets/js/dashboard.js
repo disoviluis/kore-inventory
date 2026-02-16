@@ -1785,6 +1785,7 @@ async function guardarPlan() {
     precio_anual: document.getElementById('planPrecioAnual').value 
       ? parseFloat(document.getElementById('planPrecioAnual').value) 
       : null,
+    max_empresas: 1, // Valor por defecto
     max_usuarios_por_empresa: document.getElementById('planMaxUsuarios').value 
       ? parseInt(document.getElementById('planMaxUsuarios').value) 
       : null,
@@ -1794,10 +1795,13 @@ async function guardarPlan() {
     max_facturas_mes: document.getElementById('planMaxFacturas').value 
       ? parseInt(document.getElementById('planMaxFacturas').value) 
       : null,
+    modulos_incluidos: modulosIncluidos,
     soporte_nivel: document.getElementById('planSoporteNivel').value,
-    duracion_trial_dias: parseInt(document.getElementById('planDuracionTrial').value),
-    activo: parseInt(document.getElementById('planActivo').value),
-    modulos_incluidos: modulosIncluidos
+    api_access: 0, // Valores por defecto para campos booleanos
+    white_label: 0,
+    reportes_avanzados: 0,
+    multi_bodega: 0,
+    activo: parseInt(document.getElementById('planActivo').value)
   };
   
   try {
