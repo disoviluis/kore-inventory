@@ -84,13 +84,16 @@ export const buscarProducto = async (req: Request, res: Response): Promise<Respo
 
     const productos = await query(
       `SELECT 
-        p.id, p.nombre, p.sku, p.codigo_barras, p.precio_venta,
+        p.id, p.nombre, p.sku, p.codigo_barras, 
+        p.precio_minorista as precio_venta,
         p.stock_actual, p.unidad_medida, p.imagen_url,
+        p.aplica_iva, p.porcentaje_iva, p.iva_incluido_en_precio,
         c.nombre as categoria_nombre
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
       WHERE p.empresa_id = ? 
         AND p.estado = 'activo'
+        AND p.maneja_inventario = 1
         AND (
           p.nombre LIKE ? 
           OR p.sku LIKE ? 
