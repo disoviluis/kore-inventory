@@ -681,7 +681,7 @@ function calcularTotales() {
 // ============================================
 
 function agregarPago() {
-    const selectMetodo = document.getElementById('metodoPago');
+    const selectMetodo = document.getElementById('metodoPagoNuevo');
     const inputMonto = document.getElementById('montoPago');
     const inputReferencia = document.getElementById('referenciaPago');
     const inputBanco = document.getElementById('bancoPago');
@@ -986,7 +986,7 @@ function limpiarVentaSinConfirmar() {
     document.getElementById('montoPago').value = '';
     document.getElementById('referenciaPago').value = '';
     document.getElementById('bancoPago').value = '';
-    document.getElementById('metodoPago').selectedIndex = 0;
+    document.getElementById('metodoPagoNuevo').selectedIndex = 0;
     
     renderizarProductos();
     renderizarPagos();
