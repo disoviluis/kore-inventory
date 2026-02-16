@@ -911,18 +911,18 @@ async function cargarMetricasUsuarios() {
     const data = await response.json();
     const metrics = data.data;
     
-    // Actualizar tarjetas de métricas
-    if (document.getElementById('metricUsuariosTotal')) {
-      document.getElementById('metricUsuariosTotal').textContent = metrics.usuarios.total || 0;
+    // Actualizar tarjetas de métricas del módulo de usuarios
+    if (document.getElementById('usuariosModuleTotal')) {
+      document.getElementById('usuariosModuleTotal').textContent = metrics.usuarios.total || 0;
     }
-    if (document.getElementById('metricUsuariosActivos')) {
-      document.getElementById('metricUsuariosActivos').textContent = metrics.usuarios.activos || 0;
+    if (document.getElementById('usuariosModuleActivos')) {
+      document.getElementById('usuariosModuleActivos').textContent = metrics.usuarios.activos || 0;
     }
-    if (document.getElementById('metricAdminEmpresas')) {
-      document.getElementById('metricAdminEmpresas').textContent = metrics.usuarios.admin_empresas || 0;
+    if (document.getElementById('usuariosModuleAdminEmpresas')) {
+      document.getElementById('usuariosModuleAdminEmpresas').textContent = metrics.usuarios.admin_empresas || 0;
     }
-    if (document.getElementById('metricUsuariosNuevosMes')) {
-      document.getElementById('metricUsuariosNuevosMes').textContent = metrics.usuarios.nuevos_mes || 0;
+    if (document.getElementById('usuariosModuleNuevosMes')) {
+      document.getElementById('usuariosModuleNuevosMes').textContent = metrics.usuarios.nuevos_mes || 0;
     }
   } catch (error) {
     console.error('Error al cargar métricas de usuarios:', error);
