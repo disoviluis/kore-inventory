@@ -246,9 +246,9 @@ export const createUsuario = async (req: Request, res: Response) => {
     // Auditoría
     await connection.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion
-      ) VALUES (?, 'crear', 'usuarios', ?, ?)
-    `, [req.body.usuario_id || null, usuarioId, `Usuario creado: ${email}`]);
+        usuario_id, accion, tabla, registro_id, modulo
+      ) VALUES (?, 'crear', 'usuarios', ?, 'super-admin')
+    `, [req.body.usuario_id || null, usuarioId]);
 
     await connection.commit();
 
@@ -335,9 +335,9 @@ export const updateUsuario = async (req: Request, res: Response) => {
     // Auditoría
     await pool.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion
-      ) VALUES (?, 'actualizar', 'usuarios', ?, ?)
-    `, [req.body.usuario_id || null, id, `Usuario actualizado: ${email}`]);
+        usuario_id, accion, tabla, registro_id, modulo
+      ) VALUES (?, 'actualizar', 'usuarios', ?, 'super-admin')
+    `, [req.body.usuario_id || null, id]);
 
     logger.info(`Usuario actualizado: ${email} (ID: ${id})`);
 
@@ -379,9 +379,9 @@ export const cambiarPasswordUsuario = async (req: Request, res: Response) => {
     // Auditoría
     await pool.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion
-      ) VALUES (?, 'cambiar_password', 'usuarios', ?, ?)
-    `, [req.body.usuario_id || null, id, `Contraseña cambiada para usuario ID: ${id}`]);
+        usuario_id, accion, tabla, registro_id, modulo
+      ) VALUES (?, 'cambiar_password', 'usuarios', ?, 'super-admin')
+    `, [req.body.usuario_id || null, id]);
 
     logger.info(`Contraseña cambiada para usuario ID: ${id}`);
 
@@ -440,9 +440,9 @@ export const asignarUsuarioEmpresa = async (req: Request, res: Response) => {
     // Auditoría
     await connection.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion, empresa_id
-      ) VALUES (?, 'asignar_empresa', 'usuario_empresa', ?, ?, ?)
-    `, [req.body.usuario_id || null, id, `Usuario ${id} asignado a empresa ${empresa_id}`, empresa_id]);
+        usuario_id, accion, tabla, registro_id, empresa_id, modulo
+      ) VALUES (?, 'asignar_empresa', 'usuario_empresa', ?, ?, 'super-admin')
+    `, [req.body.usuario_id || null, id, empresa_id]);
 
     await connection.commit();
 
@@ -493,9 +493,9 @@ export const desasignarUsuarioEmpresa = async (req: Request, res: Response) => {
     // Auditoría
     await connection.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion, empresa_id
-      ) VALUES (?, 'desasignar_empresa', 'usuario_empresa', ?, ?, ?)
-    `, [req.body.usuario_id || null, id, `Usuario ${id} desasignado de empresa ${empresaId}`, empresaId]);
+        usuario_id, accion, tabla, registro_id, empresa_id, modulo
+      ) VALUES (?, 'desasignar_empresa', 'usuario_empresa', ?, ?, 'super-admin')
+    `, [req.body.usuario_id || null, id, empresaId]);
 
     await connection.commit();
 
@@ -555,9 +555,9 @@ export const deleteUsuario = async (req: Request, res: Response) => {
     // Auditoría
     await connection.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion
-      ) VALUES (?, 'eliminar', 'usuarios', ?, ?)
-    `, [req.body.usuario_id || null, id, `Usuario eliminado (ID: ${id})`]);
+        usuario_id, accion, tabla, registro_id, modulo
+      ) VALUES (?, 'eliminar', 'usuarios', ?, 'super-admin')
+    `, [req.body.usuario_id || null, id]);
 
     await connection.commit();
 

@@ -288,9 +288,9 @@ export const createEmpresa = async (req: Request, res: Response) => {
     // Auditoría
     await connection.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion
-      ) VALUES (?, 'crear', 'empresas', ?, ?)
-    `, [req.body.usuario_id || null, empresaId, `Empresa creada: ${nombre}`]);
+        usuario_id, empresa_id, accion, modulo, tabla, registro_id
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `, [req.body.usuario_id || null, empresaId, 'crear', 'super-admin', 'empresas', empresaId]);
 
     await connection.commit();
 
@@ -377,9 +377,9 @@ export const updateEmpresa = async (req: Request, res: Response) => {
     // Auditoría
     await pool.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion, empresa_id
-      ) VALUES (?, 'actualizar', 'empresas', ?, ?, ?)
-    `, [req.body.usuario_id || null, id, `Empresa actualizada: ${nombre}`, id]);
+        usuario_id, empresa_id, accion, modulo, tabla, registro_id
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `, [req.body.usuario_id || null, id, 'actualizar', 'super-admin', 'empresas', id]);
 
     logger.info(`Empresa actualizada: ${nombre} (ID: ${id})`);
 
@@ -433,12 +433,11 @@ export const cambiarEstadoEmpresa = async (req: Request, res: Response) => {
     // Auditoría
     await connection.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion, empresa_id
-      ) VALUES (?, 'cambiar_estado', 'empresas', ?, ?, ?)
+        usuario_id, empresa_id, accion, modulo, tabla, registro_id
+      ) VALUES (?, ?, 'cambiar_estado', 'super-admin', 'empresas', ?)
     `, [
       req.body.usuario_id || null,
       id,
-      `Estado cambiado a ${estado}. Motivo: ${motivo || 'N/A'}`,
       id
     ]);
 
@@ -489,7 +488,7 @@ export const deleteEmpresa = async (req: Request, res: Response) => {
     // Eliminar registros relacionados
     await connection.query('DELETE FROM usuario_empresa WHERE empresa_id = ?', [id]);
     await connection.query('DELETE FROM licencias WHERE empresa_id = ?', [id]);
-    await connection.query('DELETE FROM empresa_configuracion WHERE empresa_id = ?', [id]);
+    // await connection.query('DELETE FROM empresa_configuracion WHERE empresa_id = ?', [id]);
     
     // Eliminar empresa
     await connection.query('DELETE FROM empresas WHERE id = ?', [id]);
@@ -497,9 +496,9 @@ export const deleteEmpresa = async (req: Request, res: Response) => {
     // Auditoría
     await connection.query(`
       INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, descripcion
-      ) VALUES (?, 'eliminar', 'empresas', ?, ?)
-    `, [req.body.usuario_id || null, id, `Empresa eliminada (ID: ${id})`]);
+        usuario_id, empresa_id, accion, modulo, tabla, registro_id
+      ) VALUES (?, ?, 'eliminar', 'super-admin', 'empresas', ?)
+    `, [req.body.usuario_id || null, id, id]);
 
     await connection.commit();
 
