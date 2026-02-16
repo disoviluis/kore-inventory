@@ -904,10 +904,10 @@ function renderizarTablaPlanes(planes) {
       <td>${plan.id}</td>
       <td>${plan.nombre || ''}</td>
       <td>$${parseFloat(plan.precio_mensual || 0).toLocaleString()}</td>
-      <td>${plan.limite_usuarios || 'Ilimitado'}</td>
+      <td>${plan.max_usuarios_por_empresa || 'Ilimitado'}</td>
       <td>
-        <span class="badge bg-${plan.estado === 'activo' ? 'success' : 'danger'}">
-          ${plan.estado === 'activo' ? 'Activo' : 'Inactivo'}
+        <span class="badge bg-${plan.activo ? 'success' : 'danger'}">
+          ${plan.activo ? 'Activo' : 'Inactivo'}
         </span>
       </td>
       <td>

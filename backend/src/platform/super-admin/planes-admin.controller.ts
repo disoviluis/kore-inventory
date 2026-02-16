@@ -21,11 +21,18 @@ export const getPlanes = async (req: Request, res: Response): Promise<void> => {
         p.descripcion,
         p.precio_mensual,
         p.precio_anual,
-        p.limite_usuarios,
-        p.limite_productos,
-        p.limite_bodegas,
-        p.caracteristicas,
-        p.estado,
+        p.max_empresas,
+        p.max_usuarios_por_empresa,
+        p.max_productos,
+        p.max_facturas_mes,
+        p.modulos_incluidos,
+        p.soporte_nivel,
+        p.api_access,
+        p.white_label,
+        p.reportes_avanzados,
+        p.multi_bodega,
+        p.activo,
+        p.destacado,
         p.created_at,
         p.updated_at,
         COUNT(DISTINCT e.id) as empresas_activas
@@ -93,10 +100,16 @@ export const createPlan = async (req: Request, res: Response): Promise<void> => 
       descripcion,
       precio_mensual,
       precio_anual,
-      limite_usuarios,
-      limite_productos,
-      limite_bodegas,
-      caracteristicas
+      max_empresas,
+      max_usuarios_por_empresa,
+      max_productos,
+      max_facturas_mes,
+      modulos_incluidos,
+      soporte_nivel,
+      api_access,
+      white_label,
+      reportes_avanzados,
+      multi_bodega
     } = req.body;
 
     await connection.beginTransaction();
@@ -105,17 +118,25 @@ export const createPlan = async (req: Request, res: Response): Promise<void> => 
     const [result] = await connection.query<ResultSetHeader>(
       `INSERT INTO planes (
         nombre, descripcion, precio_mensual, precio_anual,
-        limite_usuarios, limite_productos, limite_bodegas, caracteristicas
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        max_empresas, max_usuarios_por_empresa, max_productos, max_facturas_mes,
+        modulos_incluidos, soporte_nivel, api_access, white_label,
+        reportes_avanzados, multi_bodega
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nombre,
         descripcion || null,
         precio_mensual,
         precio_anual || null,
-        limite_usuarios || null,
-        limite_productos || null,
-        limite_bodegas || null,
-        caracteristicas ? JSON.stringify(caracteristicas) : null
+        max_empresas || 1,
+        max_usuarios_por_empresa || 5,
+        max_productos || null,
+        max_facturas_mes || null,
+        modulos_incluidos ? JSON.stringify(modulos_incluidos) : null,
+        soporte_nivel || 'email',
+        api_access || 0,
+        white_label || 0,
+        reportes_avanzados || 0,
+        multi_bodega || 0
       ]
     );
 
@@ -162,11 +183,17 @@ export const updatePlan = async (req: Request, res: Response): Promise<void> => 
       descripcion,
       precio_mensual,
       precio_anual,
-      limite_usuarios,
-      limite_productos,
-      limite_bodegas,
-      caracteristicas,
-      estado
+      max_empresas,
+      max_usuarios_por_empresa,
+      max_productos,
+      max_facturas_mes,
+      modulos_incluidos,
+      soporte_nivel,
+      api_access,
+      white_label,
+      reportes_avanzados,
+      multi_bodega,
+      activo
     } = req.body;
 
     await connection.beginTransaction();
@@ -178,11 +205,17 @@ export const updatePlan = async (req: Request, res: Response): Promise<void> => 
         descripcion = ?,
         precio_mensual = ?,
         precio_anual = ?,
-        limite_usuarios = ?,
-        limite_productos = ?,
-        limite_bodegas = ?,
-        caracteristicas = ?,
-        estado = ?,
+        max_empresas = ?,
+        max_usuarios_por_empresa = ?,
+        max_productos = ?,
+        max_facturas_mes = ?,
+        modulos_incluidos = ?,
+        soporte_nivel = ?,
+        api_access = ?,
+        white_label = ?,
+        reportes_avanzados = ?,
+        multi_bodega = ?,
+        activo = ?,
         updated_at = NOW()
       WHERE id = ?`,
       [
@@ -190,11 +223,17 @@ export const updatePlan = async (req: Request, res: Response): Promise<void> => 
         descripcion,
         precio_mensual,
         precio_anual,
-        limite_usuarios,
-        limite_productos,
-        limite_bodegas,
-        caracteristicas ? JSON.stringify(caracteristicas) : null,
-        estado,
+        max_empresas,
+        max_usuarios_por_empresa,
+        max_productos,
+        max_facturas_mes,
+        modulos_incluidos ? JSON.stringify(modulos_incluidos) : null,
+        soporte_nivel,
+        api_access,
+        white_label,
+        reportes_avanzados,
+        multi_bodega,
+        activo,
         id
       ]
     );
