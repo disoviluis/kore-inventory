@@ -665,22 +665,15 @@ function cambiarModulo(nombreModulo) {
         break;
       case 'empresas':
         // Cargar módulo Super Admin - Empresas
-        if (typeof cargarDashboardSuperAdmin === 'function') {
-          cargarDashboardSuperAdmin();
-          cargarEmpresasSuperAdmin();
-        }
+        cargarEmpresasSuperAdmin();
         break;
       case 'usuarios':
         // Cargar módulo Super Admin - Usuarios
-        if (typeof cargarUsuarios === 'function') {
-          cargarUsuarios();
-        }
+        cargarUsuarios();
         break;
       case 'planes':
         // Cargar módulo Super Admin - Planes y Licencias
-        if (typeof cargarPlanes === 'function') {
-          cargarPlanes();
-        }
+        cargarPlanes();
         break;
       case 'productos':
         if (typeof cargarProductos === 'function') {
