@@ -1573,7 +1573,7 @@ function abrirModalUsuario(usuarioId = null) {
     passwordRequired.forEach(el => el.style.display = 'none');
     document.getElementById('usuarioPassword').removeAttribute('required');
     document.getElementById('usuarioPasswordConfirm').removeAttribute('required');
-    cargarDatosUsuario(usuarioId);
+    cargarDatosUsuarioAdmin(usuarioId);
   } else {
     title.textContent = 'Nuevo Usuario';
     // En modo creación, la contraseña es requerida
@@ -1612,7 +1612,7 @@ async function cargarEmpresasSelect() {
   }
 }
 
-async function cargarDatosUsuario(id) {
+async function cargarDatosUsuarioAdmin(id) {
   try {
     const response = await fetch(`${API_URL}/super-admin/usuarios/${id}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -1635,6 +1635,8 @@ async function cargarDatosUsuario(id) {
     mostrarError('Error al cargar datos de usuario');
   }
 }
+
+// Nota: cargarDatosUsuario (sin Admin) se usa en verificarAutenticacion para el usuario logueado
 
 async function guardarUsuario() {
   const id = document.getElementById('usuarioId').value;
