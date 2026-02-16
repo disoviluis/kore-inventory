@@ -877,6 +877,10 @@ function renderizarTablaEmpresas(empresas) {
 // Cargar usuarios para Super Admin
 async function cargarUsuarios() {
   try {
+    // Cargar métricas del dashboard
+    await cargarMetricasUsuarios();
+    
+    // Cargar lista de usuarios
     const response = await fetch(`${API_URL}/super-admin/usuarios`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -890,6 +894,38 @@ async function cargarUsuarios() {
   } catch (error) {
     console.error('Error:', error);
     mostrarError('Error al cargar usuarios');
+  }
+}
+
+// Cargar métricas de usuarios
+async function cargarMetricasUsuarios() {
+  try {
+    const response = await fetch(`${API_URL}/super-admin/dashboard`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!response.ok) throw new Error('Error al cargar métricas');
+    
+    const data = await response.json();
+    const metrics = data.data;
+    
+    // Actualizar tarjetas de métricas
+    if (document.getElementById('metricUsuariosTotal')) {
+      document.getElementById('metricUsuariosTotal').textContent = metrics.usuarios.total || 0;
+    }
+    if (document.getElementById('metricUsuariosActivos')) {
+      document.getElementById('metricUsuariosActivos').textContent = metrics.usuarios.activos || 0;
+    }
+    if (document.getElementById('metricAdminEmpresas')) {
+      document.getElementById('metricAdminEmpresas').textContent = metrics.usuarios.admin_empresas || 0;
+    }
+    if (document.getElementById('metricUsuariosNuevosMes')) {
+      document.getElementById('metricUsuariosNuevosMes').textContent = metrics.usuarios.nuevos_mes || 0;
+    }
+  } catch (error) {
+    console.error('Error al cargar métricas de usuarios:', error);
   }
 }
 
