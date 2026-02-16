@@ -17,6 +17,7 @@ import proveedoresRoutes from './platform/proveedores/proveedores.routes';
 import inventarioRoutes from './platform/inventario/inventario.routes';
 import comprasRoutes from './platform/compras/compras.routes';
 import superAdminRoutes from './platform/super-admin/super-admin.routes';
+import impuestosRoutes from './platform/impuestos/impuestos.routes';
 
 const router = Router();
 
@@ -59,5 +60,6 @@ router.use('/ventas', ventasRoutes);
 router.use('/proveedores', proveedoresRoutes);
 router.use('/inventario', inventarioRoutes);
 router.use('/compras', comprasRoutes);
+router.use('/impuestos', impuestosRoutes);
 
 export default router;
