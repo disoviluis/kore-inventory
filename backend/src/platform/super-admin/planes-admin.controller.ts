@@ -144,12 +144,14 @@ export const createPlan = async (req: Request, res: Response): Promise<void> => 
 
     // Registrar auditoría
     const usuario = (req as any).usuario;
-    await connection.query(
-      `INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla_afectada, registro_id, fecha
-      ) VALUES (?, ?, ?, ?, NOW())`,
-      [usuario.id, 'CREATE', 'planes', planId]
-    );
+    if (usuario && usuario.id) {
+      await connection.query(
+        `INSERT INTO auditoria_logs (
+          usuario_id, accion, tabla_afectada, registro_id, fecha
+        ) VALUES (?, ?, ?, ?, NOW())`,
+        [usuario.id, 'INSERT', 'planes', planId]
+      );
+    }
 
     await connection.commit();
 
@@ -240,12 +242,14 @@ export const updatePlan = async (req: Request, res: Response): Promise<void> => 
 
     // Registrar auditoría
     const usuario = (req as any).usuario;
-    await connection.query(
-      `INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla_afectada, registro_id, fecha
-      ) VALUES (?, ?, ?, ?, NOW())`,
-      [usuario.id, 'UPDATE', 'planes', id]
-    );
+    if (usuario && usuario.id) {
+      await connection.query(
+        `INSERT INTO auditoria_logs (
+          usuario_id, accion, tabla_afectada, registro_id, fecha
+        ) VALUES (?, ?, ?, ?, NOW())`,
+        [usuario.id, 'UPDATE', 'planes', id]
+      );
+    }
 
     await connection.commit();
 
@@ -295,12 +299,14 @@ export const deletePlan = async (req: Request, res: Response): Promise<void> => 
 
     // Registrar auditoría
     const usuario = (req as any).usuario;
-    await connection.query(
-      `INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla_afectada, registro_id, fecha
-      ) VALUES (?, ?, ?, ?, NOW())`,
-      [usuario.id, 'DELETE', 'planes', id]
-    );
+    if (usuario && usuario.id) {
+      await connection.query(
+        `INSERT INTO auditoria_logs (
+          usuario_id, accion, tabla_afectada, registro_id, fecha
+        ) VALUES (?, ?, ?, ?, NOW())`,
+        [usuario.id, 'DELETE', 'planes', id]
+      );
+    }
 
     await connection.commit();
 
@@ -425,12 +431,14 @@ export const createLicencia = async (req: Request, res: Response): Promise<void>
 
     // Registrar auditoría
     const usuario = (req as any).usuario;
-    await connection.query(
-      `INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla_afectada, registro_id, fecha
-      ) VALUES (?, ?, ?, ?, NOW())`,
-      [usuario.id, 'CREATE', 'licencias', licenciaId]
-    );
+    if (usuario && usuario.id) {
+      await connection.query(
+        `INSERT INTO auditoria_logs (
+          usuario_id, accion, tabla_afectada, registro_id, fecha
+        ) VALUES (?, ?, ?, ?, NOW())`,
+        [usuario.id, 'CREATE', 'licencias', licenciaId]
+      );
+    }
 
     await connection.commit();
 
@@ -475,12 +483,14 @@ export const updateLicencia = async (req: Request, res: Response): Promise<void>
 
     // Registrar auditoría
     const usuario = (req as any).usuario;
-    await connection.query(
-      `INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla_afectada, registro_id, fecha
-      ) VALUES (?, ?, ?, ?, NOW())`,
-      [usuario.id, 'UPDATE', 'licencias', id]
-    );
+    if (usuario && usuario.id) {
+      await connection.query(
+        `INSERT INTO auditoria_logs (
+          usuario_id, accion, tabla_afectada, registro_id, fecha
+        ) VALUES (?, ?, ?, ?, NOW())`,
+        [usuario.id, 'UPDATE', 'licencias', id]
+      );
+    }
 
     await connection.commit();
 
@@ -515,12 +525,14 @@ export const deleteLicencia = async (req: Request, res: Response): Promise<void>
 
     // Registrar auditoría
     const usuario = (req as any).usuario;
-    await connection.query(
-      `INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla_afectada, registro_id, fecha
-      ) VALUES (?, ?, ?, ?, NOW())`,
-      [usuario.id, 'DELETE', 'licencias', id]
-    );
+    if (usuario && usuario.id) {
+      await connection.query(
+        `INSERT INTO auditoria_logs (
+          usuario_id, accion, tabla_afectada, registro_id, fecha
+        ) VALUES (?, ?, ?, ?, NOW())`,
+        [usuario.id, 'DELETE', 'licencias', id]
+      );
+    }
 
     await connection.commit();
 
