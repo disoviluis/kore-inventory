@@ -193,10 +193,10 @@ function renderizarTablaEmpresasSuperAdmin(empresas) {
                     <button class="btn btn-outline-info" onclick="editarEmpresa(${emp.id})" title="Editar">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-outline-${emp.estado === 'activo' ? 'warning' : 'success'}" 
-                            onclick="cambiarEstadoEmpresa(${emp.id}, '${emp.estado === 'activo' ? 'inactivo' : 'activo'}')"
-                            title="${emp.estado === 'activo' ? 'Suspender' : 'Activar'}">
-                        <i class="bi bi-${emp.estado === 'activo' ? 'pause' : 'play'}-circle"></i>
+                    <button class="btn btn-outline-${emp.estado === 'activa' || emp.estado === 'activo' ? 'warning' : 'success'}" 
+                            onclick="cambiarEstadoEmpresa(${emp.id}, '${emp.estado === 'activa' || emp.estado === 'activo' ? 'suspendida' : 'activa'}')"
+                            title="${emp.estado === 'activa' || emp.estado === 'activo' ? 'Suspender' : 'Activar'}">
+                        <i class="bi bi-${emp.estado === 'activa' || emp.estado === 'activo' ? 'pause' : 'play'}-circle"></i>
                     </button>
                 </div>
             </td>
@@ -398,9 +398,12 @@ function getPlanColor(plan) {
 function getEstadoColor(estado) {
     const colores = {
         'activo': 'success',
+        'activa': 'success',
         'inactivo': 'secondary',
         'suspendido': 'warning',
-        'trial': 'info'
+        'suspendida': 'warning',
+        'trial': 'info',
+        'cancelada': 'danger'
     };
     return colores[estado] || 'secondary';
 }
