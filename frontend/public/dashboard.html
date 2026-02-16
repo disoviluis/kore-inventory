@@ -839,9 +839,9 @@
             </div>
 
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-12 mb-4">
                     <!-- Planes -->
-                    <div class="card mb-4">
+                    <div class="card">
                         <div class="card-header">
                             <div class="d-flex justify-content-between align-items-center">
                                 <h5 class="card-title mb-0">Planes Disponibles</h5>
@@ -851,26 +851,58 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="listaPlanes">
-                                <div class="text-center py-4">
-                                    <div class="spinner-border text-primary" role="status"></div>
-                                </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nombre</th>
+                                            <th>Precio Mensual</th>
+                                            <th>Límite Usuarios</th>
+                                            <th>Estado</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="planesTableBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center">
+                                                <div class="spinner-border text-primary" role="status"></div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <!-- Licencias por Vencer -->
-                    <div class="card mb-4">
+                <div class="col-md-12">
+                    <!-- Licencias -->
+                    <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">Licencias Próximas a Vencer</h5>
+                            <h5 class="card-title mb-0">Licencias</h5>
                         </div>
-                        <div class="card-body" style="max-height: 600px; overflow-y: auto;">
-                            <div id="listaLicenciasPorVencer">
-                                <div class="text-center py-4">
-                                    <div class="spinner-border text-primary" role="status"></div>
-                                </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Empresa</th>
+                                            <th>Plan</th>
+                                            <th>Fecha Inicio</th>
+                                            <th>Fecha Fin</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="licenciasTableBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center">
+                                                <div class="spinner-border text-primary" role="status"></div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

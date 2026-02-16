@@ -8,6 +8,22 @@
 const API_URL = 'http://18.191.181.99:3000/api';
 
 /**
+ * Mostrar mensaje de error
+ */
+function mostrarError(mensaje) {
+  console.error(mensaje);
+  alert(mensaje);
+}
+
+/**
+ * Mostrar mensaje de éxito
+ */
+function mostrarExito(mensaje) {
+  console.log(mensaje);
+  alert(mensaje);
+}
+
+/**
  * Verificar autenticación al cargar
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -850,19 +866,26 @@ function renderizarTablaUsuarios(usuarios) {
 // Cargar planes para Super Admin
 async function cargarPlanes() {
   try {
-    const response = await fetch(`${API_URL}/super-admin/planes`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
+    const [planesResponse, licenciasResponse] = await Promise.all([
+      fetch(`${API_URL}/super-admin/planes`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      }),
+      fetch(`${API_URL}/super-admin/licencias`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      })
+    ]);
 
-    if (!response.ok) throw new Error('Error al cargar planes');
+    if (!planesResponse.ok) throw new Error('Error al cargar planes');
+    if (!licenciasResponse.ok) throw new Error('Error al cargar licencias');
     
-    const data = await response.json();
-    renderizarTablaPlanes(data.data || []);
+    const planesData = await planesResponse.json();
+    const licenciasData = await licenciasResponse.json();
+    
+    renderizarTablaPlanes(planesData.data || []);
+    renderizarTablaLicencias(licenciasData.data || []);
   } catch (error) {
     console.error('Error:', error);
-    mostrarError('Error al cargar planes');
+    mostrarError('Error al cargar planes y licencias');
   }
 }
 
@@ -897,6 +920,39 @@ function renderizarTablaPlanes(planes) {
       </td>
     </tr>
   `).join('');
+}
+
+// Renderizar tabla de licencias
+function renderizarTablaLicencias(licencias) {
+  const tbody = document.getElementById('licenciasTableBody');
+  if (!tbody) return;
+
+  if (!licencias || licencias.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay licencias registradas</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = licencias.map(licencia => {
+    const diasRestantes = licencia.dias_restantes || 0;
+    let estadoBadge = 'success';
+    if (diasRestantes < 0) estadoBadge = 'danger';
+    else if (diasRestantes <= 15) estadoBadge = 'warning';
+
+    return `
+      <tr>
+        <td>${licencia.id}</td>
+        <td>${licencia.empresa_nombre || ''}</td>
+        <td>${licencia.plan_nombre || ''}</td>
+        <td>${new Date(licencia.fecha_inicio).toLocaleDateString()}</td>
+        <td>${new Date(licencia.fecha_fin).toLocaleDateString()}</td>
+        <td>
+          <span class="badge bg-${estadoBadge}">
+            ${diasRestantes < 0 ? 'Vencida' : diasRestantes === 0 ? 'Vence hoy' : `${diasRestantes} días`}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 // Placeholders para funciones de detalle/edición (implementar más tarde)

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as superAdminController from './super-admin.controller';
 import * as empresasAdminController from './empresas-admin.controller';
 import * as usuariosAdminController from './usuarios-admin.controller';
+import * as planesAdminController from './planes-admin.controller';
 
 const router = Router();
 
@@ -41,5 +42,23 @@ router.put('/usuarios/:id/password', usuariosAdminController.cambiarPasswordUsua
 router.post('/usuarios/:id/empresas', usuariosAdminController.asignarUsuarioEmpresa);
 router.delete('/usuarios/:id/empresas/:empresaId', usuariosAdminController.desasignarUsuarioEmpresa);
 router.delete('/usuarios/:id', usuariosAdminController.deleteUsuario);
+
+// ========================================
+// GESTIÓN DE PLANES
+// ========================================
+router.get('/planes', planesAdminController.getPlanes);
+router.get('/planes/:id', planesAdminController.getPlanById);
+router.post('/planes', planesAdminController.createPlan);
+router.put('/planes/:id', planesAdminController.updatePlan);
+router.delete('/planes/:id', planesAdminController.deletePlan);
+
+// ========================================
+// GESTIÓN DE LICENCIAS
+// ========================================
+router.get('/licencias', planesAdminController.getLicencias);
+router.get('/licencias/:id', planesAdminController.getLicenciaById);
+router.post('/licencias', planesAdminController.createLicencia);
+router.put('/licencias/:id', planesAdminController.updateLicencia);
+router.delete('/licencias/:id', planesAdminController.deleteLicencia);
 
 export default router;
