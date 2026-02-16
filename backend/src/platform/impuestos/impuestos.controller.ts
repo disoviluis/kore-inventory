@@ -31,39 +31,27 @@ export const getImpuestos = async (req: Request, res: Response): Promise<Respons
 
     const [impuestos] = await pool.query<RowDataPacket[]>(
       `SELECT 
-        i.id,
-        i.empresa_id,
-        i.codigo,
-        i.nombre,
-        i.descripcion,
-        i.tipo,
-        i.tasa,
-        i.aplica_sobre,
-        i.afecta_total,
-        i.aplica_automaticamente,
-        i.requiere_autorizacion,
-        i.cuenta_contable,
-        i.orden,
-        i.activo,
-        i.created_at,
-        i.updated_at
+        i.*,
+        u.nombre as creador_nombre,
+        u.apellido as creador_apellido
       FROM impuestos i
+      LEFT JOIN usuarios u ON i.creado_por = u.id
       WHERE i.empresa_id = ?
       ORDER BY i.orden ASC, i.nombre ASC`,
       [empresaId]
     );
 
     logger.info(`Impuestos obtenidos para empresa ${empresaId}: ${impuestos.length}`);
-    return successResponse(res, 'Impuestos obtenidos exitosamente', impuestos, CONSTANTS.HTTP_STATUS.OK);
+    return successResponse(res, 'Impuestos obtenidos exitosamente', impuestos);
 
   } catch (error) {
     logger.error('Error al obtener impuestos:', error);
-    return errorResponse(res, 'Error al obtener impuestos', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    return errorResponse(res, 'Error al obtener impuestos', error);
   }
 };
 
 /**
- * Obtener impuestos activos para POS
+ * Obtener impuestos activos de una empresa
  * GET /api/impuestos/activos?empresaId=X
  */
 export const getImpuestosActivos = async (req: Request, res: Response): Promise<Response> => {
@@ -81,26 +69,19 @@ export const getImpuestosActivos = async (req: Request, res: Response): Promise<
 
     const [impuestos] = await pool.query<RowDataPacket[]>(
       `SELECT 
-        id,
-        codigo,
-        nombre,
-        descripcion,
-        tipo,
-        tasa,
-        aplica_sobre,
-        afecta_total,
-        aplica_automaticamente
+        id, codigo, nombre, descripcion, tipo, tasa,
+        aplica_sobre, afecta_total, aplica_automaticamente
       FROM impuestos
       WHERE empresa_id = ? AND activo = 1
       ORDER BY orden ASC, nombre ASC`,
       [empresaId]
     );
 
-    return successResponse(res, 'Impuestos activos obtenidos', impuestos, CONSTANTS.HTTP_STATUS.OK);
+    return successResponse(res, 'Impuestos activos obtenidos exitosamente', impuestos);
 
   } catch (error) {
     logger.error('Error al obtener impuestos activos:', error);
-    return errorResponse(res, 'Error al obtener impuestos activos', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    return errorResponse(res, 'Error al obtener impuestos activos', error);
   }
 };
 
@@ -126,11 +107,11 @@ export const getImpuestoById = async (req: Request, res: Response): Promise<Resp
       );
     }
 
-    return successResponse(res, 'Impuesto obtenido exitosamente', impuestos[0], CONSTANTS.HTTP_STATUS.OK);
+    return successResponse(res, 'Impuesto obtenido exitosamente', impuestos[0]);
 
   } catch (error) {
     logger.error('Error al obtener impuesto:', error);
-    return errorResponse(res, 'Error al obtener impuesto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    return errorResponse(res, 'Error al obtener impuesto', error);
   }
 };
 
@@ -140,7 +121,7 @@ export const getImpuestoById = async (req: Request, res: Response): Promise<Resp
  */
 export const createImpuesto = async (req: Request, res: Response): Promise<Response> => {
   const connection = await pool.getConnection();
-
+  
   try {
     const {
       empresa_id,
@@ -157,18 +138,27 @@ export const createImpuesto = async (req: Request, res: Response): Promise<Respo
       orden
     } = req.body;
 
-    // Validaciones
-    if (!empresa_id || !codigo || !nombre || !tasa) {
+    const usuario = (req as any).usuario;
+
+    await connection.beginTransaction();
+
+    // Validar que el código no exista para esta empresa
+    const [existente] = await connection.query<RowDataPacket[]>(
+      'SELECT id FROM impuestos WHERE empresa_id = ? AND codigo = ?',
+      [empresa_id, codigo]
+    );
+
+    if (existente.length > 0) {
+      await connection.rollback();
       return errorResponse(
         res,
-        'Campos requeridos: empresa_id, codigo, nombre, tasa',
+        'Ya existe un impuesto con ese código para esta empresa',
         null,
         CONSTANTS.HTTP_STATUS.BAD_REQUEST
       );
     }
 
-    await connection.beginTransaction();
-
+    // Insertar impuesto
     const [result] = await connection.query<ResultSetHeader>(
       `INSERT INTO impuestos (
         empresa_id, codigo, nombre, descripcion, tipo, tasa,
@@ -188,13 +178,21 @@ export const createImpuesto = async (req: Request, res: Response): Promise<Respo
         requiere_autorizacion || 0,
         cuenta_contable || null,
         orden || 0,
-        (req as any).usuario?.id || null
+        usuario.id
       ]
+    );
+
+    // Auditoría
+    await connection.query(
+      `INSERT INTO auditoria_logs (
+        usuario_id, accion, tabla_afectada, registro_id, fecha
+      ) VALUES (?, ?, ?, ?, NOW())`,
+      [usuario.id, 'CREATE', 'impuestos', result.insertId]
     );
 
     await connection.commit();
 
-    logger.info(`Impuesto creado: ${result.insertId}`);
+    logger.info(`Impuesto creado: ${nombre} (ID: ${result.insertId})`);
     return successResponse(
       res,
       'Impuesto creado exitosamente',
@@ -202,20 +200,10 @@ export const createImpuesto = async (req: Request, res: Response): Promise<Respo
       CONSTANTS.HTTP_STATUS.CREATED
     );
 
-  } catch (error: any) {
+  } catch (error) {
     await connection.rollback();
-    
-    if (error.code === 'ER_DUP_ENTRY') {
-      return errorResponse(
-        res,
-        'Ya existe un impuesto con ese código para esta empresa',
-        error,
-        CONSTANTS.HTTP_STATUS.CONFLICT
-      );
-    }
-
     logger.error('Error al crear impuesto:', error);
-    return errorResponse(res, 'Error al crear impuesto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    return errorResponse(res, 'Error al crear impuesto', error);
   } finally {
     connection.release();
   }
@@ -227,7 +215,7 @@ export const createImpuesto = async (req: Request, res: Response): Promise<Respo
  */
 export const updateImpuesto = async (req: Request, res: Response): Promise<Response> => {
   const connection = await pool.getConnection();
-
+  
   try {
     const { id } = req.params;
     const {
@@ -245,9 +233,28 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
       activo
     } = req.body;
 
+    const usuario = (req as any).usuario;
+
     await connection.beginTransaction();
 
-    const [result] = await connection.query<ResultSetHeader>(
+    // Verificar que existe
+    const [existe] = await connection.query<RowDataPacket[]>(
+      'SELECT id FROM impuestos WHERE id = ?',
+      [id]
+    );
+
+    if (existe.length === 0) {
+      await connection.rollback();
+      return errorResponse(
+        res,
+        'Impuesto no encontrado',
+        null,
+        CONSTANTS.HTTP_STATUS.NOT_FOUND
+      );
+    }
+
+    // Actualizar
+    await connection.query(
       `UPDATE impuestos SET
         codigo = ?,
         nombre = ?,
@@ -260,7 +267,8 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
         requiere_autorizacion = ?,
         cuenta_contable = ?,
         orden = ?,
-        activo = ?
+        activo = ?,
+        updated_at = NOW()
       WHERE id = ?`,
       [
         codigo,
@@ -279,25 +287,23 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
       ]
     );
 
-    if (result.affectedRows === 0) {
-      await connection.rollback();
-      return errorResponse(
-        res,
-        'Impuesto no encontrado',
-        null,
-        CONSTANTS.HTTP_STATUS.NOT_FOUND
-      );
-    }
+    // Auditoría
+    await connection.query(
+      `INSERT INTO auditoria_logs (
+        usuario_id, accion, tabla_afectada, registro_id, fecha
+      ) VALUES (?, ?, ?, ?, NOW())`,
+      [usuario.id, 'UPDATE', 'impuestos', id]
+    );
 
     await connection.commit();
 
-    logger.info(`Impuesto actualizado: ${id}`);
-    return successResponse(res, 'Impuesto actualizado exitosamente', null, CONSTANTS.HTTP_STATUS.OK);
+    logger.info(`Impuesto actualizado: ${nombre} (ID: ${id})`);
+    return successResponse(res, 'Impuesto actualizado exitosamente');
 
   } catch (error) {
     await connection.rollback();
     logger.error('Error al actualizar impuesto:', error);
-    return errorResponse(res, 'Error al actualizar impuesto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    return errorResponse(res, 'Error al actualizar impuesto', error);
   } finally {
     connection.release();
   }
@@ -309,52 +315,49 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
  */
 export const deleteImpuesto = async (req: Request, res: Response): Promise<Response> => {
   const connection = await pool.getConnection();
-
+  
   try {
     const { id } = req.params;
+    const usuario = (req as any).usuario;
 
     await connection.beginTransaction();
 
-    // Verificar si el impuesto ha sido usado en ventas
+    // Verificar si hay ventas asociadas
     const [ventas] = await connection.query<RowDataPacket[]>(
-      'SELECT COUNT(*) as count FROM venta_impuestos WHERE impuesto_id = ?',
+      'SELECT COUNT(*) as total FROM venta_impuestos WHERE impuesto_id = ?',
       [id]
     );
 
-    if (ventas[0].count > 0) {
+    if (ventas[0].total > 0) {
       await connection.rollback();
       return errorResponse(
         res,
-        'No se puede eliminar el impuesto porque ha sido usado en ventas',
+        `No se puede eliminar. Hay ${ventas[0].total} ventas asociadas a este impuesto`,
         null,
-        CONSTANTS.HTTP_STATUS.CONFLICT
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
       );
     }
 
-    const [result] = await connection.query<ResultSetHeader>(
-      'DELETE FROM impuestos WHERE id = ?',
-      [id]
+    // Eliminar
+    await connection.query('DELETE FROM impuestos WHERE id = ?', [id]);
+
+    // Auditoría
+    await connection.query(
+      `INSERT INTO auditoria_logs (
+        usuario_id, accion, tabla_afectada, registro_id, fecha
+      ) VALUES (?, ?, ?, ?, NOW())`,
+      [usuario.id, 'DELETE', 'impuestos', id]
     );
-
-    if (result.affectedRows === 0) {
-      await connection.rollback();
-      return errorResponse(
-        res,
-        'Impuesto no encontrado',
-        null,
-        CONSTANTS.HTTP_STATUS.NOT_FOUND
-      );
-    }
 
     await connection.commit();
 
-    logger.info(`Impuesto eliminado: ${id}`);
-    return successResponse(res, 'Impuesto eliminado exitosamente', null, CONSTANTS.HTTP_STATUS.OK);
+    logger.info(`Impuesto eliminado (ID: ${id})`);
+    return successResponse(res, 'Impuesto eliminado exitosamente');
 
   } catch (error) {
     await connection.rollback();
     logger.error('Error al eliminar impuesto:', error);
-    return errorResponse(res, 'Error al eliminar impuesto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    return errorResponse(res, 'Error al eliminar impuesto', error);
   } finally {
     connection.release();
   }
