@@ -14,12 +14,12 @@ import {
   updateImpuesto,
   deleteImpuesto
 } from './impuestos.controller';
-import { authenticateToken } from '../../core/middleware/auth.middleware';
+import { authMiddleware } from '../../core/middleware/auth.middleware';
 
 const router = Router();
 
 // Todas las rutas requieren autenticación
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 // Rutas
 router.get('/', getImpuestos);
