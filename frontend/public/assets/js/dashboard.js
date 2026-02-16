@@ -622,3 +622,105 @@ window.addEventListener('resize', () => {
     if (mainContent) mainContent.classList.remove('expanded');
   }
 });
+
+// ============================================
+// NAVIGATION - MODULE SWITCHING
+// ============================================
+
+/**
+ * Cambiar entre módulos del dashboard
+ */
+function cambiarModulo(nombreModulo) {
+  // Ocultar todos los módulos
+  const modulos = document.querySelectorAll('.module-content');
+  modulos.forEach(modulo => {
+    modulo.style.display = 'none';
+  });
+  
+  // Mostrar el módulo seleccionado
+  const moduloActivo = document.getElementById(`${nombreModulo}Module`);
+  if (moduloActivo) {
+    moduloActivo.style.display = 'block';
+    
+    // Inicializar el módulo según corresponda
+    switch(nombreModulo) {
+      case 'dashboard':
+        // Ya se carga automáticamente
+        break;
+      case 'empresas':
+        // Cargar módulo Super Admin - Empresas
+        if (typeof cargarDashboardSuperAdmin === 'function') {
+          cargarDashboardSuperAdmin();
+          cargarEmpresasSuperAdmin();
+        }
+        break;
+      case 'productos':
+        if (typeof cargarProductos === 'function') {
+          cargarProductos();
+        }
+        break;
+      // Agregar más módulos según se implementen
+    }
+    
+    // Actualizar breadcrumb si existe
+    actualizarBreadcrumb(nombreModulo);
+  }
+  
+  // Cerrar sidebar en móvil al cambiar de módulo
+  if (window.innerWidth < 992) {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar) sidebar.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+  }
+}
+
+/**
+ * Actualizar breadcrumb
+ */
+function actualizarBreadcrumb(nombreModulo) {
+  const breadcrumb = document.querySelector('.breadcrumb');
+  if (!breadcrumb) return;
+  
+  const nombreModulos = {
+    'dashboard': 'Dashboard',
+    'empresas': 'Gestión de Empresas',
+    'productos': 'Productos',
+    'inventario': 'Inventario',
+    'ventas': 'Ventas',
+    'compras': 'Compras',
+    'clientes': 'Clientes',
+    'proveedores': 'Proveedores'
+  };
+  
+  breadcrumb.innerHTML = `
+    <li class="breadcrumb-item"><a href="#" onclick="cambiarModulo('dashboard')">Inicio</a></li>
+    <li class="breadcrumb-item active">${nombreModulos[nombreModulo] || nombreModulo}</li>
+  `;
+}
+
+/**
+ * Event listeners para navegación por data-module
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Configurar navegación por data-module
+  const navLinks = document.querySelectorAll('[data-module]');
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const moduleName = link.getAttribute('data-module');
+      
+      // Remover clase active de todos los links
+      navLinks.forEach(l => l.classList.remove('active'));
+      
+      // Agregar clase active al link seleccionado
+      link.classList.add('active');
+      
+      // Cambiar módulo
+      cambiarModulo(moduleName);
+    });
+  });
+  
+  // Módulo inicial: dashboard
+  cambiarModulo('dashboard');
+});

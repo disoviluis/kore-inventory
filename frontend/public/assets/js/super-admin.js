@@ -4,76 +4,117 @@
  * ========================================
  */
 
-const API_URL = 'http://localhost:3000/api';
-let currentUser = null;
-let empresas = [];
-let planes = [];
+// Reutilizar API_URL del dashboard.js
+// const API_URL ya está definido en dashboard.js
+let currentUserSuperAdmin = null;
+let empresasSuperAdmin = [];
+let planesSuperAdmin = [];
 
 // ========================================
-// INICIALIZACIÓN
+// INICIALIZACIÓN (llamada desde dashboard.js)
 // ========================================
-document.addEventListener('DOMContentLoaded', () => {
-    verificarAutenticacion();
-    inicializarEventListeners();
-    cargarDashboard();
-    cargarEmpresas();
-});
 
-function verificarAutenticacion() {
+/**
+ * Cargar dashboard de Super Admin
+ * Llamada desde dashboard.js cuando se activa el módulo
+ */
+function cargarDashboardSuperAdmin() {
     const token = localStorage.getItem('token');
-    const usuario = localStorage.getItem('usuario');
+    const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
     
-    if (!token || !usuario) {
-        window.location.href = 'login.html';
+    if (!usuario || usuario.tipo_usuario !== 'super_admin') {
+        mostrarAlertaSuperAdmin('No tienes permisos para acceder a esta sección', 'danger');
         return;
     }
     
-    currentUser = JSON.parse(usuario);
+    currentUserSuperAdmin = usuario;
     
-    if (currentUser.tipo_usuario !== 'super_admin') {
-        mostrarAlerta('No tienes permisos para acceder a esta sección', 'danger');
-        setTimeout(() => window.location.href = 'dashboard.html', 2000);
-        return;
-    }
+    // Cargar métricas del dashboard
+    fetch(`${API_URL}/super-admin/dashboard`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            actualizarMetricasSuperAdmin(data.data);
+        }
+    })
+    .catch(error => {
+        console.error('Error al cargar dashboard Super Admin:', error);
+    });
     
-    document.getElementById('nombreUsuario').textContent = currentUser.nombre;
+    // Inicializar event listeners solo una vez
+    inicializarEventListenersSuperAdmin();
 }
 
-function inicializarEventListeners() {
+/**
+ * Cargar listado de empresas
+ * Llamada desde dashboard.js cuando se activa el módulo
+ */
+function cargarEmpresasSuperAdmin() {
+    const token = localStorage.getItem('token');
+    const searchEmpresas = document.getElementById('searchEmpresas');
+    const filterEstado = document.getElementById('filterEstado');
+    const filterPlan = document.getElementById('filterPlan');
+    
+    const search = searchEmpresas ? searchEmpresas.value : '';
+    const estado = filterEstado ? filterEstado.value : '';
+    const planId = filterPlan ? filterPlan.value : '';
+    
+    let url = `${API_URL}/super-admin/empresas?limit=100`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (estado) url += `&estado=${estado}`;
+    if (planId) url += `&plan_id=${planId}`;
+    
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            empresasSuperAdmin = data.data;
+            renderizarTablaEmpresasSuperAdmin(empresasSuperAdmin);
+        }
+    })
+    .catch(error => {
+        console.error('Error al cargar empresas:', error);
+        mostrarAlertaSuperAdmin('Error al cargar empresas', 'danger');
+    });
+}
+
+/**
+ * Inicializar event listeners (solo una vez)
+ */
+let eventListenersInicializados = false;
+function inicializarEventListenersSuperAdmin() {
+    if (eventListenersInicializados) return;
+    eventListenersInicializados = true;
+    
     // Búsqueda
     const searchEmpresas = document.getElementById('searchEmpresas');
     if (searchEmpresas) {
-        searchEmpresas.addEventListener('input', debounce(() => cargarEmpresas(), 500));
+        searchEmpresas.addEventListener('input', debounce(() => cargarEmpresasSuperAdmin(), 500));
     }
     
     // Filtros
     const filterEstado = document.getElementById('filterEstado');
     const filterPlan = document.getElementById('filterPlan');
-    if (filterEstado) filterEstado.addEventListener('change', cargarEmpresas);
-    if (filterPlan) filterPlan.addEventListener('change', cargarEmpresas);
+    if (filterEstado) filterEstado.addEventListener('change', cargarEmpresasSuperAdmin);
+    if (filterPlan) filterPlan.addEventListener('change', cargarEmpresasSuperAdmin);
 }
 
 // ========================================
-// DASHBOARD
+// MÉTRICAS
 // ========================================
-async function cargarDashboard() {
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/super-admin/dashboard`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) throw new Error('Error al cargar dashboard');
-        
-        const data = await response.json();
-        mostrarMetricas(data.data);
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarAlerta('Error al cargar métricas del dashboard', 'danger');
-    }
-}
-
-function mostrarMetricas(metricas) {
+function actualizarMetricasSuperAdmin(metricas) {
     // Métricas principales
     if (document.getElementById('metricEmpresasActivas')) {
         document.getElementById('metricEmpresasActivas').textContent = metricas.empresas_activas || 0;
@@ -104,36 +145,9 @@ function mostrarMetricas(metricas) {
 }
 
 // ========================================
-// CRUD EMPRESAS
+// CRUD EMPRESAS - RENDERIZADO
 // ========================================
-async function cargarEmpresas() {
-    try {
-        const token = localStorage.getItem('token');
-        const buscar = document.getElementById('searchEmpresas')?.value || '';
-        const estado = document.getElementById('filterEstado')?.value || '';
-        const planId = document.getElementById('filterPlan')?.value || '';
-        
-        let url = `${API_URL}/super-admin/empresas?limit=100`;
-        if (buscar) url += `&search=${encodeURIComponent(buscar)}`;
-        if (estado) url += `&estado=${estado}`;
-        if (planId) url += `&plan_id=${planId}`;
-        
-        const response = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) throw new Error('Error al cargar empresas');
-        
-        const data = await response.json();
-        empresas = data.data;
-        renderizarTablaEmpresas(empresas);
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarAlerta('Error al cargar empresas', 'danger');
-    }
-}
-
-function renderizarTablaEmpresas(empresas) {
+function renderizarTablaEmpresasSuperAdmin(empresas) {
     const tbody = document.getElementById('tablaEmpresas');
     
     if (!tbody) return;
@@ -194,11 +208,11 @@ function renderizarTablaEmpresas(empresas) {
 // MODAL NUEVA/EDITAR EMPRESA
 // ========================================
 function abrirModalCrearEmpresa() {
-    document.getElementById('tituloModalEmpresa').textContent = 'Nueva Empresa';
+    document.getElementById('empresaModalTitle').textContent = 'Nueva Empresa';
     document.getElementById('empresaId').value = '';
-    document.getElementById('formEmpresa').reset();
+    document.getElementById('empresaForm').reset();
     
-    const modal = new bootstrap.Modal(document.getElementById('modalEmpresa'));
+    const modal = new bootstrap.Modal(document.getElementById('empresaModal'));
     modal.show();
 }
 
@@ -219,22 +233,30 @@ async function editarEmpresa(id) {
         const data = await response.json();
         const empresa = data.data;
         
-        document.getElementById('tituloModalEmpresa').textContent = 'Editar Empresa';
+        document.getElementById('empresaModalTitle').textContent = 'Editar Empresa';
         document.getElementById('empresaId').value = empresa.id;
         document.getElementById('empresaNombre').value = empresa.nombre;
-        document.getElementById('empresaNit').value = empresa.nit;
+        document.getElementById('empresaRazonSocial').value = empresa.razon_social || '';
+        document.getElementById('empresaNit').value = empresa.nit || '';
+        document.getElementById('empresaTipoContribuyente').value = empresa.tipo_contribuyente || 'persona_juridica';
         document.getElementById('empresaEmail').value = empresa.email;
         document.getElementById('empresaTelefono').value = empresa.telefono || '';
         document.getElementById('empresaDireccion').value = empresa.direccion || '';
         document.getElementById('empresaCiudad').value = empresa.ciudad || '';
         document.getElementById('empresaPais').value = empresa.pais || 'Colombia';
         document.getElementById('empresaPlan').value = empresa.plan_id || '';
+        document.getElementById('empresaEstado').value = empresa.estado || 'trial';
+        document.getElementById('empresaFechaInicioTrial').value = empresa.fecha_inicio_trial || '';
+        document.getElementById('empresaFechaFinTrial').value = empresa.fecha_fin_trial || '';
+        document.getElementById('empresaRegimenTributario').value = empresa.regimen_tributario || 'simplificado';
+        document.getElementById('empresaMoneda').value = empresa.moneda || 'COP';
+        document.getElementById('empresaZonaHoraria').value = empresa.zona_horaria || 'America/Bogota';
         
-        const modal = new bootstrap.Modal(document.getElementById('modalEmpresa'));
+        const modal = new bootstrap.Modal(document.getElementById('empresaModal'));
         modal.show();
     } catch (error) {
         console.error('Error:', error);
-        mostrarAlerta('Error al cargar datos de la empresa', 'danger');
+        mostrarAlertaSuperAdmin('Error al cargar datos de la empresa', 'danger');
     }
 }
 
@@ -245,23 +267,34 @@ async function guardarEmpresa() {
         
         const empresaData = {
             nombre: document.getElementById('empresaNombre').value.trim(),
-            nit: document.getElementById('empresaNit').value.trim(),
-            email: document.getElementById('empresaEmail').value.trim(),
-            telefono: document.getElementById('empresaTelefono').value.trim(),
-            direccion: document.getElementById('empresaDireccion').value.trim(),
-            ciudad: document.getElementById('empresaCiudad').value.trim(),
-            pais: document.getElementById('empresaPais').value,
-            regimen_tributario: document.getElementById('empresaRegimen').value,
+            razon_social: document.getElementById('empresaRazonSocial').value.trim() || null,
+            nit: document.getElementById('empresaNit').value.trim() || null,
             tipo_contribuyente: document.getElementById('empresaTipoContribuyente').value,
+            email: document.getElementById('empresaEmail').value.trim(),
+            telefono: document.getElementById('empresaTelefono').value.trim() || null,
+            direccion: document.getElementById('empresaDireccion').value.trim() || null,
+            ciudad: document.getElementById('empresaCiudad').value.trim() || null,
+            pais: document.getElementById('empresaPais').value,
             plan_id: parseInt(document.getElementById('empresaPlan').value) || null,
-            dias_trial: parseInt(document.getElementById('empresaDiasTrial').value) || 0,
-            tipo_facturacion: document.getElementById('empresaTipoFacturacion').value,
-            auto_renovacion: document.getElementById('empresaAutoRenovacion').checked
+            estado: document.getElementById('empresaEstado').value || 'trial',
+            fecha_inicio_trial: document.getElementById('empresaFechaInicioTrial').value || null,
+            fecha_fin_trial: document.getElementById('empresaFechaFinTrial').value || null,
+            regimen_tributario: document.getElementById('empresaRegimenTributario').value,
+            moneda: document.getElementById('empresaMoneda').value,
+            zona_horaria: document.getElementById('empresaZonaHoraria').value,
+            idioma: 'es'
         };
         
         // Validaciones
-        if (!empresaData.nombre || !empresaData.nit || !empresaData.email) {
-            mostrarAlerta('Por favor completa todos los campos obligatorios', 'warning');
+        if (!empresaData.nombre || !empresaData.email) {
+            mostrarAlertaSuperAdmin('Por favor completa todos los campos obligatorios', 'warning');
+            return;
+        }
+        
+        // Validar email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(empresaData.email)) {
+            mostrarAlertaSuperAdmin('Por favor ingresa un email válido', 'warning');
             return;
         }
         
@@ -286,19 +319,19 @@ async function guardarEmpresa() {
         
         const data = await response.json();
         
-        mostrarAlerta(
+        mostrarAlertaSuperAdmin(
             esEdicion ? 'Empresa actualizada exitosamente' : 'Empresa creada exitosamente',
             'success'
         );
         
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalEmpresa'));
+        const modal = bootstrap.Modal.getInstance(document.getElementById('empresaModal'));
         modal.hide();
         
-        cargarEmpresas();
-        cargarDashboard();
+        cargarEmpresasSuperAdmin();
+        cargarDashboardSuperAdmin();
     } catch (error) {
         console.error('Error:', error);
-        mostrarAlerta(error.message || 'Error al guardar empresa', 'danger');
+        mostrarAlertaSuperAdmin(error.message || 'Error al guardar empresa', 'danger');
     }
 }
 
@@ -316,12 +349,12 @@ async function cambiarEstadoEmpresa(id, nuevoEstado) {
         
         if (!response.ok) throw new Error('Error al cambiar estado');
         
-        mostrarAlerta('Estado actualizado exitosamente', 'success');
-        cargarEmpresas();
-        cargarDashboard();
+        mostrarAlertaSuperAdmin('Estado actualizado exitosamente', 'success');
+        cargarEmpresasSuperAdmin();
+        cargarDashboardSuperAdmin();
     } catch (error) {
         console.error('Error:', error);
-        mostrarAlerta('Error al cambiar estado de la empresa', 'danger');
+        mostrarAlertaSuperAdmin('Error al cambiar estado de la empresa', 'danger');
     }
 }
 
@@ -341,12 +374,12 @@ async function eliminarEmpresa(id) {
         
         if (!response.ok) throw new Error('Error al eliminar empresa');
         
-        mostrarAlerta('Empresa eliminada exitosamente', 'success');
-        cargarEmpresas();
-        cargarDashboard();
+        mostrarAlertaSuperAdmin('Empresa eliminada exitosamente', 'success');
+        cargarEmpresasSuperAdmin();
+        cargarDashboardSuperAdmin();
     } catch (error) {
         console.error('Error:', error);
-        mostrarAlerta('Error al eliminar empresa', 'danger');
+        mostrarAlertaSuperAdmin('Error al eliminar empresa', 'danger');
     }
 }
 
@@ -399,7 +432,7 @@ function formatearFecha(fecha) {
     });
 }
 
-function mostrarAlerta(mensaje, tipo = 'info') {
+function mostrarAlertaSuperAdmin(mensaje, tipo = 'info') {
     const alertContainer = document.getElementById('alertContainer');
     if (!alertContainer) return;
     

@@ -273,10 +273,9 @@
                     <div class="collapse" id="plataformaCollapse">
                         <ul class="nav flex-column ms-3">
                             <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
+                                <a class="nav-link" href="#" data-module="empresas">
                                     <i class="bi bi-building"></i>
                                     <span>Empresas</span>
-                                    <span class="badge bg-secondary">Próximamente</span>
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -295,27 +294,6 @@
                             </li>
                         </ul>
                     </div>
-                </li>
-
-                <!-- Divider (Super Admin Only) -->
-                <li class="nav-divider super-admin-only">
-                    <span>PLATAFORMA</span>
-                </li>
-
-                <!-- Empresas (Super Admin) -->
-                <li class="nav-item super-admin-only">
-                    <a class="nav-link" href="#empresas" data-module="empresas">
-                        <i class="bi bi-building"></i>
-                        <span>Empresas</span>
-                    </a>
-                </li>
-
-                <!-- Planes y Licencias (Super Admin) -->
-                <li class="nav-item super-admin-only">
-                    <a class="nav-link" href="#licencias" data-module="licencias">
-                        <i class="bi bi-key"></i>
-                        <span>Planes y Licencias</span>
-                    </a>
                 </li>
 
             </ul>
@@ -602,6 +580,164 @@
         
         </div><!-- END DASHBOARD MODULE -->
         
+        <!-- EMPRESAS MODULE (Super Admin) -->
+        <div id="empresasModule" class="module-content" style="display: none;">
+            <div id="alertContainer"></div>
+            
+            <!-- Page Header -->
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="page-title mb-1">Gestión de Empresas</h2>
+                        <p class="text-muted mb-0">Administración de empresas, planes y licencias</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <button class="btn btn-primary" onclick="abrirModalCrearEmpresa()">
+                            <i class="bi bi-plus-circle me-2"></i>Nueva Empresa
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-primary">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 class="stat-value" id="metricEmpresasActivas">0</h3>
+                            <p class="stat-label">Empresas Activas</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-success">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 class="stat-value" id="metricUsuariosActivos">0</h3>
+                            <p class="stat-label">Usuarios Activos</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-info">
+                            <i class="bi bi-currency-dollar"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 class="stat-value" id="metricMRR">$0</h3>
+                            <p class="stat-label">MRR</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 class="stat-value text-warning" id="metricLicenciasPorVencer">0</h3>
+                            <p class="stat-label">Por Vencer</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado de Empresas -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Estado de Empresas</h5>
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <h3 class="text-success mb-0" id="empresasActivas">0</h3>
+                            <span class="badge bg-success-light text-success mt-2">Activas</span>
+                        </div>
+                        <div class="col-3">
+                            <h3 class="text-info mb-0" id="empresasTrial">0</h3>
+                            <span class="badge bg-info-light text-info mt-2">En Trial</span>
+                        </div>
+                        <div class="col-3">
+                            <h3 class="text-warning mb-0" id="empresasSuspendidas">0</h3>
+                            <span class="badge bg-warning-light text-warning mt-2">Suspendidas</span>
+                        </div>
+                        <div class="col-3">
+                            <h3 class="text-danger mb-0" id="empresasCanceladas">0</h3>
+                            <span class="badge bg-danger-light text-danger mt-2">Canceladas</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Empresas -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-3">Empresas Registradas</h5>
+                    
+                    <!-- Filtros -->
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="searchEmpresas" placeholder="Buscar por nombre, NIT o email...">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="filterEstado">
+                                <option value="">Todos los estados</option>
+                                <option value="activa">Activas</option>
+                                <option value="trial">En Trial</option>
+                                <option value="suspendida">Suspendidas</option>
+                                <option value="cancelada">Canceladas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="filterPlan">
+                                <option value="">Todos los planes</option>
+                                <option value="1">Básico</option>
+                                <option value="2">Profesional</option>
+                                <option value="3">Enterprise</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Empresa</th>
+                                    <th>Plan</th>
+                                    <th>Estado</th>
+                                    <th>Usuarios</th>
+                                    <th>Productos</th>
+                                    <th>Registro</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaEmpresas">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div><!-- END EMPRESAS MODULE -->
+        
         <!-- PRODUCTOS MODULE -->
         <div id="productosModule" class="module-content" style="display: none;">
             
@@ -715,6 +851,160 @@
         </footer>
 
     </main>
+
+    <!-- Modal Empresa (Super Admin) -->
+    <div class="modal fade" id="empresaModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="empresaModalTitle">Nueva Empresa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="empresaForm">
+                        <input type="hidden" id="empresaId">
+                        
+                        <div class="row g-3">
+                            <!-- Información Básica -->
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2">Información de la Empresa</h6>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre de la Empresa <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="empresaNombre" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Razón Social</label>
+                                <input type="text" class="form-control" id="empresaRazonSocial">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">NIT <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="empresaNit" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Email Principal <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="empresaEmail" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="empresaTelefono">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Contribuyente</label>
+                                <select class="form-select" id="empresaTipoContribuyente">
+                                    <option value="persona_juridica">Persona Jurídica</option>
+                                    <option value="persona_natural">Persona Natural</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Dirección</label>
+                                <textarea class="form-control" id="empresaDireccion" rows="2"></textarea>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Ciudad</label>
+                                <input type="text" class="form-control" id="empresaCiudad">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">País</label>
+                                <input type="text" class="form-control" id="empresaPais" value="Colombia">
+                            </div>
+
+                            <!-- Plan y Estado -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Plan y Estado</h6>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Plan <span class="text-danger">*</span></label>
+                                <select class="form-select" id="empresaPlan" required>
+                                    <option value="">Seleccionar plan...</option>
+                                    <option value="1">Básico</option>
+                                    <option value="2">Profesional</option>
+                                    <option value="3">Enterprise</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Estado de la Empresa <span class="text-danger">*</span></label>
+                                <select class="form-select" id="empresaEstado" required>
+                                    <option value="trial">En Trial</option>
+                                    <option value="activa">Activa</option>
+                                    <option value="suspendida">Suspendida</option>
+                                    <option value="cancelada">Cancelada</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha Inicio Trial</label>
+                                <input type="date" class="form-control" id="empresaFechaInicioTrial">
+                                <small class="text-muted">Solo si el estado es "trial"</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha Fin Trial</label>
+                                <input type="date" class="form-control" id="empresaFechaFinTrial">
+                                <small class="text-muted">Se calculan automáticamente 30 días</small>
+                            </div>
+
+                            <!-- Configuración -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Configuración</h6>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Régimen Tributario</label>
+                                <select class="form-select" id="empresaRegimenTributario">
+                                    <option value="simplificado">Simplificado</option>
+                                    <option value="común">Común</option>
+                                    <option value="especial">Especial</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Moneda</label>
+                                <select class="form-select" id="empresaMoneda">
+                                    <option value="COP">Peso Colombiano (COP)</option>
+                                    <option value="USD">Dólar (USD)</option>
+                                    <option value="EUR">Euro (EUR)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Zona Horaria</label>
+                                <select class="form-select" id="empresaZonaHoraria">
+                                    <option value="America/Bogota">América/Bogotá</option>
+                                    <option value="America/Mexico_City">América/Ciudad de México</option>
+                                    <option value="America/New_York">América/Nueva York</option>
+                                </select>
+                            </div>
+
+                            <!-- Observaciones -->
+                            <div class="col-12 mt-4">
+                                <label class="form-label">Observaciones Internas</label>
+                                <textarea class="form-control" id="empresaNotas" rows="2" placeholder="Notas internas sobre esta empresa..."></textarea>
+                                <small class="text-muted">Estas notas no son visibles para la empresa</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEmpresa()">
+                        <i class="bi bi-save me-2"></i>Guardar Empresa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Producto -->
     <div class="modal fade" id="productoModal" tabindex="-1">
@@ -845,5 +1135,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- Custom JS -->
     <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/super-admin.js"></script>
 </body>
 </html>
