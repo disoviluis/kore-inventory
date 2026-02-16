@@ -755,6 +755,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // Cargar empresas para Super Admin
 async function cargarEmpresasSuperAdmin() {
   try {
+    // Cargar métricas del dashboard
+    await cargarMetricasSuperAdmin();
+    
+    // Cargar lista de empresas
     const response = await fetch(`${API_URL}/super-admin/empresas`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -768,6 +772,52 @@ async function cargarEmpresasSuperAdmin() {
   } catch (error) {
     console.error('Error:', error);
     mostrarError('Error al cargar empresas');
+  }
+}
+
+// Cargar métricas del dashboard Super Admin
+async function cargarMetricasSuperAdmin() {
+  try {
+    const response = await fetch(`${API_URL}/super-admin/dashboard`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!response.ok) throw new Error('Error al cargar métricas');
+    
+    const data = await response.json();
+    const metrics = data.data;
+    
+    // Actualizar tarjetas superiores
+    if (document.getElementById('metricEmpresasActivas')) {
+      document.getElementById('metricEmpresasActivas').textContent = metrics.empresas.activas || 0;
+    }
+    if (document.getElementById('metricUsuariosActivos')) {
+      document.getElementById('metricUsuariosActivos').textContent = metrics.usuarios.activos || 0;
+    }
+    if (document.getElementById('metricMRR')) {
+      document.getElementById('metricMRR').textContent = `$${(metrics.ingresos.mrr || 0).toLocaleString()}`;
+    }
+    if (document.getElementById('metricLicenciasPorVencer')) {
+      document.getElementById('metricLicenciasPorVencer').textContent = metrics.licencias.por_vencer || 0;
+    }
+    
+    // Actualizar estado de empresas
+    if (document.getElementById('empresasActivas')) {
+      document.getElementById('empresasActivas').textContent = metrics.empresas.activas || 0;
+    }
+    if (document.getElementById('empresasTrial')) {
+      document.getElementById('empresasTrial').textContent = metrics.empresas.en_trial || 0;
+    }
+    if (document.getElementById('empresasSuspendidas')) {
+      document.getElementById('empresasSuspendidas').textContent = metrics.empresas.suspendidas || 0;
+    }
+    if (document.getElementById('empresasCanceladas')) {
+      document.getElementById('empresasCanceladas').textContent = metrics.empresas.canceladas || 0;
+    }
+  } catch (error) {
+    console.error('Error al cargar métricas:', error);
   }
 }
 
