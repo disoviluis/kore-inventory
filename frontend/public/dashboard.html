@@ -273,27 +273,21 @@
                     <div class="collapse" id="plataformaCollapse">
                         <ul class="nav flex-column ms-3">
                             <li class="nav-item">
-                                <a class="nav-link" href="super-admin.html#empresas">
+                                <a class="nav-link" href="#" onclick="cambiarModulo('empresas'); return false;">
                                     <i class="bi bi-building"></i>
                                     <span>Empresas</span>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="super-admin.html#usuarios">
+                                <a class="nav-link" href="#" onclick="cambiarModulo('usuarios'); return false;">
                                     <i class="bi bi-people"></i>
                                     <span>Usuarios</span>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="super-admin.html#planes">
+                                <a class="nav-link" href="#" onclick="cambiarModulo('planes'); return false;">
                                     <i class="bi bi-card-checklist"></i>
                                     <span>Planes y Licencias</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="super-admin.html#dashboard">
-                                    <i class="bi bi-speedometer2"></i>
-                                    <span>Dashboard Super Admin</span>
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -748,6 +742,141 @@
                 </div>
             </div>
         </div><!-- END EMPRESAS MODULE -->
+        
+        <!-- USUARIOS MODULE (Super Admin) -->
+        <div id="usuariosModule" class="module-content" style="display: none;">
+            <div id="alertContainerUsuarios"></div>
+            
+            <!-- Page Header -->
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="page-title mb-1">Gestión de Usuarios</h2>
+                        <p class="text-muted mb-0">Administración de usuarios del sistema</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <button class="btn btn-primary" onclick="abrirModalCrearUsuario()">
+                            <i class="bi bi-person-plus me-2"></i>Nuevo Usuario
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="searchUsuarios" placeholder="Buscar por nombre o email...">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="filterTipoUsuario">
+                                <option value="">Todos los tipos</option>
+                                <option value="super_admin">Super Admin</option>
+                                <option value="admin_empresa">Admin Empresa</option>
+                                <option value="usuario">Usuario</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="filterActivoUsuario">
+                                <option value="">Todos</option>
+                                <option value="1" selected>Activos</option>
+                                <option value="0">Inactivos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" onclick="buscarUsuarios()">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Usuarios -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Email</th>
+                                    <th>Tipo</th>
+                                    <th>Empresas</th>
+                                    <th>Estado</th>
+                                    <th>Último Login</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaUsuarios">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div><!-- END USUARIOS MODULE -->
+        
+        <!-- PLANES MODULE (Super Admin) -->
+        <div id="planesModule" class="module-content" style="display: none;">
+            <div id="alertContainerPlanes"></div>
+            
+            <!-- Page Header -->
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-12">
+                        <h2 class="page-title mb-1">Planes y Licencias</h2>
+                        <p class="text-muted mb-0">Gestión de planes de suscripción y licencias</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <!-- Planes -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">Planes Disponibles</h5>
+                                <button class="btn btn-primary btn-sm" onclick="abrirModalCrearPlan()">
+                                    <i class="bi bi-plus-circle me-1"></i>Nuevo Plan
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="listaPlanes">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <!-- Licencias por Vencer -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Licencias Próximas a Vencer</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                            <div id="listaLicenciasPorVencer">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- END PLANES MODULE -->
         
         <!-- PRODUCTOS MODULE -->
         <div id="productosModule" class="module-content" style="display: none;">

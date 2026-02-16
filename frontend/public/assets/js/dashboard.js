@@ -654,6 +654,18 @@ function cambiarModulo(nombreModulo) {
           cargarEmpresasSuperAdmin();
         }
         break;
+      case 'usuarios':
+        // Cargar módulo Super Admin - Usuarios
+        if (typeof cargarUsuarios === 'function') {
+          cargarUsuarios();
+        }
+        break;
+      case 'planes':
+        // Cargar módulo Super Admin - Planes y Licencias
+        if (typeof cargarPlanes === 'function') {
+          cargarPlanes();
+        }
+        break;
       case 'productos':
         if (typeof cargarProductos === 'function') {
           cargarProductos();
