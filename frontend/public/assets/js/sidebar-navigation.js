@@ -7,11 +7,51 @@
  */
 
 /**
+ * Mostrar/ocultar elementos de super admin en el sidebar
+ */
+function configurarSidebarSuperAdmin() {
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+  
+  if (usuario.tipo_usuario === 'super_admin') {
+    console.log('👑 Usuario Super Admin detectado - Mostrando opciones de PLATAFORMA');
+    
+    // Ocultar la sección colapsable vieja (con enlaces disabled)
+    const plataformaSection = document.getElementById('plataformaSection');
+    if (plataformaSection) {
+      plataformaSection.style.display = 'none';
+    }
+    
+    // Mostrar los enlaces directos nuevos (con data-module)
+    const superAdminElements = document.querySelectorAll('.super-admin-only');
+    superAdminElements.forEach(element => {
+      element.style.display = 'block';
+    });
+  } else {
+    console.log('👤 Usuario regular - Ocultando opciones de PLATAFORMA');
+    
+    // Ocultar sección colapsable
+    const plataformaSection = document.getElementById('plataformaSection');
+    if (plataformaSection) {
+      plataformaSection.style.display = 'none';
+    }
+    
+    // Ocultar enlaces super admin
+    const superAdminElements = document.querySelectorAll('.super-admin-only');
+    superAdminElements.forEach(element => {
+      element.style.display = 'none';
+    });
+  }
+}
+
+/**
  * Configurar navegación por data-module en el sidebar
  * Esto permite que los enlaces de PLATAFORMA funcionen desde cualquier página
  */
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🔧 Sidebar Navigation inicializado');
+  
+  // Configurar visibilidad de elementos super admin
+  configurarSidebarSuperAdmin();
   
   // Configurar navegación por data-module (para módulos de PLATAFORMA)
   const navLinks = document.querySelectorAll('[data-module]');
