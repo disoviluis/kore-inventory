@@ -675,6 +675,10 @@ function cambiarModulo(nombreModulo) {
         // Cargar módulo de Impuestos
         cargarImpuestos();
         break;
+      case 'roles':
+        // Cargar módulo de Roles y Permisos
+        cargarRoles();
+        break;
       case 'productos':
         if (typeof cargarProductos === 'function') {
           cargarProductos();
@@ -708,6 +712,7 @@ function actualizarBreadcrumb(nombreModulo) {
     'empresas': 'Gestión de Empresas',
     'usuarios': 'Usuarios',
     'planes': 'Planes y Licencias',
+    'roles': 'Roles y Permisos',
     'impuestos': 'Configuración de Impuestos',
     'productos': 'Productos',
     'inventario': 'Inventario',
@@ -1860,23 +1865,31 @@ async function guardarPlan() {
 
 async function cargarImpuestos() {
   try {
-    const empresaId = localStorage.getItem('empresa_activa') || currentEmpresa?.id;
+    const empresaActiva = localStorage.getItem('empresaActiva');
+    const empresaId = empresaActiva ? JSON.parse(empresaActiva).id : null;
+    
     if (!empresaId) {
       mostrarError('No hay empresa seleccionada');
+      console.error('No hay empresaId para cargar impuestos. empresaActiva:', empresaActiva);
       return;
     }
 
+    console.log('Cargando impuestos para empresa:', empresaId);
     const response = await fetch(`${API_URL}/impuestos?empresaId=${empresaId}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
 
-    if (!response.ok) throw new Error('Error al cargar impuestos');
-    const data = await response.json();
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error response:', response.status, errorData);
+      throw new Error(`Error ${response.status}: ${errorData.message || 'Error al cargar impuestos'}`);
+    }
     
+    const data = await response.json();
     renderizarTablaImpuestos(data.data);
   } catch (error) {
-    console.error('Error:', error);
-    mostrarError('Error al cargar impuestos');
+    console.error('Error completo:', error);
+    mostrarError('Error al cargar impuestos: ' + error.message);
   }
 }
 
@@ -2215,4 +2228,578 @@ function filtrarImpuestos() {
     // Mostrar/ocultar fila según filtros
     row.style.display = (matchSearch && matchTipo && matchActivo) ? '' : 'none';
   });
+}
+
+// ============================================
+// MÓDULO: ROLES Y PERMISOS
+// ============================================
+
+let modulosAccionesData = null; // Cache de módulos y acciones
+let permisosSeleccionados = []; // IDs de permisos seleccionados
+
+/**
+ * Cargar lista de roles
+ */
+async function cargarRoles() {
+  try {
+    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    const mostrarSistema = document.getElementById('mostrarRolesSistema')?.checked || false;
+    
+    let url = `${API_URL}/roles`;
+    if (empresaActiva) {
+      url += `?empresa_id=${empresaActiva.id}`;
+    }
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar roles');
+    
+    const data = await response.json();
+    let roles = data.data || [];
+    
+    // Filtrar roles de sistema si no está activado el checkbox
+    if (!mostrarSistema) {
+      roles = roles.filter(r => r.tipo !== 'sistema');
+    }
+    
+    const tbody = document.getElementById('rolesTableBody');
+    
+    if (roles.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-4">
+            <i class="bi bi-inbox fs-1 text-muted"></i>
+            <p class="text-muted mt-2 mb-0">No hay roles configurados</p>
+            ${!mostrarSistema ? '<small class="text-muted">Activa "Mostrar roles de sistema" para ver roles predefinidos</small>' : ''}
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    tbody.innerHTML = roles.map(rol => `
+      <tr>
+        <td>
+          <i class="bi ${rol.es_admin ? 'bi-shield-fill-check text-danger' : 'bi-shield-check text-primary'}" 
+             title="${rol.es_admin ? 'Rol Administrador' : 'Rol Regular'}"></i>
+        </td>
+        <td>
+          <strong>${rol.nombre}</strong>
+          ${rol.empresa_nombre ? `<br><small class="text-muted">${rol.empresa_nombre}</small>` : 
+            '<br><small class="badge bg-info">Global</small>'}
+        </td>
+        <td>${rol.descripcion || '<span class="text-muted">Sin descripción</span>'}</td>
+        <td>
+          <span class="badge bg-${rol.tipo === 'sistema' ? 'secondary' : 'primary'}">
+            ${rol.tipo === 'sistema' ? 'Sistema' : 'Personalizado'}
+          </span>
+        </td>
+        <td class="text-center">
+          <span class="badge bg-info">${rol.usuarios_count || 0}</span>
+        </td>
+        <td>
+          <span class="badge bg-${rol.activo ? 'success' : 'secondary'}">
+            ${rol.activo ? 'Activo' : 'Inactivo'}
+          </span>
+        </td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-primary" onclick="verDetalleRol(${rol.id})" title="Ver detalle">
+            <i class="bi bi-eye"></i>
+          </button>
+          ${rol.tipo !== 'sistema' ? `
+            <button class="btn btn-sm btn-outline-warning" onclick="editarRol(${rol.id})" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="eliminarRol(${rol.id}, '${rol.nombre.replace(/'/g, "\\'")}', ${rol.usuarios_count})" title="Eliminar">
+              <i class="bi bi-trash"></i>
+            </button>
+          ` : '<small class="text-muted">No editable</small>'}
+        </td>
+      </tr>
+    `).join('');
+    
+  } catch (error) {
+    console.error('Error al cargar roles:', error);
+    document.getElementById('rolesTableBody').innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center text-danger py-4">
+          <i class="bi bi-exclamation-triangle fs-1"></i>
+          <p class="mt-2 mb-0">${error.message}</p>
+        </td>
+      </tr>
+    `;
+  }
+}
+
+/**
+ * Abrir modal para crear/editar rol
+ */
+async function abrirModalRol(rolId = null) {
+  const modal = new bootstrap.Modal(document.getElementById('rolModal'));
+  const form = document.getElementById('rolForm');
+  form.reset();
+  permisosSeleccionados = [];
+  
+  document.getElementById('rolModalTitle').textContent = rolId ? 'Editar Rol' : 'Crear Rol';
+  document.getElementById('rolId').value = rolId || '';
+  
+  // Cargar módulos y acciones si no están en cache
+  if (!modulosAccionesData) {
+    await cargarModulosAcciones();
+  }
+  
+  // Si es edición, cargar datos del rol
+  if (rolId) {
+    try {
+      const response = await fetch(`${API_URL}/roles/${rolId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Error al cargar rol');
+      
+      const data = await response.json();
+      const rol = data.data;
+      
+      // Llenar formulario
+      document.getElementById('rolNombre').value = rol.nombre;
+      document.getElementById('rolDescripcion').value = rol.descripcion || '';
+      document.getElementById('rolActivo').value = rol.activo ? '1' : '0';
+      
+      // Marcar permisos asignados
+      permisosSeleccionados = rol.permisos.map(p => p.permiso_id);
+      
+      // Renderizar matriz con permisos marcados
+      renderizarMatrizPermisos();
+      
+    } catch (error) {
+      console.error('Error:', error);
+      mostrarError('Error al cargar datos del rol');
+      return;
+    }
+  } else {
+    // Renderizar matriz vacía para nuevo rol
+    renderizarMatrizPermisos();
+  }
+  
+  modal.show();
+}
+
+/**
+ * Cargar módulos y acciones disponibles
+ */
+async function cargarModulosAcciones() {
+  const container = document.getElementById('permisosContainer');
+  container.innerHTML = `
+    <div class="text-center py-4">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="text-muted mt-2">Cargando permisos...</p>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch(`${API_URL}/roles/modulos-acciones`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar módulos y acciones');
+    
+    const data = await response.json();
+    modulosAccionesData = data.data;
+    
+    renderizarMatrizPermisos();
+    
+  } catch (error) {
+    console.error('Error:', error);
+    container.innerHTML = `
+      <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        ${error.message}
+      </div>
+    `;
+  }
+}
+
+/**
+ * Renderizar matriz de permisos (checkboxes por módulo y acción)
+ */
+function renderizarMatrizPermisos() {
+  if (!modulosAccionesData) return;
+  
+  const { modulos, acciones, permisos } = modulosAccionesData;
+  
+  // Agrupar módulos por categoría
+  const categorias = {};
+  modulos.forEach(modulo => {
+    const cat = modulo.categoria || 'Sin Categoría';
+    if (!categorias[cat]) categorias[cat] = [];
+    categorias[cat].push(modulo);
+  });
+  
+  // Crear mapa de permisos por modulo_id y accion_id
+  const permisoMap = {};
+  permisos.forEach(p => {
+    const key = `${p.modulo_id}_${p.accion_id}`;
+    permisoMap[key] = p.id;
+  });
+  
+  let html = '';
+  
+  Object.entries(categorias).forEach(([categoria, mods]) => {
+    html += `
+      <div class="card mb-3">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 text-uppercase">
+            <i class="bi bi-folder me-2"></i>${categoria}
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 200px;">Módulo</th>
+                  ${acciones.map(a => `
+                    <th class="text-center" style="width: 80px;" title="${a.descripcion}">
+                      ${a.nombre_mostrar}
+                    </th>
+                  `).join('')}
+                  <th class="text-center" style="width: 100px;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" 
+                            onclick="toggleCategoriaCompleta('${categoria}')">
+                      <i class="bi bi-check-all"></i>
+                    </button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+    `;
+    
+    mods.forEach(modulo => {
+      html += `
+        <tr data-modulo-id="${modulo.id}">
+          <td>
+            <i class="bi ${modulo.icono} me-2 text-primary"></i>
+            <strong>${modulo.nombre_mostrar}</strong>
+            ${modulo.nivel === 'platform' ? '<span class="badge bg-warning ms-2">Plataforma</span>' : ''}
+          </td>
+      `;
+      
+      acciones.forEach(accion => {
+        const permisoKey = `${modulo.id}_${accion.id}`;
+        const permisoId = permisoMap[permisoKey];
+        
+        if (permisoId) {
+          const isChecked = permisosSeleccionados.includes(permisoId);
+          html += `
+            <td class="text-center align-middle">
+              <input type="checkbox" class="form-check-input permiso-check" 
+                     data-permiso-id="${permisoId}"
+                     data-modulo-id="${modulo.id}"
+                     data-accion-id="${accion.id}"
+                     ${isChecked ? 'checked' : ''}
+                     onchange="togglePermiso(this)">
+            </td>
+          `;
+        } else {
+          html += `<td class="text-center text-muted"><small>N/A</small></td>`;
+        }
+      });
+      
+      html += `
+          <td class="text-center align-middle">
+            <button type="button" class="btn btn-sm btn-outline-primary" 
+                    onclick="toggleModuloCompleto(${modulo.id})">
+              <i class="bi bi-check-all"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  document.getElementById('permisosContainer').innerHTML = html;
+}
+
+/**
+ * Toggle individual de permiso
+ */
+function togglePermiso(checkbox) {
+  const permisoId = parseInt(checkbox.dataset.permisoId);
+  
+  if (checkbox.checked) {
+    if (!permisosSeleccionados.includes(permisoId)) {
+      permisosSeleccionados.push(permisoId);
+    }
+  } else {
+    permisosSeleccionados = permisosSeleccionados.filter(id => id !== permisoId);
+  }
+  
+  console.log('Permisos seleccionados:', permisosSeleccionados.length);
+}
+
+/**
+ * Seleccionar/Deseleccionar todos los permisos de un módulo
+ */
+function toggleModuloCompleto(moduloId) {
+  const checkboxes = document.querySelectorAll(`input[data-modulo-id="${moduloId}"]`);
+  const todosChecked = Array.from(checkboxes).every(cb => cb.checked);
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = !todosChecked;
+    togglePermiso(checkbox);
+  });
+}
+
+/**
+ * Seleccionar/Deseleccionar todos los permisos de una categoría
+ */
+function toggleCategoriaCompleta(categoria) {
+  const card = Array.from(document.querySelectorAll('.card-header h6'))
+    .find(h => h.textContent.includes(categoria))
+    ?.closest('.card');
+  
+  if (!card) return;
+  
+  const checkboxes = card.querySelectorAll('.permiso-check');
+  const todosChecked = Array.from(checkboxes).every(cb => cb.checked);
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = !todosChecked;
+    togglePermiso(checkbox);
+  });
+}
+
+/**
+ * Seleccionar o limpiar TODOS los permisos
+ */
+function seleccionarTodosPermisos(seleccionar) {
+  const checkboxes = document.querySelectorAll('.permiso-check');
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = seleccionar;
+    togglePermiso(checkbox);
+  });
+}
+
+/**
+ * Guardar rol (crear o actualizar)
+ */
+document.getElementById('rolForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const rolId = document.getElementById('rolId').value;
+  const nombre = document.getElementById('rolNombre').value.trim();
+  const descripcion = document.getElementById('rolDescripcion').value.trim();
+  const activo = document.getElementById('rolActivo').value === '1';
+  const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+  
+  if (!nombre) {
+    mostrarError('El nombre del rol es obligatorio');
+    return;
+  }
+  
+  if (permisosSeleccionados.length === 0) {
+    if (!confirm('No has seleccionado ningún permiso. ¿Deseas continuar?')) {
+      return;
+    }
+  }
+  
+  const datosRol = {
+    nombre,
+    descripcion: descripcion || null,
+    activo,
+    empresa_id: empresaActiva?.id || null,
+    permisos_ids: permisosSeleccionados
+  };
+  
+  try {
+    const url = rolId ? `${API_URL}/roles/${rolId}` : `${API_URL}/roles`;
+    const method = rolId ? 'PUT' : 'POST';
+    
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(datosRol)
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Error al guardar rol');
+    }
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('rolModal'));
+    modal.hide();
+    
+    mostrarExito(rolId ? 'Rol actualizado exitosamente' : 'Rol creado exitosamente');
+    cargarRoles();
+    
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError(error.message);
+  }
+});
+
+/**
+ * Ver detalle de un rol
+ */
+async function verDetalleRol(rolId) {
+  try {
+    const response = await fetch(`${API_URL}/roles/${rolId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar rol');
+    
+    const data = await response.json();
+    const rol = data.data;
+    
+    // Agrupar permisos por módulo
+    const permisosPorModulo = {};
+    rol.permisos.forEach(p => {
+      if (!permisosPorModulo[p.modulo_nombre]) {
+        permisosPorModulo[p.modulo_nombre] = {
+          nombre_mostrar: p.modulo_mostrar,
+          acciones: []
+        };
+      }
+      permisosPorModulo[p.modulo_nombre].acciones.push(p.accion_mostrar);
+    });
+    
+    let permisosHtml = '';
+    Object.entries(permisosPorModulo).forEach(([modulo, data]) => {
+      permisosHtml += `
+        <div class="mb-3">
+          <strong class="text-primary">${data.nombre_mostrar}</strong><br>
+          ${data.acciones.map(a => `<span class="badge bg-secondary me-1">${a}</span>`).join('')}
+        </div>
+      `;
+    });
+    
+    const modalHtml = `
+      <div class="modal fade" id="detalleRolModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">
+                <i class="bi bi-shield-check me-2"></i>Detalle del Rol
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row g-3">
+                <div class="col-md-8">
+                  <strong>Nombre:</strong><br>
+                  <h5>${rol.nombre}</h5>
+                  ${rol.empresa_nombre ? `<small class="text-muted">Empresa: ${rol.empresa_nombre}</small>` : 
+                    '<span class="badge bg-info">Rol Global</span>'}
+                </div>
+                <div class="col-md-4 text-end">
+                  <span class="badge bg-${rol.tipo === 'sistema' ? 'secondary' : 'primary'} fs-6">
+                    ${rol.tipo === 'sistema' ? 'Sistema' : 'Personalizado'}
+                  </span><br>
+                  <span class="badge bg-${rol.activo ? 'success' : 'secondary'} fs-6 mt-2">
+                    ${rol.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                <div class="col-12">
+                  <strong>Descripción:</strong><br>
+                  ${rol.descripcion || '<span class="text-muted">Sin descripción</span>'}
+                </div>
+                <div class="col-12 mt-4">
+                  <h6 class="border-bottom pb-2">Permisos Asignados (${rol.permisos.length})</h6>
+                  ${rol.permisos.length > 0 ? permisosHtml : '<p class="text-muted">No tiene permisos asignados</p>'}
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              ${rol.tipo !== 'sistema' ? `
+                <button type="button" class="btn btn-warning" onclick="editarRol(${rol.id}); bootstrap.Modal.getInstance(document.getElementById('detalleRolModal')).hide();">
+                  <i class="bi bi-pencil me-2"></i>Editar
+                </button>
+              ` : ''}
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    const oldModal = document.getElementById('detalleRolModal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('detalleRolModal'));
+    modal.show();
+    
+    document.getElementById('detalleRolModal').addEventListener('hidden.bs.modal', function() {
+      this.remove();
+    });
+    
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError('Error al cargar detalle del rol');
+  }
+}
+
+/**
+ * Editar rol
+ */
+function editarRol(rolId) {
+  abrirModalRol(rolId);
+}
+
+/**
+ * Eliminar rol
+ */
+async function eliminarRol(rolId, nombre, usuariosCount) {
+  if (usuariosCount > 0) {
+    alert(`No se puede eliminar el rol "${nombre}" porque tiene ${usuariosCount} usuario(s) asignado(s).\n\nPrimero debes reasignar esos usuarios a otro rol.`);
+    return;
+  }
+  
+  if (!confirm(`¿Estás seguro de eliminar el rol "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/roles/${rolId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Error al eliminar rol');
+    }
+    
+    mostrarExito('Rol eliminado exitosamente');
+    cargarRoles();
+    
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError(error.message);
+  }
 }

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Test PLATAFORMA - Diagnóstico</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Diagnóstico PLATAFORMA</h1>
+    <div id="results"></div>
+    
+    <!-- Elemento de prueba -->
+    <li class="nav-item" id="plataformaSection" style="display: none; border: 2px solid blue; padding: 10px; margin-top: 20px;">
+        PLATAFORMA Section (debe aparecer si eres super_admin)
+    </li>
+
+    <!-- Cargar sidebar-navigation.js para tener la función -->
+    <script src="assets/js/sidebar-navigation.js"></script>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message, type = 'info') {
+            const p = document.createElement('p');
+            p.className = type;
+            p.textContent = message;
+            results.appendChild(p);
+        }
+
+        function logJSON(title, obj) {
+            const h3 = document.createElement('h3');
+            h3.textContent = title;
+            results.appendChild(h3);
+            
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(obj, null, 2);
+            results.appendChild(pre);
+        }
+
+        // 1. Verificar localStorage
+        log('=== 1. VERIFICANDO LOCALSTORAGE ===');
+        
+        const token = localStorage.getItem('token');
+        if (token) {
+            log('✅ Token encontrado: ' + token.substring(0, 20) + '...', 'success');
+        } else {
+            log('❌ No hay token en localStorage', 'error');
+        }
+
+        const usuarioStr = localStorage.getItem('usuario');
+        if (usuarioStr) {
+            log('✅ Usuario encontrado en localStorage', 'success');
+            try {
+                const usuario = JSON.parse(usuarioStr);
+                logJSON('Usuario completo:', usuario);
+                
+                if (usuario.tipo_usuario) {
+                    log('✅ tipo_usuario: ' + usuario.tipo_usuario, 
+                        usuario.tipo_usuario === 'super_admin' ? 'success' : 'info');
+                } else {
+                    log('❌ NO hay tipo_usuario en el objeto usuario', 'error');
+                }
+            } catch (e) {
+                log('❌ Error al parsear usuario: ' + e.message, 'error');
+            }
+        } else {
+            log('❌ No hay usuario en localStorage', 'error');
+        }
+
+        // 2. Verificar si existe el elemento plataformaSection
+        log('\n=== 2. VERIFICANDO DOM ===');
+        
+        setTimeout(() => {
+            const plataformaSection = document.getElementById('plataformaSection');
+            if (plataformaSection) {
+                log('✅ Elemento #plataformaSection encontrado', 'success');
+                log('Display actual: ' + window.getComputedStyle(plataformaSection).display, 'info');
+            } else {
+                log('❌ Elemento #plataformaSection NO encontrado', 'error');
+            }
+        }, 100);
+
+        // 3. Verificar si existe la función
+        log('\n=== 3. VERIFICANDO FUNCIÓN ===');
+        
+        if (typeof configurarSidebarSuperAdmin === 'function') {
+            log('✅ Función configurarSidebarSuperAdmin existe', 'success');
+            
+            // Probar ejecutarla
+            try {
+                configurarSidebarSuperAdmin();
+                log('✅ Función ejecutada sin errores', 'success');
+            } catch (e) {
+                log('❌ Error al ejecutar función: ' + e.message, 'error');
+            }
+        } else {
+            log('❌ Función configurarSidebarSuperAdmin NO existe', 'error');
+        }
+
+        // 4. Resumen
+        log('\n=== 4. RESUMEN Y RECOMENDACIONES ===');
+        
+        if (!token) {
+            log('👉 Primero inicia sesión en login.html', 'info');
+        } else if (!usuarioStr) {
+            log('👉 El token existe pero no hay usuario. Vuelve a login.html', 'info');
+        } else {
+            const usuario = JSON.parse(usuarioStr);
+            if (usuario.tipo_usuario !== 'super_admin') {
+                log('👉 Tu usuario NO es super_admin. PLATAFORMA solo aparece para super_admin', 'info');
+            } else {
+                log('👉 Todo debería funcionar. Si no ves PLATAFORMA, limpia caché con Ctrl+Shift+R', 'success');
+            }
+        }
+    </script>
+</body>
+</html>

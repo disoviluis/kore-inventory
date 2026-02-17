@@ -18,6 +18,7 @@ import inventarioRoutes from './platform/inventario/inventario.routes';
 import comprasRoutes from './platform/compras/compras.routes';
 import superAdminRoutes from './platform/super-admin/super-admin.routes';
 import impuestosRoutes from './platform/impuestos/impuestos.routes';
+import rolesRoutes from './core/roles/roles.routes';
 
 const router = Router();
 
@@ -47,7 +48,7 @@ router.use('/empresas', empresasRoutes);
 // RUTAS CORE (Seguridad)
 // ============================================
 // router.use('/usuarios', usuariosRoutes);
-// router.use('/roles', rolesRoutes);
+router.use('/roles', rolesRoutes);
 // router.use('/permisos', permisosRoutes);
 
 // ============================================

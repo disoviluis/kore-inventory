@@ -246,10 +246,9 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
+                                <a class="nav-link" href="#" onclick="cambiarModulo('roles'); return false;">
                                     <i class="bi bi-shield-check"></i>
                                     <span>Roles y Permisos</span>
-                                    <span class="badge bg-secondary">Próximamente</span>
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -1063,6 +1062,79 @@
 
         </div><!-- END PRODUCTOS MODULE -->
 
+        <!-- ROLES MODULE -->
+        <div id="rolesModule" class="module-content" style="display: none;">
+            <div id="alertContainerRoles"></div>
+            
+            <!-- Page Header -->
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="page-title mb-1">Gestión de Roles y Permisos</h2>
+                        <p class="text-muted mb-0">Administración de roles con permisos granulares por módulo y acción</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <button class="btn btn-primary" onclick="abrirModalRol()">
+                            <i class="bi bi-plus-circle me-2"></i>Crear Rol
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>¿Cómo funcionan los roles?</strong><br>
+                        Los roles permiten agrupar permisos y asignarlos a usuarios. Cada permiso controla el acceso a módulos y acciones específicas:
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Roles de Sistema:</strong> Pre-configurados y no se pueden modificar (ej: Super Admin, Admin Empresa)</li>
+                            <li><strong>Roles Personalizados:</strong> Creados por ti, puedes editarlos y asignar permisos específicos (ej: Cajero, Vendedor, Bodeguero)</li>
+                            <li><strong>Permisos Granulares:</strong> Cada módulo tiene acciones específicas: Ver, Crear, Editar, Eliminar, Aprobar, Exportar, etc.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Roles -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Roles Configurados</h5>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="mostrarRolesSistema" onchange="cargarRoles()">
+                        <label class="form-check-label" for="mostrarRolesSistema">Mostrar roles de sistema</label>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><i class="bi bi-shield-check"></i></th>
+                                    <th>Nombre del Rol</th>
+                                    <th>Descripción</th>
+                                    <th>Tipo</th>
+                                    <th class="text-center">Usuarios</th>
+                                    <th>Estado</th>
+                                    <th class="text-end" style="width: 200px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rolesTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando roles...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div><!-- END ROLES MODULE -->
+
         <!-- IMPUESTOS MODULE -->
         <div id="impuestosModule" class="module-content" style="display: none;">
             <div id="alertContainerImpuestos"></div>
@@ -1625,6 +1697,85 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" form="planForm" class="btn btn-primary">
                         <i class="bi bi-save me-2"></i>Guardar Plan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Rol -->
+    <div class="modal fade" id="rolModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rolModalTitle">Crear Rol</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="rolForm">
+                        <input type="hidden" id="rolId">
+                        
+                        <div class="row g-3">
+                            <!-- Información Básica -->
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Información Básica</h6>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre del Rol <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="rolNombre" required placeholder="Ej: Cajero, Vendedor, Bodeguero">
+                                <small class="text-muted">Nombre descriptivo del rol</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Estado <span class="text-danger">*</span></label>
+                                <select class="form-select" id="rolActivo" required>
+                                    <option value="1">Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" id="rolDescripcion" rows="2" placeholder="Describe las responsabilidades y alcance de este rol"></textarea>
+                            </div>
+
+                            <!-- Permisos -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">
+                                    <i class="bi bi-shield-check me-2"></i>Permisos
+                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="seleccionarTodosPermisos(true)">
+                                        <i class="bi bi-check-all"></i> Seleccionar Todos
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="seleccionarTodosPermisos(false)">
+                                        <i class="bi bi-x"></i> Limpiar
+                                    </button>
+                                </h6>
+                                <p class="text-muted small mb-3">
+                                    Selecciona qué módulos y acciones puede realizar este rol. Los permisos se organizan por categorías.
+                                </p>
+                            </div>
+
+                            <div class="col-12">
+                                <div id="permisosContainer">
+                                    <!-- Matriz de permisos cargada dinámicamente -->
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando permisos...</span>
+                                        </div>
+                                        <p class="text-muted mt-2">Cargando matriz de permisos...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" form="rolForm" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Guardar Rol
                     </button>
                 </div>
             </div>

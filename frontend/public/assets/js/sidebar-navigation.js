@@ -27,6 +27,27 @@ function configurarSidebarSuperAdmin() {
 }
 
 /**
+ * Mostrar/ocultar sección de ADMINISTRACIÓN para admin_empresa y super_admin
+ */
+function configurarSidebarAdministracion() {
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+  const administracionSection = document.getElementById('administracionCollapse');
+  const administracionLink = document.querySelector('a[href="#administracionCollapse"]');
+  
+  if (!administracionSection || !administracionLink) {
+    return;
+  }
+  
+  if (usuario.tipo_usuario === 'super_admin' || usuario.tipo_usuario === 'admin_empresa') {
+    console.log('🔐 Usuario con permisos de administración - Mostrando ADMINISTRACIÓN');
+    administracionLink.parentElement.style.display = 'block';
+  } else {
+    console.log('👤 Usuario sin permisos - Ocultando ADMINISTRACIÓN');
+    administracionLink.parentElement.style.display = 'none';
+  }
+}
+
+/**
  * Inicializar sidebar navigation
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,6 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Configurar visibilidad de PLATAFORMA
   configurarSidebarSuperAdmin();
+  
+  // Configurar visibilidad de ADMINISTRACIÓN
+  configurarSidebarAdministracion();
   
   // Si estamos en dashboard.html y hay un hash, activar ese módulo
   if (window.location.pathname.includes('dashboard.html') && window.location.hash) {
