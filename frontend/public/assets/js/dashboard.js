@@ -663,8 +663,8 @@ function cambiarModulo(nombreModulo) {
         // Cargar módulo Super Admin - Empresas
         cargarEmpresasSuperAdmin();
         break;
-      case 'usuarios':
-        // Cargar módulo Super Admin - Usuarios
+      case 'usuarios-admin':
+        // Cargar módulo Super Admin - Usuarios (todos los usuarios)
         cargarUsuarios();
         break;
       case 'planes':
@@ -680,7 +680,7 @@ function cambiarModulo(nombreModulo) {
         cargarRoles();
         break;
       case 'usuarios':
-        // Cargar módulo de Usuarios
+        // Cargar módulo de Usuarios de Empresa (admin_empresa)
         cargarUsuariosEmpresa();
         break;
       case 'productos':
@@ -714,6 +714,7 @@ function actualizarBreadcrumb(nombreModulo) {
   const nombreModulos = {
     'dashboard': 'Dashboard',
     'empresas': 'Gestión de Empresas',
+    'usuarios-admin': 'Gestión de Usuarios',
     'usuarios': 'Gestión de Usuarios',
     'planes': 'Planes y Licencias',
     'roles': 'Roles y Permisos',
