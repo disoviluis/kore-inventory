@@ -101,12 +101,13 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
     const params: any[] = [];
 
     // super_admin ve todos los roles
-    // admin_empresa ve solo roles de su empresa + roles de sistema (empresa_id = NULL)
+    // admin_empresa ve SOLO roles de su empresa (tipo='personalizado')
     if (usuario.tipo_usuario !== 'super_admin') {
-      query += ' AND (r.empresa_id = ? OR r.empresa_id IS NULL)';
-      params.push(empresa_id || usuario.empresa_id);
+      // admin_empresa NO puede ver ni asignar roles de sistema
+      query += ' AND r.empresa_id = ? AND r.tipo = ?';
+      params.push(empresa_id || usuario.empresa_id, 'personalizado');
     } else if (empresa_id) {
-      // super_admin puede filtrar por empresa
+      // super_admin puede filtrar por empresa (ve sistema + personalizados)
       query += ' AND (r.empresa_id = ? OR r.empresa_id IS NULL)';
       params.push(empresa_id);
     }
