@@ -1619,10 +1619,11 @@ async function cargarEmpresasSelect() {
     select.innerHTML = '<option value="">Sin empresa asignada</option>';
     
     data.data.forEach(empresa => {
-      if (empresa.estado === 'activa') {
+      // Mostrar empresas activas y en trial
+      if (empresa.estado === 'activa' || empresa.estado === 'trial') {
         const option = document.createElement('option');
         option.value = empresa.id;
-        option.textContent = empresa.nombre;
+        option.textContent = `${empresa.nombre}${empresa.estado === 'trial' ? ' (Trial)' : ''}`;
         select.appendChild(option);
       }
     });
