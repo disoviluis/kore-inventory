@@ -111,7 +111,7 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
       params.push(empresa_id);
     }
 
-    query += ' ORDER BY r.empresa_id IS NULL DESC, r.orden ASC, r.nombre ASC';
+    query += ' ORDER BY r.empresa_id IS NULL DESC, r.nombre ASC';
 
     const [roles] = await pool.execute<Rol[]>(query, params);
 
