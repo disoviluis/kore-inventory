@@ -464,11 +464,11 @@ body {
    =================================== */
 .page-content {
     flex: 1;
-    padding: 20px;
+    padding: 15px 20px;
 }
 
 .page-header {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .page-title {

@@ -70,6 +70,14 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
     const { empresa_id } = req.query;
     const usuario = (req as any).user;
 
+    if (!usuario) {
+      res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+      return;
+    }
+
     let query = `
       SELECT 
         r.id,
@@ -129,6 +137,14 @@ export const getRolById = async (req: Request, res: Response): Promise<void> => 
   try {
     const { id } = req.params;
     const usuario = (req as any).user;
+
+    if (!usuario) {
+      res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+      return;
+    }
 
     // Obtener información del rol
     const [roles] = await pool.execute<Rol[]>(
@@ -209,6 +225,14 @@ export const getRolById = async (req: Request, res: Response): Promise<void> => 
 export const getModulosAcciones = async (req: Request, res: Response): Promise<void> => {
   try {
     const usuario = (req as any).user;
+
+    if (!usuario) {
+      res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+      return;
+    }
 
     // Obtener todos los módulos activos
     let modulosQuery = `
@@ -312,6 +336,16 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
 
     const usuario = (req as any).user;
     const { nombre, descripcion, empresa_id, permisos_ids } = req.body;
+
+    if (!usuario) {
+      res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+      await connection.rollback();
+      connection.release();
+      return;
+    }
 
     // Validaciones
     if (!nombre || !nombre.trim()) {
@@ -422,6 +456,16 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const usuario = (req as any).user;
     const { nombre, descripcion, activo, permisos_ids } = req.body;
+
+    if (!usuario) {
+      res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+      await connection.rollback();
+      connection.release();
+      return;
+    }
 
     // Verificar que el rol existe
     const [roles] = await connection.execute<Rol[]>(
@@ -548,6 +592,14 @@ export const deleteRol = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const usuario = (req as any).user;
+
+    if (!usuario) {
+      res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+      return;
+    }
 
     // Verificar que el rol existe
     const [roles] = await pool.execute<Rol[]>(

@@ -2858,8 +2858,8 @@ async function cargarUsuariosEmpresa() {
         ? new Date(usuario.ultimo_login).toLocaleDateString() 
         : 'Nunca';
       
-      const rolesHtml = usuario.roles_nombres && usuario.roles_nombres.length > 0
-        ? usuario.roles_nombres.map(r => `<span class="badge bg-primary me-1">${r}</span>`).join('')
+      const rolesHtml = usuario.roles_nombres
+        ? usuario.roles_nombres.split(',').map(r => `<span class="badge bg-primary me-1">${r.trim()}</span>`).join('')
         : '<span class="text-muted">Sin roles</span>';
       
       return `
