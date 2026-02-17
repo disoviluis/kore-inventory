@@ -370,7 +370,7 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
           ) VALUES (?, ?, ?, ?, ?, ?)`,
           [
             ventaId,
-            pago.metodo,
+            pago.metodo_pago,
             pago.monto,
             pago.referencia || null,
             pago.banco || null,
