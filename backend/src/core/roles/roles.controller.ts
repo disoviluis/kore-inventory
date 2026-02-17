@@ -68,7 +68,7 @@ interface Accion extends RowDataPacket {
 export const getRoles = async (req: Request, res: Response): Promise<void> => {
   try {
     const { empresa_id } = req.query;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
     let query = `
       SELECT 
@@ -128,7 +128,7 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
 export const getRolById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
     // Obtener información del rol
     const [roles] = await pool.execute<Rol[]>(
@@ -208,7 +208,7 @@ export const getRolById = async (req: Request, res: Response): Promise<void> => 
 
 export const getModulosAcciones = async (req: Request, res: Response): Promise<void> => {
   try {
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
     // Obtener todos los módulos activos
     let modulosQuery = `
@@ -310,7 +310,7 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
   try {
     await connection.beginTransaction();
 
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
     const { nombre, descripcion, empresa_id, permisos_ids } = req.body;
 
     // Validaciones
@@ -420,7 +420,7 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
     await connection.beginTransaction();
 
     const { id } = req.params;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
     const { nombre, descripcion, activo, permisos_ids } = req.body;
 
     // Verificar que el rol existe
@@ -547,7 +547,7 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
 export const deleteRol = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
     // Verificar que el rol existe
     const [roles] = await pool.execute<Rol[]>(
