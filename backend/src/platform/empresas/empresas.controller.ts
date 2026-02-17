@@ -155,7 +155,7 @@ export const getEmpresasByUsuario = async (req: Request, res: Response): Promise
         ORDER BY nombre ASC`
       );
     } else {
-      // Para usuarios normales, obtener solo sus empresas asignadas
+      // Para usuarios normales, obtener solo sus empresas asignadas (activas y trial)
       empresas = await query(
         `SELECT 
           e.id, 
@@ -168,7 +168,7 @@ export const getEmpresasByUsuario = async (req: Request, res: Response): Promise
         FROM empresas e
         INNER JOIN usuario_empresa ue ON e.id = ue.empresa_id
         WHERE ue.usuario_id = ? 
-          AND e.estado = 'activa'
+          AND e.estado IN ('activa', 'trial')
           AND ue.activo = 1
         ORDER BY e.nombre ASC`,
         [userId]
