@@ -239,10 +239,9 @@
                     <div class="collapse" id="administracionCollapse">
                         <ul class="nav flex-column ms-3">
                             <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
+                                <a class="nav-link" href="#" onclick="cambiarModulo('usuarios'); return false;">
                                     <i class="bi bi-person-gear"></i>
                                     <span>Usuarios</span>
-                                    <span class="badge bg-secondary">Próximamente</span>
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -1062,6 +1061,100 @@
 
         </div><!-- END PRODUCTOS MODULE -->
 
+        <!-- USUARIOS MODULE -->
+        <div id="usuariosModule" class="module-content" style="display: none;">
+            <div id="alertContainerUsuarios"></div>
+            
+            <!-- Page Header -->
+            <div class="page-header mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="page-title mb-1">Gestión de Usuarios</h2>
+                        <p class="text-muted mb-0">Administración de usuarios de la empresa con asignación de roles</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <button class="btn btn-primary" onclick="abrirModalUsuarioEmpresa()">
+                            <i class="bi bi-person-plus me-2"></i>Crear Usuario
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Gestión de usuarios de la empresa</strong><br>
+                        Crea y administra las cuentas de los usuarios que trabajarán en tu empresa:
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Usuarios Regulares:</strong> Empleados con acceso según los roles asignados</li>
+                            <li><strong>Asignación de Roles:</strong> Puedes asignar uno o varios roles a cada usuario</li>
+                            <li><strong>Permisos Heredados:</strong> Los usuarios heredan automáticamente los permisos de sus roles</li>
+                            <li><strong>Acceso Controlado:</strong> Configura qué módulos y acciones puede realizar cada usuario</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="searchUsuarios" placeholder="🔍 Buscar por nombre o email...">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="filterUsuarioActivo" onchange="filtrarUsuarios()">
+                                <option value="">Todos los estados</option>
+                                <option value="1">Activos</option>
+                                <option value="0">Inactivos</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltrosUsuarios()">
+                                <i class="bi bi-x-circle me-2"></i>Limpiar Filtros
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Usuarios -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Usuarios de la Empresa</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><i class="bi bi-person-circle"></i></th>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Teléfono</th>
+                                    <th>Roles Asignados</th>
+                                    <th>Último Acceso</th>
+                                    <th>Estado</th>
+                                    <th class="text-end" style="width: 200px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usuariosTableBody">
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando usuarios...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div><!-- END USUARIOS MODULE -->
+
         <!-- ROLES MODULE -->
         <div id="rolesModule" class="module-content" style="display: none;">
             <div id="alertContainerRoles"></div>
@@ -1697,6 +1790,109 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" form="planForm" class="btn btn-primary">
                         <i class="bi bi-save me-2"></i>Guardar Plan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Usuario Empresa -->
+    <div class="modal fade" id="usuarioEmpresaModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="usuarioEmpresaModalTitle">Crear Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="usuarioEmpresaForm">
+                        <input type="hidden" id="usuarioEmpresaId">
+                        
+                        <div class="row g-3">
+                            <!-- Información Personal -->
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2"><i class="bi bi-person me-2"></i>Información Personal</h6>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="usuarioEmpresaNombre" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Apellido</label>
+                                <input type="text" class="form-control" id="usuarioEmpresaApellido">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="usuarioEmpresaEmail" required>
+                                <small class="text-muted">Será usado para iniciar sesión</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="usuarioEmpresaTelefono">
+                            </div>
+
+                            <!-- Contraseña -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2"><i class="bi bi-key me-2"></i>Contraseña</h6>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Contraseña <span class="text-danger" id="passwordRequiredEmpresa">*</span></label>
+                                <input type="password" class="form-control" id="usuarioEmpresaPassword">
+                                <small class="text-muted">Mínimo 6 caracteres</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Confirmar Contraseña <span class="text-danger" id="passwordConfirmRequiredEmpresa">*</span></label>
+                                <input type="password" class="form-control" id="usuarioEmpresaPasswordConfirm">
+                            </div>
+
+                            <!-- Roles -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">
+                                    <i class="bi bi-shield-check me-2"></i>Roles y Permisos
+                                </h6>
+                                <p class="text-muted small mb-3">
+                                    Selecciona los roles que tendrá este usuario. Los permisos se aplicarán automáticamente según los roles asignados.
+                                </p>
+                            </div>
+
+                            <div class="col-12">
+                                <div id="rolesCheckboxContainer">
+                                    <!-- Checkboxes de roles cargados dinámicamente -->
+                                    <div class="text-center py-3">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Cargando roles...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Estado -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2"><i class="bi bi-toggle-on me-2"></i>Estado</h6>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Estado <span class="text-danger">*</span></label>
+                                <select class="form-select" id="usuarioEmpresaActivo" required>
+                                    <option value="1">Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" form="usuarioEmpresaForm" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Guardar Usuario
                     </button>
                 </div>
             </div>

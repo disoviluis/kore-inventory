@@ -679,6 +679,10 @@ function cambiarModulo(nombreModulo) {
         // Cargar módulo de Roles y Permisos
         cargarRoles();
         break;
+      case 'usuarios':
+        // Cargar módulo de Usuarios
+        cargarUsuariosEmpresa();
+        break;
       case 'productos':
         if (typeof cargarProductos === 'function') {
           cargarProductos();
@@ -710,7 +714,7 @@ function actualizarBreadcrumb(nombreModulo) {
   const nombreModulos = {
     'dashboard': 'Dashboard',
     'empresas': 'Gestión de Empresas',
-    'usuarios': 'Usuarios',
+    'usuarios': 'Gestión de Usuarios',
     'planes': 'Planes y Licencias',
     'roles': 'Roles y Permisos',
     'impuestos': 'Configuración de Impuestos',
@@ -2802,4 +2806,504 @@ async function eliminarRol(rolId, nombre, usuariosCount) {
     console.error('Error:', error);
     mostrarError(error.message);
   }
+}
+
+// ============================================
+// MÓDULO: USUARIOS DE EMPRESA
+// ============================================
+
+let rolesDisponiblesEmpresa = []; // Cache de roles para checkboxes
+
+/**
+ * Cargar lista de usuarios de la empresa
+ */
+async function cargarUsuariosEmpresa() {
+  try {
+    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    
+    if (!empresaActiva) {
+      mostrarError('No hay empresa activa seleccionada');
+      return;
+    }
+    
+    const response = await fetch(`${API_URL}/usuarios?empresa_id=${empresaActiva.id}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar usuarios');
+    
+    const data = await response.json();
+    const usuarios = data.data || [];
+    
+    const tbody = document.getElementById('usuariosTableBody');
+    
+    if (usuarios.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center py-4">
+            <i class="bi bi-people fs-1 text-muted"></i>
+            <p class="text-muted mt-2 mb-0">No hay usuarios registrados</p>
+            <small class="text-muted">Crea el primer usuario de tu empresa</small>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    tbody.innerHTML = usuarios.map(usuario => {
+      const nombreCompleto = `${usuario.nombre} ${usuario.apellido || ''}`.trim();
+      const ultimoLogin = usuario.ultimo_login 
+        ? new Date(usuario.ultimo_login).toLocaleDateString() 
+        : 'Nunca';
+      
+      const rolesHtml = usuario.roles_nombres && usuario.roles_nombres.length > 0
+        ? usuario.roles_nombres.map(r => `<span class="badge bg-primary me-1">${r}</span>`).join('')
+        : '<span class="text-muted">Sin roles</span>';
+      
+      return `
+        <tr>
+          <td>
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                 style="width: 35px; height: 35px;">
+              ${nombreCompleto.charAt(0).toUpperCase()}
+            </div>
+          </td>
+          <td>
+            <strong>${nombreCompleto}</strong>
+            ${usuario.email_verificado ? '<i class="bi bi-patch-check-fill text-success ms-1" title="Email verificado"></i>' : ''}
+          </td>
+          <td>${usuario.email}</td>
+          <td>${usuario.telefono || '<span class="text-muted">-</span>'}</td>
+          <td>${rolesHtml}</td>
+          <td>${ultimoLogin}</td>
+          <td>
+            <span class="badge bg-${usuario.activo ? 'success' : 'secondary'}">
+              ${usuario.activo ? 'Activo' : 'Inactivo'}
+            </span>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary" onclick="verDetalleUsuarioEmpresa(${usuario.id})" title="Ver detalle">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-warning" onclick="editarUsuarioEmpresa(${usuario.id})" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            ${usuario.tipo_usuario === 'usuario' ? `
+              <button class="btn btn-sm btn-outline-danger" onclick="desactivarUsuarioEmpresa(${usuario.id}, '${nombreCompleto.replace(/'/g, "\\'")}', ${usuario.activo})" title="Desactivar">
+                <i class="bi bi-toggle-off"></i>
+              </button>
+            ` : '<small class="text-muted">Admin</small>'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+    
+  } catch (error) {
+    console.error('Error al cargar usuarios:', error);
+    document.getElementById('usuariosTableBody').innerHTML = `
+      <tr>
+        <td colspan="8" class="text-center text-danger py-4">
+          <i class="bi bi-exclamation-triangle fs-1"></i>
+          <p class="mt-2 mb-0">${error.message}</p>
+        </td>
+      </tr>
+    `;
+  }
+}
+
+/**
+ * Cargar roles disponibles para checkboxes
+ */
+async function cargarRolesParaUsuario() {
+  try {
+    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    
+    const response = await fetch(`${API_URL}/roles?empresa_id=${empresaActiva.id}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar roles');
+    
+    const data = await response.json();
+    rolesDisponiblesEmpresa = data.data || [];
+    
+    // Renderizar checkboxes
+    const container = document.getElementById('rolesCheckboxContainer');
+    
+    if (rolesDisponiblesEmpresa.length === 0) {
+      container.innerHTML = `
+        <div class="alert alert-warning">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          No hay roles configurados. Primero debes crear roles en el módulo "Roles y Permisos".
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = rolesDisponiblesEmpresa.map(rol => `
+      <div class="form-check mb-2">
+        <input class="form-check-input rol-checkbox" type="checkbox" value="${rol.id}" id="rol_${rol.id}">
+        <label class="form-check-label" for="rol_${rol.id}">
+          <strong>${rol.nombre}</strong>
+          ${rol.descripcion ? `<br><small class="text-muted">${rol.descripcion}</small>` : ''}
+          <span class="badge bg-${rol.tipo === 'sistema' ? 'secondary' : 'primary'} ms-2">
+            ${rol.tipo === 'sistema' ? 'Sistema' : 'Personalizado'}
+          </span>
+        </label>
+      </div>
+    `).join('');
+    
+  } catch (error) {
+    console.error('Error:', error);
+    document.getElementById('rolesCheckboxContainer').innerHTML = `
+      <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        ${error.message}
+      </div>
+    `;
+  }
+}
+
+/**
+ * Abrir modal para crear/editar usuario
+ */
+async function abrirModalUsuarioEmpresa(usuarioId = null) {
+  const modal = new bootstrap.Modal(document.getElementById('usuarioEmpresaModal'));
+  const form = document.getElementById('usuarioEmpresaForm');
+  form.reset();
+  
+  document.getElementById('usuarioEmpresaModalTitle').textContent = usuarioId ? 'Editar Usuario' : 'Crear Usuario';
+  document.getElementById('usuarioEmpresaId').value = usuarioId || '';
+  
+  // Contraseña requerida solo al crear
+  const passwordRequired = document.getElementById('passwordRequiredEmpresa');
+  const passwordConfirmRequired = document.getElementById('passwordConfirmRequiredEmpresa');
+  const passwordField = document.getElementById('usuarioEmpresaPassword');
+  const passwordConfirmField = document.getElementById('usuarioEmpresaPasswordConfirm');
+  
+  if (usuarioId) {
+    passwordRequired.style.display = 'none';
+    passwordConfirmRequired.style.display = 'none';
+    passwordField.removeAttribute('required');
+    passwordConfirmField.removeAttribute('required');
+  } else {
+    passwordRequired.style.display = 'inline';
+    passwordConfirmRequired.style.display = 'inline';
+    passwordField.setAttribute('required', 'required');
+    passwordConfirmField.setAttribute('required', 'required');
+  }
+  
+  // Cargar roles disponibles
+  await cargarRolesParaUsuario();
+  
+  // Si es edición, cargar datos del usuario
+  if (usuarioId) {
+    try {
+      const response = await fetch(`${API_URL}/usuarios/${usuarioId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Error al cargar usuario');
+      
+      const data = await response.json();
+      const usuario = data.data;
+      
+      // Llenar formulario
+      document.getElementById('usuarioEmpresaNombre').value = usuario.nombre;
+      document.getElementById('usuarioEmpresaApellido').value = usuario.apellido || '';
+      document.getElementById('usuarioEmpresaEmail').value = usuario.email;
+      document.getElementById('usuarioEmpresaTelefono').value = usuario.telefono || '';
+      document.getElementById('usuarioEmpresaActivo').value = usuario.activo ? '1' : '0';
+      
+      // Marcar roles asignados
+      if (usuario.roles && usuario.roles.length > 0) {
+        usuario.roles.forEach(rol => {
+          const checkbox = document.getElementById(`rol_${rol.rol_id}`);
+          if (checkbox) checkbox.checked = true;
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error:', error);
+      mostrarError('Error al cargar datos del usuario');
+      return;
+    }
+  }
+  
+  modal.show();
+}
+
+/**
+ * Guardar usuario (crear o actualizar)
+ */
+document.getElementById('usuarioEmpresaForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const usuarioId = document.getElementById('usuarioEmpresaId').value;
+  const nombre = document.getElementById('usuarioEmpresaNombre').value.trim();
+  const apellido = document.getElementById('usuarioEmpresaApellido').value.trim();
+  const email = document.getElementById('usuarioEmpresaEmail').value.trim();
+  const telefono = document.getElementById('usuarioEmpresaTelefono').value.trim();
+  const password = document.getElementById('usuarioEmpresaPassword').value;
+  const passwordConfirm = document.getElementById('usuarioEmpresaPasswordConfirm').value;
+  const activo = document.getElementById('usuarioEmpresaActivo').value === '1';
+  
+  // Obtener roles seleccionados
+  const rolesSeleccionados = Array.from(document.querySelectorAll('.rol-checkbox:checked'))
+    .map(cb => parseInt(cb.value));
+  
+  // Validaciones
+  if (!nombre || !email) {
+    mostrarError('Nombre y email son obligatorios');
+    return;
+  }
+  
+  if (!usuarioId) {
+    if (!password || password.length < 6) {
+      mostrarError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    
+    if (password !== passwordConfirm) {
+      mostrarError('Las contraseñas no coinciden');
+      return;
+    }
+  } else {
+    if (password && password !== passwordConfirm) {
+      mostrarError('Las contraseñas no coinciden');
+      return;
+    }
+  }
+  
+  const datosUsuario = {
+    nombre,
+    apellido: apellido || null,
+    email,
+    telefono: telefono || null,
+    activo,
+    roles_ids: rolesSeleccionados
+  };
+  
+  if (password && password.trim()) {
+    datosUsuario.password = password;
+  }
+  
+  try {
+    const url = usuarioId ? `${API_URL}/usuarios/${usuarioId}` : `${API_URL}/usuarios`;
+    const method = usuarioId ? 'PUT' : 'POST';
+    
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(datosUsuario)
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Error al guardar usuario');
+    }
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('usuarioEmpresaModal'));
+    modal.hide();
+    
+    mostrarExito(usuarioId ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente');
+    cargarUsuariosEmpresa();
+    
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError(error.message);
+  }
+});
+
+/**
+ * Ver detalle de usuario
+ */
+async function verDetalleUsuarioEmpresa(usuarioId) {
+  try {
+    const response = await fetch(`${API_URL}/usuarios/${usuarioId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar usuario');
+    
+    const data = await response.json();
+    const usuario = data.data;
+    
+    const nombreCompleto = `${usuario.nombre} ${usuario.apellido || ''}`.trim();
+    
+    let rolesHtml = '';
+    if (usuario.roles && usuario.roles.length > 0) {
+      rolesHtml = usuario.roles.map(r => `
+        <div class="mb-2">
+          <span class="badge bg-primary">${r.rol_nombre}</span>
+          <small class="text-muted ms-2">en ${r.empresa_nombre}</small>
+        </div>
+      `).join('');
+    } else {
+      rolesHtml = '<p class="text-muted">No tiene roles asignados</p>';
+    }
+    
+    const modalHtml = `
+      <div class="modal fade" id="detalleUsuarioModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">
+                <i class="bi bi-person-circle me-2"></i>Detalle del Usuario
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row g-3">
+                <div class="col-md-8">
+                  <strong>Nombre Completo:</strong><br>
+                  <h5>${nombreCompleto}</h5>
+                </div>
+                <div class="col-md-4 text-end">
+                  <span class="badge bg-${usuario.activo ? 'success' : 'secondary'} fs-6">
+                    ${usuario.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                  ${usuario.email_verificado ? '<br><span class="badge bg-info fs-6 mt-2">Email Verificado</span>' : ''}
+                </div>
+                <div class="col-md-6">
+                  <strong>Email:</strong><br>${usuario.email}
+                </div>
+                <div class="col-md-6">
+                  <strong>Teléfono:</strong><br>${usuario.telefono || '<span class="text-muted">No registrado</span>'}
+                </div>
+                <div class="col-md-6">
+                  <strong>Tipo de Usuario:</strong><br>
+                  <span class="badge bg-secondary">${usuario.tipo_usuario}</span>
+                </div>
+                <div class="col-md-6">
+                  <strong>Último Acceso:</strong><br>
+                  ${usuario.ultimo_login ? new Date(usuario.ultimo_login).toLocaleString() : '<span class="text-muted">Nunca</span>'}
+                </div>
+                <div class="col-12 mt-4">
+                  <h6 class="border-bottom pb-2">Roles Asignados</h6>
+                  ${rolesHtml}
+                </div>
+                <div class="col-md-6">
+                  <strong>Creado:</strong><br>
+                  <small class="text-muted">${new Date(usuario.created_at).toLocaleString()}</small>
+                </div>
+                <div class="col-md-6">
+                  <strong>Actualizado:</strong><br>
+                  <small class="text-muted">${new Date(usuario.updated_at).toLocaleString()}</small>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              ${usuario.tipo_usuario !== 'admin_empresa' ? `
+                <button type="button" class="btn btn-warning" onclick="editarUsuarioEmpresa(${usuario.id}); bootstrap.Modal.getInstance(document.getElementById('detalleUsuarioModal')).hide();">
+                  <i class="bi bi-pencil me-2"></i>Editar
+                </button>
+              ` : ''}
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    const oldModal = document.getElementById('detalleUsuarioModal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('detalleUsuarioModal'));
+    modal.show();
+    
+    document.getElementById('detalleUsuarioModal').addEventListener('hidden.bs.modal', function() {
+      this.remove();
+    });
+    
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError('Error al cargar detalle del usuario');
+  }
+}
+
+/**
+ * Editar usuario
+ */
+function editarUsuarioEmpresa(usuarioId) {
+  abrirModalUsuarioEmpresa(usuarioId);
+}
+
+/**
+ * Desactivar usuario
+ */
+async function desactivarUsuarioEmpresa(usuarioId, nombre, activo) {
+  const accion = activo ? 'desactivar' : 'activar';
+  
+  if (!confirm(`¿Estás seguro de ${accion} al usuario "${nombre}"?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_URL}/usuarios/${usuarioId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || `Error al ${accion} usuario`);
+    }
+    
+    mostrarExito(`Usuario ${activo ? 'desactivado' : 'activado'} exitosamente`);
+    cargarUsuariosEmpresa();
+    
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarError(error.message);
+  }
+}
+
+/**
+ * Filtrar usuarios
+ */
+function filtrarUsuarios() {
+  const searchText = document.getElementById('searchUsuarios')?.value.toLowerCase() || '';
+  const activoFilter = document.getElementById('filterUsuarioActivo')?.value || '';
+  
+  const rows = document.querySelectorAll('#usuariosTableBody tr');
+  
+  rows.forEach(row => {
+    const nombre = row.cells[1]?.textContent.toLowerCase() || '';
+    const email = row.cells[2]?.textContent.toLowerCase() || '';
+    const estado = row.cells[6]?.textContent || '';
+    
+    const matchSearch = !searchText || nombre.includes(searchText) || email.includes(searchText);
+    const matchActivo = !activoFilter || 
+      (activoFilter === '1' && estado.includes('Activo')) ||
+      (activoFilter === '0' && estado.includes('Inactivo'));
+    
+    row.style.display = (matchSearch && matchActivo) ? '' : 'none';
+  });
+}
+
+// Event listener para búsqueda en tiempo real
+document.getElementById('searchUsuarios')?.addEventListener('input', filtrarUsuarios);
+
+/**
+ * Limpiar filtros
+ */
+function limpiarFiltrosUsuarios() {
+  document.getElementById('searchUsuarios').value = '';
+  document.getElementById('filterUsuarioActivo').value = '';
+  filtrarUsuarios();
 }
