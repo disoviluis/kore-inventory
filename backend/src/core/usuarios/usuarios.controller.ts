@@ -37,12 +37,21 @@ export const getUsuariosEmpresa = async (req: Request, res: Response): Promise<v
     const { empresa_id } = req.query;
     const usuario = (req as any).user;
 
+    if (!usuario) {
+      res.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      });
+      return;
+    }
+
     let empresaIdFinal: number;
 
     // super_admin puede especificar empresa_id, admin_empresa usa la suya
     if (usuario.tipo_usuario === 'super_admin') {
       empresaIdFinal = empresa_id ? Number(empresa_id) : usuario.empresa_id;
     } else {
+      // admin_empresa y otros siempre usan su propia empresa_id
       empresaIdFinal = usuario.empresa_id;
     }
 
@@ -53,6 +62,8 @@ export const getUsuariosEmpresa = async (req: Request, res: Response): Promise<v
       });
       return;
     }
+
+    console.log(`[USUARIOS] Usuario tipo: ${usuario.tipo_usuario}, empresa_id: ${empresaIdFinal}, query empresa_id: ${empresa_id}`);
 
     const query = `
       SELECT 
