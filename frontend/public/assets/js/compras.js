@@ -41,6 +41,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         currentUsuario = usuario;
         cargarInfoUsuario(usuario);
 
+        // Configurar visibilidad de PLATAFORMA en sidebar
+        if (typeof configurarSidebarSuperAdmin === 'function') {
+            configurarSidebarSuperAdmin();
+        }
+
         await cargarEmpresas(usuario.id);
 
         currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));

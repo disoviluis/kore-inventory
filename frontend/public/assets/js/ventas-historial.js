@@ -46,6 +46,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('userName').textContent = `${usuario.nombre} ${usuario.apellido}`;
         document.getElementById('userRole').textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
         
+        // Configurar visibilidad de PLATAFORMA en sidebar
+        if (typeof configurarSidebarSuperAdmin === 'function') {
+            configurarSidebarSuperAdmin();
+        }
+        
         // Inicializar modal
         detalleVentaModal = new bootstrap.Modal(document.getElementById('detalleVentaModal'));
 

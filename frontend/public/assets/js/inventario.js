@@ -50,6 +50,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Cargar información del usuario en la UI
         cargarInfoUsuario(usuario);
 
+        // Configurar visibilidad de PLATAFORMA en sidebar
+        if (typeof configurarSidebarSuperAdmin === 'function') {
+            configurarSidebarSuperAdmin();
+        }
+
         // Cargar empresas del usuario
         await cargarEmpresas(usuario.id);
 
