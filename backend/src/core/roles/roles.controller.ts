@@ -6,7 +6,7 @@
  */
 
 import { Request, Response } from 'express';
-import { pool } from '../../shared/database';
+import pool from '../../shared/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 // ============================================
