@@ -51,8 +51,9 @@ export const getUsuariosEmpresa = async (req: Request, res: Response): Promise<v
     if (usuario.tipo_usuario === 'super_admin') {
       empresaIdFinal = empresa_id ? Number(empresa_id) : usuario.empresa_id;
     } else {
-      // admin_empresa y otros siempre usan su propia empresa_id
-      empresaIdFinal = usuario.empresa_id;
+      // admin_empresa usa empresa_id del query (viene del frontend con empresaActiva)
+      // Si no tiene empresa_id en el token JWT, usar el del query
+      empresaIdFinal = empresa_id ? Number(empresa_id) : usuario.empresa_id;
     }
 
     if (!empresaIdFinal) {
