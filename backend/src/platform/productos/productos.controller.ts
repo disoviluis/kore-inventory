@@ -44,6 +44,8 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         p.precio_minorista,
         p.precio_mayorista,
         p.precio_distribuidor,
+        p.precio_minimo,
+        p.precio_maximo,
         p.aplica_iva,
         p.porcentaje_iva,
         p.tipo_impuesto,
@@ -145,6 +147,8 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
       precio_minorista,
       precio_mayorista,
       precio_distribuidor,
+      precio_minimo,
+      precio_maximo,
       aplica_iva,
       porcentaje_iva,
       tipo_impuesto,
@@ -213,6 +217,8 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         precio_minorista,
         precio_mayorista,
         precio_distribuidor,
+        precio_minimo,
+        precio_maximo,
         aplica_iva,
         porcentaje_iva,
         tipo_impuesto,
@@ -230,7 +236,7 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         cuenta_inventario,
         cuenta_gasto,
         creado_por
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         tipoProducto,
@@ -244,6 +250,8 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         precio_minorista,
         precio_mayorista || null,
         precio_distribuidor || null,
+        precio_minimo || null,
+        precio_maximo || null,
         aplica_iva !== false,
         porcIVA,
         tipo_impuesto || 'gravado',
@@ -298,6 +306,8 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
       precio_minorista,
       precio_mayorista,
       precio_distribuidor,
+      precio_minimo,
+      precio_maximo,
       aplica_iva,
       porcentaje_iva,
       tipo_impuesto,
@@ -393,6 +403,14 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
     if (precio_distribuidor !== undefined) {
       updates.push('precio_distribuidor = ?');
       values.push(precio_distribuidor);
+    }
+    if (precio_minimo !== undefined) {
+      updates.push('precio_minimo = ?');
+      values.push(precio_minimo);
+    }
+    if (precio_maximo !== undefined) {
+      updates.push('precio_maximo = ?');
+      values.push(precio_maximo);
     }
     if (aplica_iva !== undefined) {
       updates.push('aplica_iva = ?');

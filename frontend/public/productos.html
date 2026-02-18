@@ -658,6 +658,46 @@
                                 <small class="text-muted">Para revendedores autorizados</small>
                             </div>
 
+                            <!-- Precios Límite (Control POS) -->
+                            <div class="col-12 mt-3">
+                                <h6 class="border-bottom pb-2">
+                                    <i class="bi bi-shield-check me-2"></i>Límites de Precio (Control POS)
+                                    <i class="bi bi-info-circle text-muted ms-2" title="Estos límites no son visibles para el vendedor, pero se usan para validaciones"></i>
+                                </h6>
+                                <div class="alert alert-info alert-sm py-2">
+                                    <i class="bi bi-lightbulb me-1"></i>
+                                    <small>Estos límites se usan para validar precios manuales en el punto de venta. El vendedor recibirá alertas si intenta vender fuera de estos rangos.</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <i class="bi bi-arrow-down-circle text-danger me-1"></i>Precio Mínimo
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="productoPrecioMinimo" step="0.01" min="0">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnCalcMinimo" title="Establecer como costo + 5%">
+                                        <i class="bi bi-calculator"></i> Costo+5%
+                                    </button>
+                                </div>
+                                <small class="text-muted">Precio mínimo permitido para vender (generalmente costo + margen mínimo)</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <i class="bi bi-arrow-up-circle text-success me-1"></i>Precio Máximo
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="productoPrecioMaximo" step="0.01" min="0">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnCalcMaximo" title="Establecer como minorista + 50%">
+                                        <i class="bi bi-calculator"></i> Min+50%
+                                    </button>
+                                </div>
+                                <small class="text-muted">Precio máximo sugerido (evita errores de digitación)</small>
+                            </div>
+
                             <!-- IVA -->
                             <div class="col-12 mt-3">
                                 <h6 class="border-bottom pb-2"><i class="bi bi-receipt me-2"></i>Impuestos (IVA)</h6>

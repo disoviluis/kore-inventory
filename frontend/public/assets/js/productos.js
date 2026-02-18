@@ -388,6 +388,8 @@ function initEventListeners() {
     // Calculadoras de precios
     const btnCalcMayorista = document.getElementById('btnCalcMayorista');
     const btnCalcDistribuidor = document.getElementById('btnCalcDistribuidor');
+    const btnCalcMinimo = document.getElementById('btnCalcMinimo');
+    const btnCalcMaximo = document.getElementById('btnCalcMaximo');
     
     if (btnCalcMayorista) {
         btnCalcMayorista.addEventListener('click', () => {
@@ -405,6 +407,26 @@ function initEventListeners() {
             if (minorista > 0) {
                 precioDistribuidor.value = (minorista * 0.8).toFixed(2); // 20% descuento
                 calcularMargenes();
+            }
+        });
+    }
+
+    if (btnCalcMinimo) {
+        btnCalcMinimo.addEventListener('click', () => {
+            const costo = parseFloat(precioCompra.value) || 0;
+            if (costo > 0) {
+                const precioMinimoInput = document.getElementById('productoPrecioMinimo');
+                precioMinimoInput.value = (costo * 1.05).toFixed(2); // Costo + 5%
+            }
+        });
+    }
+
+    if (btnCalcMaximo) {
+        btnCalcMaximo.addEventListener('click', () => {
+            const minorista = parseFloat(precioMinorista.value) || 0;
+            if (minorista > 0) {
+                const precioMaximoInput = document.getElementById('productoPrecioMaximo');
+                precioMaximoInput.value = (minorista * 1.5).toFixed(2); // Minorista + 50%
             }
         });
     }
@@ -648,6 +670,8 @@ async function editarProducto(id) {
         document.getElementById('productoPrecioMinorista').value = producto.precio_minorista || producto.precio_venta; // Compatibilidad
         document.getElementById('productoPrecioMayorista').value = producto.precio_mayorista || '';
         document.getElementById('productoPrecioDistribuidor').value = producto.precio_distribuidor || '';
+        document.getElementById('productoPrecioMinimo').value = producto.precio_minimo || '';
+        document.getElementById('productoPrecioMaximo').value = producto.precio_maximo || '';
         
         // IVA
         document.getElementById('productoAplicaIVA').checked = producto.aplica_iva === 1;
@@ -731,6 +755,8 @@ async function guardarProducto(e) {
         precio_minorista: parseFloat(document.getElementById('productoPrecioMinorista').value) || 0,
         precio_mayorista: parseFloat(document.getElementById('productoPrecioMayorista').value) || null,
         precio_distribuidor: parseFloat(document.getElementById('productoPrecioDistribuidor').value) || null,
+        precio_minimo: parseFloat(document.getElementById('productoPrecioMinimo').value) || null,
+        precio_maximo: parseFloat(document.getElementById('productoPrecioMaximo').value) || null,
         
         // IVA
         aplica_iva: document.getElementById('productoAplicaIVA').checked ? 1 : 0,

@@ -2255,6 +2255,9 @@ async function cargarRoles() {
       url += `?empresa_id=${empresaActiva.id}`;
     }
     
+    console.log('🔄 Cargando roles desde:', url);
+    console.log('📋 Mostrar roles de sistema:', mostrarSistema);
+    
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -2266,9 +2269,14 @@ async function cargarRoles() {
     const data = await response.json();
     let roles = data.data || [];
     
+    console.log('✅ Roles recibidos del API:', roles.length);
+    console.log('📊 Tipos de roles:', roles.map(r => `${r.nombre} (${r.tipo})`));
+    
     // Filtrar roles de sistema si no está activado el checkbox
     if (!mostrarSistema) {
+      const rolesAntes = roles.length;
       roles = roles.filter(r => r.tipo !== 'sistema');
+      console.log(`🔍 Filtrado: ${rolesAntes} roles → ${roles.length} roles (ocultados ${rolesAntes - roles.length} de sistema)`);
     }
     
     const tbody = document.getElementById('rolesTableBody');

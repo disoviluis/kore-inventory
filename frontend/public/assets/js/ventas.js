@@ -483,6 +483,11 @@ function agregarProducto(producto) {
             nombre: producto.nombre,
             sku: producto.sku,
             precio_unitario: precioUnitario,
+            precio_minorista: producto.precio_minorista || precioUnitario,
+            precio_mayorista: producto.precio_mayorista || null,
+            precio_distribuidor: producto.precio_distribuidor || null,
+            precio_minimo: producto.precio_minimo || null,
+            precio_maximo: producto.precio_maximo || null,
             cantidad: 1,
             stock_disponible: producto.stock_actual,
             subtotal: precioUnitario,
@@ -537,39 +542,82 @@ function renderizarProductos() {
                     <i class="bi bi-calendar-event"></i> Entrega estimada: ${formatearFecha(p.fecha_entrega_estimada)}
                  </small>` : '';
             
+            // Determinar si el precio está fuera de rango (para alertas visuales)
+            let clasePrecio = '';
+            let alertaPrecio = '';
+            if (p.precio_minimo && p.precio_unitario < p.precio_minimo) {
+                clasePrecio = 'border-danger';
+                alertaPrecio = `<small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Por debajo del mínimo ($${formatearNumero(p.precio_minimo)})</small>`;
+            } else if (p.precio_maximo && p.precio_unitario > p.precio_maximo) {
+                clasePrecio = 'border-warning';
+                alertaPrecio = `<small class="text-warning"><i class="bi bi-exclamation-circle"></i> Por encima del máximo ($${formatearNumero(p.precio_maximo)})</small>`;
+            }
+            
+            // Opciones de precios disponibles
+            let opcionesPrecios = '';
+            if (p.precio_minorista) {
+                opcionesPrecios += `<option value="${p.precio_minorista}">Minorista - $${formatearNumero(p.precio_minorista)}</option>`;
+            }
+            if (p.precio_mayorista) {
+                opcionesPrecios += `<option value="${p.precio_mayorista}">Mayorista - $${formatearNumero(p.precio_mayorista)}</option>`;
+            }
+            if (p.precio_distribuidor) {
+                opcionesPrecios += `<option value="${p.precio_distribuidor}">Distribuidor - $${formatearNumero(p.precio_distribuidor)}</option>`;
+            }
+            opcionesPrecios += `<option value="manual">✏️ Manual</option>`;
+            
             html += `
-            <div class="producto-item mb-3 p-3 border rounded ${p.tipo_venta === 'contra_pedido' ? 'border-warning' : ''}">
-                <div class="d-flex justify-content-between align-items-center">
+            <div class="producto-item mb-3 p-3 border rounded ${p.tipo_venta === 'contra_pedido' ? 'border-warning' : ''} ${clasePrecio}">
+                <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <strong>${p.nombre}</strong>${badgeContraPedido}
                         ${p.aplica_iva ? '<span class="badge bg-info ms-2"><i class="bi bi-percent"></i> IVA ' + p.porcentaje_iva + '%</span>' : '<span class="badge bg-secondary ms-2">Sin IVA</span>'}<br>
                         <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_disponible}</small>${infoEntrega}
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="d-flex align-items-center">
-                            <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, -1)">
-                                <i class="bi bi-dash"></i>
-                            </button>
-                            <input type="number" class="form-control form-control-sm input-cantidad mx-1" 
-                                   value="${p.cantidad}" min="1" max="${p.tipo_venta === 'contra_pedido' ? 9999 : p.stock_disponible}"
-                                   onchange="actualizarCantidad(${index}, this.value)"
-                                   style="width: 60px; text-align: center;">
-                            <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, 1)">
-                                <i class="bi bi-plus"></i>
-                            </button>
+                    <div class="d-flex align-items-start gap-2">
+                        <!-- Cantidad -->
+                        <div class="d-flex flex-column align-items-center">
+                            <small class="text-muted mb-1">Cantidad</small>
+                            <div class="d-flex align-items-center">
+                                <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, -1)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <input type="number" class="form-control form-control-sm input-cantidad mx-1" 
+                                       value="${p.cantidad}" min="1" max="${p.tipo_venta === 'contra_pedido' ? 9999 : p.stock_disponible}"
+                                       onchange="actualizarCantidad(${index}, this.value)"
+                                       style="width: 60px; text-align: center;">
+                                <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, 1)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="text-end" style="min-width: 140px;">
-                            <strong class="text-success">$${formatearNumero(p.subtotal)}</strong><br>
-                            <div class="input-group input-group-sm" style="width: 130px;">
-                                <span class="input-group-text">@</span>
+                        
+                        <!-- Precio -->
+                        <div class="d-flex flex-column" style="min-width: 180px;">
+                            <small class="text-muted mb-1">Tipo de Precio</small>
+                            <select class="form-select form-select-sm mb-1" onchange="cambiarTipoPrecio(${index}, this.value)" id="tipoPrecio${index}">
+                                ${opcionesPrecios}
+                            </select>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">$</span>
                                 <input type="number" class="form-control form-control-sm" 
                                        value="${p.precio_unitario}" 
                                        min="0" step="0.01"
                                        onchange="actualizarPrecio(${index}, this.value)"
+                                       id="precioInput${index}"
                                        style="text-align: right;">
                             </div>
+                            ${alertaPrecio}
                         </div>
-                        <button class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${index})">
+                        
+                        <!-- Subtotal -->
+                        <div class="text-end" style="min-width: 100px;">
+                            <small class="text-muted">Subtotal</small><br>
+                            <strong class="text-success fs-5">$${formatearNumero(p.subtotal)}</strong>
+                        </div>
+                        
+                        <!-- Eliminar -->
+                        <button class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${index})" title="Eliminar producto">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -581,6 +629,22 @@ function renderizarProductos() {
         console.log('Primeros 200 chars:', html.substring(0, 200));
         container.innerHTML = html;
         console.log('container.innerHTML actualizado, children count:', container.children.length);
+        
+        // Establecer el valor seleccionado en los selectores de tipo de precio
+        productosVenta.forEach((p, index) => {
+            const selector = document.getElementById(`tipoPrecio${index}`);
+            if (selector) {
+                if (p.precio_unitario === p.precio_minorista) {
+                    selector.value = p.precio_minorista;
+                } else if (p.precio_unitario === p.precio_mayorista) {
+                    selector.value = p.precio_mayorista;
+                } else if (p.precio_unitario === p.precio_distribuidor) {
+                    selector.value = p.precio_distribuidor;
+                } else {
+                    selector.value = 'manual';
+                }
+            }
+        });
     } catch (error) {
         console.error('ERROR en renderizarProductos:', error);
         console.error('Stack:', error.stack);
@@ -642,9 +706,55 @@ function actualizarPrecio(index, valor) {
     }
 
     const producto = productosVenta[index];
+    
+    // Validar si el precio está fuera del rango permitido
+    let advertencia = false;
+    if (producto.precio_minimo && precio < producto.precio_minimo) {
+        advertencia = true;
+        if (!confirm(`⚠️ ALERTA: El precio ingresado ($${formatearNumero(precio)}) está por debajo del precio mínimo permitido ($${formatearNumero(producto.precio_minimo)}).\n\n¿Desea continuar de todas formas?`)) {
+            renderizarProductos();
+            return;
+        }
+    } else if (producto.precio_maximo && precio > producto.precio_maximo) {
+        advertencia = true;
+        if (!confirm(`⚠️ ALERTA: El precio ingresado ($${formatearNumero(precio)}) está por encima del precio máximo sugerido ($${formatearNumero(producto.precio_maximo)}).\n\n¿Desea continuar de todas formas?`)) {
+            renderizarProductos();
+            return;
+        }
+    }
+    
     producto.precio_unitario = precio;
     producto.subtotal = producto.cantidad * precio;
 
+    renderizarProductos();
+    calcularTotales();
+}
+
+// Función para cambiar el tipo de precio seleccionado
+function cambiarTipoPrecio(index, valor) {
+    const producto = productosVenta[index];
+    
+    if (valor === 'manual') {
+        // Enfocar el input de precio para edición manual
+        setTimeout(() => {
+            const precioInput = document.getElementById(`precioInput${index}`);
+            if (precioInput) {
+                precioInput.focus();
+                precioInput.select();
+            }
+        }, 100);
+        return;
+    }
+    
+    const nuevoPrecio = parseFloat(valor);
+    if (isNaN(nuevoPrecio) || nuevoPrecio < 0) {
+        renderizarProductos();
+        return;
+    }
+    
+    producto.precio_unitario = nuevoPrecio;
+    producto.subtotal = producto.cantidad * nuevoPrecio;
+    
     renderizarProductos();
     calcularTotales();
 }
@@ -1885,6 +1995,11 @@ document.getElementById('btnConfirmarContraPedido').addEventListener('click', fu
             nombre: producto.nombre,
             sku: producto.sku,
             precio_unitario: precioUnitario,
+            precio_minorista: producto.precio_minorista || precioUnitario,
+            precio_mayorista: producto.precio_mayorista || null,
+            precio_distribuidor: producto.precio_distribuidor || null,
+            precio_minimo: producto.precio_minimo || null,
+            precio_maximo: producto.precio_maximo || null,
             cantidad: 1,
             stock_disponible: producto.stock_actual || 0,
             subtotal: precioUnitario,
