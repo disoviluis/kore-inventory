@@ -147,7 +147,7 @@ async function loadCategorias() {
 
         if (response.ok) {
             const data = await response.json();
-            categorias = data.categorias || [];
+            categorias = data.data || [];
             categoriasOriginal = [...categorias];
             console.log('✅ Categorías cargadas:', categorias.length);
             renderCategorias();
