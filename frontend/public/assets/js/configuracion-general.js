@@ -40,22 +40,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadUserData() {
     try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/auth/me`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        // Obtener usuario desde localStorage (ya fue validado en login/dashboard)
+        let usuario = JSON.parse(localStorage.getItem('usuario'));
+        
+        // Si no hay usuario en localStorage, verificar token
+        if (!usuario) {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_URL}/auth/verify`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
 
-        if (response.ok) {
-            const data = await response.json();
-            document.getElementById('userName').textContent = data.nombre;
-            document.getElementById('userRole').textContent = data.rol?.nombre || 'Usuario';
-            
-            // Mostrar sección plataforma si es super_admin
-            if (data.rol?.nombre === 'super_admin') {
-                document.getElementById('plataformaSection').style.display = 'block';
+            if (!response.ok) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('usuario');
+                window.location.href = 'login.html';
+                return;
             }
+
+            const data = await response.json();
+            usuario = data.data;
+            localStorage.setItem('usuario', JSON.stringify(usuario));
+        }
+
+        // Cargar información del usuario en la UI
+        document.getElementById('userName').textContent = usuario.nombre;
+        document.getElementById('userRole').textContent = usuario.rol?.nombre || 'Usuario';
+        
+        // Mostrar sección plataforma si es super_admin
+        if (usuario.rol?.nombre === 'super_admin') {
+            document.getElementById('plataformaSection').style.display = 'block';
         }
     } catch (error) {
         console.error('Error cargando usuario:', error);
@@ -64,43 +79,50 @@ async function loadUserData() {
 
 async function loadCompanies() {
     try {
+        // Obtener usuario desde localStorage
+        const usuario = JSON.parse(localStorage.getItem('usuario'));
+        if (!usuario || !usuario.id) {
+            console.error('No hay usuario en localStorage');
+            return;
+        }
+
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/auth/me`, {
+        const response = await fetch(`${API_URL}/empresas/usuario/${usuario.id}`, {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
 
-        if (response.ok) {
-            const data = await response.json();
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.length > 0) {
             const selector = document.getElementById('companySelector');
-            
             selector.innerHTML = '';
             
-            if (data.empresas && data.empresas.length > 0) {
-                data.empresas.forEach(empresa => {
-                    const option = document.createElement('option');
-                    option.value = empresa.id;
-                    option.textContent = empresa.nombre;
-                    selector.appendChild(option);
-                });
+            data.data.forEach(empresa => {
+                const option = document.createElement('option');
+                option.value = empresa.id;
+                option.textContent = empresa.nombre;
+                selector.appendChild(option);
+            });
 
-                // Seleccionar empresa guardada o primera
-                const savedCompanyId = localStorage.getItem('selectedCompanyId');
-                if (savedCompanyId && data.empresas.find(e => e.id == savedCompanyId)) {
-                    selector.value = savedCompanyId;
-                } else {
-                    selector.value = data.empresas[0].id;
-                }
-
-                // Establecer empresa actual
-                currentEmpresa = data.empresas.find(e => e.id == selector.value);
-                
-                // Cargar categorías
-                loadCategorias();
+            // Seleccionar empresa guardada o primera
+            const empresaGuardada = localStorage.getItem('empresaActiva');
+            if (empresaGuardada) {
+                const empresaObj = JSON.parse(empresaGuardada);
+                selector.value = empresaObj.id;
+                currentEmpresa = empresaObj;
             } else {
-                selector.innerHTML = '<option value="">Sin empresas asignadas</option>';
+                selector.value = data.data[0].id;
+                currentEmpresa = data.data[0];
+                localStorage.setItem('empresaActiva', JSON.stringify(currentEmpresa));
             }
+            
+            // Cargar categorías
+            loadCategorias();
+        } else {
+            document.getElementById('companySelector').innerHTML = '<option value="">Sin empresas asignadas</option>';
         }
     } catch (error) {
         console.error('Error cargando empresas:', error);
@@ -425,20 +447,28 @@ function createToastContainer() {
 
 function initEventListeners() {
     // Cambio de empresa
-    document.getElementById('companySelector')?.addEventListener('change', (e) => {
+    document.getElementById('companySelector')?.addEventListener('change', async (e) => {
         const empresaId = e.target.value;
-        localStorage.setItem('selectedCompanyId', empresaId);
         
-        // Buscar empresa
-        const token = localStorage.getItem('token');
-        fetch(`${API_URL}/auth/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => res.json())
-        .then(data => {
-            currentEmpresa = data.empresas.find(emp => emp.id == empresaId);
-            loadCategorias();
-        });
+        try {
+            // Obtener usuario desde localStorage
+            const usuario = JSON.parse(localStorage.getItem('usuario'));
+            const token = localStorage.getItem('token');
+            
+            const response = await fetch(`${API_URL}/empresas/usuario/${usuario.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                currentEmpresa = data.data.find(emp => emp.id == empresaId);
+                localStorage.setItem('empresaActiva', JSON.stringify(currentEmpresa));
+                loadCategorias();
+            }
+        } catch (error) {
+            console.error('Error cambiando empresa:', error);
+        }
     });
 
     // Botones nueva categoría
