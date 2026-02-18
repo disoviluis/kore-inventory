@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración General - KORE Inventory</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+
+    <!-- Mobile Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="d-flex align-items-center">
+                <div class="logo-container-sidebar me-2">
+                    <i class="bi bi-boxes"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0 fw-bold text-white">KORE<span class="text-warning">.</span>inventory</h5>
+                    <small class="text-white-50">ERP SaaS</small>
+                </div>
+            </div>
+            <button class="btn-close-sidebar d-lg-none" id="closeSidebar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <!-- User Info -->
+        <div class="sidebar-user">
+            <div class="d-flex align-items-center">
+                <div class="user-avatar me-3">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="user-name" id="userName">Cargando...</div>
+                    <div class="user-role" id="userRole">-</div>
+                </div>
+                <div class="dropdown">
+                    <button class="btn-user-menu" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Mi Perfil</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configuración</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Company Selector -->
+        <div class="company-selector">
+            <label class="form-label text-white-50 small mb-2">Empresa Activa</label>
+            <select class="form-select form-select-sm" id="companySelector">
+                <option value="">Cargando empresas...</option>
+            </select>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="sidebar-nav">
+            <ul class="nav flex-column">
+                
+                <!-- Dashboard -->
+                <li class="nav-item">
+                    <a class="nav-link" href="dashboard.html">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <!-- OPERACIONES Section -->
+                <li class="nav-item">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#operacionesCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>OPERACIONES</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                    </a>
+                    <div class="collapse" id="operacionesCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link" href="ventas.html">
+                                    <i class="bi bi-cart-check"></i>
+                                    <span>Punto de Venta</span>
+                                    <span class="badge bg-success">POS</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="ventas-historial.html">
+                                    <i class="bi bi-receipt"></i>
+                                    <span>Ventas</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="clientes.html">
+                                    <i class="bi bi-people"></i>
+                                    <span>Clientes</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="inventario.html">
+                                    <i class="bi bi-box-seam"></i>
+                                    <span>Inventario</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="productos.html">
+                                    <i class="bi bi-tags"></i>
+                                    <span>Productos</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="proveedores.html">
+                                    <i class="bi bi-truck"></i>
+                                    <span>Proveedores</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="compras.html">
+                                    <i class="bi bi-bag-check"></i>
+                                    <span>Compras</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- FINANZAS Section -->
+                <li class="nav-item">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#finanzasCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-cash-coin"></i>
+                        <span>FINANZAS</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                    </a>
+                    <div class="collapse" id="finanzasCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-wallet2"></i>
+                                    <span>Cuentas por Cobrar</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-credit-card"></i>
+                                    <span>Cuentas por Pagar</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- REPORTES Section -->
+                <li class="nav-item">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#reportesCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        <span>REPORTES</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                    </a>
+                    <div class="collapse" id="reportesCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-bar-chart"></i>
+                                    <span>Ventas</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- ADMINISTRACIÓN Section -->
+                <li class="nav-item">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#administracionCollapse" role="button" aria-expanded="true">
+                        <i class="bi bi-gear-fill"></i>
+                        <span>ADMINISTRACIÓN</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                    </a>
+                    <div class="collapse show" id="administracionCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-person-gear"></i>
+                                    <span>Usuarios</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-shield-check"></i>
+                                    <span>Roles y Permisos</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="configuracion-general.html">
+                                    <i class="bi bi-sliders"></i>
+                                    <span>Configuración General</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- PLATAFORMA Section (solo super_admin) -->
+                <li class="nav-item" id="plataformaSection" style="display: none;">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#plataformaCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-globe"></i>
+                        <span>PLATAFORMA</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                    </a>
+                    <div class="collapse" id="plataformaCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link" href="super-admin.html">
+                                    <i class="bi bi-speedometer"></i>
+                                    <span>Dashboard Super Admin</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+            </ul>
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <div class="license-status">
+                <i class="bi bi-check-circle-fill text-success"></i>
+                <small>Licencia Activa</small>
+            </div>
+            <small class="text-white-50">v1.0.0 - © Disovi Soft</small>
+        </div>
+    </aside>
+
+    <!-- Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Top Navbar -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+            <div class="container-fluid">
+                
+                <!-- Toggle Sidebar -->
+                <button class="btn btn-toggle-sidebar" id="toggleSidebar">
+                    <i class="bi bi-list"></i>
+                </button>
+
+                <!-- Breadcrumb -->
+                <nav aria-label="breadcrumb" class="d-none d-md-block">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="dashboard.html">Inicio</a></li>
+                        <li class="breadcrumb-item">Administración</li>
+                        <li class="breadcrumb-item active" aria-current="page">Configuración General</li>
+                    </ol>
+                </nav>
+
+                <!-- Navbar Right -->
+                <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                    
+                    <!-- Notifications -->
+                    <div class="dropdown me-2">
+                        <button class="btn-icon" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell"></i>
+                            <span class="badge-notification">0</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
+                            <li class="dropdown-header">
+                                <strong>Notificaciones</strong>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-center text-muted" href="#">No hay notificaciones</a></li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+        </nav>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <div class="container-fluid">
+
+                <!-- Page Header -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h1 class="h3 mb-1">
+                                    <i class="bi bi-sliders me-2"></i>Configuración General
+                                </h1>
+                                <p class="text-muted mb-0">Gestiona las configuraciones de tu empresa</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-white">
+                                <ul class="nav nav-tabs card-header-tabs" id="configTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="categorias-tab" data-bs-toggle="tab" data-bs-target="#categorias-panel" type="button" role="tab">
+                                            <i class="bi bi-tags me-2"></i>Categorías
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="impuestos-tab" data-bs-toggle="tab" data-bs-target="#impuestos-panel" type="button" role="tab">
+                                            <i class="bi bi-percent me-2"></i>Impuestos
+                                            <span class="badge bg-secondary ms-2">Próximamente</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="empresa-tab" data-bs-toggle="tab" data-bs-target="#empresa-panel" type="button" role="tab">
+                                            <i class="bi bi-building me-2"></i>Empresa
+                                            <span class="badge bg-secondary ms-2">Próximamente</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="card-body">
+                                <div class="tab-content" id="configTabContent">
+                                    
+                                    <!-- Tab: Categorías -->
+                                    <div class="tab-pane fade show active" id="categorias-panel" role="tabpanel">
+                                        
+                                        <!-- Header de Categorías -->
+                                        <div class="d-flex justify-content-between align-items-center mb-4">
+                                            <div>
+                                                <h5 class="mb-1">Gestión de Categorías de Productos</h5>
+                                                <p class="text-muted small mb-0">Organiza tus productos por categorías personalizadas</p>
+                                            </div>
+                                            <button class="btn btn-primary" id="btnNuevaCategoria">
+                                                <i class="bi bi-plus-circle me-2"></i>Nueva Categoría
+                                            </button>
+                                        </div>
+
+                                        <!-- Filtros -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-8">
+                                                <div class="input-group">
+                                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                                    <input type="text" class="form-control" id="searchCategoria" placeholder="Buscar categoría...">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <select class="form-select" id="filterEstadoCategoria">
+                                                    <option value="">Todos los estados</option>
+                                                    <option value="1">Activas</option>
+                                                    <option value="0">Inactivas</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button class="btn btn-outline-secondary w-100" id="btnLimpiarFiltros" title="Limpiar filtros">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tabla de Categorías -->
+                                        <div class="table-responsive">
+                                            <table class="table table-hover" id="tableCategorias">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th width="60">Icono</th>
+                                                        <th>Nombre</th>
+                                                        <th>Descripción</th>
+                                                        <th width="100">Color</th>
+                                                        <th width="100" class="text-center">Productos</th>
+                                                        <th width="100" class="text-center">Estado</th>
+                                                        <th width="120" class="text-center">Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="categoriasTableBody">
+                                                    <tr>
+                                                        <td colspan="7" class="text-center text-muted py-5">
+                                                            <i class="bi bi-hourglass-split display-4"></i>
+                                                            <p class="mt-2">Cargando categorías...</p>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Empty State -->
+                                        <div id="emptyStateCategorias" style="display: none;">
+                                            <div class="text-center py-5">
+                                                <i class="bi bi-tags display-1 text-muted"></i>
+                                                <h5 class="mt-3">No hay categorías registradas</h5>
+                                                <p class="text-muted">Crea tu primera categoría para organizar tus productos</p>
+                                                <button class="btn btn-primary" id="btnNuevaCategoriaEmpty">
+                                                    <i class="bi bi-plus-circle me-2"></i>Crear Primera Categoría
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- Tab: Impuestos -->
+                                    <div class="tab-pane fade" id="impuestos-panel" role="tabpanel">
+                                        <div class="text-center py-5">
+                                            <i class="bi bi-percent display-1 text-muted"></i>
+                                            <h5 class="mt-3">Gestión de Impuestos</h5>
+                                            <p class="text-muted">Configura los impuestos para tu empresa</p>
+                                            <span class="badge bg-secondary">Próximamente</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tab: Empresa -->
+                                    <div class="tab-pane fade" id="empresa-panel" role="tabpanel">
+                                        <div class="text-center py-5">
+                                            <i class="bi bi-building display-1 text-muted"></i>
+                                            <h5 class="mt-3">Información de la Empresa</h5>
+                                            <p class="text-muted">Datos generales, logo, facturación electrónica</p>
+                                            <span class="badge bg-secondary">Próximamente</span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <div class="container-fluid">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <p class="mb-0 text-muted">© 2025 <strong>Disovi Soft</strong>. Todos los derechos reservados.</p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <a href="#" class="text-muted me-3">Términos</a>
+                        <a href="#" class="text-muted me-3">Privacidad</a>
+                        <a href="#" class="text-muted">Soporte</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- Modal: Categoría -->
+    <div class="modal fade" id="categoriaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoriaModalTitle">Nueva Categoría</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoriaForm">
+                        <input type="hidden" id="categoriaId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="categoriaNombre" required maxlength="100" placeholder="Ej: Electrónica">
+                            <small class="text-muted">Máximo 100 caracteres</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" id="categoriaDescripcion" rows="2" placeholder="Breve descripción de la categoría"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Icono</label>
+                                <select class="form-select" id="categoriaIcono">
+                                    <option value="bi-box">📦 Sin icono (box)</option>
+                                    <option value="bi-laptop">💻 Laptop (Electrónica)</option>
+                                    <option value="bi-bag">👜 Bag (Ropa)</option>
+                                    <option value="bi-cup-straw">🥤 Cup (Alimentos/Bebidas)</option>
+                                    <option value="bi-house">🏠 House (Hogar)</option>
+                                    <option value="bi-heart-pulse">❤️ Heart (Salud/Belleza)</option>
+                                    <option value="bi-trophy">🏆 Trophy (Deportes)</option>
+                                    <option value="bi-book">📚 Book (Libros/Papelería)</option>
+                                    <option value="bi-controller">🎮 Controller (Juguetes)</option>
+                                    <option value="bi-tools">🔧 Tools (Herramientas)</option>
+                                    <option value="bi-car-front">🚗 Car (Automotriz)</option>
+                                    <option value="bi-hammer">🔨 Hammer (Construcción)</option>
+                                    <option value="bi-paint-bucket">🎨 Paint (Pinturas)</option>
+                                    <option value="bi-flower1">🌸 Flower (Jardinería)</option>
+                                </select>
+                                <small class="text-muted">Preview: <i id="iconoPreview" class="bi bi-box ms-2" style="font-size: 1.5rem;"></i></small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Color</label>
+                                <input type="color" class="form-control form-control-color w-100" id="categoriaColor" value="#9CA3AF">
+                                <small class="text-muted">Color para identificación visual</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="categoriaActivo" checked>
+                                <label class="form-check-label" for="categoriaActivo">
+                                    Categoría activa
+                                </label>
+                            </div>
+                            <small class="text-muted">Las categorías inactivas no aparecen en los formularios</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="categoriaForm" class="btn btn-primary" id="btnGuardarCategoria">
+                        <i class="bi bi-save me-2"></i>Guardar Categoría
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5.3 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Sidebar Navigation (Common) -->
+    <script src="assets/js/sidebar-navigation.js"></script>
+    <!-- Custom JS -->
+    <script src="assets/js/configuracion-general.js"></script>
+</body>
+</html>
