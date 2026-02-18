@@ -431,6 +431,13 @@ function initEventListeners() {
     document.getElementById('filterCategoria').addEventListener('change', filtrarProductos);
     document.getElementById('filterEstado').addEventListener('change', filtrarProductos);
     document.getElementById('btnLimpiarFiltros').addEventListener('click', limpiarFiltros);
+    
+    // Preview de imagen
+    const imagenUrlInput = document.getElementById('productoImagenUrl');
+    if (imagenUrlInput) {
+        imagenUrlInput.addEventListener('input', actualizarPreviewImagen);
+        imagenUrlInput.addEventListener('blur', actualizarPreviewImagen);
+    }
 
     // Cerrar sesión
     document.getElementById('logoutBtn').addEventListener('click', (e) => {
@@ -594,6 +601,18 @@ function abrirModalNuevo() {
     // Limpiar tabla resumen
     updateTablaResumenPrecios();
     
+    // Limpiar preview de imagen
+    const previewImg = document.getElementById('imagenPreviewImg');
+    const previewPlaceholder = document.getElementById('imagenPreviewPlaceholder');
+    if (previewImg) previewImg.style.display = 'none';
+    if (previewPlaceholder) {
+        previewPlaceholder.style.display = 'block';
+        previewPlaceholder.innerHTML = `
+            <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+            <p class="text-muted small mb-0">Vista previa</p>
+        `;
+    }
+    
     const modal = new bootstrap.Modal(document.getElementById('productoModal'));
     modal.show();
 }
@@ -615,6 +634,10 @@ async function editarProducto(id) {
         document.getElementById('productoDescripcion').value = producto.descripcion || '';
         document.getElementById('productoCategoria').value = producto.categoria_id || '';
         document.getElementById('productoCodigoBarras').value = producto.codigo_barras || '';
+        document.getElementById('productoImagenUrl').value = producto.imagen_url || '';
+        
+        // Actualizar preview de imagen
+        actualizarPreviewImagen();
         
         // Tipo y configuración
         document.getElementById('productoTipo').value = producto.tipo || 'producto';
@@ -697,6 +720,7 @@ async function guardarProducto(e) {
         descripcion: document.getElementById('productoDescripcion').value,
         categoria_id: document.getElementById('productoCategoria').value || null,
         codigo_barras: document.getElementById('productoCodigoBarras').value,
+        imagen_url: document.getElementById('productoImagenUrl').value || null,
         
         // Tipo y configuración
         tipo: document.getElementById('productoTipo').value,
@@ -857,6 +881,49 @@ function cerrarSesion() {
 // ============================================
 // UTILIDADES
 // ============================================
+
+/**
+ * Actualizar preview de imagen del producto
+ */
+function actualizarPreviewImagen() {
+    const urlInput = document.getElementById('productoImagenUrl');
+    const previewImg = document.getElementById('imagenPreviewImg');
+    const previewPlaceholder = document.getElementById('imagenPreviewPlaceholder');
+    
+    if (!urlInput || !previewImg || !previewPlaceholder) return;
+    
+    const url = urlInput.value.trim();
+    
+    if (url) {
+        // Validar que sea una URL válida
+        try {
+            new URL(url);
+            previewImg.src = url;
+            previewImg.style.display = 'block';
+            previewPlaceholder.style.display = 'none';
+            
+            // Manejar error de carga
+            previewImg.onerror = function() {
+                previewImg.style.display = 'none';
+                previewPlaceholder.style.display = 'block';
+                previewPlaceholder.innerHTML = `
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                    <p class="text-warning small mb-0">Error al cargar</p>
+                `;
+            };
+        } catch (e) {
+            previewImg.style.display = 'none';
+            previewPlaceholder.style.display = 'block';
+        }
+    } else {
+        previewImg.style.display = 'none';
+        previewPlaceholder.style.display = 'block';
+        previewPlaceholder.innerHTML = `
+            <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+            <p class="text-muted small mb-0">Vista previa</p>
+        `;
+    }
+}
 
 function mostrarAlerta(mensaje, tipo = 'info') {
     // Crear elemento de alerta

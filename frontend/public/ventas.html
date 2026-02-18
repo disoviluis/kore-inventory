@@ -72,6 +72,74 @@
             opacity: 0.5;
             pointer-events: none;
         }
+        .producto-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 100%;
+            position: relative;
+        }
+        .producto-card:hover {
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+            border-color: #1E40AF;
+            transform: translateY(-2px);
+        }
+        .producto-card.selected {
+            border-color: #1E40AF;
+            background-color: #f0f7ff;
+        }
+        .producto-card-img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: #f5f5f5;
+        }
+        .producto-card-img-placeholder {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px;
+            color: white;
+            font-size: 2.5rem;
+        }
+        .stock-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .stock-alto { background: #10b981; color: white; }
+        .stock-medio { background: #f59e0b; color: white; }
+        .stock-bajo { background: #ef4444; color: white; }
+        .stock-sin { background: #6b7280; color: white; }
+        .producto-card-list {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+        .producto-card-list:hover {
+            box-shadow: 0 2px 8px rgba(30, 64, 175, 0.15);
+            border-color: #1E40AF;
+        }
+        #catalogoProductos {
+            background: #fafafa;
+            padding: 15px;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
@@ -401,9 +469,27 @@
                 </nav>
 
                 <!-- Navbar Right -->
-                <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                <div class="navbar-nav ms-auto d-flex flex-row align-items-center gap-2">
+                    <!-- Modo Rápido -->
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="modoRapidoSwitch">
+                        <label class="form-check-label small" for="modoRapidoSwitch">
+                            ⚡ Modo Rápido
+                        </label>
+                    </div>
+                    
+                    <!-- Últimas Ventas -->
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#ultimasVentasPanel">
+                        <i class="bi bi-receipt me-1"></i>Últimas Ventas
+                    </button>
+                    
+                    <!-- Turno de Caja -->
+                    <button class="btn btn-outline-success btn-sm" id="btnTurnoCaja">
+                        <i class="bi bi-cash-stack me-1"></i>Turno
+                    </button>
+                    
                     <button class="btn btn-outline-danger btn-sm" id="btnCancelarVenta">
-                        <i class="bi bi-x-circle me-1"></i>Cancelar Venta
+                        <i class="bi bi-x-circle me-1"></i>Cancelar
                     </button>
                 </div>
             </div>
@@ -450,10 +536,16 @@
                                                 <div class="search-results" id="resultadosNombre" style="display: none;"></div>
                                             </div>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
+                                            <label class="form-label">&nbsp;</label>
+                                            <button class="btn btn-info w-100" id="btnPublicoGeneral" title="Cliente genérico para ventas rápidas">
+                                                <i class="bi bi-people me-1"></i>Público
+                                            </button>
+                                        </div>
+                                        <div class="col-md-2">
                                             <label class="form-label">&nbsp;</label>
                                             <button class="btn btn-success w-100" id="btnNuevoCliente">
-                                                <i class="bi bi-person-plus me-2"></i>Nuevo Cliente
+                                                <i class="bi bi-person-plus me-1"></i>Nuevo
                                             </button>
                                         </div>
                                     </div>
@@ -499,6 +591,41 @@
                                     </div>
                                     <div class="search-results" id="resultadosProducto" style="display: none;"></div>
                                 </div>
+
+                                <!-- Catálogo de Productos -->
+                                <div id="catalogoProductos" class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0"><i class="bi bi-grid-3x3-gap me-2"></i>Catálogo de Productos</h6>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-secondary active" onclick="cambiarVistaProductos('grid')">
+                                                <i class="bi bi-grid"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="cambiarVistaProductos('list')">
+                                                <i class="bi bi-list"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Filtros por Categoría -->
+                                    <div class="mb-3">
+                                        <div class="d-flex gap-2 flex-wrap" id="categoriasFiltros">
+                                            <button class="btn btn-sm btn-primary active" onclick="filtrarPorCategoria(null)">
+                                                <i class="bi bi-star me-1"></i>Todos
+                                            </button>
+                                            <!-- Categorías dinámicas se cargarán aquí -->
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Grid de Productos -->
+                                    <div id="gridProductos" class="row g-3" style="max-height: 400px; overflow-y: auto;">
+                                        <div class="col-12 text-center text-muted py-5">
+                                            <i class="bi bi-box-seam display-4"></i>
+                                            <p class="mt-2">Cargando productos...</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr>
 
                                 <!-- Lista de Productos en la Venta -->
                                 <div id="listaProductos">
@@ -587,6 +714,15 @@
                                             <div class="col-6">
                                                 <small class="text-muted">Total Pagado:</small>
                                                 <div class="fw-bold text-success" id="totalPagado">$0</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Calculadora de Vueltas -->
+                                        <div class="alert alert-success" id="calculadoraVueltas" style="display: none; border: 3px solid #10b981;">
+                                            <div class="text-center">
+                                                <small class="text-muted">VUELTAS</small>
+                                                <div class="display-4 fw-bold text-success" id="montoVueltas">$0</div>
+                                                <small class="text-muted">💰 Entregar al cliente</small>
                                             </div>
                                         </div>
                                         
@@ -780,6 +916,114 @@
                     </button>
                     <button type="button" class="btn btn-success" id="btnConfirmarContraPedido">
                         <i class="bi bi-check-circle me-1"></i>Sí, Vender Contra Pedido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Lateral: Últimas Ventas -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="ultimasVentasPanel">
+        <div class="offcanvas-header bg-primary text-white">
+            <h5 class="offcanvas-title"><i class="bi bi-receipt me-2"></i>Últimas Ventas</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div id="listaUltimasVentas" class="list-group list-group-flush">
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-receipt display-4"></i>
+                    <p class="mt-2">Cargando ventas...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Turno de Caja -->
+    <div class="modal fade" id="turnoCajaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-cash-stack me-2"></i>Turno de Caja
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="turnoAbierto" style="display: none;">
+                        <div class="alert alert-success">
+                            <h6 class="alert-heading"><i class="bi bi-check-circle me-2"></i>Turno Activo</h6>
+                            <hr>
+                            <p class="mb-1"><strong>Cajero:</strong> <span id="turnoUsuario"></span></p>
+                            <p class="mb-1"><strong>Apertura:</strong> <span id="turnoApertura"></span></p>
+                            <p class="mb-0"><strong>Base inicial:</strong> $<span id="turnoBaseInicial"></span></p>
+                        </div>
+                        
+                        <h6 class="mt-4 mb-3">Cerrar Turno</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Efectivo Contado en Caja</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="efectivoContado" min="0" step="0.01">
+                            </div>
+                        </div>
+                        
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Resumen del Turno</h6>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Base inicial:</span>
+                                    <strong>$<span id="resumenBaseInicial"></span></strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Ventas en efectivo:</span>
+                                    <strong class="text-success">$<span id="resumenVentasEfectivo"></span></strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Esperado en caja:</span>
+                                    <strong>$<span id="resumenEsperado"></span></strong>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <span><strong>Diferencia:</strong></span>
+                                    <strong id="resumenDiferencia" class="text-primary">$0</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label class="form-label">Notas de Cierre (Opcional)</label>
+                            <textarea class="form-control" id="notasCierreTurno" rows="2"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div id="turnoNuevo">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No hay un turno activo. Apertura un nuevo turno para comenzar.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Base Inicial en Caja</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="baseInicialTurno" value="50000" min="0" step="1000">
+                            </div>
+                            <small class="text-muted">Efectivo con el que inicia el turno</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Notas de Apertura (Opcional)</label>
+                            <textarea class="form-control" id="notasAperturaTurno" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="btnAbrirTurno">
+                        <i class="bi bi-unlock me-1"></i>Abrir Turno
+                    </button>
+                    <button type="button" class="btn btn-danger" id="btnCerrarTurno" style="display: none;">
+                        <i class="bi bi-lock me-1"></i>Cerrar Turno
                     </button>
                 </div>
             </div>

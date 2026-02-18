@@ -88,6 +88,7 @@ export const buscarProducto = async (req: Request, res: Response): Promise<Respo
         p.precio_minorista as precio_venta,
         p.stock_actual, p.unidad_medida, p.imagen_url,
         p.aplica_iva, p.porcentaje_iva, p.iva_incluido_en_precio,
+        p.permite_venta_sin_stock,
         c.nombre as categoria_nombre
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id

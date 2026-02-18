@@ -18,8 +18,16 @@ let impuestosDisponibles = [];
 let impuestosSeleccionados = [];
 let pagosPendientes = []; // Array de pagos múltiples
 let totalVentaActual = 0; // Total de la venta actual
+let todosCatalogo = []; // Todos los productos del catálogo
+let categoriasCatalogo = []; // Categorías disponibles
+let categoriaFiltroActual = null; // Categoría filtrada actual
+let productoSeleccionadoCatalogo = null; // Producto seleccionado en el catálogo
+let vistaActual = 'grid'; // Vista actual del catálogo (grid o list)
+let modoRapido = false; // Modo rápido activado
+let turnoActivo = null; // Turno de caja actual
+let ultimasVentas = []; // Últimas ventas del día
 
-console.log('🚀 Ventas.js cargado - Versión 1.7.0 - Pagos Múltiples');
+console.log('🚀 Ventas.js cargado - Versión 2.0.0 - POS Profesional');
 
 // ============================================
 // INICIALIZACIÓN
@@ -71,6 +79,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Cargar impuestos activos de la empresa
         await cargarImpuestosActivos();
+        
+        // Cargar catálogo de productos
+        await cargarCatalogoProductos();
 
         initEventListeners();
         deshabilitarSeccionProductos();
@@ -178,6 +189,7 @@ function initEventListeners() {
     // Botones de cliente
     document.getElementById('btnNuevoCliente').addEventListener('click', abrirModalCliente);
     document.getElementById('btnCambiarCliente').addEventListener('click', cambiarCliente);
+    document.getElementById('btnPublicoGeneral').addEventListener('click', seleccionarPublicoGeneral);
 
     // Búsqueda de productos
     document.getElementById('buscarProducto').addEventListener('input', debounce(buscarProductos, 300));
@@ -192,6 +204,15 @@ function initEventListeners() {
     document.getElementById('btnGuardarVenta').addEventListener('click', guardarVenta);
     document.getElementById('btnLimpiarVenta').addEventListener('click', limpiarVenta);
     document.getElementById('btnCancelarVenta').addEventListener('click', limpiarVenta);
+    
+    // Modo rápido
+    document.getElementById('modoRapidoSwitch').addEventListener('change', toggleModoRapido);
+    
+    // Turno de caja
+    document.getElementById('btnTurnoCaja').addEventListener('click', abrirModalTurno);
+    document.getElementById('btnAbrirTurno').addEventListener('click', abrirTurno);
+    document.getElementById('btnCerrarTurno').addEventListener('click', cerrarTurno);
+    document.getElementById('efectivoContado').addEventListener('input', calcularDiferenciaTurno);
 
     // Sidebar
     document.getElementById('toggleSidebar').addEventListener('click', () => {
@@ -404,7 +425,9 @@ function mostrarOpcionesProductos(productos) {
         <div class="search-result-item" onclick='agregarProducto(${JSON.stringify(p).replace(/'/g, "\\'")})'">
             <div class="d-flex justify-content-between">
                 <div>
-                    <strong>${p.nombre}</strong><br>
+                    <strong>${p.nombre}</strong>
+                    ${p.aplica_iva ? '<span class="badge bg-info text-white ms-2"><i class="bi bi-percent"></i> IVA</span>' : ''}
+                    <br>
                     <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_actual}</small>
                 </div>
                 <div class="text-end">
@@ -464,7 +487,10 @@ function agregarProducto(producto) {
             stock_disponible: producto.stock_actual,
             subtotal: precioUnitario,
             tipo_venta: 'normal',
-            estado_entrega: 'entregado'
+            estado_entrega: 'entregado',
+            aplica_iva: producto.aplica_iva || false,
+            porcentaje_iva: producto.porcentaje_iva || 19,
+            iva_incluido_en_precio: producto.iva_incluido_en_precio || false
         });
     }
 
@@ -474,6 +500,7 @@ function agregarProducto(producto) {
 
     renderizarProductos();
     calcularTotales();
+    reproducirSonido('add');
 }
 
 function renderizarProductos() {
@@ -514,7 +541,8 @@ function renderizarProductos() {
             <div class="producto-item mb-3 p-3 border rounded ${p.tipo_venta === 'contra_pedido' ? 'border-warning' : ''}">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="flex-grow-1">
-                        <strong>${p.nombre}</strong>${badgeContraPedido}<br>
+                        <strong>${p.nombre}</strong>${badgeContraPedido}
+                        ${p.aplica_iva ? '<span class="badge bg-info ms-2"><i class="bi bi-percent"></i> IVA ' + p.porcentaje_iva + '%</span>' : '<span class="badge bg-secondary ms-2">Sin IVA</span>'}<br>
                         <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_disponible}</small>${infoEntrega}
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -530,9 +558,16 @@ function renderizarProductos() {
                                 <i class="bi bi-plus"></i>
                             </button>
                         </div>
-                        <div class="text-end" style="min-width: 100px;">
+                        <div class="text-end" style="min-width: 140px;">
                             <strong class="text-success">$${formatearNumero(p.subtotal)}</strong><br>
-                            <small class="text-muted">@$${formatearNumero(p.precio_unitario)}</small>
+                            <div class="input-group input-group-sm" style="width: 130px;">
+                                <span class="input-group-text">@</span>
+                                <input type="number" class="form-control form-control-sm" 
+                                       value="${p.precio_unitario}" 
+                                       min="0" step="0.01"
+                                       onchange="actualizarPrecio(${index}, this.value)"
+                                       style="text-align: right;">
+                            </div>
                         </div>
                         <button class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${index})">
                             <i class="bi bi-trash"></i>
@@ -599,6 +634,21 @@ function actualizarCantidad(index, valor) {
     calcularTotales();
 }
 
+function actualizarPrecio(index, valor) {
+    const precio = parseFloat(valor);
+    if (isNaN(precio) || precio < 0) {
+        renderizarProductos();
+        return;
+    }
+
+    const producto = productosVenta[index];
+    producto.precio_unitario = precio;
+    producto.subtotal = producto.cantidad * precio;
+
+    renderizarProductos();
+    calcularTotales();
+}
+
 function eliminarProducto(index) {
     productosVenta.splice(index, 1);
     renderizarProductos();
@@ -613,7 +663,16 @@ function calcularTotales() {
     const subtotal = productosVenta.reduce((sum, p) => sum + p.subtotal, 0);
     const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
     const baseImponible = subtotal - descuento;
-    const impuesto = baseImponible * 0.19; // IVA 19%
+    
+    // Calcular IVA solo para productos gravados
+    let impuesto = 0;
+    productosVenta.forEach(p => {
+        if (p.aplica_iva) {
+            const porcentaje = (p.porcentaje_iva || 19) / 100;
+            const subtotalProducto = p.subtotal * (descuento > 0 ? (1 - descuento / subtotal) : 1);
+            impuesto += subtotalProducto * porcentaje;
+        }
+    });
     
     // Calcular impuestos adicionales
     let totalImpuestosAdicionales = 0;
@@ -829,7 +888,16 @@ async function guardarVenta() {
     const subtotal = productosVenta.reduce((sum, p) => sum + p.subtotal, 0);
     const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
     const baseImponible = subtotal - descuento;
-    const impuesto = baseImponible * 0.19;
+    
+    // Calcular IVA solo para productos gravados
+    let impuesto = 0;
+    productosVenta.forEach(p => {
+        if (p.aplica_iva) {
+            const porcentaje = (p.porcentaje_iva || 19) / 100;
+            const subtotalProducto = p.subtotal * (descuento > 0 ? (1 - descuento / subtotal) : 1);
+            impuesto += subtotalProducto * porcentaje;
+        }
+    });
     
     // Calcular impuestos adicionales
     let totalImpuestosAdicionales = 0;
@@ -942,11 +1010,21 @@ async function guardarVenta() {
         // Mostrar factura después de limpiar
         mostrarFactura(ultimaVentaGuardada, ultimaVentaData);
         
-        mostrarAlerta('Venta guardada exitosamente', 'success');
+        mostrarAlerta('🎉 Venta guardada exitosamente', 'success');
+        reproducirSonido('success');
+        
+        // Recargar últimas ventas
+        setTimeout(cargarUltimasVentas, 500);
+        
+        // Si modo rápido está activo, seleccionar público general automáticamente
+        if (modoRapido) {
+            setTimeout(seleccionarPublicoGeneral, 1000);
+        }
 
     } catch (error) {
         console.error('Error:', error);
         mostrarAlerta(error.message || 'Error al guardar venta', 'danger');
+        reproducirSonido('error');
     }
 }
 
@@ -1930,3 +2008,645 @@ function toggleImpuesto(impuestoId) {
     calcularTotales();
 }
 
+// ============================================
+// CATÁLOGO DE PRODUCTOS
+// ============================================
+
+/**
+ * Cargar catálogo completo de productos
+ */
+async function cargarCatalogoProductos() {
+    if (!currentEmpresa) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/productos?empresaId=${currentEmpresa.id}&estado=activo`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+
+        if (!response.ok) throw new Error('Error al cargar productos');
+
+        const data = await response.json();
+        todosCatalogo = data.data || [];
+        
+        // Extraer categorías únicas
+        categoriasCatalogo = [...new Set(todosCatalogo.map(p => p.categoria_nombre).filter(Boolean))];
+        
+        renderizarCategoriasFilter();
+        renderizarCatalogo();
+
+    } catch (error) {
+        console.error('Error al cargar catálogo:', error);
+        document.getElementById('gridProductos').innerHTML = `
+            <div class="col-12 text-center text-danger py-4">
+                <i class="bi bi-exclamation-triangle display-4"></i>
+                <p class="mt-2">Error al cargar el catálogo</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Renderizar filtros de categorías
+ */
+function renderizarCategoriasFilter() {
+    const container = document.getElementById('categoriasFiltros');
+    if (!container) return;
+    
+    const btnTodos = `
+        <button class="btn btn-sm ${categoriaFiltroActual === null ? 'btn-primary' : 'btn-outline-secondary'}" 
+                onclick="filtrarPorCategoria(null)">
+            <i class="bi bi-star me-1"></i>Todos (${todosCatalogo.length})
+        </button>
+    `;
+    
+    const btnsCategorias = categoriasCatalogo.map(cat => {
+        const count = todosCatalogo.filter(p => p.categoria_nombre === cat).length;
+        return `
+            <button class="btn btn-sm ${categoriaFiltroActual === cat ? 'btn-primary' : 'btn-outline-secondary'}" 
+                    onclick="filtrarPorCategoria('${cat.replace(/'/g, "\\'")}')">
+                ${cat} (${count})
+            </button>
+        `;
+    }).join('');
+    
+    container.innerHTML = btnTodos + btnsCategorias;
+}
+
+/**
+ * Filtrar productos por categoría
+ */
+function filtrarPorCategoria(categoria) {
+    categoriaFiltroActual = categoria;
+    renderizarCategoriasFilter();
+    renderizarCatalogo();
+}
+
+/**
+ * Cambiar vista del catálogo (grid/list)
+ */
+function cambiarVistaProductos(vista) {
+    vistaActual = vista;
+    
+    // Actualizar botones
+    document.querySelectorAll('#catalogoProductos .btn-group button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.closest('button').classList.add('active');
+    
+    renderizarCatalogo();
+}
+
+/**
+ * Renderizar catálogo de productos
+ */
+function renderizarCatalogo() {
+    const container = document.getElementById('gridProductos');
+    if (!container) return;
+    
+    // Filtrar productos
+    let productosFiltrados = todosCatalogo;
+    if (categoriaFiltroActual) {
+        productosFiltrados = todosCatalogo.filter(p => p.categoria_nombre === categoriaFiltroActual);
+    }
+    
+    if (productosFiltrados.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center text-muted py-4">
+                <i class="bi bi-inbox display-4"></i>
+                <p class="mt-2">No hay productos en esta categoría</p>
+            </div>
+        `;
+        return;
+    }
+    
+    if (vistaActual === 'grid') {
+        renderizarCatalogoGrid(productosFiltrados, container);
+    } else {
+        renderizarCatalogoList(productosFiltrados, container);
+    }
+}
+
+/**
+ * Renderizar catálogo en vista Grid
+ */
+function renderizarCatalogoGrid(productos, container) {
+    container.innerHTML = productos.map(p => {
+        const stockClass = p.stock_actual > 10 ? 'stock-alto' : 
+                          p.stock_actual > 5 ? 'stock-medio' : 
+                          p.stock_actual > 0 ? 'stock-bajo' : 'stock-sin';
+        
+        const stockText = p.stock_actual > 0 ? p.stock_actual : 'Sin stock';
+        
+        return `
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="producto-card" 
+                     onclick="seleccionarProductoCatalogo(${p.id})"
+                     ondblclick="agregarProductoDesdeCatalogo(${p.id})"
+                     data-producto-id="${p.id}">
+                    <span class="stock-badge ${stockClass}">${stockText}</span>
+                    ${p.imagen_url ? 
+                        `<img src="${p.imagen_url}" class="producto-card-img mb-2" alt="${p.nombre}">` :
+                        `<div class="producto-card-img-placeholder mb-2">
+                            <i class="bi bi-box-seam"></i>
+                         </div>`
+                    }
+                    <div class="mb-1">
+                        <strong class="d-block text-truncate" style="font-size: 0.9rem;">${p.nombre}</strong>
+                        <small class="text-muted">SKU: ${p.sku}</small>
+                        ${p.aplica_iva ? '<span class="badge bg-info text-white ms-1" style="font-size: 0.65rem;">IVA</span>' : ''}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="text-success" style="font-size: 1.1rem;">$${formatearNumero(p.precio_minorista)}</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Agregar listener para tecla Enter
+    agregarListenerTeclado();
+}
+
+/**
+ * Renderizar catálogo en vista List
+ */
+function renderizarCatalogoList(productos, container) {
+    container.innerHTML = `
+        <div class="col-12">
+            ${productos.map(p => {
+                const stockClass = p.stock_actual > 10 ? 'stock-alto' : 
+                                  p.stock_actual > 5 ? 'stock-medio' : 
+                                  p.stock_actual > 0 ? 'stock-bajo' : 'stock-sin';
+                
+                const stockText = p.stock_actual > 0 ? p.stock_actual : 'Sin stock';
+                
+                return `
+                    <div class="producto-card-list" 
+                         onclick="seleccionarProductoCatalogo(${p.id})"
+                         ondblclick="agregarProductoDesdeCatalogo(${p.id})"
+                         data-producto-id="${p.id}">
+                        ${p.imagen_url ? 
+                            `<img src="${p.imagen_url}" class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;" alt="${p.nombre}">` :
+                            `<div class="rounded me-3" style="width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white;">
+                                <i class="bi bi-box-seam" style="font-size: 1.5rem;"></i>
+                             </div>`
+                        }
+                        <div class="flex-grow-1">
+                            <strong>${p.nombre}</strong>
+                            ${p.aplica_iva ? '<span class="badge bg-info text-white ms-2">IVA</span>' : ''}
+                            <br>
+                            <small class="text-muted">SKU: ${p.sku}</small>
+                        </div>
+                        <div class="text-center me-3">
+                            <span class="badge ${stockClass}">${stockText}</span>
+                        </div>
+                        <div class="text-end">
+                            <strong class="text-success" style="font-size: 1.2rem;">$${formatearNumero(p.precio_minorista)}</strong>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+    
+    // Agregar listener para tecla Enter
+    agregarListenerTeclado();
+}
+
+/**
+ * Seleccionar producto del catálogo
+ */
+function seleccionarProductoCatalogo(productoId) {
+    // Remover selección previa
+    document.querySelectorAll('.producto-card, .producto-card-list').forEach(el => {
+        el.classList.remove('selected');
+    });
+    
+    // Seleccionar nuevo
+    const card = document.querySelector(`[data-producto-id="${productoId}"]`);
+    if (card) {
+        card.classList.add('selected');
+        productoSeleccionadoCatalogo = productoId;
+    }
+}
+
+/**
+ * Agregar producto desde catálogo
+ */
+function agregarProductoDesdeCatalogo(productoId) {
+    const producto = todosCatalogo.find(p => p.id === productoId);
+    if (producto) {
+        agregarProducto(producto);
+    }
+}
+
+/**
+ * Agregar listener para tecla Enter en catálogo
+ */
+function agregarListenerTeclado() {
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && productoSeleccionadoCatalogo) {
+            agregarProductoDesdeCatalogo(productoSeleccionadoCatalogo);
+        }
+    });
+}
+// ============================================
+// CLIENTE PÚBLICO GENERAL
+// ============================================
+
+/**
+ * Seleccionar cliente "Público General" automáticamente
+ */
+async function seleccionarPublicoGeneral() {
+    try {
+        // Buscar o crear cliente público general
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/ventas/buscar-cliente?empresaId=${currentEmpresa.id}&tipo=documento&valor=999999999`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+
+        if (!response.ok) throw new Error('Error al buscar cliente');
+
+        const data = await response.json();
+        let clientePublico = data.data && data.data.length > 0 ? data.data[0] : null;
+
+        // Si no existe, crearlo
+        if (!clientePublico) {
+            const createResponse = await fetch(`${API_URL}/clientes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    empresa_id: currentEmpresa.id,
+                    tipo_documento: 'CC',
+                    numero_documento: '999999999',
+                    nombre: 'PÚBLICO',
+                    apellido: 'GENERAL',
+                    razon_social: 'PÚBLICO GENERAL',
+                    email: 'publico@general.com',
+                    tipo_cliente: 'ocasional',
+                    estado: 'activo'
+                })
+            });
+
+            if (!createResponse.ok) throw new Error('Error al crear cliente público');
+            
+            const createData = await createResponse.json();
+            clientePublico = {
+                id: createData.data.id,
+                tipo_documento: 'CC',
+                numero_documento: '999999999',
+                nombre: 'PÚBLICO',
+                apellido: 'GENERAL',
+                razon_social: 'PÚBLICO GENERAL',
+                email: 'publico@general.com'
+            };
+        }
+
+        seleccionarCliente(clientePublico);
+        reproducirSonido('success');
+        mostrarAlerta('Cliente "Público General" seleccionado', 'success');
+
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlerta('Error al seleccionar público general', 'danger');
+    }
+}
+
+// ============================================
+// CALCULADORA DE VUELTAS
+// ============================================
+
+/**
+ * Actualizar estado de pago con calculadora de vueltas
+ */
+function actualizarEstadoPago() {
+    const totalPagado = calcularTotalPagado();
+    const pendiente = totalVentaActual - totalPagado;
+    
+    // Actualizar resumen de pagos
+    document.getElementById('totalVentaPagos').textContent = `$${formatearNumero(totalVentaActual)}`;
+    document.getElementById('totalPagado').textContent = `$${formatearNumero(totalPagado)}`;
+    document.getElementById('montoPendiente').textContent = `$${formatearNumero(pendiente)}`;
+    
+    // Mostrar/ocultar calculadora de vueltas
+    const calculadoraVueltas = document.getElementById('calculadoraVueltas');
+    const alertaPendiente = document.getElementById('alertaPendiente');
+    
+    if (totalPagado > totalVentaActual) {
+        // Hay vueltas
+        const vueltas = totalPagado - totalVentaActual;
+        calculadoraVueltas.style.display = 'block';
+        alertaPendiente.style.display = 'none';
+        document.getElementById('montoVueltas').textContent = `$${formatearNumero(vueltas)}`;
+        reproducirSonido('vueltas');
+    } else if (pendiente > 0.01) {
+        // Falta por pagar
+        calculadoraVueltas.style.display = 'none';
+        alertaPendiente.style.display = 'block';
+    } else {
+        // Pagado exacto
+        calculadoraVueltas.style.display = 'none';
+        alertaPendiente.style.display = 'none';
+    }
+    
+    // Habilitar/deshabilitar botón de guardar
+    const btnGuardar = document.getElementById('btnGuardarVenta');
+    const pagoCompleto = Math.abs(pendiente) < 0.01 || totalPagado >= totalVentaActual;
+    const tieneCliente = !!clienteSeleccionado;
+    const tieneProductos = productosVenta.length > 0;
+    
+    btnGuardar.disabled = !tieneCliente || !tieneProductos || !pagoCompleto;
+}
+
+// ============================================
+// SONIDOS DE FEEDBACK
+// ============================================
+
+/**
+ * Reproducir sonido de feedback
+ */
+function reproducirSonido(tipo) {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    switch(tipo) {
+        case 'success':
+            oscillator.frequency.value = 800;
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+            break;
+        case 'add':
+            oscillator.frequency.value = 600;
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.05);
+            break;
+        case 'error':
+            oscillator.frequency.value = 200;
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.2);
+            break;
+        case 'vueltas':
+            oscillator.frequency.value = 1000;
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            oscillator.start();
+            setTimeout(() => {
+                oscillator.frequency.value = 1200;
+            }, 100);
+            oscillator.stop(audioContext.currentTime + 0.2);
+            break;
+    }
+}
+
+// ============================================
+// ÚLTIMAS VENTAS
+// ============================================
+
+/**
+ * Cargar últimas ventas del día
+ */
+async function cargarUltimasVentas() {
+    if (!currentEmpresa) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const hoy = new Date().toISOString().split('T')[0];
+        
+        const response = await fetch(
+            `${API_URL}/ventas?empresaId=${currentEmpresa.id}&fecha_desde=${hoy}&fecha_hasta=${hoy}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+
+        if (!response.ok) throw new Error('Error al cargar ventas');
+
+        const data = await response.json();
+        ultimasVentas = data.data || [];
+        
+        renderizarUltimasVentas();
+
+    } catch (error) {
+        console.error('Error al cargar últimas ventas:', error);
+    }
+}
+
+/**
+ * Renderizar últimas ventas en el panel
+ */
+function renderizarUltimasVentas() {
+    const container = document.getElementById('listaUltimasVentas');
+    
+    if (ultimasVentas.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox display-4"></i>
+                <p class="mt-2">No hay ventas hoy</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = ultimasVentas.slice(0, 10).map(venta => `
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${venta.numero_factura}</h6>
+                    <p class="mb-1 small text-muted">
+                        ${venta.cliente_nombre || venta.razon_social}
+                    </p>
+                    <small class="text-muted">${new Date(venta.fecha_venta).toLocaleTimeString('es-CO')}</small>
+                </div>
+                <div class="text-end">
+                    <strong class="text-success d-block">$${formatearNumero(venta.total)}</strong>
+                    <button class="btn btn-sm btn-outline-primary mt-1" onclick="reimprimirFactura('${venta.numero_factura}')">
+                        <i class="bi bi-printer"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Reimprimir factura
+ */
+async function reimprimirFactura(numeroFactura) {
+    mostrarAlerta('Función de reimpresión en desarrollo', 'info');
+    reproducirSonido('add');
+}
+
+// ============================================
+// TURNOS DE CAJA
+// ============================================
+
+/**
+ * Abrir modal de turno de caja
+ */
+function abrirModalTurno() {
+    // Verificar si hay turno activo en localStorage
+    turnoActivo = JSON.parse(localStorage.getItem('turnoActivo'));
+    
+    if (turnoActivo) {
+        // Mostrar turno activo
+        document.getElementById('turnoNuevo').style.display = 'none';
+        document.getElementById('turnoAbierto').style.display = 'block';
+        document.getElementById('btnAbrirTurno').style.display = 'none';
+        document.getElementById('btnCerrarTurno').style.display = 'block';
+        
+        document.getElementById('turnoUsuario').textContent = turnoActivo.usuario;
+        document.getElementById('turnoApertura').textContent = new Date(turnoActivo.apertura).toLocaleString('es-CO');
+        document.getElementById('turnoBaseInicial').textContent = formatearNumero(turnoActivo.baseInicial);
+        document.getElementById('resumenBaseInicial').textContent = formatearNumero(turnoActivo.baseInicial);
+        
+        // Calcular ventas en efectivo del turno
+        calcularResumenTurno();
+    } else {
+        // Mostrar formulario nuevo turno
+        document.getElementById('turnoNuevo').style.display = 'block';
+        document.getElementById('turnoAbierto').style.display = 'none';
+        document.getElementById('btnAbrirTurno').style.display = 'block';
+        document.getElementById('btnCerrarTurno').style.display = 'none';
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('turnoCajaModal'));
+    modal.show();
+}
+
+/**
+ * Abrir nuevo turno
+ */
+function abrirTurno() {
+    const baseInicial = parseFloat(document.getElementById('baseInicialTurno').value) || 0;
+    const notas = document.getElementById('notasAperturaTurno').value;
+    
+    turnoActivo = {
+        id: Date.now(),
+        usuario: `${currentUsuario.nombre} ${currentUsuario.apellido}`,
+        usuario_id: currentUsuario.id,
+        empresa_id: currentEmpresa.id,
+        apertura: new Date().toISOString(),
+        baseInicial: baseInicial,
+        notas: notas
+    };
+    
+    localStorage.setItem('turnoActivo', JSON.stringify(turnoActivo));
+    
+    bootstrap.Modal.getInstance(document.getElementById('turnoCajaModal')).hide();
+    mostrarAlerta('Turno abierto exitosamente', 'success');
+    reproducirSonido('success');
+}
+
+/**
+ * Calcular resumen del turno
+ */
+async function calcularResumenTurno() {
+    if (!turnoActivo) return;
+    
+    // Filtrar ventas en efectivo desde la apertura
+    const ventasEfectivo = ultimasVentas.filter(v => {
+        const fechaVenta = new Date(v.fecha_venta);
+        const fechaApertura = new Date(turnoActivo.apertura);
+        return fechaVenta >= fechaApertura && v.metodo_pago === 'efectivo';
+    });
+    
+    const totalEfectivo = ventasEfectivo.reduce((sum, v) => sum + parseFloat(v.total), 0);
+    const esperado = turnoActivo.baseInicial + totalEfectivo;
+    
+    document.getElementById('resumenVentasEfectivo').textContent = formatearNumero(totalEfectivo);
+    document.getElementById('resumenEsperado').textContent = formatearNumero(esperado);
+}
+
+/**
+ * Calcular diferencia en el cierre
+ */
+function calcularDiferenciaTurno() {
+    const efectivoContado = parseFloat(document.getElementById('efectivoContado').value) || 0;
+    const esperado = turnoActivo.baseInicial + parseFloat(document.getElementById('resumenVentasEfectivo').textContent.replace(/,/g, ''));
+    const diferencia = efectivoContado - esperado;
+    
+    const elemento = document.getElementById('resumenDiferencia');
+    elemento.textContent = `$${formatearNumero(Math.abs(diferencia))}`;
+    
+    if (diferencia > 0) {
+        elemento.className = 'text-success';
+        elemento.innerHTML = `<i class="bi bi-arrow-up-circle me-1"></i>+$${formatearNumero(diferencia)} (Sobrante)`;
+    } else if (diferencia < 0) {
+        elemento.className = 'text-danger';
+        elemento.innerHTML = `<i class="bi bi-arrow-down-circle me-1"></i>-$${formatearNumero(Math.abs(diferencia))} (Faltante)`;
+    } else {
+        elemento.className = 'text-primary';
+        elemento.innerHTML = `<i class="bi bi-check-circle me-1"></i>$0 (Exacto)`;
+    }
+}
+
+/**
+ * Cerrar turno
+ */
+function cerrarTurno() {
+    if (!confirm('¿Está seguro de cerrar el turno? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    const cierreTurno = {
+        ...turnoActivo,
+        cierre: new Date().toISOString(),
+        efectivoContado: parseFloat(document.getElementById('efectivoContado').value) || 0,
+        notasCierre: document.getElementById('notasCierreTurno').value
+    };
+    
+    // Guardar en historial (por ahora en localStorage)
+    const historial = JSON.parse(localStorage.getItem('historialTurnos') || '[]');
+    historial.push(cierreTurno);
+    localStorage.setItem('historialTurnos', JSON.stringify(historial));
+    
+    // Limpiar turno activo
+    localStorage.removeItem('turnoActivo');
+    turnoActivo = null;
+    
+    bootstrap.Modal.getInstance(document.getElementById('turnoCajaModal')).hide();
+    mostrarAlerta('Turno cerrado exitosamente', 'success');
+    reproducirSonido('success');
+}
+
+// ============================================
+// MODO RÁPIDO
+// ============================================
+
+/**
+ * Toggle modo rápido
+ */
+function toggleModoRapido(e) {
+    modoRapido = e.target.checked;
+    
+    if (modoRapido) {
+        mostrarAlerta('⚡ Modo Rápido activado - Cliente público automático', 'info');
+        // En modo rápido, si no hay cliente, seleccionar público general
+        if (!clienteSeleccionado) {
+            seleccionarPublicoGeneral();
+        }
+    } else {
+        mostrarAlerta('Modo Normal activado', 'info');
+    }
+}
+
+// ============================================
+// INICIALIZACIÓN ADICIONAL
+// ============================================
+
+// Cargar últimas ventas al iniciar
+setTimeout(() => {
+    cargarUltimasVentas();
+    // Actualizar cada 30 segundos
+    setInterval(cargarUltimasVentas, 30000);
+}, 2000);
