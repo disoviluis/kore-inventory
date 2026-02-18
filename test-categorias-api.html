@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Categorías</title>
+</head>
+<body>
+    <h1>Test API Categorías - EVEREST SA (ID 6)</h1>
+    <button onclick="testAPI()">Probar API</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('result');
+            result.textContent = 'Probando...\n\n';
+            
+            try {
+                // Test 1: Verificar token
+                const token = localStorage.getItem('token');
+                result.textContent += `✅ Token: ${token ? 'Existe' : '❌ NO EXISTE'}\n`;
+                
+                // Test 2: Verificar usuario
+                const usuario = JSON.parse(localStorage.getItem('usuario'));
+                result.textContent += `✅ Usuario: ${usuario ? usuario.nombre : '❌ NO EXISTE'}\n`;
+                
+                // Test 3: Verificar empresaActiva
+                const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
+                result.textContent += `✅ Empresa Activa: ${empresaActiva ? empresaActiva.nombre + ' (ID: ' + empresaActiva.id + ')' : '❌ NO EXISTE'}\n\n`;
+                
+                // Test 4: Llamar API de categorías
+                result.textContent += '--- Llamando API de categorías ---\n';
+                const empresaId = empresaActiva ? empresaActiva.id : 6;
+                const url = `http://18.191.181.99:3000/api/categorias?empresaId=${empresaId}`;
+                result.textContent += `URL: ${url}\n\n`;
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                result.textContent += `Status: ${response.status} ${response.statusText}\n`;
+                
+                const data = await response.json();
+                result.textContent += `Response:\n${JSON.stringify(data, null, 2)}`;
+                
+            } catch (error) {
+                result.textContent += `\n❌ ERROR: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
