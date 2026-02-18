@@ -604,6 +604,7 @@ function renderizarProductos() {
                                        value="${p.precio_unitario}" 
                                        min="0" step="0.01"
                                        onchange="actualizarPrecio(${index}, this.value)"
+                                       onkeypress="if(event.key === 'Enter') { actualizarPrecio(${index}, this.value); this.blur(); }"
                                        id="precioInput${index}"
                                        style="text-align: right;">
                             </div>
@@ -699,25 +700,31 @@ function actualizarCantidad(index, valor) {
 }
 
 function actualizarPrecio(index, valor) {
+    console.log('actualizarPrecio llamado:', { index, valor, valorType: typeof valor });
+    
     const precio = parseFloat(valor);
     if (isNaN(precio) || precio < 0) {
+        console.log('Precio inválido, renderizando productos');
         renderizarProductos();
         return;
     }
 
     const producto = productosVenta[index];
+    console.log('Producto antes de actualizar:', { ...producto });
     
     // Validar si el precio está fuera del rango permitido
     let advertencia = false;
     if (producto.precio_minimo && precio < producto.precio_minimo) {
         advertencia = true;
         if (!confirm(`⚠️ ALERTA: El precio ingresado ($${formatearNumero(precio)}) está por debajo del precio mínimo permitido ($${formatearNumero(producto.precio_minimo)}).\n\n¿Desea continuar de todas formas?`)) {
+            console.log('Usuario canceló cambio de precio por debajo del mínimo');
             renderizarProductos();
             return;
         }
     } else if (producto.precio_maximo && precio > producto.precio_maximo) {
         advertencia = true;
         if (!confirm(`⚠️ ALERTA: El precio ingresado ($${formatearNumero(precio)}) está por encima del precio máximo sugerido ($${formatearNumero(producto.precio_maximo)}).\n\n¿Desea continuar de todas formas?`)) {
+            console.log('Usuario canceló cambio de precio por encima del máximo');
             renderizarProductos();
             return;
         }
@@ -725,6 +732,9 @@ function actualizarPrecio(index, valor) {
     
     producto.precio_unitario = precio;
     producto.subtotal = producto.cantidad * precio;
+    
+    console.log('Producto después de actualizar:', { ...producto });
+    console.log('productosVenta completo:', productosVenta.map(p => ({ id: p.id, nombre: p.nombre, cantidad: p.cantidad, precio: p.precio_unitario, subtotal: p.subtotal })));
 
     renderizarProductos();
     calcularTotales();
