@@ -748,10 +748,12 @@
         
         <!-- USUARIOS MODULE (Super Admin) -->
         <div id="usuarios-adminModule" class="module-content" style="display: none;">
-            <div id="alertContainerUsuarios"></div>
-            
-            <!-- Page Header -->
-            <div class="page-header mb-4">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div id="alertContainerUsuarios"></div>
+                    
+                    <!-- Page Header -->
+                    <div class="page-header mb-4">
                 <div class="row align-items-center">
                     <div class="col-md-8">
                         <h2 class="page-title mb-1">Gestión de Usuarios</h2>
@@ -874,6 +876,8 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
                 </div>
             </div>
         </div><!-- END USUARIOS MODULE -->
@@ -1156,22 +1160,24 @@
 
         <!-- ROLES MODULE -->
         <div id="rolesModule" class="module-content" style="display: none;">
-            <div id="alertContainerRoles"></div>
-            
-            <!-- Page Header -->
-            <div class="page-header mb-4">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <h2 class="page-title mb-1">Gestión de Roles y Permisos</h2>
-                        <p class="text-muted mb-0">Administración de roles con permisos granulares por módulo y acción</p>
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div id="alertContainerRoles"></div>
+                    
+                    <!-- Page Header -->
+                    <div class="page-header mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h2 class="page-title mb-1">Gestión de Roles y Permisos</h2>
+                                <p class="text-muted mb-0">Administración de roles con permisos granulares por módulo y acción</p>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <button class="btn btn-primary" onclick="abrirModalRol()">
+                                    <i class="bi bi-plus-circle me-2"></i>Crear Rol
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-4 text-md-end">
-                        <button class="btn btn-primary" onclick="abrirModalRol()">
-                            <i class="bi bi-plus-circle me-2"></i>Crear Rol
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             <!-- Info Cards -->
             <div class="row g-3 mb-4">
@@ -1225,26 +1231,30 @@
                     </div>
                 </div>
             </div>
+                </div>
+            </div>
         </div><!-- END ROLES MODULE -->
 
         <!-- IMPUESTOS MODULE -->
         <div id="impuestosModule" class="module-content" style="display: none;">
-            <div id="alertContainerImpuestos"></div>
-            
-            <!-- Page Header -->
-            <div class="page-header mb-4">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <h2 class="page-title mb-1">Gestión de Impuestos</h2>
-                        <p class="text-muted mb-0">Configuración de impuestos adicionales (Retenciones, ICA, etc.)</p>
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div id="alertContainerImpuestos"></div>
+                    
+                    <!-- Page Header -->
+                    <div class="page-header mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h2 class="page-title mb-1">Gestión de Impuestos</h2>
+                                <p class="text-muted mb-0">Configuración de impuestos adicionales (Retenciones, ICA, etc.)</p>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <button class="btn btn-primary" onclick="abrirModalImpuesto()">
+                                    <i class="bi bi-plus-circle me-2"></i>Nuevo Impuesto
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-4 text-md-end">
-                        <button class="btn btn-primary" onclick="abrirModalImpuesto()">
-                            <i class="bi bi-plus-circle me-2"></i>Nuevo Impuesto
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             <!-- Info Cards -->
             <div class="row g-3 mb-4">
@@ -1293,6 +1303,8 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
                 </div>
             </div>
         </div><!-- END IMPUESTOS MODULE -->
