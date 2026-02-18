@@ -2859,7 +2859,7 @@ async function cargarUsuariosEmpresa() {
         ? new Date(usuario.ultimo_login).toLocaleDateString() 
         : 'Nunca';
       
-      const rolesHtml = usuario.roles_nombres
+      const rolesHtml = usuario.roles_nombres && typeof usuario.roles_nombres === 'string'
         ? usuario.roles_nombres.split(',').map(r => `<span class="badge bg-primary me-1">${r.trim()}</span>`).join('')
         : '<span class="text-muted">Sin roles</span>';
       
