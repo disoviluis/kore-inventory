@@ -267,6 +267,29 @@ export const createEmpresa = async (req: Request, res: Response) => {
       plan.max_facturas_mes
     ]);
 
+    // Crear categorías por defecto para la nueva empresa
+    const categoriasDefault = [
+      ['Electrónica', 'Productos electrónicos y tecnología', 'bi-laptop', '#3B82F6'],
+      ['Ropa y Accesorios', 'Vestimenta y complementos', 'bi-bag', '#8B5CF6'],
+      ['Alimentos y Bebidas', 'Productos alimenticios', 'bi-cup-straw', '#10B981'],
+      ['Hogar y Decoración', 'Artículos para el hogar', 'bi-house', '#F59E0B'],
+      ['Salud y Belleza', 'Productos de cuidado personal', 'bi-heart-pulse', '#EC4899'],
+      ['Deportes', 'Artículos deportivos y fitness', 'bi-trophy', '#EF4444'],
+      ['Libros y Papelería', 'Material de oficina y lectura', 'bi-book', '#6366F1'],
+      ['Juguetes', 'Juguetes y entretenimiento', 'bi-controller', '#F97316'],
+      ['Herramientas', 'Herramientas y ferretería', 'bi-tools', '#64748B'],
+      ['Otros', 'Productos varios sin categoría específica', 'bi-box', '#9CA3AF']
+    ];
+
+    for (const [nombre, descripcion, icono, color] of categoriasDefault) {
+      await connection.query(`
+        INSERT INTO categorias (empresa_id, nombre, descripcion, icono, color, activo)
+        VALUES (?, ?, ?, ?, ?, 1)
+      `, [empresaId, nombre, descripcion, icono, color]);
+    }
+
+    logger.info(`${categoriasDefault.length} categorías por defecto creadas para empresa ${empresaId}`);
+
     // TODO: Crear configuraciones por defecto cuando la tabla exista
     // const configuracionesDefault = [
     //   ['moneda_simbolo', '$', 'texto', 'general', 'Símbolo de la moneda'],
