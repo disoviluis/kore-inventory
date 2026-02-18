@@ -365,19 +365,20 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
       empresaIdFinal = empresa_id || null;
     }
 
-    // Validar que no exista un rol con el mismo nombre en la empresa
+    // Validar que no exista un rol con el mismo nombre en la MISMA empresa
+    // Solo comparamos dentro del scope de la empresa actual
     const [existentes] = await connection.execute<RowDataPacket[]>(
       `SELECT id FROM roles 
        WHERE nombre = ? 
-       AND (empresa_id = ? OR (empresa_id IS NULL AND ? IS NULL))`,
-      [nombre.trim(), empresaIdFinal, empresaIdFinal]
+       AND empresa_id <=> ?`,
+      [nombre.trim(), empresaIdFinal]
     );
 
     if (existentes.length > 0) {
       await connection.rollback();
       res.status(400).json({
         success: false,
-        message: 'Ya existe un rol con ese nombre'
+        message: 'Ya existe un rol con ese nombre en esta empresa'
       });
       return;
     }
@@ -513,6 +514,24 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
       const params: any[] = [];
 
       if (nombre && nombre.trim()) {
+        // Validar que no exista otro rol con el mismo nombre en la misma empresa
+        const [existentes] = await connection.execute<RowDataPacket[]>(
+          `SELECT id FROM roles 
+           WHERE nombre = ? 
+           AND empresa_id <=> ?
+           AND id != ?`,
+          [nombre.trim(), rol.empresa_id, id]
+        );
+
+        if (existentes.length > 0) {
+          await connection.rollback();
+          res.status(400).json({
+            success: false,
+            message: 'Ya existe otro rol con ese nombre en esta empresa'
+          });
+          return;
+        }
+
         updates.push('nombre = ?');
         params.push(nombre.trim());
         
