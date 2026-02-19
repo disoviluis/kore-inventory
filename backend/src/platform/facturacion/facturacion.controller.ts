@@ -59,24 +59,24 @@ export const getConfiguracionFacturacion = async (req: Request, res: Response): 
 export const updateConfiguracionFacturacion = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { empresaId } = req.params;
-    const {
-      mostrar_logo,
-      logo_posicion,
-      mostrar_slogan,
-      color_primario,
-      color_secundario,
-      fuente,
-      tamano_fuente,
-      pie_pagina,
-      terminos_condiciones,
-      notas_predeterminadas,
-      mensaje_agradecimiento,
-      mostrar_qr,
-      mostrar_cufe,
-      mostrar_firma,
-      texto_firma,
-      cuentas_bancarias
-    } = req.body;
+    
+    // Obtener valores del body y convertir undefined a null
+    const mostrar_logo = req.body.mostrar_logo ?? null;
+    const logo_posicion = req.body.logo_posicion ?? null;
+    const mostrar_slogan = req.body.mostrar_slogan ?? null;
+    const color_primario = req.body.color_primario ?? null;
+    const color_secundario = req.body.color_secundario ?? null;
+    const fuente = req.body.fuente ?? null;
+    const tamano_fuente = req.body.tamano_fuente ?? null;
+    const pie_pagina = req.body.pie_pagina ?? null;
+    const terminos_condiciones = req.body.terminos_condiciones ?? null;
+    const notas_predeterminadas = req.body.notas_predeterminadas ?? null;
+    const mensaje_agradecimiento = req.body.mensaje_agradecimiento ?? null;
+    const mostrar_qr = req.body.mostrar_qr ?? null;
+    const mostrar_cufe = req.body.mostrar_cufe ?? null;
+    const mostrar_firma = req.body.mostrar_firma ?? null;
+    const texto_firma = req.body.texto_firma ?? null;
+    const cuentas_bancarias = req.body.cuentas_bancarias ? JSON.stringify(req.body.cuentas_bancarias) : null;
 
     // Verificar si existe la configuración
     const existe = await query(
@@ -99,7 +99,7 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
           color_primario, color_secundario, fuente, tamano_fuente,
           pie_pagina, terminos_condiciones, notas_predeterminadas,
           mensaje_agradecimiento, mostrar_qr, mostrar_cufe,
-          mostrar_firma, texto_firma, JSON.stringify(cuentas_bancarias)
+          mostrar_firma, texto_firma, cuentas_bancarias
         ]
       );
     } else {
@@ -129,7 +129,7 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
           color_primario, color_secundario, fuente, tamano_fuente,
           pie_pagina, terminos_condiciones, notas_predeterminadas,
           mensaje_agradecimiento, mostrar_qr, mostrar_cufe,
-          mostrar_firma, texto_firma, JSON.stringify(cuentas_bancarias),
+          mostrar_firma, texto_firma, cuentas_bancarias,
           empresaId
         ]
       );
@@ -265,15 +265,15 @@ export const createRetencion = async (req: Request, res: Response): Promise<Resp
 export const updateRetencion = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params;
-    const {
-      codigo,
-      nombre,
-      tipo,
-      porcentaje,
-      base_minima,
-      descripcion,
-      activo
-    } = req.body;
+    
+    // Convertir undefined a null
+    const codigo = req.body.codigo ?? null;
+    const nombre = req.body.nombre ?? null;
+    const tipo = req.body.tipo ?? null;
+    const porcentaje = req.body.porcentaje ?? null;
+    const base_minima = req.body.base_minima ?? null;
+    const descripcion = req.body.descripcion ?? null;
+    const activo = req.body.activo ?? null;
 
     await query(
       `UPDATE retenciones SET
