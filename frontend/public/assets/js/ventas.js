@@ -965,6 +965,14 @@ function actualizarEstadoPago() {
     const pendiente = totalVentaActual - totalPagado;
     const cambio = totalPagado - totalVentaActual;
     
+    console.log('=== actualizarEstadoPago ===');
+    console.log('totalVentaActual:', totalVentaActual);
+    console.log('totalPagado:', totalPagado);
+    console.log('pendiente:', pendiente);
+    console.log('cambio:', cambio);
+    console.log('clienteSeleccionado:', clienteSeleccionado);
+    console.log('productosVenta.length:', productosVenta.length);
+    
     // Actualizar resumen de pagos
     document.getElementById('totalVentaPagos').textContent = `$${formatearNumero(totalVentaActual)}`;
     document.getElementById('totalPagado').textContent = `$${formatearNumero(totalPagado)}`;
@@ -1001,6 +1009,12 @@ function actualizarEstadoPago() {
     const pagoCompleto = pendiente <= 0.01; // Permitir si está pagado o sobrepagado
     const tieneCliente = !!clienteSeleccionado;
     const tieneProductos = productosVenta.length > 0;
+    
+    console.log('Condiciones para habilitar botón:');
+    console.log('  - pagoCompleto:', pagoCompleto, '(pendiente <= 0.01)');
+    console.log('  - tieneCliente:', tieneCliente);
+    console.log('  - tieneProductos:', tieneProductos);
+    console.log('  - btnGuardar.disabled será:', !tieneCliente || !tieneProductos || !pagoCompleto);
     
     btnGuardar.disabled = !tieneCliente || !tieneProductos || !pagoCompleto;
 }
