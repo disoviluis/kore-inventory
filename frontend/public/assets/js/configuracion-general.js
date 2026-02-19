@@ -575,9 +575,9 @@ async function cargarDatosEmpresa() {
             
             // Resolución DIAN
             document.getElementById('empresaResolucionDian').value = empresa.resolucion_dian || '';
-            document.getElementById('empresaFechaResolucion').value = empresa.fecha_resolucion || '';
-            document.getElementById('empresaFechaResolucionDesde').value = empresa.fecha_resolucion_desde || '';
-            document.getElementById('empresaFechaResolucionHasta').value = empresa.fecha_resolucion_hasta || '';
+            document.getElementById('empresaFechaResolucion').value = empresa.fecha_resolucion ? empresa.fecha_resolucion.split('T')[0] : '';
+            document.getElementById('empresaFechaResolucionDesde').value = empresa.fecha_resolucion_desde ? empresa.fecha_resolucion_desde.split('T')[0] : '';
+            document.getElementById('empresaFechaResolucionHasta').value = empresa.fecha_resolucion_hasta ? empresa.fecha_resolucion_hasta.split('T')[0] : '';
             document.getElementById('empresaPrefijoFactura').value = empresa.prefijo_factura || 'FAC';
             document.getElementById('empresaRangoFacturaDesde').value = empresa.rango_factura_desde || '';
             document.getElementById('empresaRangoFacturaHasta').value = empresa.rango_factura_hasta || '';
