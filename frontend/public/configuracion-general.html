@@ -434,63 +434,182 @@
                                             <input type="hidden" id="empresaId">
                                             
                                             <div class="row">
-                                                <!-- Información Básica -->
-                                                <div class="col-12 mb-4">
+                                                <!-- ===== INFORMACIÓN BÁSICA ===== -->
+                                                <div class="col-12 mb-3">
                                                     <h6 class="border-bottom pb-2 mb-3">
                                                         <i class="bi bi-info-circle text-primary me-2"></i>Información Básica
                                                     </h6>
                                                 </div>
                                                 
                                                 <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Nombre de la Empresa <span class="text-danger">*</span></label>
+                                                    <label class="form-label">Nombre Comercial <span class="text-danger">*</span></label>
                                                     <input type="text" class="form-control" id="empresaNombre" required>
+                                                    <small class="text-muted">Nombre que aparece en las facturas</small>
                                                 </div>
                                                 
                                                 <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Razón Social</label>
+                                                    <input type="text" class="form-control" id="empresaRazonSocial">
+                                                    <small class="text-muted">Nombre legal completo (S.A.S., Ltda., etc.)</small>
+                                                </div>
+                                                
+                                                <div class="col-md-4 mb-3">
                                                     <label class="form-label">NIT/RUT <span class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" id="empresaNit" required>
+                                                    <input type="text" class="form-control" id="empresaNit" required placeholder="900.123.456-7">
                                                 </div>
                                                 
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Email</label>
-                                                    <input type="email" class="form-control" id="empresaEmail">
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="form-label">Email Comercial <span class="text-danger">*</span></label>
+                                                    <input type="email" class="form-control" id="empresaEmail" required>
                                                 </div>
                                                 
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Teléfono</label>
-                                                    <input type="tel" class="form-control" id="empresaTelefono">
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="form-label">Teléfono Principal</label>
+                                                    <input type="tel" class="form-control" id="empresaTelefono" placeholder="(601) 123-4567">
+                                                </div>
+                                                
+                                                <!-- ===== UBICACIÓN ===== -->
+                                                <div class="col-12 mb-3 mt-3">
+                                                    <h6 class="border-bottom pb-2 mb-3">
+                                                        <i class="bi bi-geo-alt text-primary me-2"></i>Ubicación
+                                                    </h6>
                                                 </div>
                                                 
                                                 <div class="col-12 mb-3">
-                                                    <label class="form-label">Dirección</label>
-                                                    <textarea class="form-control" id="empresaDireccion" rows="2"></textarea>
+                                                    <label class="form-label">Dirección Fiscal</label>
+                                                    <input type="text" class="form-control" id="empresaDireccion" placeholder="Carrera 7 No. 71-21 Torre B Piso 12">
                                                 </div>
                                                 
-                                                <!-- Información Adicional -->
-                                                <div class="col-12 mb-4 mt-3">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Ciudad</label>
+                                                    <input type="text" class="form-control" id="empresaCiudad" placeholder="Bogotá D.C.">
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">País</label>
+                                                    <input type="text" class="form-control" id="empresaPais" value="Colombia">
+                                                </div>
+                                                
+                                                <!-- ===== INFORMACIÓN FISCAL ===== -->
+                                                <div class="col-12 mb-3 mt-3">
                                                     <h6 class="border-bottom pb-2 mb-3">
-                                                        <i class="bi bi-building text-primary me-2"></i>Información Adicional
+                                                        <i class="bi bi-calculator text-primary me-2"></i>Información Fiscal
+                                                    </h6>
+                                                </div>
+                                                
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="form-label">Régimen Tributario <span class="text-danger">*</span></label>
+                                                    <select class="form-select" id="empresaRegimenTributario" required>
+                                                        <option value="simplificado">Régimen Simplificado</option>
+                                                        <option value="común">Régimen Común</option>
+                                                        <option value="especial">Régimen Especial</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="form-label">Tipo Contribuyente</label>
+                                                    <select class="form-select" id="empresaTipoContribuyente">
+                                                        <option value="persona_natural">Persona Natural</option>
+                                                        <option value="persona_juridica" selected>Persona Jurídica</option>
+                                                    </select>
+                                                </div>
+                                                
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="form-label d-block">Responsabilidades Fiscales</label>
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="checkbox" id="empresaGranContribuyente">
+                                                        <label class="form-check-label" for="empresaGranContribuyente">
+                                                            Gran Contribuyente
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="checkbox" id="empresaAutoretenedor">
+                                                        <label class="form-check-label" for="empresaAutoretenedor">
+                                                            Autoretenedor
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- ===== RESOLUCIÓN DIAN (FACTURACIÓN ELECTRÓNICA) ===== -->
+                                                <div class="col-12 mb-3 mt-3">
+                                                    <h6 class="border-bottom pb-2 mb-3">
+                                                        <i class="bi bi-file-earmark-text text-primary me-2"></i>Resolución DIAN - Facturación Electrónica
+                                                    </h6>
+                                                    <div class="alert alert-info mb-3">
+                                                        <i class="bi bi-info-circle me-2"></i>
+                                                        <strong>Importante:</strong> Esta información es obligatoria para generar facturas electrónicas válidas ante la DIAN.
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Número Resolución DIAN</label>
+                                                    <input type="text" class="form-control" id="empresaResolucionDian" placeholder="18764000045892">
+                                                    <small class="text-muted">Número de habilitación DIAN</small>
+                                                </div>
+                                                
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Fecha Inicio Vigencia</label>
+                                                    <input type="date" class="form-control" id="empresaFechaResolucionDesde">
+                                                </div>
+                                                
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Fecha Fin Vigencia</label>
+                                                    <input type="date" class="form-control" id="empresaFechaResolucionHasta">
+                                                </div>
+                                                
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Prefijo Factura</label>
+                                                    <input type="text" class="form-control" id="empresaPrefijoFactura" placeholder="FAC" maxlength="10">
+                                                    <small class="text-muted">Ej: FAC, FVEN, etc.</small>
+                                                </div>
+                                                
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Rango Desde</label>
+                                                    <input type="number" class="form-control" id="empresaRangoFacturaDesde" placeholder="1">
+                                                </div>
+                                                
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Rango Hasta</label>
+                                                    <input type="number" class="form-control" id="empresaRangoFacturaHasta" placeholder="100000">
+                                                </div>
+                                                
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Numeración Actual</label>
+                                                    <input type="number" class="form-control" id="empresaNumeracionActual" placeholder="156" readonly>
+                                                    <small class="text-muted">Consecutivo automático</small>
+                                                </div>
+                                                
+                                                <!-- ===== BRANDING Y WEB ===== -->
+                                                <div class="col-12 mb-3 mt-3">
+                                                    <h6 class="border-bottom pb-2 mb-3">
+                                                        <i class="bi bi-palette text-primary me-2"></i>Imagen Corporativa
                                                     </h6>
                                                 </div>
                                                 
                                                 <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Sitio Web</label>
-                                                    <input type="url" class="form-control" id="empresaWeb" placeholder="https://ejemplo.com">
+                                                    <label class="form-label">Logo URL</label>
+                                                    <input type="url" class="form-control" id="empresaLogoUrl" placeholder="https://ejemplo.com/logo.png">
+                                                    <small class="text-muted">URL completa del logo (aparece en facturas)</small>
                                                 </div>
                                                 
                                                 <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Logo URL</label>
-                                                    <input type="url" class="form-control" id="empresaLogo" placeholder="https://ejemplo.com/logo.png">
-                                                    <small class="form-text text-muted">URL completa de la imagen del logo</small>
+                                                    <label class="form-label">Sitio Web</label>
+                                                    <input type="url" class="form-control" id="empresaSitioWeb" placeholder="https://www.empresa.com">
+                                                </div>
+                                                
+                                                <div class="col-12 mb-3">
+                                                    <label class="form-label">Slogan</label>
+                                                    <input type="text" class="form-control" id="empresaSlogan" placeholder="Soluciones que elevan tu negocio">
+                                                    <small class="text-muted">Frase promocional (opcional)</small>
                                                 </div>
                                                 
                                                 <div class="col-12 mb-3">
                                                     <label class="form-label">Descripción</label>
-                                                    <textarea class="form-control" id="empresaDescripcion" rows="3"></textarea>
+                                                    <textarea class="form-control" id="empresaDescripcion" rows="2" placeholder="Breve descripción de la empresa y sus servicios"></textarea>
                                                 </div>
                                                 
                                                 <!-- Botones -->
-                                                <div class="col-12 mt-3">
+                                                <div class="col-12 mt-4">
                                                     <button type="submit" class="btn btn-primary">
                                                         <i class="bi bi-save me-2"></i>Guardar Cambios
                                                     </button>

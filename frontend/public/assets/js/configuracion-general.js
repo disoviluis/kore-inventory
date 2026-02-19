@@ -533,6 +533,7 @@ async function cargarDatosEmpresa() {
     const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
     if (!empresaActiva || !empresaActiva.id) {
         console.error('No hay empresa activa seleccionada');
+        showNotification('No hay empresa seleccionada', 'warning');
         return;
     }
 
@@ -544,26 +545,52 @@ async function cargarDatosEmpresa() {
             }
         });
 
-        if (!response.ok) throw new Error('Error al cargar empresa');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error al cargar empresa');
+        }
 
         const data = await response.json();
         if (data.success && data.data) {
             const empresa = data.data;
             
-            // Llenar el formulario
+            // Información Básica
             document.getElementById('empresaId').value = empresa.id || '';
             document.getElementById('empresaNombre').value = empresa.nombre || '';
+            document.getElementById('empresaRazonSocial').value = empresa.razon_social || '';
             document.getElementById('empresaNit').value = empresa.nit || '';
             document.getElementById('empresaEmail').value = empresa.email || '';
             document.getElementById('empresaTelefono').value = empresa.telefono || '';
+            
+            // Ubicación
             document.getElementById('empresaDireccion').value = empresa.direccion || '';
-            document.getElementById('empresaWeb').value = empresa.sitio_web || '';
-            document.getElementById('empresaLogo').value = empresa.logo_url || '';
+            document.getElementById('empresaCiudad').value = empresa.ciudad || '';
+            document.getElementById('empresaPais').value = empresa.pais || 'Colombia';
+            
+            // Información Fiscal
+            document.getElementById('empresaRegimenTributario').value = empresa.regimen_tributario || 'simplificado';
+            document.getElementById('empresaTipoContribuyente').value = empresa.tipo_contribuyente || 'persona_juridica';
+            document.getElementById('empresaGranContribuyente').checked = empresa.gran_contribuyente || false;
+            document.getElementById('empresaAutoretenedor').checked = empresa.autoretenedor || false;
+            
+            // Resolución DIAN
+            document.getElementById('empresaResolucionDian').value = empresa.resolucion_dian || '';
+            document.getElementById('empresaFechaResolucionDesde').value = empresa.fecha_resolucion_desde || '';
+            document.getElementById('empresaFechaResolucionHasta').value = empresa.fecha_resolucion_hasta || '';
+            document.getElementById('empresaPrefijoFactura').value = empresa.prefijo_factura || 'FAC';
+            document.getElementById('empresaRangoFacturaDesde').value = empresa.rango_factura_desde || '';
+            document.getElementById('empresaRangoFacturaHasta').value = empresa.rango_factura_hasta || '';
+            document.getElementById('empresaNumeracionActual').value = empresa.numeracion_actual || 1;
+            
+            // Branding
+            document.getElementById('empresaLogoUrl').value = empresa.logo_url || '';
+            document.getElementById('empresaSitioWeb').value = empresa.sitio_web || '';
+            document.getElementById('empresaSlogan').value = empresa.slogan || '';
             document.getElementById('empresaDescripcion').value = empresa.descripcion || '';
         }
     } catch (error) {
         console.error('Error al cargar datos de empresa:', error);
-        showNotification('Error al cargar los datos de la empresa', 'danger');
+        showNotification(error.message || 'Error al cargar los datos de la empresa', 'danger');
     }
 }
 
@@ -571,13 +598,37 @@ async function guardarDatosEmpresa() {
     const empresaId = document.getElementById('empresaId').value;
     
     const datosEmpresa = {
+        // Información Básica
         nombre: document.getElementById('empresaNombre').value.trim(),
+        razon_social: document.getElementById('empresaRazonSocial').value.trim() || null,
         nit: document.getElementById('empresaNit').value.trim(),
-        email: document.getElementById('empresaEmail').value.trim() || null,
+        email: document.getElementById('empresaEmail').value.trim(),
         telefono: document.getElementById('empresaTelefono').value.trim() || null,
+        
+        // Ubicación
         direccion: document.getElementById('empresaDireccion').value.trim() || null,
-        sitio_web: document.getElementById('empresaWeb').value.trim() || null,
-        logo_url: document.getElementById('empresaLogo').value.trim() || null,
+        ciudad: document.getElementById('empresaCiudad').value.trim() || null,
+        pais: document.getElementById('empresaPais').value.trim() || 'Colombia',
+        
+        // Información Fiscal
+        regimen_tributario: document.getElementById('empresaRegimenTributario').value,
+        tipo_contribuyente: document.getElementById('empresaTipoContribuyente').value,
+        gran_contribuyente: document.getElementById('empresaGranContribuyente').checked,
+        autoretenedor: document.getElementById('empresaAutoretenedor').checked,
+        
+        // Resolución DIAN
+        resolucion_dian: document.getElementById('empresaResolucionDian').value.trim() || null,
+        fecha_resolucion_desde: document.getElementById('empresaFechaResolucionDesde').value || null,
+        fecha_resolucion_hasta: document.getElementById('empresaFechaResolucionHasta').value || null,
+        prefijo_factura: document.getElementById('empresaPrefijoFactura').value.trim() || 'FAC',
+        rango_factura_desde: parseInt(document.getElementById('empresaRangoFacturaDesde').value) || null,
+        rango_factura_hasta: parseInt(document.getElementById('empresaRangoFacturaHasta').value) || null,
+        numeracion_actual: parseInt(document.getElementById('empresaNumeracionActual').value) || 1,
+        
+        // Branding
+        logo_url: document.getElementById('empresaLogoUrl').value.trim() || null,
+        sitio_web: document.getElementById('empresaSitioWeb').value.trim() || null,
+        slogan: document.getElementById('empresaSlogan').value.trim() || null,
         descripcion: document.getElementById('empresaDescripcion').value.trim() || null
     };
 
@@ -588,6 +639,10 @@ async function guardarDatosEmpresa() {
     }
     if (!datosEmpresa.nit) {
         showNotification('El NIT/RUT es obligatorio', 'warning');
+        return;
+    }
+    if (!datosEmpresa.email) {
+        showNotification('El email es obligatorio', 'warning');
         return;
     }
 
