@@ -1119,6 +1119,14 @@ async function guardarVenta() {
     });
     
     const total = baseImponible + impuesto + totalImpuestosAdicionales;
+    
+    // Determinar método de pago para mostrar en factura
+    let metodoPagoResumen = 'No especificado';
+    if (pagosPendientes.length === 1) {
+        metodoPagoResumen = pagosPendientes[0].metodo_pago;
+    } else if (pagosPendientes.length > 1) {
+        metodoPagoResumen = 'Múltiple';
+    }
 
     const ventaData = {
         empresa_id: currentEmpresa?.id,
@@ -1128,6 +1136,7 @@ async function guardarVenta() {
         descuento: descuento,
         impuesto: impuesto,
         total: total,
+        metodo_pago: metodoPagoResumen,
         notas: document.getElementById('notasVenta').value || null,
         impuestos: impuestosVenta,
         pagos: pagosPendientes,
