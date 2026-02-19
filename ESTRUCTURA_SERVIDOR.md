@@ -63,10 +63,14 @@ Nombre proceso: kore-backend
 ID: 1
 Estado: online ✅
 Puerto: 3000
-Directorio ejecución: /home/ubuntu/kore-inventory/backend
+Directorio código: /home/ubuntu/kore-inventory/backend
+Directorio ejecución: /var/www/kore/kore-inventory/backend
 Comando: npm run dev
 Uptime actual: 3+ días
 ```
+
+**IMPORTANTE:** El backend se ejecuta desde `/var/www/kore/kore-inventory/backend` (symlink)  
+**Repositorio Git:** `/home/ubuntu/kore-inventory` (código fuente)
 
 **Verificar con:** `pm2 status`
 
@@ -102,10 +106,14 @@ cd ~/kore-inventory
 git pull origin main
 
 # 3. Si cambiaste BACKEND (archivos .ts en /backend/src/):
-cd backend
-npm install              # Si hay nuevas dependencias
-pm2 restart kore-backend
-pm2 logs --lines 20      # Verificar que inició bien
+cd ~/kore-inventory/backend  # Desde el repositorio git
+npm install                   # Si hay nuevas dependencias
+npm run build                 # Compilar TypeScript a JavaScript
+pm2 restart kore-backend     # Reiniciar proceso PM2
+pm2 logs kore-backend --lines 20  # Verificar que inició bien
+
+# NOTA: PM2 ejecuta desde /var/www/kore/kore-inventory/backend (symlink)
+#       pero los cambios se hacen en /home/ubuntu/kore-inventory
 
 # 4. Si cambiaste FRONTEND (archivos .html, .js, .css):
 # ✅ NO HACE FALTA NADA
