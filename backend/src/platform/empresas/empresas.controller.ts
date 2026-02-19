@@ -89,6 +89,7 @@ export const getEmpresaById = async (req: Request, res: Response): Promise<Respo
         agente_retenedor_iva,
         agente_retenedor_ica,
         resolucion_dian,
+        fecha_resolucion,
         fecha_resolucion_desde,
         fecha_resolucion_hasta,
         prefijo_factura,
@@ -223,8 +224,8 @@ export const updateEmpresa = async (req: Request, res: Response): Promise<Respon
       logo_url, sitio_web, descripcion, slogan, regimen_tributario,
       tipo_contribuyente, gran_contribuyente, autoretenedor,
       agente_retenedor_iva, agente_retenedor_ica, resolucion_dian,
-      fecha_resolucion_desde, fecha_resolucion_hasta, prefijo_factura,
-      rango_factura_desde, rango_factura_hasta, numeracion_actual,
+      fecha_resolucion, fecha_resolucion_desde, fecha_resolucion_hasta, 
+      prefijo_factura, rango_factura_desde, rango_factura_hasta, numeracion_actual,
       software_id, pin_software, ambiente
     } = req.body;
 
@@ -243,8 +244,8 @@ export const updateEmpresa = async (req: Request, res: Response): Promise<Respon
         ciudad = ?, pais = ?, logo_url = ?, sitio_web = ?, descripcion = ?, slogan = ?,
         regimen_tributario = ?, tipo_contribuyente = ?, gran_contribuyente = ?, autoretenedor = ?,
         agente_retenedor_iva = ?, agente_retenedor_ica = ?, resolucion_dian = ?,
-        fecha_resolucion_desde = ?, fecha_resolucion_hasta = ?, prefijo_factura = ?,
-        rango_factura_desde = ?, rango_factura_hasta = ?, numeracion_actual = ?,
+        fecha_resolucion = ?, fecha_resolucion_desde = ?, fecha_resolucion_hasta = ?, 
+        prefijo_factura = ?, rango_factura_desde = ?, rango_factura_hasta = ?, numeracion_actual = ?,
         software_id = ?, pin_software = ?, ambiente = ?, updated_at = NOW()
       WHERE id = ?`,
       [
@@ -253,9 +254,9 @@ export const updateEmpresa = async (req: Request, res: Response): Promise<Respon
         descripcion || null, slogan || null, regimen_tributario || 'simplificado',
         tipo_contribuyente || 'persona_juridica', gran_contribuyente || false, autoretenedor || false,
         agente_retenedor_iva || false, agente_retenedor_ica || false, resolucion_dian || null,
-        fecha_resolucion_desde || null, fecha_resolucion_hasta || null, prefijo_factura || 'FAC',
-        rango_factura_desde || null, rango_factura_hasta || null, numeracion_actual || 1,
-        software_id || null, pin_software || null, ambiente || 'pruebas', id
+        fecha_resolucion || null, fecha_resolucion_desde || null, fecha_resolucion_hasta || null, 
+        prefijo_factura || 'FAC', rango_factura_desde || null, rango_factura_hasta || null, 
+        numeracion_actual || 1, software_id || null, pin_software || null, ambiente || 'pruebas', id
       ]
     );
 

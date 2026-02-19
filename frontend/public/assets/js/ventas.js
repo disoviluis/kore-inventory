@@ -1488,8 +1488,8 @@ function mostrarFactura(venta, ventaData) {
             <!-- Resolución DIAN -->
             ${currentEmpresa.resolucion_dian ? `
             <div class="mb-3 p-2" style="background-color: #f8f9fa; border-left: 3px solid #28a745; font-size: 0.85rem;">
-                <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian}<br>
-                <strong>Fecha Resolución:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)}<br>
+                <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian}${currentEmpresa.fecha_resolucion ? ` del ${formatearFecha(currentEmpresa.fecha_resolucion)}` : ''}<br>
+                <strong>Vigencia:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)}<br>
                 <strong>Rango Autorizado:</strong> ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_desde || 1).padStart(6, '0')} al ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_hasta || 100000).padStart(6, '0')}<br>
                 <strong>Ambiente:</strong> ${currentEmpresa.ambiente === 'produccion' ? 'Producción' : 'Pruebas'}
             </div>
@@ -2030,8 +2030,8 @@ function generarHTMLImpresion(formatoTermico = false) {
     
     ${currentEmpresa.resolucion_dian ? `
     <div class="resolucion-dian">
-        <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian} | 
-        <strong>Fecha:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)}<br>
+        <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian}${currentEmpresa.fecha_resolucion ? ` del ${formatearFecha(currentEmpresa.fecha_resolucion)}` : ''}<br>
+        <strong>Vigencia:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)} | 
         <strong>Rango Autorizado:</strong> ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_desde || 1).padStart(6, '0')} al ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_hasta || 100000).padStart(6, '0')} | 
         <strong>Ambiente:</strong> ${currentEmpresa.ambiente === 'produccion' ? 'Producción' : 'Pruebas'}
     </div>
