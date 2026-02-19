@@ -138,9 +138,24 @@ SELECT id, 'RETEIVA', 'Retención IVA', 'reteiva', 15.00, 0 FROM empresas;
 INSERT IGNORE INTO retenciones (empresa_id, codigo, nombre, tipo, porcentaje, base_minima) 
 SELECT id, 'RETEFUENTE', 'Retención en la Fuente', 'retefuente', 2.50, 0 FROM empresas;
 
--- Índices
-CREATE INDEX IF NOT EXISTS idx_ventas_numero_factura ON ventas(numero_factura);
-CREATE INDEX IF NOT EXISTS idx_clientes_documento ON clientes(documento);
+-- Índices (crear solo si no existen)
+SET @index_exists = (SELECT COUNT(*) FROM information_schema.statistics 
+    WHERE table_schema = DATABASE() AND table_name = 'ventas' AND index_name = 'idx_ventas_numero_factura');
+SET @sql = IF(@index_exists = 0, 
+    'CREATE INDEX idx_ventas_numero_factura ON ventas(numero_factura)', 
+    'SELECT "Índice idx_ventas_numero_factura ya existe" AS mensaje');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (SELECT COUNT(*) FROM information_schema.statistics 
+    WHERE table_schema = DATABASE() AND table_name = 'clientes' AND index_name = 'idx_clientes_documento');
+SET @sql = IF(@index_exists = 0, 
+    'CREATE INDEX idx_clientes_documento ON clientes(documento)', 
+    'SELECT "Índice idx_clientes_documento ya existe" AS mensaje');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Limpiar
 DROP PROCEDURE IF EXISTS add_column_if_not_exists;
