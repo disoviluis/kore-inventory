@@ -81,11 +81,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        // Actualizar datos de empresa desde backend si están incompletos
-        if (!currentEmpresa.telefono || !currentEmpresa.slogan || !currentEmpresa.resolucion_dian) {
-            console.log('⚠️ Datos de empresa incompletos, actualizando desde backend...');
-            await actualizarDatosEmpresa(currentEmpresa.id);
-        }
+        // SIEMPRE actualizar datos de empresa desde backend para asegurar datos completos
+        console.log('🔄 Actualizando datos de empresa desde backend...');
+        await actualizarDatosEmpresa(currentEmpresa.id);
 
         // Cargar impuestos activos de la empresa
         await cargarImpuestosActivos();
