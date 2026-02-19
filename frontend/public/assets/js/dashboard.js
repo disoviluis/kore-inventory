@@ -103,6 +103,9 @@ function cargarDatosUsuario(usuario) {
   
   // Cargar empresas del usuario
   cargarEmpresas(usuario.id);
+  
+  // Verificar configuración de facturación
+  verificarConfiguracionFacturacion();
 }
 
 /**
@@ -3315,4 +3318,141 @@ function limpiarFiltrosUsuarios() {
   document.getElementById('searchUsuarios').value = '';
   document.getElementById('filterUsuarioActivo').value = '';
   filtrarUsuarios();
+}
+
+/**
+ * =====================================================
+ * VERIFICACIÓN DE CONFIGURACIÓN DE FACTURACIÓN
+ * =====================================================
+ */
+
+/**
+ * Verificar si la empresa tiene configuración de facturación completa
+ */
+async function verificarConfiguracionFacturacion() {
+  const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+  const token = localStorage.getItem('token');
+  
+  if (!usuario || !usuario.empresa_id) {
+    return; // No hay empresa asociada
+  }
+  
+  const alertElement = document.getElementById('alertConfiguracionPendiente');
+  if (!alertElement) return;
+  
+  try {
+    const response = await fetch(`${API_URL}/facturacion/configuracion/${usuario.empresa_id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success || !result.data) {
+      // No hay configuración, mostrar alerta
+      mostrarAlertaConfiguracion({
+        color_primario: false,
+        color_secundario: false,
+        fuente: false,
+        cuentas_bancarias: false,
+        mensaje_agradecimiento: false
+      });
+      return;
+    }
+    
+    // Verificar qué configuraciones faltan
+    const config = result.data;
+    const configuracionesFaltantes = {
+      color_primario: !config.color_primario,
+      color_secundario: !config.color_secundario,
+      fuente: !config.fuente,
+      cuentas_bancarias: !config.cuentas_bancarias || 
+                         (typeof config.cuentas_bancarias === 'string' && 
+                          JSON.parse(config.cuentas_bancarias || '[]').length === 0),
+      mensaje_agradecimiento: !config.mensaje_agradecimiento
+    };
+    
+    // Verificar si faltan configuraciones importantes
+    const algunaFaltante = Object.values(configuracionesFaltantes).some(falta => falta);
+    
+    if (algunaFaltante) {
+      mostrarAlertaConfiguracion(configuracionesFaltantes);
+    } else {
+      // Todo configurado, ocultar alerta
+      alertElement.style.display = 'none';
+    }
+    
+  } catch (error) {
+    console.error('Error verificando configuración:', error);
+    // No mostrar alerta si hay error
+  }
+}
+
+/**
+ * Mostrar alerta de configuración pendiente con detalles
+ */
+function mostrarAlertaConfiguracion(faltantes) {
+  const alertElement = document.getElementById('alertConfiguracionPendiente');
+  const listaElement = document.getElementById('listaConfiguracionesPendientes');
+  
+  if (!alertElement || !listaElement) return;
+  
+  const mensajes = {
+    color_primario: '🎨 Colores corporativos (primario y secundario)',
+    fuente: '📝 Fuente y tamaño para las facturas',
+    cuentas_bancarias: '🏦 Cuentas bancarias para mostrar en facturas',
+    mensaje_agradecimiento: '💬 Mensaje de agradecimiento personalizado'
+  };
+  
+  // Construir lista de configuraciones pendientes
+  const items = [];
+  
+  if (faltantes.color_primario || faltantes.color_secundario) {
+    items.push(mensajes.color_primario);
+  }
+  if (faltantes.fuente) {
+    items.push(mensajes.fuente);
+  }
+  if (faltantes.cuentas_bancarias) {
+    items.push(mensajes.cuentas_bancarias);
+  }
+  if (faltantes.mensaje_agradecimiento) {
+    items.push(mensajes.mensaje_agradecimiento);
+  }
+  
+  // Si no hay items, ocultar alerta
+  if (items.length === 0) {
+    alertElement.style.display = 'none';
+    return;
+  }
+  
+  // Mostrar lista de pendientes
+  listaElement.innerHTML = items.map(item => `<li>${item}</li>`).join('');
+  
+  // Mostrar alerta
+  alertElement.style.display = 'block';
+  
+  // Guardar en localStorage que se mostró (para no molestar mucho)
+  const alertKey = `alertFacturacion_${JSON.parse(localStorage.getItem('usuario')).empresa_id}`;
+  const lastShown = localStorage.getItem(alertKey);
+  const now = new Date().getTime();
+  
+  // Si ya se mostró hace menos de 24 horas, no mostrar
+  if (lastShown && (now - parseInt(lastShown)) < 24 * 60 * 60 * 1000) {
+    alertElement.style.display = 'none';
+    return;
+  }
+  
+  // Guardar timestamp de cuando se mostró
+  localStorage.setItem(alertKey, now.toString());
+  
+  // Event listener para el botón de "Recordar Después"
+  const btnRecordar = alertElement.querySelector('[data-bs-dismiss="alert"]');
+  if (btnRecordar) {
+    btnRecordar.addEventListener('click', () => {
+      localStorage.setItem(alertKey, now.toString());
+    });
+  }
 }
