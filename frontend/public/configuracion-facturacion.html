@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración de Facturación - KORE Inventory</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+    
+    <style>
+        .color-preview {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .section-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        
+        .cuenta-bancaria-row {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .btn-remove-cuenta {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="d-flex align-items-center">
+                <div class="logo-container-sidebar me-2">
+                    <i class="bi bi-boxes"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0 fw-bold text-white">KORE<span class="text-warning">.</span>inventory</h5>
+                    <small class="text-white-50">ERP SaaS</small>
+                </div>
+            </div>
+            <button class="btn-close-sidebar d-lg-none" id="closeSidebar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <!-- User Info -->
+        <div class="sidebar-user">
+            <div class="d-flex align-items-center">
+                <div class="user-avatar me-3">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="user-details">
+                    <div class="user-name" id="userName">Cargando...</div>
+                    <div class="user-role" id="userRole">...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-item">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="ventas.html" class="nav-item">
+                <i class="bi bi-cart-check"></i>
+                <span>Punto de Venta</span>
+            </a>
+            <a href="productos.html" class="nav-item">
+                <i class="bi bi-box-seam"></i>
+                <span>Productos</span>
+            </a>
+            <a href="clientes.html" class="nav-item">
+                <i class="bi bi-people"></i>
+                <span>Clientes</span>
+            </a>
+            <a href="proveedores.html" class="nav-item">
+                <i class="bi bi-truck"></i>
+                <span>Proveedores</span>
+            </a>
+            <a href="compras.html" class="nav-item">
+                <i class="bi bi-bag-plus"></i>
+                <span>Compras</span>
+            </a>
+            <a href="inventario.html" class="nav-item">
+                <i class="bi bi-boxes"></i>
+                <span>Inventario</span>
+            </a>
+            
+            <div class="nav-divider"></div>
+            
+            <a href="configuracion-general.html" class="nav-item">
+                <i class="bi bi-gear"></i>
+                <span>Configuración</span>
+            </a>
+            <a href="configuracion-facturacion.html" class="nav-item active">
+                <i class="bi bi-receipt"></i>
+                <span>Facturación</span>
+            </a>
+            <a href="#" class="nav-item" onclick="logout()">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <button class="btn-toggle-sidebar" id="toggleSidebar">
+                <i class="bi bi-list"></i>
+            </button>
+            <h4 class="mb-0 fw-bold">
+                <i class="bi bi-receipt text-primary"></i>
+                Configuración de Facturación
+            </h4>
+            <div class="empresa-selector">
+                <label class="me-2">Empresa:</label>
+                <select id="empresaSelect" class="form-select form-select-sm">
+                    <option value="">Cargando...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            
+            <!-- Alert Messages -->
+            <div id="alertContainer"></div>
+
+            <!-- Loading Overlay -->
+            <div class="text-center py-5" id="loadingOverlay" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2 text-muted">Cargando configuración...</p>
+            </div>
+
+            <!-- Configuration Form -->
+            <form id="formConfiguracion" style="display: none;">
+                
+                <!-- Sección: Apariencia de la Factura -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <i class="bi bi-palette me-2"></i>Apariencia de la Factura
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Color Primario</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="colorPrimario" value="#007bff">
+                                    <input type="text" class="form-control" id="colorPrimarioText" value="#007bff" placeholder="#007bff">
+                                </div>
+                                <small class="text-muted">Color principal de la factura (títulos, encabezados)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Color Secundario</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="colorSecundario" value="#6c757d">
+                                    <input type="text" class="form-control" id="colorSecundarioText" value="#6c757d" placeholder="#6c757d">
+                                </div>
+                                <small class="text-muted">Color secundario (subtítulos, bordes)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Fuente</label>
+                                <select class="form-select" id="fuente">
+                                    <option value="Arial">Arial</option>
+                                    <option value="Helvetica">Helvetica</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Courier New">Courier New</option>
+                                    <option value="Georgia">Georgia</option>
+                                    <option value="Verdana">Verdana</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tamaño de Fuente</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="tamanoFuente" value="10" min="8" max="16" step="1">
+                                    <span class="input-group-text">pt</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Elementos Visuales -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <i class="bi bi-image me-2"></i>Elementos Visuales
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="mostrarLogo" checked>
+                                    <label class="form-check-label" for="mostrarLogo">
+                                        <strong>Mostrar Logo</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Logo de la empresa en la factura</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="mostrarSlogan" checked>
+                                    <label class="form-check-label" for="mostrarSlogan">
+                                        <strong>Mostrar Slogan</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Slogan de la empresa</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Posición del Logo</label>
+                                <select class="form-select form-select-sm" id="logoPosicion">
+                                    <option value="izquierda">Izquierda</option>
+                                    <option value="centro">Centro</option>
+                                    <option value="derecha">Derecha</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="mostrarQr" checked>
+                                    <label class="form-check-label" for="mostrarQr">
+                                        <strong>Mostrar QR</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Código QR de validación</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="mostrarCufe" checked>
+                                    <label class="form-check-label" for="mostrarCufe">
+                                        <strong>Mostrar CUFE</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Código Único de Factura Electrónica</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="mostrarFirma">
+                                    <label class="form-check-label" for="mostrarFirma">
+                                        <strong>Mostrar Firma</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Línea de firma autorizada</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id="textoFirmaContainer" style="display: none;">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label">Texto de Firma</label>
+                                <input type="text" class="form-control" id="textoFirma" placeholder="Ej: Firma Autorizada - Gerente General">
+                                <small class="text-muted">Texto que aparecerá debajo de la línea de firma</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Textos y Notas -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <i class="bi bi-chat-left-text me-2"></i>Textos y Notas
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Mensaje de Agradecimiento</label>
+                                <textarea class="form-control" id="mensajeAgradecimiento" rows="2" placeholder="Ej: Gracias por su compra">Gracias por su compra</textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Notas Predeterminadas</label>
+                                <textarea class="form-control" id="notasPredeterminadas" rows="2" placeholder="Notas que aparecerán por defecto en cada factura"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Pie de Página</label>
+                                <textarea class="form-control" id="piePagina" rows="3" placeholder="Información que aparece al final de la factura"></textarea>
+                                <small class="text-muted">Ej: Dirección, teléfono, email, sitio web</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Términos y Condiciones</label>
+                                <textarea class="form-control" id="terminosCondiciones" rows="3" placeholder="Términos y condiciones de la venta"></textarea>
+                                <small class="text-muted">Políticas de devolución, garantías, etc.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Cuentas Bancarias -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <i class="bi bi-bank me-2"></i>Cuentas Bancarias
+                    </div>
+                    
+                    <div id="cuentasBancariasContainer">
+                        <!-- Las cuentas se agregarán dinámicamente aquí -->
+                    </div>
+                    
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnAgregarCuenta">
+                        <i class="bi bi-plus-circle me-1"></i> Agregar Cuenta Bancaria
+                    </button>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="text-end">
+                    <button type="button" class="btn btn-secondary me-2" onclick="cargarConfiguracion()">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Recargar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i> Guardar Configuración
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="assets/js/configuracion-facturacion.js?v=1.0"></script>
+
+</body>
+</html>
