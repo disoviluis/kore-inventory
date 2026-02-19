@@ -137,20 +137,36 @@ async function cargarEmpresas(usuarioId) {
       });
       
       // Seleccionar la primera empresa o la guardada
+      let empresaSeleccionadaId;
       const empresaGuardada = localStorage.getItem('empresaActiva');
+      
       if (empresaGuardada) {
         const empresaObj = JSON.parse(empresaGuardada);
-        companySelector.value = empresaObj.id;
+        // Verificar que la empresa guardada existe en la lista
+        const empresaExiste = data.data.find(emp => emp.id == empresaObj.id);
+        if (empresaExiste) {
+          companySelector.value = empresaObj.id;
+          empresaSeleccionadaId = empresaObj.id;
+        } else {
+          // Si no existe, usar la primera empresa
+          companySelector.value = data.data[0].id;
+          empresaSeleccionadaId = data.data[0].id;
+          localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+        }
       } else {
+        // No hay empresa guardada, usar la primera
         companySelector.value = data.data[0].id;
+        empresaSeleccionadaId = data.data[0].id;
         localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
       }
       
       // Cargar estadísticas de la empresa seleccionada
-      cargarEstadisticas(companySelector.value);
-      
-      // Verificar configuración de facturación después de cargar empresa
-      verificarConfiguracionFacturacion();
+      if (empresaSeleccionadaId) {
+        cargarEstadisticas(empresaSeleccionadaId);
+        
+        // Verificar configuración de facturación después de cargar empresa
+        verificarConfiguracionFacturacion();
+      }
       
       // Event listener para cambio de empresa
       companySelector.addEventListener('change', (e) => {
@@ -175,6 +191,12 @@ async function cargarEmpresas(usuarioId) {
  * Cargar estadísticas del dashboard
  */
 async function cargarEstadisticas(empresaId) {
+  // Validar que empresaId existe
+  if (!empresaId) {
+    console.error('No se puede cargar estadísticas sin empresaId');
+    return;
+  }
+  
   const token = localStorage.getItem('token');
   
   try {
