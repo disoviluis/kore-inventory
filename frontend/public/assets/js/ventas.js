@@ -1442,96 +1442,201 @@ function mostrarFactura(venta, ventaData) {
         minute: '2-digit'
     });
     
+    // Calcular dígito de verificación del NIT
+    const calcularDigitoVerificacion = (nit) => {
+        const nitNumeros = nit.replace(/[^0-9]/g, '');
+        const vpri = [3,7,13,17,19,23,29,37,41,43,47,53,59,67,71];
+        let suma = 0;
+        for (let i = 0; i < nitNumeros.length && i < 15; i++) {
+            suma += parseInt(nitNumeros[nitNumeros.length - 1 - i]) * vpri[i];
+        }
+        const residuo = suma % 11;
+        return residuo > 1 ? 11 - residuo : residuo;
+    };
+
+    const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
+    const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
+
+    // Formatear fechas de resolución
+    const formatearFecha = (fecha) => {
+        if (!fecha) return 'N/A';
+        const d = new Date(fecha);
+        return d.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+    };
+
     const html = `
         <div id="facturaPrint" class="p-3" style="max-width: 100%; font-size: 0.95rem;">
             <!-- Encabezado Empresa -->
-            <div class="text-center mb-3">
-                <h4 class="mb-2" style="font-size: 1.3rem;">${currentEmpresa.nombre}</h4>
+            <div class="text-center mb-3 pb-2 border-bottom">
+                <h4 class="mb-2" style="font-size: 1.4rem; color: ${currentEmpresa.color_primario || '#1E40AF'};">${currentEmpresa.nombre}</h4>
+                ${currentEmpresa.slogan ? `<p class="mb-1" style="font-size: 0.85rem; font-style: italic; color: #666;">${currentEmpresa.slogan}</p>` : ''}
                 <p class="mb-1" style="font-size: 0.9rem;">${currentEmpresa.razon_social}</p>
-                <p class="mb-1" style="font-size: 0.9rem;">NIT: ${currentEmpresa.nit}</p>
-                <p class="mb-1" style="font-size: 0.85rem;">${currentEmpresa.direccion || ''}</p>
+                <p class="mb-1" style="font-size: 0.9rem;"><strong>NIT: ${nitCompleto}</strong></p>
+                ${currentEmpresa.regimen_tributario ? `<p class="mb-1" style="font-size: 0.85rem;">Régimen ${currentEmpresa.regimen_tributario}</p>` : ''}
+                ${currentEmpresa.gran_contribuyente ? `<p class="mb-1" style="font-size: 0.85rem;"><span class="badge bg-success">Gran Contribuyente</span></p>` : ''}
+                <p class="mb-1" style="font-size: 0.85rem;">${currentEmpresa.direccion || ''} - ${currentEmpresa.ciudad || ''}</p>
                 <p class="mb-1" style="font-size: 0.85rem;">Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email}</p>
-                <hr>
-                <h5 style="font-size: 1.1rem;">FACTURA DE VENTA</h5>
-                <p style="font-size: 1rem;"><strong>${venta.numero_factura}</strong></p>
+                ${currentEmpresa.sitio_web ? `<p class="mb-1" style="font-size: 0.85rem;">Web: ${currentEmpresa.sitio_web}</p>` : ''}
             </div>
+
+            <!-- Título Factura -->
+            <div class="text-center mb-3 p-2" style="background-color: ${currentEmpresa.color_primario || '#1E40AF'}15; border: 2px solid ${currentEmpresa.color_primario || '#1E40AF'}; border-radius: 5px;">
+                <h5 class="mb-1" style="font-size: 1.2rem; color: ${currentEmpresa.color_primario || '#1E40AF'};">FACTURA DE VENTA ELECTRÓNICA</h5>
+                <p class="mb-1" style="font-size: 1.1rem;"><strong>${venta.numero_factura}</strong></p>
+            </div>
+
+            <!-- Resolución DIAN -->
+            ${currentEmpresa.resolucion_dian ? `
+            <div class="mb-3 p-2" style="background-color: #f8f9fa; border-left: 3px solid #28a745; font-size: 0.85rem;">
+                <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian}<br>
+                <strong>Fecha Resolución:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)}<br>
+                <strong>Rango Autorizado:</strong> ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_desde || 1).padStart(6, '0')} al ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_hasta || 100000).padStart(6, '0')}<br>
+                <strong>Ambiente:</strong> ${currentEmpresa.ambiente === 'produccion' ? 'Producción' : 'Pruebas'}
+            </div>
+            ` : ''}
 
             <!-- Datos Cliente y Venta -->
             <div class="row mb-3" style="font-size: 0.9rem;">
                 <div class="col-12 col-md-6 mb-2">
-                    <strong>Cliente:</strong><br>
-                    ${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>
-                    ${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}<br>
-                    ${ventaData.cliente.telefono || ventaData.cliente.celular || ''}<br>
-                    ${ventaData.cliente.direccion || ''}
+                    <div class="p-2 border rounded">
+                        <strong style="color: ${currentEmpresa.color_primario || '#1E40AF'};">CLIENTE:</strong><br>
+                        <strong>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}</strong><br>
+                        ${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}${ventaData.cliente.digito_verificacion ? '-' + ventaData.cliente.digito_verificacion : ''}<br>
+                        ${ventaData.cliente.tipo_persona ? `<small>Tipo: ${ventaData.cliente.tipo_persona === 'juridica' ? 'Persona Jurídica' : 'Persona Natural'}</small><br>` : ''}
+                        ${ventaData.cliente.regimen_tributario ? `<small>Régimen: ${ventaData.cliente.regimen_tributario}</small><br>` : ''}
+                        ${ventaData.cliente.direccion ? `${ventaData.cliente.direccion}<br>` : ''}
+                        ${ventaData.cliente.ciudad ? `${ventaData.cliente.ciudad}${ventaData.cliente.departamento ? ' - ' + ventaData.cliente.departamento : ''}<br>` : ''}
+                        ${ventaData.cliente.telefono || ventaData.cliente.celular || ''}
+                    </div>
                 </div>
-                <div class="col-12 col-md-6 text-md-end">
-                    <strong>Fecha:</strong> ${fecha}<br>
-                    <strong>Vendedor:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}<br>
-                    <strong>Método de Pago:</strong> ${ventaData.metodo_pago}
+                <div class="col-12 col-md-6">
+                    <div class="p-2 border rounded">
+                        <strong>Fecha Emisión:</strong> ${fecha}<br>
+                        <strong>Forma de Pago:</strong> ${ventaData.forma_pago === 'credito' ? 'Crédito' : 'Contado'}<br>
+                        ${ventaData.fecha_vencimiento ? `<strong>Fecha Vencimiento:</strong> ${new Date(ventaData.fecha_vencimiento).toLocaleDateString('es-CO')}<br>` : ''}
+                        <strong>Método de Pago:</strong> ${ventaData.metodo_pago}<br>
+                        <strong>Vendedor:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}
+                    </div>
                 </div>
             </div>
 
             <!-- Detalle Productos -->
             <div class="table-responsive">
             <table class="table table-bordered table-sm" style="font-size: 0.85rem;">
-                <thead class="table-light">
+                <thead style="background-color: ${currentEmpresa.color_primario || '#1E40AF'}15;">
                     <tr>
-                        <th style="min-width: 120px;">Producto</th>
-                        <th class="text-center" style="width: 70px;">Cant.</th>
+                        <th style="min-width: 120px;">Producto / Descripción</th>
+                        <th class="text-center" style="width: 50px;">Und.</th>
+                        <th class="text-center" style="width: 60px;">Cant.</th>
                         <th class="text-end" style="width: 90px;">P. Unit.</th>
+                        <th class="text-end" style="width: 70px;">IVA %</th>
                         <th class="text-end" style="width: 90px;">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${ventaData.productos.map(p => `
                         <tr>
-                            <td>${p.nombre}</td>
+                            <td>
+                                <strong>${p.nombre}</strong>
+                                ${p.descripcion_adicional ? `<br><small class="text-muted">${p.descripcion_adicional}</small>` : ''}
+                            </td>
+                            <td class="text-center">${p.unidad_medida || 'UND'}</td>
                             <td class="text-center">${p.cantidad}</td>
                             <td class="text-end">$${formatearNumero(p.precio_unitario)}</td>
+                            <td class="text-end">${p.impuesto_porcentaje || 19}%</td>
                             <td class="text-end">$${formatearNumero(p.subtotal)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
-                        <td class="text-end">$${formatearNumero(subtotal)}</td>
-                    </tr>
-                    ${descuento > 0 ? `
-                    <tr>
-                        <td colspan="3" class="text-end"><strong>Descuento:</strong></td>
-                        <td class="text-end">-$${formatearNumero(descuento)}</td>
-                    </tr>
-                    ` : ''}
-                    <tr>
-                        <td colspan="3" class="text-end"><strong>IVA (19%):</strong></td>
-                        <td class="text-end">$${formatearNumero(impuesto)}</td>
-                    </tr>
-                    ${ventaData.impuestos && ventaData.impuestos.length > 0 ? 
-                        ventaData.impuestos.map(imp => `
-                            <tr>
-                                <td colspan="3" class="text-end">
-                                    <strong class="${imp.afecta_total === 'resta' ? 'text-danger' : 'text-success'}">
-                                        ${imp.afecta_total === 'resta' ? '-' : '+'} ${imp.nombre}:
-                                    </strong>
-                                </td>
-                                <td class="text-end ${imp.afecta_total === 'resta' ? 'text-danger' : 'text-success'}">
-                                    ${imp.afecta_total === 'resta' ? '-' : ''}$${formatearNumero(imp.valor)}
-                                </td>
-                            </tr>
-                        `).join('') : ''
-                    }
-                    <tr class="table-primary">
-                        <td colspan="3" class="text-end"><strong>TOTAL:</strong></td>
-                        <td class="text-end"><strong>$${formatearNumero(total)}</strong></td>
-                    </tr>
-                </tfoot>
             </table>
             </div>
 
-            <div class="text-center mt-3">
-                <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 0;">¡Gracias por su compra!</p>
+            <!-- Totales -->
+            <div class="row">
+                <div class="col-12 col-md-6">
+                    ${ventaData.observaciones ? `
+                    <div class="mb-2">
+                        <strong>Observaciones:</strong>
+                        <p class="mb-0" style="font-size: 0.85rem; color: #666;">${ventaData.observaciones}</p>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="col-12 col-md-6">
+                    <table class="table table-sm mb-0" style="font-size: 0.9rem;">
+                        <tr>
+                            <td class="text-end border-0"><strong>Subtotal:</strong></td>
+                            <td class="text-end border-0" style="width: 120px;">$${formatearNumero(subtotal)}</td>
+                        </tr>
+                        ${descuento > 0 ? `
+                        <tr>
+                            <td class="text-end border-0"><strong>Descuento ${ventaData.descuento_porcentaje ? `(${ventaData.descuento_porcentaje}%)` : ''}:</strong></td>
+                            <td class="text-end border-0 text-danger">-$${formatearNumero(descuento)}</td>
+                        </tr>
+                        ` : ''}
+                        <tr>
+                            <td class="text-end border-0"><strong>IVA (19%):</strong></td>
+                            <td class="text-end border-0">$${formatearNumero(impuesto)}</td>
+                        </tr>
+                        ${ventaData.retencion_fuente > 0 ? `
+                        <tr>
+                            <td class="text-end border-0"><strong>Retención Fuente:</strong></td>
+                            <td class="text-end border-0 text-danger">-$${formatearNumero(ventaData.retencion_fuente)}</td>
+                        </tr>
+                        ` : ''}
+                        ${ventaData.retencion_iva > 0 ? `
+                        <tr>
+                            <td class="text-end border-0"><strong>Retención IVA:</strong></td>
+                            <td class="text-end border-0 text-danger">-$${formatearNumero(ventaData.retencion_iva)}</td>
+                        </tr>
+                        ` : ''}
+                        ${ventaData.retencion_ica > 0 ? `
+                        <tr>
+                            <td class="text-end border-0"><strong>Retención ICA:</strong></td>
+                            <td class="text-end border-0 text-danger">-$${formatearNumero(ventaData.retencion_ica)}</td>
+                        </tr>
+                        ` : ''}
+                        ${ventaData.impuestos && ventaData.impuestos.length > 0 ? 
+                            ventaData.impuestos.map(imp => `
+                                <tr>
+                                    <td class="text-end border-0">
+                                        <strong class="${imp.afecta_total === 'resta' ? 'text-danger' : 'text-success'}">
+                                            ${imp.afecta_total === 'resta' ? '-' : '+'} ${imp.nombre}:
+                                        </strong>
+                                    </td>
+                                    <td class="text-end border-0 ${imp.afecta_total === 'resta' ? 'text-danger' : 'text-success'}">
+                                        ${imp.afecta_total === 'resta' ? '-' : ''}$${formatearNumero(imp.valor)}
+                                    </td>
+                                </tr>
+                            `).join('') : ''
+                        }
+                        <tr style="background-color: ${currentEmpresa.color_primario || '#1E40AF'}; color: white;">
+                            <td class="text-end border-0"><strong style="font-size: 1.1rem;">TOTAL:</strong></td>
+                            <td class="text-end border-0"><strong style="font-size: 1.1rem;">$${formatearNumero(total)}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CUFE y QR -->
+            ${ventaData.cufe ? `
+            <div class="mt-3 p-2 border rounded" style="background-color: #f8f9fa;">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <small><strong>CUFE:</strong></small><br>
+                        <small style="word-break: break-all; font-family: monospace; font-size: 0.75rem;">${ventaData.cufe}</small>
+                    </div>
+                    ${ventaData.qr_code ? `
+                    <div class="col-md-4 text-center">
+                        <img src="${ventaData.qr_code}" alt="QR Code" style="width: 100px; height: 100px;">
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            ` : ''}
+
+            <div class="text-center mt-3 pt-2 border-top">
+                <p class="text-muted mb-1" style="font-size: 0.85rem;">¡Gracias por su compra!</p>
+                ${currentEmpresa.descripcion ? `<p class="text-muted mb-0" style="font-size: 0.75rem;">${currentEmpresa.descripcion}</p>` : ''}
             </div>
         </div>
     `;
@@ -1747,6 +1852,9 @@ function generarHTMLImpresion(formatoTermico = false) {
         `;
     } else {
         // FORMATO CARTA (Letter)
+        const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
+        const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
+        
         return `
 <!DOCTYPE html>
 <html>
@@ -1766,63 +1874,104 @@ function generarHTMLImpresion(formatoTermico = false) {
         }
         body {
             font-family: Arial, sans-serif;
-            font-size: 11pt;
+            font-size: 10pt;
             color: #000;
             background: white;
-            padding: 10mm;
+            padding: 8mm;
         }
         .encabezado {
             text-align: center;
-            margin-bottom: 8mm;
+            margin-bottom: 5mm;
+            padding-bottom: 3mm;
+            border-bottom: 2px solid #333;
         }
         .encabezado h2 {
-            font-size: 18pt;
+            font-size: 16pt;
             margin-bottom: 2mm;
+            color: ${currentEmpresa.color_primario || '#1E40AF'};
+        }
+        .encabezado .slogan {
+            font-size: 9pt;
+            font-style: italic;
+            color: #666;
+            margin-bottom: 1mm;
         }
         .encabezado p {
-            font-size: 10pt;
-            margin: 1mm 0;
+            font-size: 9pt;
+            margin: 0.5mm 0;
+        }
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+            padding: 1mm 3mm;
+            border-radius: 2mm;
+            font-size: 8pt;
         }
         .titulo-factura {
             text-align: center;
-            font-size: 14pt;
+            font-size: 13pt;
             font-weight: bold;
-            margin: 5mm 0;
+            margin: 4mm 0;
             padding: 3mm;
-            border: 2px solid #000;
+            border: 2px solid ${currentEmpresa.color_primario || '#1E40AF'};
+            background-color: ${currentEmpresa.color_primario || '#1E40AF'}15;
+            border-radius: 3mm;
         }
-        .info-cliente {
+        .resolucion-dian {
+            background-color: #f8f9fa;
+            border-left: 3px solid #28a745;
+            padding: 3mm;
+            margin: 3mm 0;
+            font-size: 8pt;
+        }
+        .info-boxes {
             display: flex;
             justify-content: space-between;
-            margin: 5mm 0;
-            font-size: 10pt;
+            gap: 3mm;
+            margin: 4mm 0;
         }
-        .info-cliente > div {
+        .info-box {
             flex: 1;
+            border: 1px solid #ddd;
+            padding: 3mm;
+            border-radius: 2mm;
+            font-size: 9pt;
+        }
+        .info-box strong {
+            color: ${currentEmpresa.color_primario || '#1E40AF'};
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 5mm 0;
-            font-size: 10pt;
+            margin: 4mm 0;
+            font-size: 9pt;
         }
         th {
-            background-color: #f0f0f0;
-            border: 1px solid #000;
-            padding: 3mm;
+            background-color: ${currentEmpresa.color_primario || '#1E40AF'}15;
+            border: 1px solid #ddd;
+            padding: 2mm;
             text-align: left;
             font-weight: bold;
+            color: #333;
         }
         td {
-            border: 1px solid #000;
-            padding: 3mm;
+            border: 1px solid #ddd;
+            padding: 2mm;
         }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
+        .text-danger { color: #dc3545; }
+        .totales-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4mm;
+        }
+        .observaciones {
+            flex: 1;
+            padding-right: 5mm;
+        }
         .totales {
-            margin-top: 5mm;
-            float: right;
-            width: 50%;
+            width: 45%;
         }
         .totales table {
             width: 100%;
@@ -1834,17 +1983,26 @@ function generarHTMLImpresion(formatoTermico = false) {
             padding: 2mm;
         }
         .total-final {
-            font-size: 12pt;
+            font-size: 11pt;
             font-weight: bold;
-            background-color: #f0f0f0;
+            background-color: ${currentEmpresa.color_primario || '#1E40AF'};
+            color: white;
+        }
+        .cufe-section {
+            margin-top: 5mm;
+            padding: 3mm;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 2mm;
+            font-size: 8pt;
         }
         .footer {
             clear: both;
             text-align: center;
-            margin-top: 10mm;
-            padding-top: 5mm;
+            margin-top: 8mm;
+            padding-top: 3mm;
             border-top: 1px solid #ddd;
-            font-size: 9pt;
+            font-size: 8pt;
             color: #666;
         }
         @media print {
@@ -1855,94 +2013,154 @@ function generarHTMLImpresion(formatoTermico = false) {
 <body>
     <div class="encabezado">
         <h2>${currentEmpresa.nombre}</h2>
-        <p>${currentEmpresa.razon_social}</p>
-        <p>NIT: ${currentEmpresa.nit}</p>
-        <p>${currentEmpresa.direccion || ''}</p>
+        ${currentEmpresa.slogan ? `<div class="slogan">${currentEmpresa.slogan}</div>` : ''}
+        <p><strong>${currentEmpresa.razon_social}</strong></p>
+        <p><strong>NIT: ${nitCompleto}</strong></p>
+        ${currentEmpresa.regimen_tributario ? `<p>Régimen ${currentEmpresa.regimen_tributario}</p>` : ''}
+        ${currentEmpresa.gran_contribuyente ? `<p><span class="badge-success">GRAN CONTRIBUYENTE</span></p>` : ''}
+        <p>${currentEmpresa.direccion || ''} - ${currentEmpresa.ciudad || ''}</p>
         <p>Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email}</p>
+        ${currentEmpresa.sitio_web ? `<p>Web: ${currentEmpresa.sitio_web}</p>` : ''}
     </div>
     
     <div class="titulo-factura">
-        FACTURA DE VENTA<br>
+        FACTURA DE VENTA ELECTRÓNICA<br>
         ${numeroFactura}
     </div>
     
-    <div class="info-cliente">
-        <div>
-            <strong>CLIENTE:</strong><br>
-            ${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>
-            ${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}<br>
-            ${ventaData.cliente.telefono || ventaData.cliente.celular || ''}<br>
-            ${ventaData.cliente.direccion || ''}
+    ${currentEmpresa.resolucion_dian ? `
+    <div class="resolucion-dian">
+        <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian} | 
+        <strong>Fecha:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)}<br>
+        <strong>Rango Autorizado:</strong> ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_desde || 1).padStart(6, '0')} al ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_hasta || 100000).padStart(6, '0')} | 
+        <strong>Ambiente:</strong> ${currentEmpresa.ambiente === 'produccion' ? 'Producción' : 'Pruebas'}
+    </div>
+    ` : ''}
+    
+    <div class="info-boxes">
+        <div class="info-box">
+            <strong>INFORMACIÓN DEL CLIENTE</strong><br>
+            <strong>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}</strong><br>
+            ${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}${ventaData.cliente.digito_verificacion ? '-' + ventaData.cliente.digito_verificacion : ''}<br>
+            ${ventaData.cliente.tipo_persona ? `Tipo: ${ventaData.cliente.tipo_persona === 'juridica' ? 'Persona Jurídica' : 'Persona Natural'}<br>` : ''}
+            ${ventaData.cliente.regimen_tributario ? `Régimen: ${ventaData.cliente.regimen_tributario}<br>` : ''}
+            ${ventaData.cliente.direccion ? `${ventaData.cliente.direccion}<br>` : ''}
+            ${ventaData.cliente.ciudad ? `${ventaData.cliente.ciudad}${ventaData.cliente.departamento ? ' - ' + ventaData.cliente.departamento : ''}<br>` : ''}
+            Tel: ${ventaData.cliente.telefono || ventaData.cliente.celular || 'N/A'}
         </div>
-        <div class="text-right">
-            <strong>FECHA:</strong> ${fecha}<br>
-            <strong>VENDEDOR:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}
+        <div class="info-box">
+            <strong>INFORMACIÓN DE LA VENTA</strong><br>
+            <strong>Fecha Emisión:</strong> ${fecha}<br>
+            <strong>Forma de Pago:</strong> ${ventaData.forma_pago === 'credito' ? 'Crédito' : 'Contado'}<br>
+            ${ventaData.fecha_vencimiento ? `<strong>Fecha Vencimiento:</strong> ${new Date(ventaData.fecha_vencimiento).toLocaleDateString('es-CO')}<br>` : ''}
+            <strong>Método de Pago:</strong> ${ventaData.metodo_pago}<br>
+            <strong>Vendedor:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}
         </div>
     </div>
     
     <table>
         <thead>
             <tr>
-                <th style="width: 50%;">Producto</th>
-                <th class="text-center" style="width: 10%;">Cant.</th>
-                <th class="text-right" style="width: 20%;">Precio Unit.</th>
-                <th class="text-right" style="width: 20%;">Subtotal</th>
+                <th style="width: 40%;">Producto / Descripción</th>
+                <th class="text-center" style="width: 8%;">Und.</th>
+                <th class="text-center" style="width: 8%;">Cant.</th>
+                <th class="text-right" style="width: 15%;">Precio Unit.</th>
+                <th class="text-center" style="width: 10%;">IVA %</th>
+                <th class="text-right" style="width: 19%;">Subtotal</th>
             </tr>
         </thead>
         <tbody>
             ${ventaData.productos.map(p => `
                 <tr>
-                    <td>${p.nombre}</td>
+                    <td>
+                        <strong>${p.nombre}</strong>
+                        ${p.descripcion_adicional ? `<br><span style="font-size: 8pt; color: #666;">${p.descripcion_adicional}</span>` : ''}
+                    </td>
+                    <td class="text-center">${p.unidad_medida || 'UND'}</td>
                     <td class="text-center">${p.cantidad}</td>
                     <td class="text-right">$${formatearNumero(p.precio_unitario)}</td>
+                    <td class="text-center">${p.impuesto_porcentaje || 19}%</td>
                     <td class="text-right">$${formatearNumero(p.subtotal)}</td>
                 </tr>
             `).join('')}
         </tbody>
     </table>
     
-    <div class="totales">
-        <table>
-            <tr>
-                <td><strong>Subtotal:</strong></td>
-                <td class="text-right">$${formatearNumero(subtotal)}</td>
-            </tr>
-            ${descuento > 0 ? `
-            <tr>
-                <td><strong>Descuento:</strong></td>
-                <td class="text-right">-$${formatearNumero(descuento)}</td>
-            </tr>
+    <div class="totales-container">
+        <div class="observaciones">
+            ${ventaData.observaciones ? `
+            <strong>OBSERVACIONES:</strong><br>
+            <p style="font-size: 9pt; color: #666; margin-top: 2mm;">${ventaData.observaciones}</p>
             ` : ''}
-            <tr>
-                <td><strong>IVA (19%):</strong></td>
-                <td class="text-right">$${formatearNumero(impuesto)}</td>
-            </tr>
-            <tr class="total-final">
-                <td><strong>TOTAL:</strong></td>
-                <td class="text-right"><strong>$${formatearNumero(total)}</strong></td>
-            </tr>
-            ${ventaData.pagos && ventaData.pagos.length > 0 ? `
-            <tr style="border-top: 2px solid #000;">
-                <td colspan="2" style="padding-top: 3mm;"><strong>FORMA DE PAGO:</strong></td>
-            </tr>
-            ${ventaData.pagos.map(pago => {
-                const nombres = {
-                    'efectivo': 'Efectivo',
-                    'tarjeta_debito': 'Tarjeta Débito',
-                    'tarjeta_credito': 'Tarjeta Crédito',
-                    'transferencia': 'Transferencia',
-                    'nequi': 'Nequi',
-                    'daviplata': 'Daviplata',
-                    'cheque': 'Cheque'
-                };
-                return `<tr>
-                    <td>${nombres[pago.metodo_pago] || pago.metodo_pago}${pago.referencia ? ` (Ref: ${pago.referencia})` : ''}</td>
-                    <td class="text-right">$${formatearNumero(pago.monto)}</td>
-                </tr>`;
-            }).join('')}
-            ` : ''}
-        </table>
+        </div>
+        <div class="totales">
+            <table>
+                <tr>
+                    <td><strong>Subtotal:</strong></td>
+                    <td class="text-right">$${formatearNumero(subtotal)}</td>
+                </tr>
+                ${descuento > 0 ? `
+                <tr>
+                    <td><strong>Descuento ${ventaData.descuento_porcentaje ? `(${ventaData.descuento_porcentaje}%)` : ''}:</strong></td>
+                    <td class="text-right text-danger">-$${formatearNumero(descuento)}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                    <td><strong>IVA (19%):</strong></td>
+                    <td class="text-right">$${formatearNumero(impuesto)}</td>
+                </tr>
+                ${ventaData.retencion_fuente > 0 ? `
+                <tr>
+                    <td><strong>Retención Fuente:</strong></td>
+                    <td class="text-right text-danger">-$${formatearNumero(ventaData.retencion_fuente)}</td>
+                </tr>
+                ` : ''}
+                ${ventaData.retencion_iva > 0 ? `
+                <tr>
+                    <td><strong>Retención IVA:</strong></td>
+                    <td class="text-right text-danger">-$${formatearNumero(ventaData.retencion_iva)}</td>
+                </tr>
+                ` : ''}
+                ${ventaData.retencion_ica > 0 ? `
+                <tr>
+                    <td><strong>Retención ICA:</strong></td>
+                    <td class="text-right text-danger">-$${formatearNumero(ventaData.retencion_ica)}</td>
+                </tr>
+                ` : ''}
+                <tr class="total-final">
+                    <td><strong>TOTAL:</strong></td>
+                    <td class="text-right"><strong>$${formatearNumero(total)}</strong></td>
+                </tr>
+                ${ventaData.pagos && ventaData.pagos.length > 0 ? `
+                <tr style="border-top: 2px solid #000;">
+                    <td colspan="2" style="padding-top: 3mm; padding-bottom: 1mm;"><strong>FORMA DE PAGO:</strong></td>
+                </tr>
+                ${ventaData.pagos.map(pago => {
+                    const nombres = {
+                        'efectivo': 'Efectivo',
+                        'tarjeta_debito': 'Tarjeta Débito',
+                        'tarjeta_credito': 'Tarjeta Crédito',
+                        'transferencia': 'Transferencia',
+                        'nequi': 'Nequi',
+                        'daviplata': 'Daviplata',
+                        'cheque': 'Cheque'
+                    };
+                    return `<tr>
+                        <td>${nombres[pago.metodo_pago] || pago.metodo_pago}${pago.referencia ? ` (Ref: ${pago.referencia})` : ''}</td>
+                        <td class="text-right">$${formatearNumero(pago.monto)}</td>
+                    </tr>`;
+                }).join('')}
+                ` : ''}
+            </table>
+        </div>
     </div>
+    
+    ${ventaData.cufe ? `
+    <div class="cufe-section">
+        <strong>CUFE (Código Único de Factura Electrónica):</strong><br>
+        <span style="word-break: break-all; font-family: monospace;">${ventaData.cufe}</span>
+    </div>
+    ` : ''}
     
     <div class="footer">
         <p>¡Gracias por su compra!</p>
