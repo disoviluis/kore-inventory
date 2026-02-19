@@ -81,6 +81,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
+        // Actualizar datos de empresa desde backend si están incompletos
+        if (!currentEmpresa.telefono || !currentEmpresa.slogan || !currentEmpresa.resolucion_dian) {
+            console.log('⚠️ Datos de empresa incompletos, actualizando desde backend...');
+            await actualizarDatosEmpresa(currentEmpresa.id);
+        }
+
         // Cargar impuestos activos de la empresa
         await cargarImpuestosActivos();
         
@@ -173,6 +179,38 @@ async function cargarEmpresas(usuarioId) {
     } catch (error) {
         console.error('Error al cargar empresas:', error);
         companySelector.innerHTML = '<option value="">Error al cargar empresas</option>';
+    }
+}
+
+// ============================================
+// ACTUALIZAR DATOS COMPLETOS DE EMPRESA
+// ============================================
+
+async function actualizarDatosEmpresa(empresaId) {
+    const token = localStorage.getItem('token');
+    
+    try {
+        console.log(`📡 Consultando datos completos de empresa ${empresaId}...`);
+        const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            console.log('✅ Datos completos recibidos del backend:', data.data);
+            localStorage.setItem('empresaActiva', JSON.stringify(data.data));
+            currentEmpresa = data.data;
+            console.log('✅ localStorage y currentEmpresa actualizados');
+        } else {
+            console.error('❌ Error al obtener datos de empresa:', data.message);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error al actualizar datos de empresa:', error);
     }
 }
 
