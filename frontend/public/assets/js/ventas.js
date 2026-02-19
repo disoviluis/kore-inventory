@@ -71,6 +71,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         await cargarEmpresas(usuario.id);
 
         currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
+        console.log('=== CARGA INICIAL currentEmpresa desde localStorage ===');
+        console.log('localStorage.empresaActiva:', localStorage.getItem('empresaActiva'));
+        console.log('currentEmpresa parseado:', currentEmpresa);
+        
         if (!currentEmpresa) {
             mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
             setTimeout(() => window.location.href = 'dashboard.html', 2000);
@@ -1420,6 +1424,18 @@ function mostrarFactura(venta, ventaData) {
     console.log('ventaData.subtotal:', ventaData.subtotal);
     console.log('ventaData.impuesto:', ventaData.impuesto);
     console.log('ventaData.total:', ventaData.total);
+    
+    console.log('=== DATOS EMPRESA (currentEmpresa) ===');
+    console.log('currentEmpresa completo:', currentEmpresa);
+    console.log('currentEmpresa.nit:', currentEmpresa?.nit);
+    console.log('currentEmpresa.email:', currentEmpresa?.email);
+    console.log('currentEmpresa.telefono:', currentEmpresa?.telefono);
+    console.log('currentEmpresa.slogan:', currentEmpresa?.slogan);
+    console.log('currentEmpresa.logo_url:', currentEmpresa?.logo_url);
+    console.log('currentEmpresa.razon_social:', currentEmpresa?.razon_social);
+    console.log('currentEmpresa.direccion:', currentEmpresa?.direccion);
+    console.log('currentEmpresa.regimen_tributario:', currentEmpresa?.regimen_tributario);
+    console.log('currentEmpresa.resolucion_dian:', currentEmpresa?.resolucion_dian);
     
     // Calcular totales correctamente
     const subtotal = ventaData.subtotal;
