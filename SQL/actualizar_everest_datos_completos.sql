@@ -18,7 +18,7 @@ SET
   sitio_web = 'https://www.everestsa.com.co',
   slogan = 'Soluciones que elevan tu negocio',
   descripcion = 'Soluciones empresariales de alta calidad para elevar tu negocio al siguiente nivel',
-  regimen_tributario = 'común',
+  regimen_tributario = 'comun',
   tipo_contribuyente = 'persona_juridica',
   gran_contribuyente = 1,
   autoretenedor = 1,
