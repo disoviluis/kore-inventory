@@ -149,10 +149,10 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 SET @index_exists = (SELECT COUNT(*) FROM information_schema.statistics 
-    WHERE table_schema = DATABASE() AND table_name = 'clientes' AND index_name = 'idx_clientes_documento');
+    WHERE table_schema = DATABASE() AND table_name = 'clientes' AND index_name = 'idx_clientes_numero_documento');
 SET @sql = IF(@index_exists = 0, 
-    'CREATE INDEX idx_clientes_documento ON clientes(documento)', 
-    'SELECT "Índice idx_clientes_documento ya existe" AS mensaje');
+    'CREATE INDEX idx_clientes_numero_documento ON clientes(numero_documento)', 
+    'SELECT "Índice idx_clientes_numero_documento ya existe" AS mensaje');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
