@@ -1521,16 +1521,30 @@ function mostrarFactura(venta, ventaData) {
         return d.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
     };
 
+    // Generar número de factura con prefijo dinámico
+    const prefijoFactura = currentEmpresa.prefijo_factura || 'FAC';
+    const numeroConsecutivo = String(currentEmpresa.numeracion_actual || venta.id || 1).padStart(6, '0');
+    const numeroFacturaCompleto = `${prefijoFactura}-${numeroConsecutivo}`;
+
     const html = `
         <div id="facturaPrint" class="p-3" style="max-width: 100%; font-size: 0.95rem;">
             <!-- Encabezado Empresa -->
             <div class="text-center mb-3 pb-2 border-bottom">
+                ${currentEmpresa.logo_url ? `<img src="${currentEmpresa.logo_url}" alt="Logo" style="max-width: 150px; max-height: 80px; margin-bottom: 10px;" onerror="this.style.display='none'">` : ''}
                 <h4 class="mb-2" style="font-size: 1.4rem; color: ${currentEmpresa.color_primario || '#1E40AF'};">${currentEmpresa.nombre}</h4>
                 ${currentEmpresa.slogan ? `<p class="mb-1" style="font-size: 0.85rem; font-style: italic; color: #666;">${currentEmpresa.slogan}</p>` : ''}
                 <p class="mb-1" style="font-size: 0.9rem;">${currentEmpresa.razon_social}</p>
                 <p class="mb-1" style="font-size: 0.9rem;"><strong>NIT: ${nitCompleto}</strong></p>
-                ${currentEmpresa.regimen_tributario ? `<p class="mb-1" style="font-size: 0.85rem;">Régimen ${currentEmpresa.regimen_tributario}</p>` : ''}
-                ${currentEmpresa.gran_contribuyente ? `<p class="mb-1" style="font-size: 0.85rem;"><span class="badge bg-success">Gran Contribuyente</span></p>` : ''}
+                
+                <!-- Badges Fiscales -->
+                <div class="mb-2">
+                    ${currentEmpresa.regimen_tributario ? `<span class="badge" style="background-color: #1E40AF; margin: 2px;">Régimen ${currentEmpresa.regimen_tributario === 'comun' ? 'Común' : currentEmpresa.regimen_tributario.charAt(0).toUpperCase() + currentEmpresa.regimen_tributario.slice(1)}</span>` : ''}
+                    ${currentEmpresa.gran_contribuyente ? `<span class="badge bg-success" style="margin: 2px;">Gran Contribuyente</span>` : ''}
+                    ${currentEmpresa.autoretenedor ? `<span class="badge bg-warning text-dark" style="margin: 2px;">Autoretenedor</span>` : ''}
+                    ${currentEmpresa.agente_retenedor_iva ? `<span class="badge bg-info" style="margin: 2px;">Agente Retenedor IVA</span>` : ''}
+                    ${currentEmpresa.agente_retenedor_ica ? `<span class="badge bg-secondary" style="margin: 2px;">Agente Retenedor ICA</span>` : ''}
+                </div>
+                
                 <p class="mb-1" style="font-size: 0.85rem;">${currentEmpresa.direccion || ''} - ${currentEmpresa.ciudad || ''}</p>
                 <p class="mb-1" style="font-size: 0.85rem;">Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email}</p>
                 ${currentEmpresa.sitio_web ? `<p class="mb-1" style="font-size: 0.85rem;">Web: ${currentEmpresa.sitio_web}</p>` : ''}
@@ -1539,7 +1553,7 @@ function mostrarFactura(venta, ventaData) {
             <!-- Título Factura -->
             <div class="text-center mb-3 p-2" style="background-color: ${currentEmpresa.color_primario || '#1E40AF'}15; border: 2px solid ${currentEmpresa.color_primario || '#1E40AF'}; border-radius: 5px;">
                 <h5 class="mb-1" style="font-size: 1.2rem; color: ${currentEmpresa.color_primario || '#1E40AF'};">FACTURA DE VENTA ELECTRÓNICA</h5>
-                <p class="mb-1" style="font-size: 1.1rem;"><strong>${venta.numero_factura}</strong></p>
+                <p class="mb-1" style="font-size: 1.1rem;"><strong>${numeroFacturaCompleto}</strong></p>
             </div>
 
             <!-- Resolución DIAN -->
