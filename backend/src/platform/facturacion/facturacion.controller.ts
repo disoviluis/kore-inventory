@@ -107,6 +107,8 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
       );
     } else {
       // Actualizar solo los campos que se enviaron
+      logger.info(`Body recibido: ${JSON.stringify(req.body)}`);
+      
       const updates: string[] = [];
       const values: any[] = [];
 
@@ -131,6 +133,8 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
           }
         }
       });
+
+      logger.info(`Updates encontrados: ${updates.length}, campos: ${updates.join(', ')}`);
 
       if (updates.length === 0) {
         return errorResponse(
