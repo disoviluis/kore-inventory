@@ -604,7 +604,7 @@ function renderizarProductos() {
                                        value="${p.precio_unitario}" 
                                        min="0" step="0.01"
                                        onchange="actualizarPrecio(${index}, this.value)"
-                                       onkeypress="if(event.key === 'Enter') { actualizarPrecio(${index}, this.value); this.blur(); }"
+                                       onkeypress="if(event.key === 'Enter') { event.preventDefault(); actualizarPrecio(${index}, this.value); return false; }"
                                        id="precioInput${index}"
                                        style="text-align: right;">
                             </div>
@@ -2388,7 +2388,11 @@ function agregarProductoDesdeCatalogo(productoId) {
  */
 function agregarListenerTeclado() {
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && productoSeleccionadoCatalogo) {
+        // Ignorar si el Enter se presiona dentro de un input, textarea o select
+        const elementoActivo = document.activeElement;
+        const esInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(elementoActivo.tagName);
+        
+        if (e.key === 'Enter' && productoSeleccionadoCatalogo && !esInput) {
             agregarProductoDesdeCatalogo(productoSeleccionadoCatalogo);
         }
     });
