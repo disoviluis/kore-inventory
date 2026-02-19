@@ -258,14 +258,21 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
     if (pagos && Array.isArray(pagos) && pagos.length > 0) {
       const totalPagos = pagos.reduce((sum: number, p: any) => sum + parseFloat(p.monto), 0);
       
+      // Permitir pagos mayores o iguales al total (para cálculo de cambio)
       // Tolerancia de 1 centavo para evitar errores de redondeo
-      if (Math.abs(totalPagos - total) > 0.01) {
+      if (totalPagos < total - 0.01) {
         return errorResponse(
           res,
-          `La suma de pagos ($${totalPagos.toFixed(2)}) no coincide con el total de la venta ($${total})`,
+          `La suma de pagos ($${totalPagos.toFixed(2)}) es menor al total de la venta ($${total})`,
           null,
           CONSTANTS.HTTP_STATUS.BAD_REQUEST
         );
+      }
+      
+      // Registrar el cambio si el pago excede el total
+      const cambio = totalPagos - total;
+      if (cambio > 0.01) {
+        logger.info(`Venta con cambio: Total=$${total}, Pagado=$${totalPagos.toFixed(2)}, Cambio=$${cambio.toFixed(2)}`);
       }
     }
 
