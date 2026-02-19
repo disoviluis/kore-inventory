@@ -78,10 +78,60 @@ Es posible que `currentEmpresa` sea null/undefined cuando se genera la factura.
 
 ## 🔍 SIGUIENTE PASO INMEDIATO:
 
-Necesito revisar el código de `mostrarFactura()` en ventas.js alrededor de la línea 1421 para ver:
-1. De dónde obtiene los datos de empresa
-2. Cómo construye el NIT con dígito de verificación
-3. Cómo renderiza el slogan (por qué muestra "null")
-4. Cómo renderiza el logo
-5. Cómo renderiza el teléfono y email
+**✅ PROBLEMA IDENTIFICADO Y SOLUCIONADO:**
+
+El problema era que `currentEmpresa` se carga desde **localStorage del navegador**, y cuando guardabas datos en "Configuración General", solo actualizaba el campo `nombre` en localStorage, dejando todos los demás campos (nit, email, teléfono, slogan, logo_url) con valores antiguos.
+
+**CORRECCIÓN APLICADA:**
+- Modificado `configuracion-general.js` línea 668: Ahora usa `Object.assign()` para actualizar **TODOS** los campos
+- Antes: `empresaActiva.nombre = datosEmpresa.nombre;`
+- Ahora: `Object.assign(empresaActiva, datosEmpresa);`
+
+## 📋 PASOS PARA ACTUALIZAR LA FACTURA:
+
+### OPCIÓN 1: Actualizar vía Configuración General (RECOMENDADO)
+
+1. **Ir a Configuración General**: http://18.191.181.99/configuracion-general.html
+2. **Verificar que todos los campos tengan estos valores correctos:**
+   - Nombre Comercial: `EVEREST SA`
+   - Razón Social: `EVEREST SOCIEDAD ANÓNIMA`
+   - NIT: `900456789` (sin guiones ni dígito de verificación)
+   - Email: `ventas@everestsa.com.co`
+   - Teléfono: `(601) 742 8900`
+   - Slogan: `Soluciones que elevan tu negocio`
+   - Logo URL: `https://pixabay.com/get/gcc1c031779007f2d6a4bc97690b34474b46af1461da6c43a22e990bc591bf4f145ea01554d096cccc15c1d88f6af18accf4cd777f333241d5e281e8cb3455655e59b797cfd1dcea9f2febc47616b08c4_640.png`
+   - Dirección: `Carrera 7 No. 71-21 Torre B Piso 12`
+   - Ciudad: `Bogotá D.C.`
+   - Régimen Tributario: `Común` (valor: comun)
+   - Gran Contribuyente: ✅ Activado
+   - Autoretenedor: ✅ Activado
+   - Agente Retenedor IVA: ✅ Activado
+   - Número Resolución: `18764000045892`
+   - Fecha Resolución: `2024-03-15`
+   - Vigencia Desde: `2024-03-15`
+   - Vigencia Hasta: `2026-03-15`
+
+3. **Hacer clic en "Guardar Cambios"**
+   - Esto actualizará la base de datos Y el localStorage con los nuevos valores
+
+4. **Refrescar la página de Ventas** (Ctrl+F5 o Cmd+Shift+R para forzar recarga)
+   - Esto cargará el nuevo `configuracion-general.js` v2.2
+
+5. **Generar una nueva venta de prueba**
+   - La factura ahora debería mostrar:
+     - ✅ NIT: 900456789-3 (con dígito calculado)
+     - ✅ Email: ventas@everestsa.com.co
+     - ✅ Teléfono: (601) 742 8900
+     - ✅ Slogan: Soluciones que elevan tu negocio
+     - ✅ Logo: Imagen de Pixabay
+     - ✅ Dirección completa
+     - ✅ Badges: Gran Contribuyente, Régimen Común
+     - ✅ Resolución DIAN completa con fechas
+
+### OPCIÓN 2: Limpiar localStorage manualmente (Solo si Opción 1 no funciona)
+
+1. Abrir DevTools (F12)
+2. Ir a Application > Local Storage
+3. Borrar el item `empresaActiva`
+4. Refrescar página (F5)
 
