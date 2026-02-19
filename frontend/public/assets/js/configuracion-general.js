@@ -665,9 +665,9 @@ async function guardarDatosEmpresa() {
             throw new Error(data.message || 'Error al guardar empresa');
         }
 
-        // Actualizar localStorage con el nuevo nombre
+        // Actualizar localStorage con TODOS los datos actualizados de la empresa
         const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
-        empresaActiva.nombre = datosEmpresa.nombre;
+        Object.assign(empresaActiva, datosEmpresa);
         localStorage.setItem('empresaActiva', JSON.stringify(empresaActiva));
 
         // Actualizar selector de empresa en el sidebar
