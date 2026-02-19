@@ -11,51 +11,163 @@ USE kore_inventory;
 -- 1. TABLA EMPRESAS - Agregar campos de facturación
 -- ============================================
 
--- Logo y branding
-ALTER TABLE empresas 
-ADD COLUMN logo_url VARCHAR(500) NULL COMMENT 'URL del logo de la empresa' AFTER telefono;
+-- Logo y branding (verificar si existen antes de agregar)
+SET @dbname = DATABASE();
+SET @tablename = 'empresas';
 
-ALTER TABLE empresas 
-ADD COLUMN slogan VARCHAR(200) NULL COMMENT 'Eslogan de la empresa' AFTER logo_url;
+-- logo_url
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'logo_url';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN logo_url VARCHAR(500) NULL COMMENT "URL del logo de la empresa" AFTER telefono', 
+    'SELECT "Column logo_url already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE empresas 
-ADD COLUMN sitio_web VARCHAR(200) NULL COMMENT 'Sitio web de la empresa' AFTER slogan;
+-- slogan
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'slogan';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN slogan VARCHAR(200) NULL COMMENT "Eslogan de la empresa" AFTER logo_url', 
+    'SELECT "Column slogan already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE empresas 
-ADD COLUMN ciudad VARCHAR(100) NULL COMMENT 'Ciudad de la empresa' AFTER direccion;
+-- sitio_web
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'sitio_web';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN sitio_web VARCHAR(200) NULL COMMENT "Sitio web de la empresa" AFTER slogan', 
+    'SELECT "Column sitio_web already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Información tributaria
-ALTER TABLE empresas 
-ADD COLUMN regimen_fiscal ENUM('comun', 'simplificado') DEFAULT 'comun' COMMENT 'Régimen fiscal' AFTER nit;
+-- ciudad
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'ciudad';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN ciudad VARCHAR(100) NULL COMMENT "Ciudad de la empresa" AFTER direccion', 
+    'SELECT "Column ciudad already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE empresas 
-ADD COLUMN gran_contribuyente BOOLEAN DEFAULT FALSE COMMENT 'Es gran contribuyente' AFTER regimen_fiscal;
+-- regimen_fiscal
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'regimen_fiscal';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN regimen_fiscal ENUM("comun", "simplificado") DEFAULT "comun" COMMENT "Régimen fiscal" AFTER nit', 
+    'SELECT "Column regimen_fiscal already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE empresas 
-ADD COLUMN autoretenedor BOOLEAN DEFAULT FALSE COMMENT 'Es autoretenedor' AFTER gran_contribuyente;
+-- gran_contribuyente
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'gran_contribuyente';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN gran_contribuyente BOOLEAN DEFAULT FALSE COMMENT "Es gran contribuyente" AFTER regimen_fiscal', 
+    'SELECT "Column gran_contribuyente already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Resolución DIAN
-ALTER TABLE empresas 
-ADD COLUMN resolucion_dian VARCHAR(50) NULL COMMENT 'Número de resolución DIAN' AFTER autoretenedor;
+-- autoretenedor
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'autoretenedor';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN autoretenedor BOOLEAN DEFAULT FALSE COMMENT "Es autoretenedor" AFTER gran_contribuyente', 
+    'SELECT "Column autoretenedor already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE empresas 
-ADD COLUMN fecha_resolucion_desde DATE NULL COMMENT 'Fecha inicio vigencia resolución' AFTER resolucion_dian;
+-- resolucion_dian
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'resolucion_dian';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN resolucion_dian VARCHAR(50) NULL COMMENT "Número de resolución DIAN" AFTER autoretenedor', 
+    'SELECT "Column resolucion_dian already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE empresas 
-ADD COLUMN fecha_resolucion_hasta DATE NULL COMMENT 'Fecha fin vigencia resolución' AFTER fecha_resolucion_desde;
+-- fecha_resolucion_desde
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'fecha_resolucion_desde';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN fecha_resolucion_desde DATE NULL COMMENT "Fecha inicio vigencia resolución" AFTER resolucion_dian', 
+    'SELECT "Column fecha_resolucion_desde already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Numeración de facturas
-ALTER TABLE empresas 
-ADD COLUMN prefijo_factura VARCHAR(10) DEFAULT 'FAC' COMMENT 'Prefijo para número de factura' AFTER fecha_resolucion_hasta;
+-- fecha_resolucion_hasta
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'fecha_resolucion_hasta';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN fecha_resolucion_hasta DATE NULL COMMENT "Fecha fin vigencia resolución" AFTER fecha_resolucion_desde', 
+    'SELECT "Column fecha_resolucion_hasta already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE empresas 
-ADD COLUMN rango_factura_desde INT NULL COMMENT 'Número inicial del rango autorizado' AFTER prefijo_factura;
+-- prefijo_factura
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'prefijo_factura';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN prefijo_factura VARCHAR(10) DEFAULT "FAC" COMMENT "Prefijo para número de factura" AFTER fecha_resolucion_hasta', 
+    'SELECT "Column prefijo_factura already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE empresas 
-ADD COLUMN rango_factura_hasta INT NULL COMMENT 'Número final del rango autorizado' AFTER rango_factura_desde;
+-- rango_factura_desde
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'rango_factura_desde';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN rango_factura_desde INT NULL COMMENT "Número inicial del rango autorizado" AFTER prefijo_factura', 
+    'SELECT "Column rango_factura_desde already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE empresas 
-ADD COLUMN contador_factura_actual INT DEFAULT 1 COMMENT 'Contador actual de facturas' AFTER rango_factura_hasta;
+-- rango_factura_hasta
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'rango_factura_hasta';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN rango_factura_hasta INT NULL COMMENT "Número final del rango autorizado" AFTER rango_factura_desde', 
+    'SELECT "Column rango_factura_hasta already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- contador_factura_actual
+SET @colexists = 0;
+SELECT COUNT(*) INTO @colexists FROM information_schema.columns 
+WHERE table_schema = @dbname AND table_name = @tablename AND column_name = 'contador_factura_actual';
+SET @query = IF(@colexists = 0, 
+    'ALTER TABLE empresas ADD COLUMN contador_factura_actual INT DEFAULT 1 COMMENT "Contador actual de facturas" AFTER rango_factura_hasta', 
+    'SELECT "Column contador_factura_actual already exists" AS message');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- ============================================
 -- 2. TABLA CLIENTES - Agregar campos para facturación
