@@ -334,7 +334,6 @@
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link" id="empresa-tab" data-bs-toggle="tab" data-bs-target="#empresa-panel" type="button" role="tab">
                                             <i class="bi bi-building me-2"></i>Empresa
-                                            <span class="badge bg-secondary ms-2">Próximamente</span>
                                         </button>
                                     </li>
                                 </ul>
@@ -429,12 +428,79 @@
 
                                     <!-- Tab: Empresa -->
                                     <div class="tab-pane fade" id="empresa-panel" role="tabpanel">
-                                        <div class="text-center py-5">
-                                            <i class="bi bi-building display-1 text-muted"></i>
-                                            <h5 class="mt-3">Información de la Empresa</h5>
-                                            <p class="text-muted">Datos generales, logo, facturación electrónica</p>
-                                            <span class="badge bg-secondary">Próximamente</span>
-                                        </div>
+                                        
+                                        <!-- Formulario de Empresa -->
+                                        <form id="empresaForm">
+                                            <input type="hidden" id="empresaId">
+                                            
+                                            <div class="row">
+                                                <!-- Información Básica -->
+                                                <div class="col-12 mb-4">
+                                                    <h6 class="border-bottom pb-2 mb-3">
+                                                        <i class="bi bi-info-circle text-primary me-2"></i>Información Básica
+                                                    </h6>
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Nombre de la Empresa <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" id="empresaNombre" required>
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">NIT/RUT <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" id="empresaNit" required>
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Email</label>
+                                                    <input type="email" class="form-control" id="empresaEmail">
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Teléfono</label>
+                                                    <input type="tel" class="form-control" id="empresaTelefono">
+                                                </div>
+                                                
+                                                <div class="col-12 mb-3">
+                                                    <label class="form-label">Dirección</label>
+                                                    <textarea class="form-control" id="empresaDireccion" rows="2"></textarea>
+                                                </div>
+                                                
+                                                <!-- Información Adicional -->
+                                                <div class="col-12 mb-4 mt-3">
+                                                    <h6 class="border-bottom pb-2 mb-3">
+                                                        <i class="bi bi-building text-primary me-2"></i>Información Adicional
+                                                    </h6>
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Sitio Web</label>
+                                                    <input type="url" class="form-control" id="empresaWeb" placeholder="https://ejemplo.com">
+                                                </div>
+                                                
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Logo URL</label>
+                                                    <input type="url" class="form-control" id="empresaLogo" placeholder="https://ejemplo.com/logo.png">
+                                                    <small class="form-text text-muted">URL completa de la imagen del logo</small>
+                                                </div>
+                                                
+                                                <div class="col-12 mb-3">
+                                                    <label class="form-label">Descripción</label>
+                                                    <textarea class="form-control" id="empresaDescripcion" rows="3"></textarea>
+                                                </div>
+                                                
+                                                <!-- Botones -->
+                                                <div class="col-12 mt-3">
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="bi bi-save me-2"></i>Guardar Cambios
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary ms-2" id="btnCancelarEmpresa">
+                                                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+
                                     </div>
 
                                 </div>

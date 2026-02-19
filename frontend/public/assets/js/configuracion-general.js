@@ -503,6 +503,129 @@ function initEventListeners() {
         localStorage.removeItem('selectedCompanyId');
         window.location.href = 'login.html';
     });
+
+    // ============================================================================
+    // EMPRESA TAB - Event Listeners
+    // ============================================================================
+    
+    // Cuando se activa la pestaña Empresa, cargar sus datos
+    document.getElementById('empresa-tab')?.addEventListener('shown.bs.tab', () => {
+        cargarDatosEmpresa();
+    });
+
+    // Submit del formulario de empresa
+    document.getElementById('empresaForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await guardarDatosEmpresa();
+    });
+
+    // Botón cancelar
+    document.getElementById('btnCancelarEmpresa')?.addEventListener('click', () => {
+        cargarDatosEmpresa(); // Recargar datos originales
+    });
+}
+
+// ============================================================================
+// EMPRESA TAB - Funciones
+// ============================================================================
+
+async function cargarDatosEmpresa() {
+    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    if (!empresaActiva || !empresaActiva.id) {
+        console.error('No hay empresa activa seleccionada');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/empresas/${empresaActiva.id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) throw new Error('Error al cargar empresa');
+
+        const data = await response.json();
+        if (data.success && data.data) {
+            const empresa = data.data;
+            
+            // Llenar el formulario
+            document.getElementById('empresaId').value = empresa.id || '';
+            document.getElementById('empresaNombre').value = empresa.nombre || '';
+            document.getElementById('empresaNit').value = empresa.nit || '';
+            document.getElementById('empresaEmail').value = empresa.email || '';
+            document.getElementById('empresaTelefono').value = empresa.telefono || '';
+            document.getElementById('empresaDireccion').value = empresa.direccion || '';
+            document.getElementById('empresaWeb').value = empresa.sitio_web || '';
+            document.getElementById('empresaLogo').value = empresa.logo_url || '';
+            document.getElementById('empresaDescripcion').value = empresa.descripcion || '';
+        }
+    } catch (error) {
+        console.error('Error al cargar datos de empresa:', error);
+        showNotification('Error al cargar los datos de la empresa', 'danger');
+    }
+}
+
+async function guardarDatosEmpresa() {
+    const empresaId = document.getElementById('empresaId').value;
+    
+    const datosEmpresa = {
+        nombre: document.getElementById('empresaNombre').value.trim(),
+        nit: document.getElementById('empresaNit').value.trim(),
+        email: document.getElementById('empresaEmail').value.trim() || null,
+        telefono: document.getElementById('empresaTelefono').value.trim() || null,
+        direccion: document.getElementById('empresaDireccion').value.trim() || null,
+        sitio_web: document.getElementById('empresaWeb').value.trim() || null,
+        logo_url: document.getElementById('empresaLogo').value.trim() || null,
+        descripcion: document.getElementById('empresaDescripcion').value.trim() || null
+    };
+
+    // Validaciones
+    if (!datosEmpresa.nombre) {
+        showNotification('El nombre de la empresa es obligatorio', 'warning');
+        return;
+    }
+    if (!datosEmpresa.nit) {
+        showNotification('El NIT/RUT es obligatorio', 'warning');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(datosEmpresa)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Error al guardar empresa');
+        }
+
+        // Actualizar localStorage con el nuevo nombre
+        const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
+        empresaActiva.nombre = datosEmpresa.nombre;
+        localStorage.setItem('empresaActiva', JSON.stringify(empresaActiva));
+
+        // Actualizar selector de empresa en el sidebar
+        const companySelector = document.getElementById('companySelector');
+        if (companySelector) {
+            const option = companySelector.querySelector(`option[value="${empresaId}"]`);
+            if (option) option.textContent = datosEmpresa.nombre;
+        }
+
+        showNotification('Datos de la empresa actualizados exitosamente', 'success');
+        
+    } catch (error) {
+        console.error('Error al guardar empresa:', error);
+        showNotification(error.message || 'Error al guardar los datos', 'danger');
+    }
 }
 
 // ============================================================================
