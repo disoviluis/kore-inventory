@@ -11,83 +11,111 @@ USE kore_inventory;
 -- 1. EMPRESAS - 17 CAMPOS NUEVOS
 -- ============================================================================
 
-ALTER TABLE empresas 
-ADD COLUMN IF NOT EXISTS sitio_web VARCHAR(200) NULL,
-ADD COLUMN IF NOT EXISTS descripcion TEXT NULL,
-ADD COLUMN IF NOT EXISTS slogan VARCHAR(200) NULL,
-ADD COLUMN IF NOT EXISTS gran_contribuyente BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS autoretenedor BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS agente_retenedor_iva BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS agente_retenedor_ica BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS resolucion_dian VARCHAR(50) NULL,
-ADD COLUMN IF NOT EXISTS fecha_resolucion_desde DATE NULL,
-ADD COLUMN IF NOT EXISTS fecha_resolucion_hasta DATE NULL,
-ADD COLUMN IF NOT EXISTS prefijo_factura VARCHAR(10) DEFAULT 'FAC',
-ADD COLUMN IF NOT EXISTS rango_factura_desde INT NULL,
-ADD COLUMN IF NOT EXISTS rango_factura_hasta INT NULL,
-ADD COLUMN IF NOT EXISTS numeracion_actual INT DEFAULT 1,
-ADD COLUMN IF NOT EXISTS software_id VARCHAR(50) NULL,
-ADD COLUMN IF NOT EXISTS pin_software VARCHAR(20) NULL,
-ADD COLUMN IF NOT EXISTS ambiente ENUM('pruebas', 'produccion') DEFAULT 'pruebas';
+-- Sitio web
+ALTER TABLE empresas ADD COLUMN sitio_web VARCHAR(200) NULL;
+
+-- Descripción
+ALTER TABLE empresas ADD COLUMN descripcion TEXT NULL;
+
+-- Slogan
+ALTER TABLE empresas ADD COLUMN slogan VARCHAR(200) NULL;
+
+-- Gran contribuyente
+ALTER TABLE empresas ADD COLUMN gran_contribuyente BOOLEAN DEFAULT FALSE;
+
+-- Autoretenedor
+ALTER TABLE empresas ADD COLUMN autoretenedor BOOLEAN DEFAULT FALSE;
+
+-- Agente retenedor IVA
+ALTER TABLE empresas ADD COLUMN agente_retenedor_iva BOOLEAN DEFAULT FALSE;
+
+-- Agente retenedor ICA
+ALTER TABLE empresas ADD COLUMN agente_retenedor_ica BOOLEAN DEFAULT FALSE;
+
+-- Resolución DIAN
+ALTER TABLE empresas ADD COLUMN resolucion_dian VARCHAR(50) NULL;
+
+-- Fecha resolución desde
+ALTER TABLE empresas ADD COLUMN fecha_resolucion_desde DATE NULL;
+
+-- Fecha resolución hasta
+ALTER TABLE empresas ADD COLUMN fecha_resolucion_hasta DATE NULL;
+
+-- Prefijo factura
+ALTER TABLE empresas ADD COLUMN prefijo_factura VARCHAR(10) DEFAULT 'FAC';
+
+-- Rango factura desde
+ALTER TABLE empresas ADD COLUMN rango_factura_desde INT NULL;
+
+-- Rango factura hasta
+ALTER TABLE empresas ADD COLUMN rango_factura_hasta INT NULL;
+
+-- Numeración actual
+ALTER TABLE empresas ADD COLUMN numeracion_actual INT DEFAULT 1;
+
+-- Software ID
+ALTER TABLE empresas ADD COLUMN software_id VARCHAR(50) NULL;
+
+-- PIN Software
+ALTER TABLE empresas ADD COLUMN pin_software VARCHAR(20) NULL;
+
+-- Ambiente
+ALTER TABLE empresas ADD COLUMN ambiente ENUM('pruebas', 'produccion') DEFAULT 'pruebas';
 
 -- ============================================================================
 -- 2. CLIENTES - 10 CAMPOS NUEVOS
 -- ============================================================================
 
-ALTER TABLE clientes 
-ADD COLUMN IF NOT EXISTS razon_social VARCHAR(200) NULL,
-ADD COLUMN IF NOT EXISTS tipo_documento ENUM('cedula', 'nit', 'pasaporte', 'cedula_extranjeria', 'rut') DEFAULT 'cedula',
-ADD COLUMN IF NOT EXISTS digito_verificacion CHAR(1) NULL,
-ADD COLUMN IF NOT EXISTS tipo_persona ENUM('natural', 'juridica') DEFAULT 'natural',
-ADD COLUMN IF NOT EXISTS regimen_tributario ENUM('simplificado', 'común', 'especial') DEFAULT 'simplificado',
-ADD COLUMN IF NOT EXISTS responsabilidad_fiscal VARCHAR(200) NULL,
-ADD COLUMN IF NOT EXISTS actividad_economica VARCHAR(200) NULL,
-ADD COLUMN IF NOT EXISTS departamento VARCHAR(100) NULL,
-ADD COLUMN IF NOT EXISTS codigo_postal VARCHAR(10) NULL,
-ADD COLUMN IF NOT EXISTS celular VARCHAR(20) NULL;
+ALTER TABLE clientes ADD COLUMN razon_social VARCHAR(200) NULL;
+ALTER TABLE clientes ADD COLUMN tipo_documento ENUM('cedula', 'nit', 'pasaporte', 'cedula_extranjeria', 'rut') DEFAULT 'cedula';
+ALTER TABLE clientes ADD COLUMN digito_verificacion CHAR(1) NULL;
+ALTER TABLE clientes ADD COLUMN tipo_persona ENUM('natural', 'juridica') DEFAULT 'natural';
+ALTER TABLE clientes ADD COLUMN regimen_tributario ENUM('simplificado', 'común', 'especial') DEFAULT 'simplificado';
+ALTER TABLE clientes ADD COLUMN responsabilidad_fiscal VARCHAR(200) NULL;
+ALTER TABLE clientes ADD COLUMN actividad_economica VARCHAR(200) NULL;
+ALTER TABLE clientes ADD COLUMN departamento VARCHAR(100) NULL;
+ALTER TABLE clientes ADD COLUMN codigo_postal VARCHAR(10) NULL;
+ALTER TABLE clientes ADD COLUMN celular VARCHAR(20) NULL;
 
 -- ============================================================================
 -- 3. PRODUCTOS - 4 CAMPOS NUEVOS
 -- ============================================================================
 
-ALTER TABLE productos 
-ADD COLUMN IF NOT EXISTS unidad_medida VARCHAR(10) DEFAULT 'UND',
-ADD COLUMN IF NOT EXISTS codigo_unspsc VARCHAR(20) NULL,
-ADD COLUMN IF NOT EXISTS marca VARCHAR(100) NULL,
-ADD COLUMN IF NOT EXISTS modelo VARCHAR(100) NULL;
+ALTER TABLE productos ADD COLUMN unidad_medida VARCHAR(10) DEFAULT 'UND';
+ALTER TABLE productos ADD COLUMN codigo_unspsc VARCHAR(20) NULL;
+ALTER TABLE productos ADD COLUMN marca VARCHAR(100) NULL;
+ALTER TABLE productos ADD COLUMN modelo VARCHAR(100) NULL;
 
 -- ============================================================================
 -- 4. VENTAS - 14 CAMPOS NUEVOS
 -- ============================================================================
 
-ALTER TABLE ventas 
-ADD COLUMN IF NOT EXISTS fecha_vencimiento DATE NULL,
-ADD COLUMN IF NOT EXISTS forma_pago ENUM('contado', 'credito') DEFAULT 'contado',
-ADD COLUMN IF NOT EXISTS metodo_pago ENUM('efectivo', 'tarjeta_credito', 'tarjeta_debito', 'transferencia', 'cheque', 'otro') DEFAULT 'efectivo',
-ADD COLUMN IF NOT EXISTS observaciones TEXT NULL,
-ADD COLUMN IF NOT EXISTS descuento_global DECIMAL(10,2) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS descuento_porcentaje DECIMAL(5,2) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS retencion_iva DECIMAL(10,2) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS retencion_fuente DECIMAL(10,2) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS retencion_ica DECIMAL(10,2) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS numero_factura VARCHAR(50) NULL,
-ADD COLUMN IF NOT EXISTS cufe VARCHAR(256) NULL,
-ADD COLUMN IF NOT EXISTS qr_code TEXT NULL,
-ADD COLUMN IF NOT EXISTS estado_dian ENUM('pendiente', 'enviado', 'aceptado', 'rechazado') DEFAULT 'pendiente',
-ADD COLUMN IF NOT EXISTS xml_factura LONGTEXT NULL,
-ADD COLUMN IF NOT EXISTS pdf_factura VARCHAR(500) NULL;
+ALTER TABLE ventas ADD COLUMN fecha_vencimiento DATE NULL;
+ALTER TABLE ventas ADD COLUMN forma_pago ENUM('contado', 'credito') DEFAULT 'contado';
+ALTER TABLE ventas ADD COLUMN metodo_pago ENUM('efectivo', 'tarjeta_credito', 'tarjeta_debito', 'transferencia', 'cheque', 'otro') DEFAULT 'efectivo';
+ALTER TABLE ventas ADD COLUMN observaciones TEXT NULL;
+ALTER TABLE ventas ADD COLUMN descuento_global DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE ventas ADD COLUMN descuento_porcentaje DECIMAL(5,2) DEFAULT 0;
+ALTER TABLE ventas ADD COLUMN retencion_iva DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE ventas ADD COLUMN retencion_fuente DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE ventas ADD COLUMN retencion_ica DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE ventas ADD COLUMN numero_factura VARCHAR(50) NULL;
+ALTER TABLE ventas ADD COLUMN cufe VARCHAR(256) NULL;
+ALTER TABLE ventas ADD COLUMN qr_code TEXT NULL;
+ALTER TABLE ventas ADD COLUMN estado_dian ENUM('pendiente', 'enviado', 'aceptado', 'rechazado') DEFAULT 'pendiente';
+ALTER TABLE ventas ADD COLUMN xml_factura LONGTEXT NULL;
+ALTER TABLE ventas ADD COLUMN pdf_factura VARCHAR(500) NULL;
 
 -- ============================================================================
 -- 5. VENTA_DETALLE - 6 CAMPOS NUEVOS
 -- ============================================================================
 
-ALTER TABLE venta_detalle 
-ADD COLUMN IF NOT EXISTS unidad_medida VARCHAR(10) DEFAULT 'UND',
-ADD COLUMN IF NOT EXISTS descuento_porcentaje DECIMAL(5,2) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS descuento_valor DECIMAL(10,2) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS impuesto_porcentaje DECIMAL(5,2) DEFAULT 19,
-ADD COLUMN IF NOT EXISTS impuesto_valor DECIMAL(10,2) DEFAULT 0,
-ADD COLUMN IF NOT EXISTS descripcion_adicional TEXT NULL;
+ALTER TABLE venta_detalle ADD COLUMN unidad_medida VARCHAR(10) DEFAULT 'UND';
+ALTER TABLE venta_detalle ADD COLUMN descuento_porcentaje DECIMAL(5,2) DEFAULT 0;
+ALTER TABLE venta_detalle ADD COLUMN descuento_valor DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE venta_detalle ADD COLUMN impuesto_porcentaje DECIMAL(5,2) DEFAULT 19;
+ALTER TABLE venta_detalle ADD COLUMN impuesto_valor DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE venta_detalle ADD COLUMN descripcion_adicional TEXT NULL;
 
 -- ============================================================================
 -- 6. TABLA RETENCIONES - NUEVA
