@@ -74,13 +74,32 @@ export const getEmpresaById = async (req: Request, res: Response): Promise<Respo
         ciudad,
         pais,
         logo_url,
+        sitio_web,
+        descripcion,
+        slogan,
         color_primario,
         plan_id,
         moneda,
         zona_horaria,
         idioma,
+        regimen_tributario,
+        tipo_contribuyente,
+        gran_contribuyente,
+        autoretenedor,
+        agente_retenedor_iva,
+        agente_retenedor_ica,
+        resolucion_dian,
+        fecha_resolucion_desde,
+        fecha_resolucion_hasta,
+        prefijo_factura,
+        rango_factura_desde,
+        rango_factura_hasta,
+        numeracion_actual,
+        software_id,
+        pin_software,
+        ambiente,
         estado,
-        DATE_FORMAT(creado_en, '%Y-%m-%d') as fecha_creacion
+        DATE_FORMAT(created_at, '%Y-%m-%d') as fecha_creacion
       FROM empresas 
       WHERE id = ?
       LIMIT 1`,
@@ -189,5 +208,61 @@ export const getEmpresasByUsuario = async (req: Request, res: Response): Promise
       error,
       CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
     );
+  }
+};
+
+/**
+ * Actualizar empresa
+ * PUT /api/empresas/:id
+ */
+export const updateEmpresa = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const {
+      nombre, razon_social, nit, email, telefono, direccion, ciudad, pais,
+      logo_url, sitio_web, descripcion, slogan, regimen_tributario,
+      tipo_contribuyente, gran_contribuyente, autoretenedor,
+      agente_retenedor_iva, agente_retenedor_ica, resolucion_dian,
+      fecha_resolucion_desde, fecha_resolucion_hasta, prefijo_factura,
+      rango_factura_desde, rango_factura_hasta, numeracion_actual,
+      software_id, pin_software, ambiente
+    } = req.body;
+
+    if (!nombre || !nit || !email) {
+      return errorResponse(res, 'Nombre, NIT y email son obligatorios', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const empresaExiste = await query('SELECT id FROM empresas WHERE id = ? LIMIT 1', [id]);
+    if (empresaExiste.length === 0) {
+      return errorResponse(res, 'Empresa no encontrada', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
+    }
+
+    await query(
+      `UPDATE empresas SET 
+        nombre = ?, razon_social = ?, nit = ?, email = ?, telefono = ?, direccion = ?,
+        ciudad = ?, pais = ?, logo_url = ?, sitio_web = ?, descripcion = ?, slogan = ?,
+        regimen_tributario = ?, tipo_contribuyente = ?, gran_contribuyente = ?, autoretenedor = ?,
+        agente_retenedor_iva = ?, agente_retenedor_ica = ?, resolucion_dian = ?,
+        fecha_resolucion_desde = ?, fecha_resolucion_hasta = ?, prefijo_factura = ?,
+        rango_factura_desde = ?, rango_factura_hasta = ?, numeracion_actual = ?,
+        software_id = ?, pin_software = ?, ambiente = ?, updated_at = NOW()
+      WHERE id = ?`,
+      [
+        nombre, razon_social || null, nit, email, telefono || null, direccion || null,
+        ciudad || null, pais || 'Colombia', logo_url || null, sitio_web || null,
+        descripcion || null, slogan || null, regimen_tributario || 'simplificado',
+        tipo_contribuyente || 'persona_juridica', gran_contribuyente || false, autoretenedor || false,
+        agente_retenedor_iva || false, agente_retenedor_ica || false, resolucion_dian || null,
+        fecha_resolucion_desde || null, fecha_resolucion_hasta || null, prefijo_factura || 'FAC',
+        rango_factura_desde || null, rango_factura_hasta || null, numeracion_actual || 1,
+        software_id || null, pin_software || null, ambiente || 'pruebas', id
+      ]
+    );
+
+    logger.info(`Empresa ${id} actualizada: ${nombre}`);
+    return successResponse(res, 'Empresa actualizada exitosamente', { id, nombre }, CONSTANTS.HTTP_STATUS.OK);
+  } catch (error) {
+    logger.error('Error al actualizar empresa:', error);
+    return errorResponse(res, 'Error al actualizar empresa', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };

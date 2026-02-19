@@ -19,4 +19,7 @@ router.get('/usuario/:userId', empresasController.getEmpresasByUsuario);
 // Obtener empresa por ID
 router.get('/:id', empresasController.getEmpresaById);
 
+// Actualizar empresa
+router.put('/:id', empresasController.updateEmpresa);
+
 export default router;
