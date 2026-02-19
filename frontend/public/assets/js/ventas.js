@@ -890,10 +890,7 @@ function agregarPago() {
     const totalPagado = calcularTotalPagado();
     const pendiente = totalVentaActual - totalPagado;
     
-    if (monto > pendiente) {
-        mostrarAlerta(`El monto excede lo pendiente ($${formatearNumero(pendiente)})`, 'warning');
-        return;
-    }
+    // Permitir sobrepagos (el sistema calculará el cambio automáticamente)
     
     // Agregar pago al array
     const pago = {
@@ -966,23 +963,42 @@ function calcularTotalPagado() {
 function actualizarEstadoPago() {
     const totalPagado = calcularTotalPagado();
     const pendiente = totalVentaActual - totalPagado;
+    const cambio = totalPagado - totalVentaActual;
     
     // Actualizar resumen de pagos
     document.getElementById('totalVentaPagos').textContent = `$${formatearNumero(totalVentaActual)}`;
     document.getElementById('totalPagado').textContent = `$${formatearNumero(totalPagado)}`;
-    document.getElementById('montoPendiente').textContent = `$${formatearNumero(pendiente)}`;
+    
+    // Mostrar pendiente o cambio según corresponda
+    const montoPendienteEl = document.getElementById('montoPendiente');
+    if (pendiente > 0.01) {
+        montoPendienteEl.textContent = `$${formatearNumero(pendiente)}`;
+        montoPendienteEl.className = 'text-danger fw-bold';
+    } else if (cambio > 0.01) {
+        montoPendienteEl.textContent = `$${formatearNumero(cambio)} (Cambio)`;
+        montoPendienteEl.className = 'text-success fw-bold';
+    } else {
+        montoPendienteEl.textContent = '$0';
+        montoPendienteEl.className = 'text-muted';
+    }
     
     // Mostrar/ocultar alerta
     const alertaPendiente = document.getElementById('alertaPendiente');
     if (pendiente > 0.01) {
         alertaPendiente.style.display = 'block';
+        alertaPendiente.textContent = `Pendiente por pagar: $${formatearNumero(pendiente)}`;
+        alertaPendiente.className = 'alert alert-warning';
+    } else if (cambio > 0.01) {
+        alertaPendiente.style.display = 'block';
+        alertaPendiente.textContent = `💵 Cambio a devolver: $${formatearNumero(cambio)}`;
+        alertaPendiente.className = 'alert alert-success';
     } else {
         alertaPendiente.style.display = 'none';
     }
     
     // Habilitar/deshabilitar botón de guardar
     const btnGuardar = document.getElementById('btnGuardarVenta');
-    const pagoCompleto = Math.abs(pendiente) < 0.01;
+    const pagoCompleto = pendiente <= 0.01; // Permitir si está pagado o sobrepagado
     const tieneCliente = !!clienteSeleccionado;
     const tieneProductos = productosVenta.length > 0;
     
