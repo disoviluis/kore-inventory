@@ -29,7 +29,7 @@ export const getEmpresas = async (req: Request, res: Response): Promise<Response
         pais,
         logo_url,
         estado,
-        DATE_FORMAT(creado_en, '%Y-%m-%d') as fecha_creacion
+        DATE_FORMAT(created_at, '%Y-%m-%d') as fecha_creacion
       FROM empresas 
       WHERE estado != 'cancelada'
       ORDER BY nombre ASC`
