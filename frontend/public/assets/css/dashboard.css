@@ -953,3 +953,44 @@ body {
 .collapsing {
     transition: height 0.35s ease;
 }
+/* ===================================
+   TABS CONFIGURATION (card-header-tabs)
+   =================================== */
+
+/* Tabs específicas para contenido (no sidebar) */
+.card-header-tabs .nav-link {
+    color: #6c757d;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 12px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.card-header-tabs .nav-link:hover {
+    color: var(--primary-color);
+    background: rgba(23, 92, 211, 0.05);
+    border-bottom-color: rgba(23, 92, 211, 0.3);
+}
+
+.card-header-tabs .nav-link.active {
+    color: var(--primary-color);
+    background: rgba(23, 92, 211, 0.1);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+}
+
+.card-header-tabs .nav-link.active::before {
+    display: none; /* No mostrar la línea lateral del sidebar */
+}
+
+.card-header-tabs .nav-link i {
+    color: inherit;
+}
+
+.card-header-tabs .nav-link .badge {
+    font-size: 0.65rem;
+    padding: 3px 6px;
+}
