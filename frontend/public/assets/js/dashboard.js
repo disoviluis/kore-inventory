@@ -103,9 +103,6 @@ function cargarDatosUsuario(usuario) {
   
   // Cargar empresas del usuario
   cargarEmpresas(usuario.id);
-  
-  // Verificar configuración de facturación
-  verificarConfiguracionFacturacion();
 }
 
 /**
@@ -152,12 +149,16 @@ async function cargarEmpresas(usuarioId) {
       // Cargar estadísticas de la empresa seleccionada
       cargarEstadisticas(companySelector.value);
       
+      // Verificar configuración de facturación después de cargar empresa
+      verificarConfiguracionFacturacion();
+      
       // Event listener para cambio de empresa
       companySelector.addEventListener('change', (e) => {
         const empresaId = e.target.value;
         const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
         localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
         cargarEstadisticas(empresaId);
+        verificarConfiguracionFacturacion();
       });
       
     } else {
@@ -3330,18 +3331,18 @@ function limpiarFiltrosUsuarios() {
  * Verificar si la empresa tiene configuración de facturación completa
  */
 async function verificarConfiguracionFacturacion() {
-  const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
   const token = localStorage.getItem('token');
+  const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
   
-  if (!usuario || !usuario.empresa_id) {
-    return; // No hay empresa asociada
+  if (!empresaActiva || !empresaActiva.id) {
+    return; // No hay empresa seleccionada
   }
   
   const alertElement = document.getElementById('alertConfiguracionPendiente');
   if (!alertElement) return;
   
   try {
-    const response = await fetch(`${API_URL}/facturacion/configuracion/${usuario.empresa_id}`, {
+    const response = await fetch(`${API_URL}/facturacion/configuracion/${empresaActiva.id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -3431,11 +3432,15 @@ function mostrarAlertaConfiguracion(faltantes) {
   // Mostrar lista de pendientes
   listaElement.innerHTML = items.map(item => `<li>${item}</li>`).join('');
   
-  // Mostrar alerta
-  alertElement.style.display = 'block';
+  // Obtener empresa activa para el alertKey
+  const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+  if (!empresaActiva || !empresaActiva.id) {
+    alertElement.style.display = 'none';
+    return;
+  }
   
   // Guardar en localStorage que se mostró (para no molestar mucho)
-  const alertKey = `alertFacturacion_${JSON.parse(localStorage.getItem('usuario')).empresa_id}`;
+  const alertKey = `alertFacturacion_${empresaActiva.id}`;
   const lastShown = localStorage.getItem(alertKey);
   const now = new Date().getTime();
   
@@ -3444,6 +3449,9 @@ function mostrarAlertaConfiguracion(faltantes) {
     alertElement.style.display = 'none';
     return;
   }
+  
+  // Mostrar alerta
+  alertElement.style.display = 'block';
   
   // Guardar timestamp de cuando se mostró
   localStorage.setItem(alertKey, now.toString());
