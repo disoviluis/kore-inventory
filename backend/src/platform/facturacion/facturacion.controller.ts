@@ -60,24 +60,6 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
   try {
     const { empresaId } = req.params;
     
-    // Obtener valores del body y convertir undefined a null
-    const mostrar_logo = req.body.mostrar_logo ?? null;
-    const logo_posicion = req.body.logo_posicion ?? null;
-    const mostrar_slogan = req.body.mostrar_slogan ?? null;
-    const color_primario = req.body.color_primario ?? null;
-    const color_secundario = req.body.color_secundario ?? null;
-    const fuente = req.body.fuente ?? null;
-    const tamano_fuente = req.body.tamano_fuente ?? null;
-    const pie_pagina = req.body.pie_pagina ?? null;
-    const terminos_condiciones = req.body.terminos_condiciones ?? null;
-    const notas_predeterminadas = req.body.notas_predeterminadas ?? null;
-    const mensaje_agradecimiento = req.body.mensaje_agradecimiento ?? null;
-    const mostrar_qr = req.body.mostrar_qr ?? null;
-    const mostrar_cufe = req.body.mostrar_cufe ?? null;
-    const mostrar_firma = req.body.mostrar_firma ?? null;
-    const texto_firma = req.body.texto_firma ?? null;
-    const cuentas_bancarias = req.body.cuentas_bancarias ? JSON.stringify(req.body.cuentas_bancarias) : null;
-
     // Verificar si existe la configuración
     const existe = await query(
       `SELECT id FROM configuracion_factura WHERE empresa_id = ?`,
@@ -85,7 +67,28 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
     );
 
     if (existe.length === 0) {
-      // Crear nueva configuración
+      // Crear nueva configuración con valores por defecto
+      const {
+        mostrar_logo = 1,
+        logo_posicion = 'izquierda',
+        mostrar_slogan = 1,
+        color_primario = '#007bff',
+        color_secundario = '#6c757d',
+        fuente = 'Arial',
+        tamano_fuente = 10,
+        pie_pagina = null,
+        terminos_condiciones = null,
+        notas_predeterminadas = null,
+        mensaje_agradecimiento = 'Gracias por su compra',
+        mostrar_qr = 1,
+        mostrar_cufe = 1,
+        mostrar_firma = 0,
+        texto_firma = null,
+        cuentas_bancarias = null
+      } = req.body;
+
+      const cuentas_json = cuentas_bancarias ? JSON.stringify(cuentas_bancarias) : null;
+
       await query(
         `INSERT INTO configuracion_factura (
           empresa_id, mostrar_logo, logo_posicion, mostrar_slogan,
@@ -99,40 +102,51 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
           color_primario, color_secundario, fuente, tamano_fuente,
           pie_pagina, terminos_condiciones, notas_predeterminadas,
           mensaje_agradecimiento, mostrar_qr, mostrar_cufe,
-          mostrar_firma, texto_firma, cuentas_bancarias
+          mostrar_firma, texto_firma, cuentas_json
         ]
       );
     } else {
-      // Actualizar configuración existente
-      await query(
-        `UPDATE configuracion_factura SET
-          mostrar_logo = ?,
-          logo_posicion = ?,
-          mostrar_slogan = ?,
-          color_primario = ?,
-          color_secundario = ?,
-          fuente = ?,
-          tamano_fuente = ?,
-          pie_pagina = ?,
-          terminos_condiciones = ?,
-          notas_predeterminadas = ?,
-          mensaje_agradecimiento = ?,
-          mostrar_qr = ?,
-          mostrar_cufe = ?,
-          mostrar_firma = ?,
-          texto_firma = ?,
-          cuentas_bancarias = ?,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE empresa_id = ?`,
-        [
-          mostrar_logo, logo_posicion, mostrar_slogan,
-          color_primario, color_secundario, fuente, tamano_fuente,
-          pie_pagina, terminos_condiciones, notas_predeterminadas,
-          mensaje_agradecimiento, mostrar_qr, mostrar_cufe,
-          mostrar_firma, texto_firma, cuentas_bancarias,
-          empresaId
-        ]
-      );
+      // Actualizar solo los campos que se enviaron
+      const updates: string[] = [];
+      const values: any[] = [];
+
+      // Lista de campos permitidos y sus tipos
+      const allowedFields = [
+        'mostrar_logo', 'logo_posicion', 'mostrar_slogan',
+        'color_primario', 'color_secundario', 'fuente', 'tamano_fuente',
+        'pie_pagina', 'terminos_condiciones', 'notas_predeterminadas',
+        'mensaje_agradecimiento', 'mostrar_qr', 'mostrar_cufe',
+        'mostrar_firma', 'texto_firma', 'cuentas_bancarias'
+      ];
+
+      // Construir UPDATE dinámico solo con campos enviados
+      Object.keys(req.body).forEach((field) => {
+        if (allowedFields.includes(field)) {
+          updates.push(`${field} = ?`);
+          // Manejar cuentas_bancarias como JSON
+          if (field === 'cuentas_bancarias') {
+            values.push(req.body[field] ? JSON.stringify(req.body[field]) : null);
+          } else {
+            values.push(req.body[field] !== undefined ? req.body[field] : null);
+          }
+        }
+      });
+
+      if (updates.length === 0) {
+        return errorResponse(
+          res,
+          'No se enviaron campos para actualizar',
+          null,
+          CONSTANTS.HTTP_STATUS.BAD_REQUEST
+        );
+      }
+
+      // Agregar updated_at
+      updates.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(empresaId);
+
+      const sql = `UPDATE configuracion_factura SET ${updates.join(', ')} WHERE empresa_id = ?`;
+      await query(sql, values);
     }
 
     logger.info(`Configuración de facturación actualizada para empresa: ${empresaId}`);
