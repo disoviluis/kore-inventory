@@ -847,8 +847,8 @@ function generarPreviewCarta(plantillaId, colorPrimario, colorSecundario, fuente
                 ${mostrarBadges && d.empresa.es_gran_contribuyente ? `<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 3px; font-size: 7pt;">Gran Contribuyente</span>` : ''}
             </div>
             
-            <div style="text-align: center; font-size: 12pt; font-weight: bold; margin: 15px 0; padding: 10px; border: 2px solid ${colorPrimario}; background: ${colorPrimario}15;">
-                FACTURA ELECTRÓNICA DE VENTA<br>${d.factura.numero}
+            <div style="text-align: center; font-size: 10pt; font-weight: bold; margin: 10px 0; padding: 8px; border: 2px solid ${colorPrimario}; background: ${colorPrimario}15; border-radius: 3px;">
+                FACTURA ELECTRÓNICA<br><span style="font-size: 11pt; color: ${colorPrimario};">${d.factura.numero}</span>
             </div>
         `;
     }

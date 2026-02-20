@@ -57,9 +57,11 @@ async function cargarConfiguracionPlantilla() {
         });
         
         const data = await response.json();
+        console.log('📥 Respuesta del servidor:', data);
         if (data.success && data.data) {
             configuracionPlantilla = data.data;
             console.log('✅ Configuración de plantilla cargada:', configuracionPlantilla);
+            console.log('📋 Plantilla ID seleccionada:', configuracionPlantilla.plantilla_id);
         } else {
             // Configuración por defecto
             configuracionPlantilla = {
@@ -2042,7 +2044,7 @@ async function descargarPDF() {
 // ============================================
 
 function obtenerConfiguracionActual() {
-    return {
+    const config = {
         plantillaId: configuracionPlantilla?.plantilla_id || 1,
         colorPrimario: configuracionPlantilla?.color_primario || currentEmpresa.color_primario || '#1E40AF',
         colorSecundario: configuracionPlantilla?.color_secundario || '#6c757d',
@@ -2052,12 +2054,16 @@ function obtenerConfiguracionActual() {
         mostrarCUFE: configuracionPlantilla?.mostrar_cufe !== false,
         mostrarBadges: configuracionPlantilla?.mostrar_badges !== false
     };
+    console.log('🎨 Configuración actual para generación:', config);
+    return config;
 }
 
 function generarHTMLImpresion(formato = 'carta') {
+    console.log('🖨️ Generando factura - Formato:', formato);
     const venta = ultimaVentaGuardada;
     const ventaData = ultimaVentaData;
     const config = obtenerConfiguracionActual();
+    console.log('📄 Usando plantilla ID:', config.plantillaId);
     
     // Decidir qué plantilla usar según formato y configuración
     if (formato === 'tirilla') {
