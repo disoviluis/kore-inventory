@@ -909,9 +909,9 @@ function generarPreviewCarta(plantillaId, colorPrimario, colorSecundario, fuente
                 </div>
             </div>
             
-            <div style="background: white; border: 2px solid ${colorPrimario}; border-radius: 8px; padding: 15px; margin: 15px 0; text-align: center;">
-                <div style="font-size: 10pt; color: ${colorSecundario}; font-family: 'Georgia', serif;">FACTURA ELECTRÓNICA DE VENTA</div>
-                <div style="font-size: 16pt; font-weight: bold; color: ${colorPrimario}; margin-top: 5px; font-family: 'Georgia', serif;">${d.factura.numero}</div>
+            <div style="background: white; border: 2px solid ${colorPrimario}; border-radius: 6px; padding: 10px; margin: 12px 0; text-align: center;">
+                <div style="font-size: 8pt; color: ${colorSecundario}; font-family: 'Georgia', serif;">FACTURA ELECTRÓNICA</div>
+                <div style="font-size: 12pt; font-weight: bold; color: ${colorPrimario}; margin-top: 3px; font-family: 'Georgia', serif;">${d.factura.numero}</div>
                 ${mostrarBadges && d.empresa.es_gran_contribuyente ? `<div style="margin-top: 8px;"><span style="background: #0c4a6e; color: white; padding: 4px 12px; border-radius: 20px; font-size: 7pt;">GRAN CONTRIBUYENTE</span></div>` : ''}
             </div>
         `;
@@ -933,12 +933,12 @@ function generarPreviewCarta(plantillaId, colorPrimario, colorSecundario, fuente
                 </div>
             </div>
             
-            <div style="background: ${colorPrimario}; color: white; border-radius: 12px; padding: 15px; margin: 15px 0; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                    <span style="font-size: 24pt;">📄</span>
+            <div style="background: ${colorPrimario}; color: white; border-radius: 10px; padding: 12px; margin: 12px 0; text-align: center; box-shadow: 0 3px 8px rgba(0,0,0,0.08);">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span style="font-size: 18pt;">📄</span>
                     <div style="text-align: left;">
-                        <div style="font-size: 9pt; opacity: 0.9;">FACTURA ELECTRÓNICA</div>
-                        <div style="font-size: 14pt; font-weight: bold;">${d.factura.numero}</div>
+                        <div style="font-size: 8pt; opacity: 0.9;">FACTURA ELECTRÓNICA</div>
+                        <div style="font-size: 11pt; font-weight: bold;">${d.factura.numero}</div>
                     </div>
                 </div>
             </div>

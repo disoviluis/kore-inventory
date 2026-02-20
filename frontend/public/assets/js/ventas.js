@@ -2112,7 +2112,7 @@ function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitComple
         body { font-family: ${config.fuente}, sans-serif; font-size: 10pt; color: #000; padding: 8mm; }
         .encabezado { text-align: center; margin-bottom: 5mm; padding-bottom: 3mm; border-bottom: 2px solid ${config.colorPrimario}; }
         .encabezado h2 { font-size: 16pt; margin-bottom: 2mm; color: ${config.colorPrimario}; }
-        .titulo-factura { text-align: center; font-size: 13pt; font-weight: bold; margin: 4mm 0; padding: 3mm; border: 2px solid ${config.colorPrimario}; background-color: ${config.colorPrimario}15; border-radius: 3mm; }
+        .titulo-factura { text-align: center; font-size: 10pt; font-weight: bold; margin: 3mm 0; padding: 2mm; border: 2px solid ${config.colorPrimario}; background-color: ${config.colorPrimario}15; border-radius: 3mm; }
         .info-boxes { display: flex; justify-content: space-between; gap: 3mm; margin: 4mm 0; }
         .info-box { flex: 1; border: 1px solid #ddd; padding: 3mm; border-radius: 2mm; font-size: 9pt; }
         table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 9pt; }
@@ -2130,7 +2130,7 @@ function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitComple
         ${config.mostrarBadges && currentEmpresa.es_gran_contribuyente ? '<span style="background: #28a745; color: white; padding: 2mm 3mm; border-radius: 2mm; font-size: 8pt;">Gran Contribuyente</span>' : ''}
     </div>
     
-    <div class="titulo-factura">FACTURA ELECTRÓNICA DE VENTA<br>${numeroFactura}</div>
+    <div class="titulo-factura">FACTURA ELECTRÓNICA<br>${numeroFactura}</div>
     
     <div class="info-boxes">
         <div class="info-box"><strong>Fecha:</strong><br>${fecha}</div>
@@ -2194,7 +2194,7 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
         body { font-family: ${config.fuente}, sans-serif; font-size: 10pt; color: #000; padding: 8mm; }
         .encabezado { display: flex; align-items: center; margin-bottom: 5mm; padding-bottom: 3mm; border-bottom: 3px solid ${config.colorPrimario}; }
         .encabezado h2 { color: ${config.colorPrimario}; margin: 0; font-size: 18pt; }
-        .titulo-factura { background: ${config.colorPrimario}; color: white; text-align: center; font-size: 13pt; font-weight: bold; padding: 12px; border-radius: 8px; margin: 15px 0; }
+        .titulo-factura { background: ${config.colorPrimario}; color: white; text-align: center; font-size: 10pt; font-weight: bold; padding: 8px; border-radius: 6px; margin: 10px 0; }
         table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 9pt; }
         th { background-color: ${config.colorPrimario}; color: white; padding: 2mm; text-align: left; }
         td { border: 1px solid #ddd; padding: 2mm; }
@@ -2257,7 +2257,7 @@ function generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCo
         body { font-family: ${config.fuente}, sans-serif; font-size: 10pt; color: #000; padding: 8mm; }
         .encabezado { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0; }
         .encabezado h2 { color: ${config.colorPrimario}; margin: 0 0 8px 0; font-size: 20pt; font-weight: 300; }
-        .titulo-factura { font-size: 11pt; font-weight: 300; margin: 20px 0; padding: 15px 0; border-top: 3px solid ${config.colorPrimario}; border-bottom: 1px solid ${config.colorPrimario}; }
+        .titulo-factura { font-size: 9pt; font-weight: 300; margin: 12px 0; padding: 10px 0; border-top: 2px solid ${config.colorPrimario}; border-bottom: 1px solid ${config.colorPrimario}; }
         table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9pt; }
         th { background-color: ${config.colorPrimario}15; padding: 8px; text-align: left; border-bottom: 2px solid ${config.colorPrimario}; }
         td { padding: 6px; border-bottom: 1px solid #f0f0f0; }
@@ -2305,14 +2305,144 @@ function generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCo
 
 // PLANTILLA 4: CORPORATIVA (Premium)
 function generarPlantillaCorporativaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
-    // Por ahora usar plantilla clásica con estilos corporativos
-    return generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Factura_${numeroFactura}</title>
+    <style>
+        @page { size: letter; margin: 15mm; }
+        body { font-family: Georgia, 'Times New Roman', serif; font-size: 10pt; color: #000; padding: 8mm; }
+        .header-band { background: linear-gradient(135deg, ${config.colorPrimario} 0%, ${config.colorSecundario} 100%); padding: 15px 20px; color: white; margin: -8mm -8mm 5mm -8mm; }
+        .header-band h1 { margin: 0; font-size: 18pt; font-weight: 300; }
+        .header-band .subtitle { font-size: 9pt; opacity: 0.9; margin-top: 3px; }
+        .titulo-factura { text-align: center; font-size: 9pt; font-weight: bold; margin: 10px 0; padding: 6px; background: ${config.colorPrimario}10; border-left: 4px solid ${config.colorPrimario}; }
+        .info-boxes { display: flex; gap: 3mm; margin: 4mm 0; }
+        .info-box { flex: 1; border: 1px solid #ddd; padding: 3mm; font-size: 9pt; }
+        .info-box strong { color: ${config.colorPrimario}; }
+        table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 9pt; }
+        th { background-color: ${config.colorPrimario}20; border: 1px solid #ddd; padding: 2mm; text-align: left; }
+        td { border: 1px solid #ddd; padding: 2mm; }
+        .text-right { text-align: right; }
+        .total-final { font-size: 11pt; font-weight: bold; background-color: ${config.colorPrimario}; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header-band">
+        <h1>${currentEmpresa.nombre}</h1>
+        <div class="subtitle">${currentEmpresa.razon_social} | NIT: ${nitCompleto}</div>
+        <div class="subtitle">${currentEmpresa.telefono || ''} | ${currentEmpresa.email || ''}</div>
+    </div>
+    
+    <div class="titulo-factura">FACTURA ${numeroFactura}</div>
+    
+    <div class="info-boxes">
+        <div class="info-box"><strong>Fecha:</strong><br>${fecha}</div>
+        <div class="info-box"><strong>Cliente:</strong><br>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}</div>
+    </div>
+    
+    <table>
+        <thead><tr><th>#</th><th>Descripción</th><th class="text-right">Cant.</th><th class="text-right">Precio</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+            ${ventaData.productos.map((p, i) => `<tr><td>${i + 1}</td><td>${p.nombre}</td><td class="text-right">${p.cantidad}</td><td class="text-right">$${formatearNumero(p.precio_unitario)}</td><td class="text-right">$${formatearNumero(p.subtotal)}</td></tr>`).join('')}
+        </tbody>
+    </table>
+    
+    <div style="display: flex; justify-content: flex-end;">
+        <table style="width: 250px;">
+            <tr><td>Subtotal:</td><td class="text-right">$${formatearNumero(subtotal)}</td></tr>
+            ${descuento > 0 ? `<tr><td>Descuento:</td><td class="text-right">-$${formatearNumero(descuento)}</td></tr>` : ''}
+            <tr><td>IVA (19%):</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            <tr class="total-final"><td style="padding: 8px;">TOTAL:</td><td class="text-right" style="padding: 8px;">$${formatearNumero(total)}</td></tr>
+        </table>
+    </div>
+    
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
+    
+    <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
+</body>
+</html>`;
 }
 
 // PLANTILLA 5: SIIGO STYLE (Premium)
 function generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
-    // Por ahora usar plantilla moderna con estilos SIIGO
-    return generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Factura_${numeroFactura}</title>
+    <style>
+        @page { size: letter; margin: 15mm; }
+        body { font-family: ${config.fuente}, sans-serif; font-size: 10pt; color: #2d3748; padding: 8mm; background: #f7fafc; }
+        .encabezado { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 15px; display: flex; align-items: center; gap: 15px; }
+        .logo-circle { width: 60px; height: 60px; background: ${config.colorPrimario}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24pt; font-weight: bold; }
+        .empresa-info { flex: 1; }
+        .empresa-info h2 { margin: 0; font-size: 14pt; color: ${config.colorPrimario}; }
+        .empresa-info p { margin: 2px 0; font-size: 8pt; color: #718096; }
+        .titulo-factura { background: white; text-align: center; font-size: 9pt; font-weight: 600; padding: 8px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.06); margin: 10px 0; color: ${config.colorPrimario}; }
+        .info-cards { display: flex; gap: 10px; margin: 15px 0; }
+        .card { flex: 1; background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); font-size: 8pt; }
+        .card-title { font-weight: bold; color: ${config.colorPrimario}; margin-bottom: 6px; font-size: 9pt; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 15px 0; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.07); font-size: 9pt; }
+        th { background: ${config.colorPrimario}; color: white; padding: 10px 8px; text-align: left; font-weight: 600; }
+        td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
+        tbody tr:last-child td { border-bottom: none; }
+        .text-right { text-align: right; }
+        .totales-box { background: white; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); padding: 12px; margin-left: auto; width: 300px; margin-top: 10px; }
+        .totales-box table { box-shadow: none; margin: 0; }
+        .totales-box td { border: none; border-bottom: 1px solid #e2e8f0; padding: 6px 8px; font-size: 9pt; }
+        .total-final { font-size: 11pt; font-weight: bold; background: ${config.colorPrimario}; color: white; }
+    </style>
+</head>
+<body>
+    <div class="encabezado">
+        <div class="logo-circle">${currentEmpresa.nombre.charAt(0)}</div>
+        <div class="empresa-info">
+            <h2>${currentEmpresa.nombre}</h2>
+            <p><strong>${currentEmpresa.razon_social}</strong></p>
+            <p>NIT: ${nitCompleto} | ${currentEmpresa.telefono || ''} | ${currentEmpresa.email || ''}</p>
+        </div>
+    </div>
+    
+    <div class="titulo-factura">📄 FACTURA ${numeroFactura}</div>
+    
+    <div class="info-cards">
+        <div class="card">
+            <div class="card-title">📅 Fecha</div>
+            <div>${fecha}</div>
+        </div>
+        <div class="card">
+            <div class="card-title">👤 Cliente</div>
+            <div>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}</div>
+            <div style="font-size: 7pt; color: #718096;">${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}</div>
+        </div>
+    </div>
+    
+    <table>
+        <thead><tr><th>#</th><th>Descripción</th><th class="text-right">Cant.</th><th class="text-right">Precio</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+            ${ventaData.productos.map((p, i) => `<tr><td>${i + 1}</td><td>${p.nombre}</td><td class="text-right">${p.cantidad}</td><td class="text-right">$${formatearNumero(p.precio_unitario)}</td><td class="text-right">$${formatearNumero(p.subtotal)}</td></tr>`).join('')}
+        </tbody>
+    </table>
+    
+    <div class="totales-box">
+        <table>
+            <tr><td>Subtotal:</td><td class="text-right">$${formatearNumero(subtotal)}</td></tr>
+            ${descuento > 0 ? `<tr><td>Descuento:</td><td class="text-right">-$${formatearNumero(descuento)}</td></tr>` : ''}
+            <tr><td>IVA (19%):</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            <tr class="total-final"><td style="padding: 10px 8px;">💰 TOTAL:</td><td class="text-right" style="padding: 10px 8px;">$${formatearNumero(total)}</td></tr>
+        </table>
+    </div>
+    
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 10px; padding: 10px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.06); font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 10px;"><img src="${venta.qr_code}" style="width: 80px; height: 80px; border-radius: 8px;"></div>` : ''}
+    
+    <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
+</body>
+</html>`;
 }
 
 // FORMATO MEDIA CARTA - Escalado de formato carta
