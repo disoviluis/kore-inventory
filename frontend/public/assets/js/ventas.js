@@ -2370,14 +2370,15 @@ function generarPlantillaTirilla(venta, ventaData, config) {
         minute: '2-digit'
     });
 
-    if (formato === 'tirilla') {
-        // FORMATO TÉRMICO (58mm o 80mm)
-        return `
+    // FORMATO TÉRMICO (58mm o 80mm)
+    return `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura_${numeroFactura}</title>
+    <style>
     <title>Factura_${numeroFactura}</title>
     <style>
         @page {
