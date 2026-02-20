@@ -69,6 +69,7 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
     if (existe.length === 0) {
       // Crear nueva configuración con valores por defecto
       const {
+        plantilla_id = 1,
         mostrar_logo = 1,
         logo_posicion = 'izquierda',
         mostrar_slogan = 1,
@@ -84,25 +85,26 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
         mostrar_cufe = 1,
         mostrar_firma = 0,
         texto_firma = null,
-        cuentas_bancarias = null
+        cuentas_bancarias = null,
+        mostrar_badges = 1
       } = req.body;
 
       const cuentas_json = cuentas_bancarias ? JSON.stringify(cuentas_bancarias) : null;
 
       await query(
         `INSERT INTO configuracion_factura (
-          empresa_id, mostrar_logo, logo_posicion, mostrar_slogan,
+          empresa_id, plantilla_id, mostrar_logo, logo_posicion, mostrar_slogan,
           color_primario, color_secundario, fuente, tamano_fuente,
           pie_pagina, terminos_condiciones, notas_predeterminadas,
           mensaje_agradecimiento, mostrar_qr, mostrar_cufe,
-          mostrar_firma, texto_firma, cuentas_bancarias
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          mostrar_firma, texto_firma, cuentas_bancarias, mostrar_badges
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          empresaId, mostrar_logo, logo_posicion, mostrar_slogan,
+          empresaId, plantilla_id, mostrar_logo, logo_posicion, mostrar_slogan,
           color_primario, color_secundario, fuente, tamano_fuente,
           pie_pagina, terminos_condiciones, notas_predeterminadas,
           mensaje_agradecimiento, mostrar_qr, mostrar_cufe,
-          mostrar_firma, texto_firma, cuentas_json
+          mostrar_firma, texto_firma, cuentas_json, mostrar_badges
         ]
       );
     } else {
@@ -112,11 +114,11 @@ export const updateConfiguracionFacturacion = async (req: Request, res: Response
 
       // Lista de campos permitidos y sus tipos
       const allowedFields = [
-        'mostrar_logo', 'logo_posicion', 'mostrar_slogan',
+        'plantilla_id', 'mostrar_logo', 'logo_posicion', 'mostrar_slogan',
         'color_primario', 'color_secundario', 'fuente', 'tamano_fuente',
         'pie_pagina', 'terminos_condiciones', 'notas_predeterminadas',
         'mensaje_agradecimiento', 'mostrar_qr', 'mostrar_cufe',
-        'mostrar_firma', 'texto_firma', 'cuentas_bancarias'
+        'mostrar_firma', 'texto_firma', 'cuentas_bancarias', 'mostrar_badges'
       ];
 
       // Construir UPDATE dinámico solo con campos enviados
