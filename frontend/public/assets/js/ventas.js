@@ -1784,6 +1784,202 @@ function imprimirFactura() {
     });
 }
 
+async function descargarPDF() {
+    if (!ultimaVentaGuardada || !ultimaVentaData) {
+        mostrarAlerta('No hay factura para descargar', 'warning');
+        return;
+    }
+
+    try {
+        mostrarAlerta('Generando PDF...', 'info');
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'letter');
+        const venta = ultimaVentaGuardada;
+        const ventaData = ultimaVentaData;
+        
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 15;
+        let y = margin;
+
+        // ENCABEZADO
+        doc.setFontSize(18);
+        doc.setTextColor(30, 64, 175); // #1E40AF
+        doc.setFont(undefined, 'bold');
+        doc.text(currentEmpresa.nombre, pageWidth / 2, y, { align: 'center' });
+        y += 6;
+
+        // Slogan
+        if (currentEmpresa.slogan) {
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.setFont(undefined, 'italic');
+            doc.text(currentEmpresa.slogan, pageWidth / 2, y, { align: 'center' });
+            y += 5;
+        }
+
+        // Razón Social y NIT
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text(currentEmpresa.razon_social, pageWidth / 2, y, { align: 'center' });
+        y += 5;
+        
+        const digitoVerif = calcularDigitoVerificacion(currentEmpresa.nit);
+        doc.text(`NIT: ${currentEmpresa.nit}-${digitoVerif}`, pageWidth / 2, y, { align: 'center' });
+        y += 5;
+
+        // Badges fiscales
+        doc.setFontSize(8);
+        let badgesText = [];
+        if (currentEmpresa.regimen_tributario) badgesText.push(`Régimen ${currentEmpresa.regimen_tributario === 'comun' ? 'Común' : currentEmpresa.regimen_tributario}`);
+        if (currentEmpresa.gran_contribuyente) badgesText.push('Gran Contribuyente');
+        if (currentEmpresa.autoretenedor) badgesText.push('Autoretenedor');
+        doc.text(badgesText.join(' • '), pageWidth / 2, y, { align: 'center' });
+        y += 5;
+
+        // Dirección y contacto
+        doc.text(`${currentEmpresa.direccion} - ${currentEmpresa.ciudad}`, pageWidth / 2, y, { align: 'center' });
+        y += 4;
+        doc.text(`Tel: ${currentEmpresa.telefono} | Email: ${currentEmpresa.email}`, pageWidth / 2, y, { align: 'center' });
+        y += 8;
+
+        // FACTURA DE VENTA ELECTRÓNICA
+        doc.setFillColor(30, 64, 175);
+        doc.rect(margin, y, pageWidth - margin * 2, 12, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text('FACTURA DE VENTA ELECTRÓNICA', pageWidth / 2, y + 5, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text(venta.numero_factura, pageWidth / 2, y + 10, { align: 'center' });
+        y += 15;
+
+        // Resolución DIAN
+        if (currentEmpresa.resolucion_dian) {
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Resolución DIAN: ${currentEmpresa.resolucion_dian}`, margin, y);
+            y += 4;
+            doc.text(`Vigencia: ${currentEmpresa.fecha_resolucion_desde} al ${currentEmpresa.fecha_resolucion_hasta}`, margin, y);
+            y += 8;
+        }
+
+        // DATOS CLIENTE Y VENTA (2 columnas)
+        const col1 = margin;
+        const col2 = pageWidth / 2 + 5;
+
+        // Cuadro Cliente
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(col1, y, pageWidth / 2 - margin - 5, 25);
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text('CLIENTE:', col1 + 2, y + 5);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        const clienteNombre = ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`;
+        doc.text(clienteNombre, col1 + 2, y + 10, { maxWidth: pageWidth / 2 - margin - 9 });
+        doc.text(`${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}`, col1 + 2, y + 15);
+        doc.text(`${ventaData.cliente.direccion || 'N/A'}, ${ventaData.cliente.ciudad || ''}`, col1 + 2, y + 20, { maxWidth: pageWidth / 2 - margin - 9 });
+
+        // Cuadro Venta
+        doc.rect(col2, y, pageWidth / 2 - margin - 5, 25);
+        doc.setFont(undefined, 'bold');
+        doc.text('DATOS DE VENTA:', col2 + 2, y + 5);
+        doc.setFont(undefined, 'normal');
+        const fecha = new Date(venta.fecha_venta).toLocaleDateString('es-CO');
+        doc.text(`Fecha: ${fecha}`, col2 + 2, y + 10);
+        doc.text(`Forma de Pago: Contado`, col2 + 2, y + 15);
+        doc.text(`Método: ${ventaData.metodo_pago || 'Efectivo'}`, col2 + 2, y + 20);
+        y += 30;
+
+        // TABLA DE PRODUCTOS
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(10);
+        doc.text('DESCRIPCIÓN DE PRODUCTOS/SERVICIOS', margin, y);
+        y += 6;
+
+        // Cabecera tabla
+        doc.setFillColor(240, 240, 240);
+        doc.rect(margin, y, pageWidth - margin * 2, 6, 'F');
+        doc.setFontSize(8);
+        doc.text('#', margin + 2, y + 4);
+        doc.text('Descripción', margin + 10, y + 4);
+        doc.text('Cant', pageWidth - margin - 80, y + 4);
+        doc.text('Precio U.', pageWidth - margin - 65, y + 4, { align: 'right' });
+        doc.text('IVA %', pageWidth - margin - 48, y + 4, { align: 'right' });
+        doc.text('Total', pageWidth - margin - 2, y + 4, { align: 'right' });
+        y += 8;
+
+        // Productos
+        doc.setFont(undefined, 'normal');
+        ventaData.productos.forEach((prod, idx) => {
+            doc.text(String(idx + 1), margin + 2, y);
+            doc.text(prod.nombre.substring(0, 40), margin + 10, y);
+            doc.text(String(prod.cantidad), pageWidth - margin - 80, y);
+            doc.text(`$${Number(prod.precio_unitario).toLocaleString('es-CO')}`, pageWidth - margin - 65, y, { align: 'right' });
+            doc.text('19%', pageWidth - margin - 48, y, { align: 'right' });
+            doc.text(`$${Number(prod.subtotal).toLocaleString('es-CO')}`, pageWidth - margin - 2, y, { align: 'right' });
+            y += 5;
+        });
+
+        y += 5;
+
+        // TOTALES
+        doc.setDrawColor(0, 0, 0);
+        doc.line(pageWidth - margin - 60, y, pageWidth - margin, y);
+        y += 6;
+        
+        doc.setFontSize(9);
+        doc.text('SUBTOTAL:', pageWidth - margin - 55, y);
+        doc.text(`$${Number(ventaData.subtotal).toLocaleString('es-CO')}`, pageWidth - margin - 2, y, { align: 'right' });
+        y += 5;
+        
+        doc.text('IVA 19%:', pageWidth - margin - 55, y);
+        doc.text(`$${Number(ventaData.impuesto).toLocaleString('es-CO')}`, pageWidth - margin - 2, y, { align: 'right' });
+        y += 7;
+
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(11);
+        doc.text('TOTAL:', pageWidth - margin - 55, y);
+        doc.text(`$${Number(ventaData.total).toLocaleString('es-CO')}`, pageWidth - margin - 2, y, { align: 'right' });
+        y += 10;
+
+        // CUFE y QR
+        if (venta.cufe) {
+            doc.setFontSize(7);
+            doc.setFont(undefined, 'normal');
+            doc.text(`CUFE: ${venta.cufe}`, margin, y, { maxWidth: pageWidth - margin * 2 - 40 });
+            
+            // QR Code (si existe)
+            if (venta.qr_code) {
+                try {
+                    doc.addImage(venta.qr_code, 'PNG', pageWidth - margin - 35, y - 5, 30, 30);
+                } catch (e) {
+                    console.warn('No se pudo agregar QR Code al PDF');
+                }
+            }
+            y += 25;
+        }
+
+        // Pie de página
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Esta factura se asimila en todos sus efectos legales a una letra de cambio (Art. 774 Código de Comercio)', pageWidth / 2, pageHeight - 20, { align: 'center', maxWidth: pageWidth - margin * 2 });
+        doc.text('¡Gracias por su compra!', pageWidth / 2, pageHeight - 15, { align: 'center' });
+
+        // Descargar
+        doc.save(`Factura_${venta.numero_factura}.pdf`);
+        
+        mostrarAlerta('PDF descargado exitosamente', 'success');
+    } catch (error) {
+        console.error('Error generando PDF:', error);
+        mostrarAlerta('Error al generar PDF: ' + error.message, 'danger');
+    }
+}
+
 function generarHTMLImpresion(formatoTermico = false) {
     const venta = ultimaVentaGuardada;
     const ventaData = ultimaVentaData;
