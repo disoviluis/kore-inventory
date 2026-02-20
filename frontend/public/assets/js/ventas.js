@@ -26,6 +26,7 @@ let vistaActual = 'grid'; // Vista actual del catálogo (grid o list)
 let modoRapido = false; // Modo rápido activado
 let turnoActivo = null; // Turno de caja actual
 let ultimasVentas = []; // Últimas ventas del día
+let configuracionPlantilla = null; // Configuración de plantilla de factura
 
 console.log('🚀 Ventas.js cargado - Versión 2.0.0 - POS Profesional');
 
@@ -41,6 +42,53 @@ function calcularDigitoVerificacion(nit) {
     }
     const residuo = suma % 11;
     return residuo > 1 ? 11 - residuo : residuo;
+}
+
+// ============================================
+// FUNCIÓN: Cargar Configuración de Plantilla
+// ============================================
+async function cargarConfiguracionPlantilla() {
+    if (!currentEmpresa || !currentEmpresa.id) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/facturacion/configuracion/${currentEmpresa.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        if (data.success && data.data) {
+            configuracionPlantilla = data.data;
+            console.log('✅ Configuración de plantilla cargada:', configuracionPlantilla);
+        } else {
+            // Configuración por defecto
+            configuracionPlantilla = {
+                plantilla_id: 1, // Clásica por defecto
+                color_primario: currentEmpresa.color_primario || '#1E40AF',
+                color_secundario: '#6c757d',
+                fuente: 'Arial',
+                mostrar_logo: true,
+                mostrar_qr: true,
+                mostrar_cufe: true,
+                mostrar_badges: true,
+                logo_posicion: 'center'
+            };
+        }
+    } catch (error) {
+        console.error('Error cargando configuración de plantilla:', error);
+        // Usar valores por defecto en caso de error
+        configuracionPlantilla = {
+            plantilla_id: 1,
+            color_primario: currentEmpresa.color_primario || '#1E40AF',
+            color_secundario: '#6c757d',
+            fuente: 'Arial',
+            mostrar_logo: true,
+            mostrar_qr: true,
+            mostrar_cufe: true,
+            mostrar_badges: true,
+            logo_posicion: 'center'
+        };
+    }
 }
 
 // ============================================
@@ -94,6 +142,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             setTimeout(() => window.location.href = 'dashboard.html', 2000);
             return;
         }
+
+        // Cargar configuración de plantilla
+        await cargarConfiguracionPlantilla();
 
         // SIEMPRE actualizar datos de empresa desde backend para asegurar datos completos
         console.log('🔄 Actualizando datos de empresa desde backend...');
