@@ -690,6 +690,43 @@ async function guardarDatosEmpresa() {
 // ============================================================================
 
 let plantillaSeleccionada = 1; // Por defecto Clásica
+let plantillaPreviewActual = 1;
+
+// Datos de ejemplo para preview
+const datosEjemplo = {
+    empresa: {
+        nombre: 'MI EMPRESA S.A.S.',
+        razon_social: 'Mi Empresa Sociedad por Acciones Simplificada',
+        nit: '900123456',
+        direccion: 'Calle 123 #45-67, Bogotá D.C.',
+        telefono: '(601) 234-5678',
+        email: 'contacto@miempresa.com',
+        sitio_web: 'www.miempresa.com',
+        es_gran_contribuyente: true,
+        regimen_tributario: 'Régimen Común'
+    },
+    factura: {
+        numero: 'FV-001234',
+        fecha: '20/02/2026 14:30',
+        cufe: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6'
+    },
+    cliente: {
+        nombre: 'JUAN CARLOS PÉREZ GONZÁLEZ',
+        documento: 'CC 1234567890',
+        direccion: 'Carrera 45 #67-89',
+        telefono: '310 123 4567'
+    },
+    productos: [
+        {nombre: 'Producto A', cantidad: 2, precio: 50000, iva: 9500, subtotal: 109500},
+        {nombre: 'Producto B', cantidad: 1, precio: 80000, iva: 15200, subtotal: 95200},
+        {nombre: 'Producto C', cantidad: 3, precio: 30000, iva: 17100, subtotal: 107100}
+    ],
+    totales: {
+        subtotal: 250000,
+        iva: 47500,
+        total: 297500
+    }
+};
 
 // Función para seleccionar plantilla
 function seleccionarPlantilla(plantillaId) {
@@ -719,14 +756,290 @@ function seleccionarPlantilla(plantillaId) {
 
 // Función para previsualizar plantilla
 function previsualizarPlantilla(plantillaId) {
-    showNotification('Vista previa de plantilla próximamente disponible', 'info');
-    // TODO: Implementar modal con preview de la plantilla
+    plantillaPreviewActual = plantillaId;
+    mostrarPreviewModal(plantillaId);
 }
 
 // Función para previsualizar plantilla actual con personalizaciones
 function previsualizarPlantillaActual() {
-    showNotification('Vista previa con personalizaciones próximamente disponible', 'info');
-    // TODO: Generar vista previa con colores y configuraciones actuales
+    mostrarPreviewModal(plantillaSeleccionada, true);
+}
+
+// Función para seleccionar plantilla desde el modal de preview
+function seleccionarPlantillaDesdePreview() {
+    seleccionarPlantilla(plantillaPreviewActual);
+    const modal = bootstrap.Modal.getInstance(document.getElementById('previewModal'));
+    if (modal) modal.hide();
+}
+
+// Mostrar modal de preview
+function mostrarPreviewModal(plantillaId, usarPersonalizacion = false) {
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    const nombrePlantilla = getNombrePlantilla(plantillaId);
+    
+    document.getElementById('previewPlantillaNombre').textContent = nombrePlantilla;
+    
+    // Generar preview inicial
+    generarPreview('carta', plantillaId, usarPersonalizacion);
+    
+    // Event listeners para cambio de formato
+    document.querySelectorAll('input[name="previewFormato"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            generarPreview(e.target.value, plantillaId, usarPersonalizacion);
+        });
+    });
+    
+    modal.show();
+}
+
+// Generar HTML de preview según plantilla y formato
+function generarPreview(formato, plantillaId, usarPersonalizacion = false) {
+    const container = document.getElementById('previewContainer');
+    
+    // Obtener colores personalizados si aplica
+    const colorPrimario = usarPersonalizacion ? 
+        document.getElementById('plantillaColorPrimario').value : '#1E40AF';
+    const colorSecundario = usarPersonalizacion ? 
+        document.getElementById('plantillaColorSecundario').value : '#6c757d';
+    const fuente = usarPersonalizacion ? 
+        document.getElementById('plantillaFuente').value : 'Arial';
+    const mostrarLogo = !usarPersonalizacion || document.getElementById('plantillaMostrarLogo').checked;
+    const mostrarQR = !usarPersonalizacion || document.getElementById('plantillaMostrarQR').checked;
+    const mostrarBadges = !usarPersonalizacion || document.getElementById('plantillaMostrarBadges').checked;
+    
+    let html = '';
+    
+    if (formato === 'tirilla') {
+        // Preview de tirilla térmica
+        container.style.maxWidth = '300px';
+        html = generarPreviewTirilla(plantillaId, colorPrimario);
+    } else if (formato === 'media-carta') {
+        // Preview de media carta
+        container.style.maxWidth = '550px';
+        html = generarPreviewMediaCarta(plantillaId, colorPrimario, colorSecundario, fuente, mostrarLogo, mostrarQR, mostrarBadges);
+    } else {
+        // Preview de carta (default)
+        container.style.maxWidth = '800px';
+        html = generarPreviewCarta(plantillaId, colorPrimario, colorSecundario, fuente, mostrarLogo, mostrarQR, mostrarBadges);
+    }
+    
+    container.innerHTML = html;
+}
+
+// Generar preview formato CARTA
+function generarPreviewCarta(plantillaId, colorPrimario, colorSecundario, fuente, mostrarLogo, mostrarQR, mostrarBadges) {
+    const d = datosEjemplo;
+    
+    let html = `
+        <div style="font-family: ${fuente}, sans-serif; padding: 20px; font-size: 10pt;">
+    `;
+    
+    // PLANTILLA CLÁSICA
+    if (plantillaId === 1) {
+        html += `
+            <!-- Encabezado Centrado -->
+            <div style="text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid ${colorPrimario};">
+                ${mostrarLogo ? `<div style="margin-bottom: 8px;">🏢 LOGO</div>` : ''}
+                <h2 style="color: ${colorPrimario}; margin: 5px 0; font-size: 16pt;">${d.empresa.nombre}</h2>
+                <p style="margin: 3px 0; font-size: 9pt;">${d.empresa.razon_social}</p>
+                <p style="margin: 3px 0; font-size: 9pt;">NIT: ${d.empresa.nit} | ${d.empresa.telefono}</p>
+                <p style="margin: 3px 0; font-size: 9pt;">${d.empresa.direccion}</p>
+                ${mostrarBadges && d.empresa.es_gran_contribuyente ? `<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 3px; font-size: 7pt;">Gran Contribuyente</span>` : ''}
+            </div>
+            
+            <div style="text-align: center; font-size: 12pt; font-weight: bold; margin: 15px 0; padding: 10px; border: 2px solid ${colorPrimario}; background: ${colorPrimario}15;">
+                FACTURA ELECTRÓNICA DE VENTA<br>${d.factura.numero}
+            </div>
+        `;
+    }
+    
+    // PLANTILLA MODERNA
+    else if (plantillaId === 2) {
+        html += `
+            <!-- Encabezado Lateral -->
+            <div style="display: flex; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid ${colorPrimario};">
+                ${mostrarLogo ? `<div style="font-size: 48pt; margin-right: 15px;">🏢</div>` : ''}
+                <div style="flex-grow: 1;">
+                    <h2 style="color: ${colorPrimario}; margin: 0; font-size: 18pt;">${d.empresa.nombre}</h2>
+                    <p style="margin: 3px 0; font-size: 9pt; color: ${colorSecundario};">${d.empresa.razon_social}</p>
+                    <p style="margin: 3px 0; font-size: 8pt;">NIT: ${d.empresa.nit} | ${d.empresa.telefono}</p>
+                </div>
+                ${mostrarBadges && d.empresa.es_gran_contribuyente ? `<div style="background: linear-gradient(135deg, ${colorPrimario}, #0ea5e9); color: white; padding: 8px 12px; border-radius: 8px; font-size: 8pt; text-align: center;"><strong>GRAN<br>CONTRIBUYENTE</strong></div>` : ''}
+            </div>
+            
+            <div style="background: ${colorPrimario}; color: white; text-align: center; font-size: 13pt; font-weight: bold; padding: 12px; border-radius: 8px; margin: 15px 0;">
+                FACTURA ELECTRÓNICA ${d.factura.numero}
+            </div>
+        `;
+    }
+    
+    // PLANTILLA MINIMALISTA
+    else if (plantillaId === 3) {
+        html += `
+            <!-- Encabezado Minimalista -->
+            <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h2 style="color: ${colorPrimario}; margin: 0 0 8px 0; font-size: 20pt; font-weight: 300;">${d.empresa.nombre}</h2>
+                        <p style="margin: 2px 0; font-size: 8pt; color: #999;">${d.empresa.razon_social}</p>
+                        <p style="margin: 2px 0; font-size: 8pt; color: #999;">NIT: ${d.empresa.nit}</p>
+                    </div>
+                    ${mostrarLogo ? `<div style="width: 80px; height: 80px; border: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center; color: #ccc;">LOGO</div>` : ''}
+                </div>
+            </div>
+            
+            <div style="font-size: 11pt; font-weight: 300; margin: 20px 0; padding: 15px 0; border-top: 3px solid ${colorPrimario}; border-bottom: 1px solid ${colorPrimario};">
+                <strong>FACTURA</strong> ${d.factura.numero}
+            </div>
+        `;
+    }
+    
+    // Información común (cliente y fecha)
+    html += `
+        <div style="display: flex; gap: 15px; margin: 15px 0;">
+            <div style="flex: 1; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                <strong style="color: ${colorPrimario};">Fecha:</strong><br>
+                <span style="font-size: 9pt;">${d.factura.fecha}</span>
+            </div>
+            <div style="flex: 2; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                <strong style="color: ${colorPrimario};">Cliente:</strong><br>
+                <span style="font-size: 9pt;">${d.cliente.nombre}<br>${d.cliente.documento}</span>
+            </div>
+        </div>
+        
+        <!-- Tabla de productos -->
+        <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9pt;">
+            <thead>
+                <tr style="background: ${colorPrimario}15;">
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">#</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descripción</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Cant.</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Precio</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    d.productos.forEach((p, i) => {
+        html += `
+            <tr${plantillaId === 2 && i % 2 === 1 ? ` style="background: #f9f9f9;"` : ''}>
+                <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${i + 1}</td>
+                <td style="border: 1px solid #ddd; padding: 6px;">${p.nombre}</td>
+                <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${p.cantidad}</td>
+                <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">$${p.precio.toLocaleString('es-CO')}</td>
+                <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">$${p.subtotal.toLocaleString('es-CO')}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+        
+        <!-- Totales -->
+        <div style="display: flex; justify-content: flex-end; margin: 15px 0;">
+            <div style="width: 250px;">
+                <table style="width: 100%; font-size: 9pt;">
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #ddd;">Subtotal:</td>
+                        <td style="padding: 5px; text-align: right; border-bottom: 1px solid #ddd;">$${d.totales.subtotal.toLocaleString('es-CO')}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px; border-bottom: 1px solid #ddd;">IVA (19%):</td>
+                        <td style="padding: 5px; text-align: right; border-bottom: 1px solid #ddd;">$${d.totales.iva.toLocaleString('es-CO')}</td>
+                    </tr>
+                    <tr style="background: ${colorPrimario}; color: white; font-weight: bold; font-size: 10pt;">
+                        <td style="padding: 8px;">TOTAL:</td>
+                        <td style="padding: 8px; text-align: right;">$${d.totales.total.toLocaleString('es-CO')}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        ${mostrarQR ? `
+        <!-- QR y CUFE -->
+        <div style="margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 5px; text-align: center;">
+            <div style="font-size: 8pt; color: #666;">
+                <strong>CUFE:</strong> ${d.factura.cufe.substring(0, 40)}...
+            </div>
+            <div style="margin-top: 8px;">📱 QR CODE</div>
+        </div>
+        ` : ''}
+        
+        </div>
+    `;
+    
+    return html;
+}
+
+// Generar preview formato MEDIA CARTA (simplificado)
+function generarPreviewMediaCarta(plantillaId, colorPrimario, colorSecundario, fuente, mostrarLogo, mostrarQR, mostrarBadges) {
+    // Versión compacta del preview de carta
+    return generarPreviewCarta(plantillaId, colorPrimario, colorSecundario, fuente, mostrarLogo, mostrarQR, mostrarBadges)
+        .replace(/font-size: 10pt/g, 'font-size: 8pt')
+        .replace(/font-size: 16pt/g, 'font-size: 12pt')
+        .replace(/font-size: 18pt/g, 'font-size: 14pt')
+        .replace(/padding: 20px/g, 'padding: 12px');
+}
+
+// Generar preview formato TIRILLA
+function generarPreviewTirilla(plantillaId, colorPrimario) {
+    const d = datosEjemplo;
+    
+    return `
+        <div style="font-family: 'Courier New', monospace; padding: 8px; font-size: 8pt; background: white;">
+            <div style="text-align: center; font-weight: bold; margin-bottom: 8px;">
+                ${d.empresa.nombre}
+            </div>
+            <div style="text-align: center; font-size: 7pt; margin-bottom: 5px;">
+                NIT: ${d.empresa.nit}<br>
+                ${d.empresa.telefono}
+            </div>
+            <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
+            <div style="text-align: center; font-weight: bold;">
+                FACTURA ${d.factura.numero}
+            </div>
+            <div style="text-align: center; font-size: 7pt; margin-bottom: 5px;">
+                ${d.factura.fecha}
+            </div>
+            <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
+            <div style="font-size: 7pt; margin-bottom: 5px;">
+                <strong>Cliente:</strong><br>
+                ${d.cliente.nombre}<br>
+                ${d.cliente.documento}
+            </div>
+            <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
+            
+            ${d.productos.map(p => `
+                <div style="margin: 5px 0;">
+                    <strong>${p.nombre}</strong><br>
+                    <div style="display: flex; justify-content: space-between; font-size: 7pt;">
+                        <span>${p.cantidad} x $${p.precio.toLocaleString('es-CO')}</span>
+                        <span>$${p.subtotal.toLocaleString('es-CO')}</span>
+                    </div>
+                </div>
+            `).join('')}
+            
+            <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
+            <div style="display: flex; justify-content: space-between; margin: 3px 0;">
+                <span>Subtotal:</span>
+                <span>$${d.totales.subtotal.toLocaleString('es-CO')}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 3px 0;">
+                <span>IVA:</span>
+                <span>$${d.totales.iva.toLocaleString('es-CO')}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 3px 0; font-weight: bold; font-size: 9pt;">
+                <span>TOTAL:</span>
+                <span>$${d.totales.total.toLocaleString('es-CO')}</span>
+            </div>
+            <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
+            <div style="text-align: center; font-size: 7pt; margin-top: 8px;">
+                ¡Gracias por su compra!
+            </div>
+        </div>
+    `;
 }
 
 // Función para guardar configuración de plantilla
@@ -871,3 +1184,4 @@ window.seleccionarPlantilla = seleccionarPlantilla;
 window.previsualizarPlantilla = previsualizarPlantilla;
 window.previsualizarPlantillaActual = previsualizarPlantillaActual;
 window.guardarConfiguracionPlantilla = guardarConfiguracionPlantilla;
+window.seleccionarPlantillaDesdePreview = seleccionarPlantillaDesdePreview;
