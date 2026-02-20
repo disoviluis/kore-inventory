@@ -30,6 +30,20 @@ let ultimasVentas = []; // Últimas ventas del día
 console.log('🚀 Ventas.js cargado - Versión 2.0.0 - POS Profesional');
 
 // ============================================
+// FUNCIÓN GLOBAL: Calcular Dígito de Verificación NIT (DIAN)
+// ============================================
+function calcularDigitoVerificacion(nit) {
+    const nitNumeros = nit.replace(/[^0-9]/g, '');
+    const vpri = [3,7,13,17,19,23,29,37,41,43,47,53,59,67,71];
+    let suma = 0;
+    for (let i = 0; i < nitNumeros.length && i < 15; i++) {
+        suma += parseInt(nitNumeros[nitNumeros.length - 1 - i]) * vpri[i];
+    }
+    const residuo = suma % 11;
+    return residuo > 1 ? 11 - residuo : residuo;
+}
+
+// ============================================
 // INICIALIZACIÓN
 // ============================================
 
@@ -1499,18 +1513,6 @@ function mostrarFactura(venta, ventaData) {
         minute: '2-digit'
     });
     
-    // Calcular dígito de verificación del NIT
-    const calcularDigitoVerificacion = (nit) => {
-        const nitNumeros = nit.replace(/[^0-9]/g, '');
-        const vpri = [3,7,13,17,19,23,29,37,41,43,47,53,59,67,71];
-        let suma = 0;
-        for (let i = 0; i < nitNumeros.length && i < 15; i++) {
-            suma += parseInt(nitNumeros[nitNumeros.length - 1 - i]) * vpri[i];
-        }
-        const residuo = suma % 11;
-        return residuo > 1 ? 11 - residuo : residuo;
-    };
-
     const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
     const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
 
@@ -1721,25 +1723,65 @@ function imprimirFactura() {
         return;
     }
 
-    // Detectar si es dispositivo móvil para usar formato térmico
-    const esMovil = window.innerWidth <= 768;
-    const formatoTermico = esMovil || confirm('¿Desea imprimir en formato de tirilla térmica?\n\nOK = Tirilla térmica (58mm)\nCancelar = Tamaño carta');
+    // Preguntar formato de impresión con SweetAlert2
+    Swal.fire({
+        title: '¿Desea imprimir en formato de tirilla térmica?',
+        html: `
+            <div class="text-start">
+                <p class="mb-2"><strong>Seleccione el formato de impresión:</strong></p>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="formatoImpresion" id="formatoCarta" value="carta" checked>
+                    <label class="form-check-label" for="formatoCarta">
+                        <i class="bi bi-file-earmark-text"></i> <strong>Tamaño Carta</strong> (Letter 8.5" x 11")
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="formatoImpresion" id="formatoTirilla" value="tirilla">
+                    <label class="form-check-label" for="formatoTirilla">
+                        <i class="bi bi-receipt"></i> <strong>Tirilla Térmica</strong> (POS 58mm/80mm)
+                    </label>
+                </div>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-printer"></i> Imprimir',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#1E40AF',
+        preConfirm: () => {
+            const formato = document.querySelector('input[name="formatoImpresion"]:checked').value;
+            return formato;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formatoTermico = result.value === 'tirilla';
+            
+            const numeroFactura = ultimaVentaGuardada.numero_factura || 'factura';
+            const nombreArchivo = `Factura_${numeroFactura}`;
 
-    const numeroFactura = ultimaVentaGuardada.numero_factura || 'factura';
-    const nombreArchivo = `Factura_${numeroFactura}`;
+            // Generar HTML de impresión
+            const htmlImpresion = generarHTMLImpresion(formatoTermico);
 
-    // Generar HTML de impresión
-    const htmlImpresion = generarHTMLImpresion(formatoTermico);
-
-    // Abrir ventana de impresión
-    const printWindow = window.open('', '', 'width=800,height=600');
-    if (!printWindow) {
-        mostrarAlerta('No se pudo abrir la ventana de impresión. Verifica que los popups estén permitidos.', 'warning');
-        return;
-    }
-
-    printWindow.document.write(htmlImpresion);
-    printWindow.document.close();
+            // Crear un iframe oculto para imprimir (más confiable que window.open)
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            
+            const iframeDoc = iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(htmlImpresion);
+            iframeDoc.close();
+            
+            // Esperar a que cargue e imprimir
+            iframe.onload = () => {
+                setTimeout(() => {
+                    iframe.contentWindow.print();
+                    // Remover iframe después de imprimir
+                    setTimeout(() => document.body.removeChild(iframe), 1000);
+                }, 250);
+            };
+        }
+    });
 }
 
 function generarHTMLImpresion(formatoTermico = false) {
