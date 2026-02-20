@@ -336,6 +336,12 @@
                                             <i class="bi bi-building me-2"></i>Empresa
                                         </button>
                                     </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="plantilla-tab" data-bs-toggle="tab" data-bs-target="#plantilla-panel" type="button" role="tab">
+                                            <i class="bi bi-file-earmark-text me-2"></i>Plantilla de Factura
+                                            <span class="badge bg-info ms-2">Nuevo</span>
+                                        </button>
+                                    </li>
                                 </ul>
                             </div>
                             <div class="card-body">
@@ -424,6 +430,217 @@
                                             <p class="text-muted">Configura los impuestos para tu empresa</p>
                                             <span class="badge bg-secondary">Próximamente</span>
                                         </div>
+                                    </div>
+
+                                    <!-- Tab: Plantilla de Factura -->
+                                    <div class="tab-pane fade" id="plantilla-panel" role="tabpanel">
+                                        
+                                        <!-- Header -->
+                                        <div class="mb-4">
+                                            <h5 class="mb-1">Personaliza tu Plantilla de Factura</h5>
+                                            <p class="text-muted small mb-0">Selecciona y personaliza el diseño de tus facturas electrónicas</p>
+                                        </div>
+
+                                        <!-- Selección de Plantilla Base -->
+                                        <div class="mb-4">
+                                            <h6 class="border-bottom pb-2 mb-3">
+                                                <i class="bi bi-palette text-primary me-2"></i>Selecciona una Plantilla Base
+                                            </h6>
+                                            
+                                            <div class="row g-3" id="plantillasGallery">
+                                                <!-- Plantilla Clásica -->
+                                                <div class="col-md-4">
+                                                    <div class="card plantilla-card h-100" data-plantilla-id="1" style="cursor: pointer; border: 2px solid #e0e0e0;">
+                                                        <img src="https://placehold.co/400x500/f8f9fa/1E40AF/png?text=Plantilla+Clasica" class="card-img-top" alt="Plantilla Clásica">
+                                                        <div class="card-body">
+                                                            <h6 class="card-title d-flex align-items-center">
+                                                                <i class="bi bi-file-earmark-text text-primary me-2"></i>
+                                                                Clásica
+                                                                <span class="badge bg-success ms-auto">Actual</span>
+                                                            </h6>
+                                                            <p class="card-text small text-muted">Diseño tradicional con encabezado centrado, tabla de productos y totales a la derecha. Ideal para B2B y archivo contable.</p>
+                                                            <div class="d-flex gap-2 mt-3">
+                                                                <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="previsualizarPlantilla(1)">
+                                                                    <i class="bi bi-eye me-1"></i>Vista Previa
+                                                                </button>
+                                                                <button class="btn btn-sm btn-primary" onclick="seleccionarPlantilla(1)">
+                                                                    <i class="bi bi-check-circle me-1"></i>Seleccionar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Plantilla Moderna -->
+                                                <div class="col-md-4">
+                                                    <div class="card plantilla-card h-100" data-plantilla-id="2" style="cursor: pointer; border: 2px solid #e0e0e0;">
+                                                        <img src="https://placehold.co/400x500/e0f2fe/0284c7/png?text=Plantilla+Moderna" class="card-img-top" alt="Plantilla Moderna">
+                                                        <div class="card-body">
+                                                            <h6 class="card-title d-flex align-items-center">
+                                                                <i class="bi bi-stars text-info me-2"></i>
+                                                                Moderna
+                                                                <span class="badge bg-info ms-auto">Nuevo</span>
+                                                            </h6>
+                                                            <p class="card-text small text-muted">Diseño contemporáneo con logo grande, colores llamativos y tabla con filas alternadas. Ideal para empresas tech y startups.</p>
+                                                            <div class="d-flex gap-2 mt-3">
+                                                                <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="previsualizarPlantilla(2)">
+                                                                    <i class="bi bi-eye me-1"></i>Vista Previa
+                                                                </button>
+                                                                <button class="btn btn-sm btn-primary" onclick="seleccionarPlantilla(2)">
+                                                                    <i class="bi bi-check-circle me-1"></i>Seleccionar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Plantilla Minimalista -->
+                                                <div class="col-md-4">
+                                                    <div class="card plantilla-card h-100" data-plantilla-id="3" style="cursor: pointer; border: 2px solid #e0e0e0;">
+                                                        <img src="https://placehold.co/400x500/fafafa/6b7280/png?text=Plantilla+Minimalista" class="card-img-top" alt="Plantilla Minimalista">
+                                                        <div class="card-body">
+                                                            <h6 class="card-title d-flex align-items-center">
+                                                                <i class="bi bi-border-style text-secondary me-2"></i>
+                                                                Minimalista
+                                                                <span class="badge bg-info ms-auto">Nuevo</span>
+                                                            </h6>
+                                                            <p class="card-text small text-muted">Diseño limpio y elegante con espaciado amplio y sin bordes. Ideal para servicios profesionales y consultorías.</p>
+                                                            <div class="d-flex gap-2 mt-3">
+                                                                <button class="btn btn-sm btn-outline-primary flex-grow-1" onclick="previsualizarPlantilla(3)">
+                                                                    <i class="bi bi-eye me-1"></i>Vista Previa
+                                                                </button>
+                                                                <button class="btn btn-sm btn-primary" onclick="seleccionarPlantilla(3)">
+                                                                    <i class="bi bi-check-circle me-1"></i>Seleccionar
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Personalización de Colores -->
+                                        <div class="mb-4">
+                                            <h6 class="border-bottom pb-2 mb-3">
+                                                <i class="bi bi-paint-bucket text-primary me-2"></i>Personalización de Colores y Fuentes
+                                            </h6>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Color Primario</label>
+                                                    <input type="color" class="form-control form-control-color w-100" id="plantillaColorPrimario" value="#1E40AF">
+                                                    <small class="text-muted">Encabezados y títulos</small>
+                                                </div>
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Color Secundario</label>
+                                                    <input type="color" class="form-control form-control-color w-100" id="plantillaColorSecundario" value="#6c757d">
+                                                    <small class="text-muted">Textos secundarios</small>
+                                                </div>
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Fuente</label>
+                                                    <select class="form-select" id="plantillaFuente">
+                                                        <option value="Arial">Arial</option>
+                                                        <option value="Helvetica">Helvetica</option>
+                                                        <option value="Times New Roman">Times New Roman</option>
+                                                        <option value="Courier New">Courier New</option>
+                                                        <option value="Georgia">Georgia</option>
+                                                        <option value="Verdana">Verdana</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Tamaño de Fuente</label>
+                                                    <select class="form-select" id="plantillaTamanoFuente">
+                                                        <option value="8">8pt (Pequeño)</option>
+                                                        <option value="9">9pt</option>
+                                                        <option value="10" selected>10pt (Normal)</option>
+                                                        <option value="11">11pt</option>
+                                                        <option value="12">12pt (Grande)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Elementos Visuales -->
+                                        <div class="mb-4">
+                                            <h6 class="border-bottom pb-2 mb-3">
+                                                <i class="bi bi-toggles text-primary me-2"></i>Elementos Visuales
+                                            </h6>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-4 mb-3">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" id="plantillaMostrarLogo" checked>
+                                                        <label class="form-check-label" for="plantillaMostrarLogo">
+                                                            <i class="bi bi-image me-1"></i>Mostrar Logo
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" id="plantillaMostrarQR" checked>
+                                                        <label class="form-check-label" for="plantillaMostrarQR">
+                                                            <i class="bi bi-qr-code me-1"></i>Mostrar QR Code
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" id="plantillaMostrarCUFE" checked>
+                                                        <label class="form-check-label" for="plantillaMostrarCUFE">
+                                                            <i class="bi bi-shield-check me-1"></i>Mostrar CUFE
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" id="plantillaMostrarBadges" checked>
+                                                        <label class="form-check-label" for="plantillaMostrarBadges">
+                                                            <i class="bi bi-award me-1"></i>Mostrar Badges (Gran Contribuyente)
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="form-label">Posición del Logo</label>
+                                                    <select class="form-select form-select-sm" id="plantillaLogoPos">
+                                                        <option value="left">Izquierda</option>
+                                                        <option value="center" selected>Centro</option>
+                                                        <option value="right">Derecha</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Preview y Guardar -->
+                                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                            <div>
+                                                <p class="text-muted small mb-0">
+                                                    <i class="bi bi-info-circle me-1"></i>
+                                                    Los cambios se aplicarán a todas las facturas futuras. Las facturas existentes no se modificarán.
+                                                </p>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-outline-primary" onclick="previsualizarPlantillaActual()">
+                                                    <i class="bi bi-eye me-2"></i>Vista Previa
+                                                </button>
+                                                <button class="btn btn-primary" onclick="guardarConfiguracionPlantilla()">
+                                                    <i class="bi bi-save me-2"></i>Guardar Configuración
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Nota sobre Formatos de Impresión -->
+                                        <div class="alert alert-info mt-4" role="alert">
+                                            <h6 class="alert-heading">
+                                                <i class="bi bi-printer me-2"></i>Formatos de Impresión Soportados
+                                            </h6>
+                                            <p class="mb-2 small">La plantilla seleccionada se adaptará automáticamente a los siguientes formatos:</p>
+                                            <ul class="small mb-0">
+                                                <li><strong>Carta (Letter 8.5" x 11"):</strong> Formato completo para impresoras de oficina</li>
+                                                <li><strong>Media Carta (5.5" x 8.5"):</strong> Formato compacto con ahorro de papel del 50%</li>
+                                                <li><strong>Tirilla Térmica (58mm/80mm):</strong> Para impresoras POS punto de venta</li>
+                                            </ul>
+                                        </div>
+                                        
                                     </div>
 
                                     <!-- Tab: Empresa -->

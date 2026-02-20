@@ -646,18 +646,62 @@ const logoBase64 = await imagenABase64(currentEmpresa.logo_url);
 
 ---
 
-## 🎯 DECISIONES PENDIENTES
+## 🎯 DECISIONES TOMADAS
 
-1. **¿Módulo independiente o tab en Configuración General?**
-   - Recomendación: Módulo independiente
+### ✅ 1. Ubicación: Nueva pestaña en Configuración General (APROBADO)
 
-2. **¿Editor visual desde inicio o después?**
-   - Recomendación: Después, empezar con plantillas predefinidas
+**Decisión:** Implementar como **nueva pestaña "Plantilla de Factura"** en el módulo de Configuración General existente.
 
-3. **¿Cuántas plantillas en versión 1?**
-   - Recomendación: 3 (Clásica, Moderna, Minimalista)
+**Ubicación final:**
+```
+Configuración General (configuracion-general.html)
+├── 📦 Categorías
+├── 💵 Impuestos
+├── 🏢 Empresa
+└── 🎨 Plantilla de Factura ← IMPLEMENTADO
+```
 
-4. **¿Sistema de plantillas premium?**
+**Justificación:**
+- ✅ **Consistencia:** Los usuarios esperan configuraciones en un solo lugar
+- ✅ **Descubribilidad:** Fácil de encontrar junto a configuración de Empresa
+- ✅ **Contexto:** Relacionado con datos empresariales y facturación
+- ✅ **Usabilidad:** Evita dispersar configuraciones en múltiples páginas
+
+**Estado:** ✅ **IMPLEMENTADO**
+
+### 🔧 2. Implementación Inicial (Versión 1.0)
+
+**Enfoque:** Incremental - Empezar simple y evolucionar
+
+**FASE 1:** Plantillas Predefinidas (IMPLEMENTADO)
+- ✅ 3 plantillas base: Clásica, Moderna, Minimalista
+- ✅ Selector visual con previews (placeholders)
+- ✅ Personalización de colores y fuentes
+- ✅ Switches para mostrar/ocultar elementos (logo, QR, CUFE, badges)
+- ✅ Guardado en tabla `configuracion_factura` existente
+- ⏳ Preview en tiempo real (próximamente)
+
+**FASE 2:** Editor Visual (Futuro)
+- 🔴 Drag & drop de elementos
+- 🔴 Upload de imágenes personalizadas
+- 🔴 Estructura JSON personalizada
+
+**FASE 3:** Plantillas Premium (Futuro)
+- 🔴 Plantilla Corporativa
+- 🔴 Plantilla SIIGO Style
+- 🔴 Sistema de plantillas marketplace
+
+---
+
+## 🎯 DECISIONES PENDIENTES (Actualizadas)
+
+### ~~1. ¿Módulo independiente o integrado?~~
+✅ **RESUELTO:** Nueva pestaña en Configuración General
+
+### ~~2. ¿Editor visual desde el inicio?~~
+✅ **RESUELTO:** Empezar con plantillas predefinidas, agregar editor después
+
+### 3. Base de Datos: ¿Extender o crear tabla nueva?
    - Recomendación: Dejar preparado pero activar después
 
 ---

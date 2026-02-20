@@ -686,7 +686,188 @@ async function guardarDatosEmpresa() {
 }
 
 // ============================================================================
+// PLANTILLA DE FACTURA
+// ============================================================================
+
+let plantillaSeleccionada = 1; // Por defecto Clásica
+
+// Función para seleccionar plantilla
+function seleccionarPlantilla(plantillaId) {
+    plantillaSeleccionada = plantillaId;
+    
+    // Actualizar visuales de las cards
+    document.querySelectorAll('.plantilla-card').forEach(card => {
+        card.style.border = '2px solid #e0e0e0';
+        const badge = card.querySelector('.badge-success');
+        if (badge) badge.remove();
+    });
+    
+    const cardSeleccionada = document.querySelector(`.plantilla-card[data-plantilla-id="${plantillaId}"]`);
+    if (cardSeleccionada) {
+        cardSeleccionada.style.border = '2px solid #1E40AF';
+        const title = cardSeleccionada.querySelector('.card-title');
+        if (!title.querySelector('.badge-success')) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-success ms-auto';
+            badge.textContent = 'Seleccionada';
+            title.appendChild(badge);
+        }
+    }
+    
+    showNotification(`Plantilla "${getNombrePlantilla(plantillaId)}" seleccionada`, 'info');
+}
+
+// Función para previsualizar plantilla
+function previsualizarPlantilla(plantillaId) {
+    showNotification('Vista previa de plantilla próximamente disponible', 'info');
+    // TODO: Implementar modal con preview de la plantilla
+}
+
+// Función para previsualizar plantilla actual con personalizaciones
+function previsualizarPlantillaActual() {
+    showNotification('Vista previa con personalizaciones próximamente disponible', 'info');
+    // TODO: Generar vista previa con colores y configuraciones actuales
+}
+
+// Función para guardar configuración de plantilla
+async function guardarConfiguracionPlantilla() {
+    try {
+        if (!currentEmpresa || !currentEmpresa.id) {
+            showNotification('No hay empresa seleccionada', 'warning');
+            return;
+        }
+
+        const config = {
+            empresa_id: currentEmpresa.id,
+            plantilla_id: plantillaSeleccionada,
+            color_primario: document.getElementById('plantillaColorPrimario').value,
+            color_secundario: document.getElementById('plantillaColorSecundario').value,
+            fuente: document.getElementById('plantillaFuente').value,
+            tamano_fuente: parseInt(document.getElementById('plantillaTamanoFuente').value),
+            mostrar_logo: document.getElementById('plantillaMostrarLogo').checked,
+            mostrar_qr: document.getElementById('plantillaMostrarQR').checked,
+            mostrar_cufe: document.getElementById('plantillaMostrarCUFE').checked,
+            mostrar_badges: document.getElementById('plantillaMostrarBadges').checked,
+            logo_posicion: document.getElementById('plantillaLogoPos').value
+        };
+
+        const token = localStorage.getItem('token');
+        
+        // Por ahora guardar en la tabla configuracion_factura existente
+        // TODO: Cuando se cree la tabla plantillas_factura, actualizar este endpoint
+        const response = await fetch(`${API_URL}/facturacion/configuracion/${currentEmpresa.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(config)
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Configuración de plantilla guardada exitosamente', 'success');
+        } else {
+            throw new Error(data.message || 'Error al guardar configuración');
+        }
+        
+    } catch (error) {
+        console.error('Error al guardar configuración de plantilla:', error);
+        showNotification(error.message || 'Error al guardar la configuración', 'danger');
+    }
+}
+
+// Función para cargar configuración existente de plantilla
+async function cargarConfiguracionPlantilla() {
+    try {
+        if (!currentEmpresa || !currentEmpresa.id) return;
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/facturacion/configuracion/${currentEmpresa.id}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            const config = data.data;
+            
+            // Cargar valores en los campos
+            if (config.plantilla_id) {
+                plantillaSeleccionada = config.plantilla_id;
+                seleccionarPlantilla(config.plantilla_id);
+            }
+            
+            if (config.color_primario) {
+                document.getElementById('plantillaColorPrimario').value = config.color_primario;
+            }
+            if (config.color_secundario) {
+                document.getElementById('plantillaColorSecundario').value = config.color_secundario;
+            }
+            if (config.fuente) {
+                document.getElementById('plantillaFuente').value = config.fuente;
+            }
+            if (config.tamano_fuente) {
+                document.getElementById('plantillaTamanoFuente').value = config.tamano_fuente;
+            }
+            
+            document.getElementById('plantillaMostrarLogo').checked = config.mostrar_logo !== false;
+            document.getElementById('plantillaMostrarQR').checked = config.mostrar_qr !== false;
+            document.getElementById('plantillaMostrarCUFE').checked = config.mostrar_cufe !== false;
+            document.getElementById('plantillaMostrarBadges').checked = config.mostrar_badges !== false;
+            
+            if (config.logo_posicion) {
+                document.getElementById('plantillaLogoPos').value = config.logo_posicion;
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error al cargar configuración de plantilla:', error);
+    }
+}
+
+// Helper: Obtener nombre de plantilla
+function getNombrePlantilla(plantillaId) {
+    const nombres = {
+        1: 'Clásica',
+        2: 'Moderna',
+        3: 'Minimalista'
+    };
+    return nombres[plantillaId] || 'Desconocida';
+}
+
+// Cargar configuración cuando se cambia de empresa
+const originalLoadCompany = window.loadCompany || function() {};
+window.loadCompany = function(empresaId) {
+    originalLoadCompany(empresaId);
+    
+    // Cargar configuración de plantilla si estamos en esa tab
+    const plantillaTab = document.getElementById('plantilla-tab');
+    if (plantillaTab && plantillaTab.classList.contains('active')) {
+        setTimeout(() => cargarConfiguracionPlantilla(), 500);
+    }
+};
+
+// Event listener para cargar config cuando se hace clic en la pestaña
+document.addEventListener('DOMContentLoaded', () => {
+    const plantillaTab = document.getElementById('plantilla-tab');
+    if (plantillaTab) {
+        plantillaTab.addEventListener('click', () => {
+            setTimeout(() => cargarConfiguracionPlantilla(), 300);
+        });
+    }
+});
+
+// ============================================================================
 // Exponer funciones globales para onclick en HTML
 // ============================================================================
 window.editarCategoria = editarCategoria;
 window.eliminarCategoria = eliminarCategoria;
+window.seleccionarPlantilla = seleccionarPlantilla;
+window.previsualizarPlantilla = previsualizarPlantilla;
+window.previsualizarPlantillaActual = previsualizarPlantillaActual;
+window.guardarConfiguracionPlantilla = guardarConfiguracionPlantilla;
