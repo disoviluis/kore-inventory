@@ -1725,14 +1725,20 @@ function imprimirFactura() {
 
     // Preguntar formato de impresión con SweetAlert2
     Swal.fire({
-        title: '¿Desea imprimir en formato de tirilla térmica?',
+        title: 'Seleccione el formato de impresión',
         html: `
             <div class="text-start">
-                <p class="mb-2"><strong>Seleccione el formato de impresión:</strong></p>
+                <p class="mb-3"><strong>Seleccione el formato de impresión:</strong></p>
                 <div class="form-check mb-2">
                     <input class="form-check-input" type="radio" name="formatoImpresion" id="formatoCarta" value="carta" checked>
                     <label class="form-check-label" for="formatoCarta">
                         <i class="bi bi-file-earmark-text"></i> <strong>Tamaño Carta</strong> (Letter 8.5" x 11")
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="formatoImpresion" id="formatoMediaCarta" value="media-carta">
+                    <label class="form-check-label" for="formatoMediaCarta">
+                        <i class="bi bi-file-earmark"></i> <strong>Media Carta</strong> (Half Letter 5.5" x 8.5")
                     </label>
                 </div>
                 <div class="form-check">
@@ -1754,13 +1760,13 @@ function imprimirFactura() {
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            const formatoTermico = result.value === 'tirilla';
+            const formato = result.value;
             
             const numeroFactura = ultimaVentaGuardada.numero_factura || 'factura';
             const nombreArchivo = `Factura_${numeroFactura}`;
 
-            // Generar HTML de impresión
-            const htmlImpresion = generarHTMLImpresion(formatoTermico);
+            // Generar HTML de impresión según formato seleccionado
+            const htmlImpresion = generarHTMLImpresion(formato);
 
             // Crear un iframe oculto para imprimir (más confiable que window.open)
             const iframe = document.createElement('iframe');
@@ -1980,7 +1986,7 @@ async function descargarPDF() {
     }
 }
 
-function generarHTMLImpresion(formatoTermico = false) {
+function generarHTMLImpresion(formato = 'carta') {
     const venta = ultimaVentaGuardada;
     const ventaData = ultimaVentaData;
     const numeroFactura = venta.numero_factura;
@@ -1998,7 +2004,7 @@ function generarHTMLImpresion(formatoTermico = false) {
         minute: '2-digit'
     });
 
-    if (formatoTermico) {
+    if (formato === 'tirilla') {
         // FORMATO TÉRMICO (58mm o 80mm)
         return `
 <!DOCTYPE html>
@@ -2157,8 +2163,332 @@ function generarHTMLImpresion(formatoTermico = false) {
 </body>
 </html>
         `;
+    } else if (formato === 'media-carta') {
+        // FORMATO MEDIA CARTA (Half Letter 5.5" x 8.5")
+        const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
+        const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
+        
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura_${numeroFactura}</title>
+    <style>
+        @page {
+            size: 5.5in 8.5in;
+            margin: 8mm;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 8pt;
+            color: #000;
+            background: white;
+            padding: 5mm;
+        }
+        .encabezado {
+            text-align: center;
+            margin-bottom: 3mm;
+            padding-bottom: 2mm;
+            border-bottom: 1px solid #333;
+        }
+        .encabezado h2 {
+            font-size: 11pt;
+            margin-bottom: 1mm;
+            color: ${currentEmpresa.color_primario || '#1E40AF'};
+        }
+        .encabezado .slogan {
+            font-size: 7pt;
+            font-style: italic;
+            color: #666;
+            margin-bottom: 0.5mm;
+        }
+        .encabezado p {
+            font-size: 7pt;
+            margin: 0.3mm 0;
+        }
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+            padding: 0.5mm 2mm;
+            border-radius: 1mm;
+            font-size: 6pt;
+        }
+        .titulo-factura {
+            text-align: center;
+            font-size: 10pt;
+            font-weight: bold;
+            margin: 2mm 0;
+            padding: 2mm;
+            border: 1px solid ${currentEmpresa.color_primario || '#1E40AF'};
+            background-color: ${currentEmpresa.color_primario || '#1E40AF'}15;
+            border-radius: 2mm;
+        }
+        .resolucion-dian {
+            background-color: #f8f9fa;
+            border-left: 2px solid #28a745;
+            padding: 2mm;
+            margin: 2mm 0;
+            font-size: 6pt;
+        }
+        .info-boxes {
+            display: flex;
+            justify-content: space-between;
+            gap: 2mm;
+            margin: 2mm 0;
+        }
+        .info-box {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 2mm;
+            border-radius: 1mm;
+            font-size: 7pt;
+        }
+        .info-box strong {
+            color: ${currentEmpresa.color_primario || '#1E40AF'};
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2mm 0;
+            font-size: 7pt;
+        }
+        th {
+            background-color: ${currentEmpresa.color_primario || '#1E40AF'}15;
+            border: 1px solid #ddd;
+            padding: 1mm;
+            text-align: left;
+            font-weight: bold;
+            color: #333;
+        }
+        td {
+            border: 1px solid #ddd;
+            padding: 1mm;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-danger { color: #dc3545; }
+        .totales-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2mm;
+        }
+        .observaciones {
+            flex: 1;
+            padding-right: 3mm;
+            font-size: 7pt;
+        }
+        .totales {
+            width: 45%;
+        }
+        .totales table {
+            width: 100%;
+            margin: 0;
+        }
+        .totales td {
+            border: none;
+            border-bottom: 1px solid #ddd;
+            padding: 1mm;
+            font-size: 7pt;
+        }
+        .total-final {
+            font-size: 9pt;
+            font-weight: bold;
+            background-color: ${currentEmpresa.color_primario || '#1E40AF'};
+            color: white;
+        }
+        .cufe-section {
+            margin-top: 3mm;
+            padding: 2mm;
+            background-color: #f8f9fa;
+            border-radius: 2mm;
+            font-size: 6pt;
+        }
+        .qr-section {
+            text-align: center;
+            margin-top: 2mm;
+        }
+        .qr-section img {
+            width: 50px;
+            height: 50px;
+        }
+        .pie-pagina {
+            margin-top: 3mm;
+            padding-top: 2mm;
+            border-top: 1px solid #ddd;
+            font-size: 6pt;
+            text-align: center;
+        }
+        @media print {
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="encabezado">
+        <h2>${currentEmpresa.nombre}</h2>
+        ${currentEmpresa.slogan ? `<p class="slogan">${currentEmpresa.slogan}</p>` : ''}
+        <p>${currentEmpresa.razon_social}</p>
+        <p>NIT: ${nitCompleto}</p>
+        <p>${currentEmpresa.direccion || ''} | Tel: ${currentEmpresa.telefono || ''}</p>
+        <p>${currentEmpresa.email || ''} | ${currentEmpresa.sitio_web || ''}</p>
+        ${currentEmpresa.es_gran_contribuyente ? '<span class="badge-success">Gran Contribuyente</span>' : ''}
+        ${currentEmpresa.regimen_tributario ? `<span class="badge-success">${currentEmpresa.regimen_tributario}</span>` : ''}
+    </div>
+
+    <div class="titulo-factura">FACTURA ELECTRÓNICA DE VENTA<br>${numeroFactura}</div>
+
+    ${venta.cufe ? `
+    <div class="resolucion-dian">
+        <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian || 'Pendiente'}<br>
+        <strong>Prefijo:</strong> ${currentEmpresa.prefijo_factura || 'FV'} | 
+        <strong>Rango:</strong> ${currentEmpresa.numeracion_desde || 1} - ${currentEmpresa.numeracion_hasta || 99999}<br>
+        <strong>Vigencia:</strong> ${currentEmpresa.fecha_vigencia_desde ? new Date(currentEmpresa.fecha_vigencia_desde).toLocaleDateString('es-CO') : ''} - 
+        ${currentEmpresa.fecha_vigencia_hasta ? new Date(currentEmpresa.fecha_vigencia_hasta).toLocaleDateString('es-CO') : ''}
+    </div>
+    ` : ''}
+
+    <div class="info-boxes">
+        <div class="info-box">
+            <strong>Fecha de Emisión:</strong><br>${fecha}
+            ${ventaData.fecha_vencimiento ? `<br><strong>Fecha de Vencimiento:</strong><br>${new Date(ventaData.fecha_vencimiento).toLocaleDateString('es-CO')}` : ''}
+        </div>
+        <div class="info-box">
+            <strong>Cliente:</strong><br>
+            ${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>
+            <strong>${ventaData.cliente.tipo_documento}:</strong> ${ventaData.cliente.numero_documento}<br>
+            ${ventaData.cliente.direccion ? `${ventaData.cliente.direccion}<br>` : ''}
+            ${ventaData.cliente.telefono ? `Tel: ${ventaData.cliente.telefono}` : ''}
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="text-center" style="width: 5%">#</th>
+                <th style="width: 40%">Descripción</th>
+                <th class="text-center" style="width: 10%">Cant.</th>
+                <th class="text-right" style="width: 15%">Precio Unit.</th>
+                <th class="text-right" style="width: 10%">IVA</th>
+                <th class="text-right" style="width: 20%">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${ventaData.productos.map((p, idx) => `
+            <tr>
+                <td class="text-center">${idx + 1}</td>
+                <td>${p.nombre}${p.codigo_barras ? `<br><small>Cód: ${p.codigo_barras}</small>` : ''}</td>
+                <td class="text-center">${p.cantidad}</td>
+                <td class="text-right">$${formatearNumero(p.precio_unitario)}</td>
+                <td class="text-right">$${formatearNumero(p.impuesto || 0)}</td>
+                <td class="text-right">$${formatearNumero(p.subtotal)}</td>
+            </tr>
+            `).join('')}
+        </tbody>
+    </table>
+
+    <div class="totales-container">
+        <div class="observaciones">
+            ${ventaData.observaciones ? `<strong>Observaciones:</strong><br>${ventaData.observaciones}` : ''}
+            ${ventaData.pagos && ventaData.pagos.length > 0 ? `
+            <div style="margin-top: 2mm;">
+                <strong>Forma de Pago:</strong><br>
+                ${ventaData.pagos.map(pago => {
+                    const nombres = {
+                        'efectivo': 'Efectivo',
+                        'tarjeta_debito': 'Tarjeta Débito',
+                        'tarjeta_credito': 'Tarjeta Crédito',
+                        'transferencia': 'Transferencia',
+                        'nequi': 'Nequi',
+                        'daviplata': 'Daviplata',
+                        'cheque': 'Cheque'
+                    };
+                    return `${nombres[pago.metodo_pago] || pago.metodo_pago}: $${formatearNumero(pago.monto)}`;
+                }).join('<br>')}
+            </div>
+            ` : ''}
+        </div>
+        <div class="totales">
+            <table>
+                <tr>
+                    <td>Subtotal:</td>
+                    <td class="text-right">$${formatearNumero(subtotal)}</td>
+                </tr>
+                ${descuento > 0 ? `
+                <tr>
+                    <td>Descuento:</td>
+                    <td class="text-right text-danger">-$${formatearNumero(descuento)}</td>
+                </tr>
+                ` : ''}
+                <tr>
+                    <td>IVA (19%):</td>
+                    <td class="text-right">$${formatearNumero(impuesto)}</td>
+                </tr>
+                ${venta.retencion_fuente > 0 ? `
+                <tr>
+                    <td>Retención Fuente (2.5%):</td>
+                    <td class="text-right text-danger">-$${formatearNumero(venta.retencion_fuente)}</td>
+                </tr>
+                ` : ''}
+                ${venta.retencion_iva > 0 ? `
+                <tr>
+                    <td>Retención IVA (15%):</td>
+                    <td class="text-right text-danger">-$${formatearNumero(venta.retencion_iva)}</td>
+                </tr>
+                ` : ''}
+                ${venta.retencion_ica > 0 ? `
+                <tr>
+                    <td>Retención ICA (1%):</td>
+                    <td class="text-right text-danger">-$${formatearNumero(venta.retencion_ica)}</td>
+                </tr>
+                ` : ''}
+                <tr class="total-final">
+                    <td>TOTAL A PAGAR:</td>
+                    <td class="text-right">$${formatearNumero(total)}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    ${venta.cufe ? `
+    <div class="cufe-section">
+        <strong>CUFE (Código Único de Factura Electrónica):</strong><br>
+        <span style="word-break: break-all; font-family: 'Courier New', monospace;">${venta.cufe}</span>
+    </div>
+    ` : ''}
+
+    ${venta.qr_code ? `
+    <div class="qr-section">
+        <p style="font-size: 6pt; margin-bottom: 1mm;">Escanee para verificar autenticidad</p>
+        <img src="${venta.qr_code}" alt="QR Code">
+    </div>
+    ` : ''}
+
+    <div class="pie-pagina">
+        <p>${currentEmpresa.mensaje_agradecimiento || '¡Gracias por su compra!'}</p>
+        <p>Vendido por: ${currentUsuario.nombre} ${currentUsuario.apellido}</p>
+        <p style="margin-top: 1mm;">Documento generado electrónicamente de acuerdo con la normativa DIAN</p>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+                setTimeout(function() { window.close(); }, 100);
+            }, 250);
+        };
+    </script>
+</body>
+</html>
+        `;
     } else {
-        // FORMATO CARTA (Letter)
+        // FORMATO CARTA (Letter 8.5" x 11")
         const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
         const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
         
