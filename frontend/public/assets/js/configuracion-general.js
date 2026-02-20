@@ -894,6 +894,57 @@ function generarPreviewCarta(plantillaId, colorPrimario, colorSecundario, fuente
         `;
     }
     
+    // PLANTILLA CORPORATIVA
+    else if (plantillaId === 4) {
+        html += `
+            <!-- Header con Franja -->
+            <div style="background: linear-gradient(to right, ${colorPrimario}, ${colorPrimario}cc); padding: 25px 20px; margin: -20px -20px 20px -20px; color: white;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 style="color: white; margin: 0 0 5px 0; font-size: 22pt; font-family: 'Georgia', serif;">${d.empresa.nombre}</h2>
+                        <p style="margin: 2px 0; font-size: 9pt; opacity: 0.9;">${d.empresa.razon_social}</p>
+                        <p style="margin: 2px 0; font-size: 8pt; opacity: 0.8;">NIT: ${d.empresa.nit} | ${d.empresa.telefono}</p>
+                    </div>
+                    ${mostrarLogo ? `<div style="width: 80px; height: 80px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 10pt; color: ${colorPrimario};">LOGO</div>` : ''}
+                </div>
+            </div>
+            
+            <div style="background: white; border: 2px solid ${colorPrimario}; border-radius: 8px; padding: 15px; margin: 15px 0; text-align: center;">
+                <div style="font-size: 10pt; color: ${colorSecundario}; font-family: 'Georgia', serif;">FACTURA ELECTRÓNICA DE VENTA</div>
+                <div style="font-size: 16pt; font-weight: bold; color: ${colorPrimario}; margin-top: 5px; font-family: 'Georgia', serif;">${d.factura.numero}</div>
+                ${mostrarBadges && d.empresa.es_gran_contribuyente ? `<div style="margin-top: 8px;"><span style="background: #0c4a6e; color: white; padding: 4px 12px; border-radius: 20px; font-size: 7pt;">GRAN CONTRIBUYENTE</span></div>` : ''}
+            </div>
+        `;
+    }
+    
+    // PLANTILLA SIIGO STYLE
+    else if (plantillaId === 5) {
+        html += `
+            <!-- Header SIIGO Style -->
+            <div style="background: linear-gradient(135deg, ${colorPrimario}15, #ffffff); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid ${colorPrimario}30;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    ${mostrarLogo ? `<div style="width: 70px; height: 70px; background: ${colorPrimario}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 28pt; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">🏢</div>` : ''}
+                    <div style="flex-grow: 1;">
+                        <h2 style="color: ${colorPrimario}; margin: 0 0 5px 0; font-size: 18pt;">${d.empresa.nombre}</h2>
+                        <p style="margin: 2px 0; font-size: 8pt; color: ${colorSecundario};">${d.empresa.razon_social}</p>
+                        <p style="margin: 2px 0; font-size: 8pt; color: ${colorSecundario};">📞 ${d.empresa.telefono} | 📧 contacto@empresa.com</p>
+                    </div>
+                    ${mostrarBadges && d.empresa.es_gran_contribuyente ? `<div style="background: linear-gradient(135deg, #047857, #10b981); color: white; padding: 10px 15px; border-radius: 25px; font-size: 7pt; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.15);"><i class="bi bi-star-fill"></i> GRAN CONTRIBUYENTE</div>` : ''}
+                </div>
+            </div>
+            
+            <div style="background: ${colorPrimario}; color: white; border-radius: 12px; padding: 15px; margin: 15px 0; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <span style="font-size: 24pt;">📄</span>
+                    <div style="text-align: left;">
+                        <div style="font-size: 9pt; opacity: 0.9;">FACTURA ELECTRÓNICA</div>
+                        <div style="font-size: 14pt; font-weight: bold;">${d.factura.numero}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
     // Información común (cliente y fecha)
     html += `
         <div style="display: flex; gap: 15px; margin: 15px 0;">
@@ -908,27 +959,29 @@ function generarPreviewCarta(plantillaId, colorPrimario, colorSecundario, fuente
         </div>
         
         <!-- Tabla de productos -->
-        <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9pt;">
+        <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9pt; ${plantillaId === 5 ? 'border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05);' : ''}">
             <thead>
-                <tr style="background: ${colorPrimario}15;">
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">#</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Descripción</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Cant.</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Precio</th>
-                    <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total</th>
+                <tr style="background: ${plantillaId === 5 ? colorPrimario : colorPrimario + '15'}; ${plantillaId === 5 ? 'color: white;' : ''}">
+                    <th style="${plantillaId === 5 ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 8px; text-align: left;">#</th>
+                    <th style="${plantillaId === 5 ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 8px; text-align: left;">Descripción</th>
+                    <th style="${plantillaId === 5 ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 8px; text-align: center;">Cant.</th>
+                    <th style="${plantillaId === 5 ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 8px; text-align: right;">Precio</th>
+                    <th style="${plantillaId === 5 ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 8px; text-align: right;">Total</th>
                 </tr>
             </thead>
             <tbody>
     `;
     
     d.productos.forEach((p, i) => {
+        const isZebra = plantillaId === 2 && i % 2 === 1;
+        const isSIIGO = plantillaId === 5;
         html += `
-            <tr${plantillaId === 2 && i % 2 === 1 ? ` style="background: #f9f9f9;"` : ''}>
-                <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${i + 1}</td>
-                <td style="border: 1px solid #ddd; padding: 6px;">${p.nombre}</td>
-                <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${p.cantidad}</td>
-                <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">$${p.precio.toLocaleString('es-CO')}</td>
-                <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">$${p.subtotal.toLocaleString('es-CO')}</td>
+            <tr${isZebra ? ` style="background: #f9f9f9;"` : isSIIGO ? ` style="border-bottom: 1px solid #f0f0f0;"` : ''}>
+                <td style="${isSIIGO ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 6px; text-align: center;">${i + 1}</td>
+                <td style="${isSIIGO ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 6px;">${p.nombre}</td>
+                <td style="${isSIIGO ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 6px; text-align: center;">${p.cantidad}</td>
+                <td style="${isSIIGO ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 6px; text-align: right;">$${p.precio.toLocaleString('es-CO')}</td>
+                <td style="${isSIIGO ? 'border: none;' : 'border: 1px solid #ddd;'} padding: 6px; text-align: right;">$${p.subtotal.toLocaleString('es-CO')}</td>
             </tr>
         `;
     });
@@ -1148,7 +1201,9 @@ function getNombrePlantilla(plantillaId) {
     const nombres = {
         1: 'Clásica',
         2: 'Moderna',
-        3: 'Minimalista'
+        3: 'Minimalista',
+        4: 'Corporativa',
+        5: 'SIIGO Style'
     };
     return nombres[plantillaId] || 'Desconocida';
 }
