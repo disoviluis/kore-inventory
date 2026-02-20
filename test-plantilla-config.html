@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Configuración de Plantilla</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #1E40AF;
+            border-bottom: 2px solid #1E40AF;
+            padding-bottom: 10px;
+        }
+        button {
+            background: #1E40AF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1e40afdd;
+        }
+        .result {
+            background: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error {
+            border-left-color: #dc3545;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left-color: #0c5460;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Configuración de Plantillas</h1>
+    
+    <div class="info">
+        <strong>📋 Instrucciones:</strong><br>
+        1. Ingresa el ID de tu empresa<br>
+        2. Haz clic en "🔍 Obtener Configuración Actual"<br>
+        3. Prueba guardar una nueva configuración<br>
+        4. Verifica los resultados en la consola del navegador (F12)
+    </div>
+
+    <!-- TEST 1: OBTENER CONFIGURACIÓN -->
+    <div class="test-box">
+        <h2>📥 1. Obtener Configuración Actual</h2>
+        <p>Obtiene la configuración de plantilla guardada para tu empresa</p>
+        
+        <label>ID Empresa: <input type="number" id="empresaIdGet" value="1" min="1"></label>
+        <button onclick="obtenerConfiguracion()">🔍 Obtener Configuración</button>
+        
+        <div id="resultGet"></div>
+    </div>
+
+    <!-- TEST 2: GUARDAR CONFIGURACIÓN -->
+    <div class="test-box">
+        <h2>💾 2. Guardar Nueva Configuración</h2>
+        <p>Guarda una nueva configuración de plantilla</p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <label>ID Empresa: <input type="number" id="empresaIdSet" value="1" min="1"></label>
+            
+            <label>Plantilla:
+                <select id="plantillaId">
+                    <option value="1">1 - Clásica</option>
+                    <option value="2">2 - Moderna</option>
+                    <option value="3">3 - Minimalista</option>
+                    <option value="4">4 - Corporativa</option>
+                    <option value="5">5 - SIIGO Style</option>
+                </select>
+            </label>
+            
+            <label>Color Primario: <input type="color" id="colorPrimario" value="#1E40AF"></label>
+            <label>Color Secundario: <input type="color" id="colorSecundario" value="#6c757d"></label>
+            
+            <label>Fuente:
+                <select id="fuente">
+                    <option value="Arial">Arial</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Georgia">Georgia</option>
+                </select>
+            </label>
+            
+            <label>Mostrar Logo: <input type="checkbox" id="mostrarLogo" checked></label>
+            <label>Mostrar QR: <input type="checkbox" id="mostrarQR" checked></label>
+            <label>Mostrar CUFE: <input type="checkbox" id="mostrarCUFE" checked></label>
+        </div>
+        
+        <button onclick="guardarConfiguracion()">💾 Guardar Configuración</button>
+        
+        <div id="resultSet"></div>
+    </div>
+
+    <!-- TEST 3: VERIFICAR -->
+    <div class="test-box">
+        <h2>✅ 3. Verificar Cambios</h2>
+        <p>Después de guardar, obtén de nuevo la configuración para verificar que se guardó correctamente</p>
+        
+        <button onclick="verificarCambios()">🔄 Verificar</button>
+        
+        <div id="resultVerify"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            alert('⚠️ No hay token de autenticación. Por favor inicia sesión primero.');
+        }
+
+        async function obtenerConfiguracion() {
+            const empresaId = document.getElementById('empresaIdGet').value;
+            const resultDiv = document.getElementById('resultGet');
+            
+            try {
+                resultDiv.innerHTML = '<div class="result">⏳ Cargando...</div>';
+                
+                const response = await fetch(`${API_URL}/facturacion/configuracion/${empresaId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                console.log('📥 Respuesta GET:', data);
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="result">
+✅ Configuración obtenida exitosamente:
+
+${JSON.stringify(data.data, null, 2)}
+
+📋 Plantilla ID: ${data.data?.plantilla_id || 'No configurada'}
+🎨 Color Primario: ${data.data?.color_primario || 'No configurado'}
+🔤 Fuente: ${data.data?.fuente || 'No configurada'}
+                    </div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">
+❌ Error: ${data.message || 'No se pudo obtener la configuración'}
+                    </div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<div class="result error">
+❌ Error de conexión: ${error.message}
+                </div>`;
+            }
+        }
+
+        async function guardarConfiguracion() {
+            const empresaId = document.getElementById('empresaIdSet').value;
+            const resultDiv = document.getElementById('resultSet');
+            
+            const config = {
+                empresa_id: parseInt(empresaId),
+                plantilla_id: parseInt(document.getElementById('plantillaId').value),
+                color_primario: document.getElementById('colorPrimario').value,
+                color_secundario: document.getElementById('colorSecundario').value,
+                fuente: document.getElementById('fuente').value,
+                tamano_fuente: 10,
+                mostrar_logo: document.getElementById('mostrarLogo').checked,
+                mostrar_qr: document.getElementById('mostrarQR').checked,
+                mostrar_cufe: document.getElementById('mostrarCUFE').checked,
+                mostrar_badges: true,
+                logo_posicion: 'center'
+            };
+            
+            try {
+                resultDiv.innerHTML = '<div class="result">⏳ Guardando...</div>';
+                
+                console.log('📤 Enviando configuración:', config);
+                
+                const response = await fetch(`${API_URL}/facturacion/configuracion/${empresaId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                const data = await response.json();
+                
+                console.log('📥 Respuesta PUT:', data);
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="result">
+✅ Configuración guardada exitosamente
+
+📋 Plantilla guardada: ${config.plantilla_id}
+🎨 Color: ${config.color_primario}
+🔤 Fuente: ${config.fuente}
+
+🔄 Ahora puedes hacer una venta en el POS para verificar que la plantilla cambió.
+                    </div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">
+❌ Error al guardar: ${data.message || 'Error desconocido'}
+                    </div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<div class="result error">
+❌ Error de conexión: ${error.message}
+                </div>`;
+            }
+        }
+
+        async function verificarCambios() {
+            const empresaId = document.getElementById('empresaIdSet').value;
+            document.getElementById('empresaIdGet').value = empresaId;
+            await obtenerConfiguracion();
+            
+            const resultDiv = document.getElementById('resultVerify');
+            resultDiv.innerHTML = `<div class="result">
+✅ Verificación completada. Revisa el resultado arriba en la sección "Obtener Configuración".
+
+💡 SIGUIENTE PASO:
+1. Ve al módulo de Ventas
+2. Realiza una venta de prueba
+3. Imprime o descarga la factura
+4. Verifica que esté usando la plantilla seleccionada
+
+🔍 En la consola del navegador (F12) verás:
+   - 📥 "Respuesta del servidor" (carga inicial)
+   - ✅ "Configuración de plantilla cargada"
+   - 📋 "Plantilla ID seleccionada: X"
+   - 🖨️ "Generando factura - Formato: carta"
+   - 📄 "Usando plantilla ID: X"
+            </div>`;
+        }
+    </script>
+</body>
+</html>
