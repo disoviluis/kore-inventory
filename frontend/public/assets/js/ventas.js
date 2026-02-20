@@ -1981,7 +1981,8 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
         .encabezado h2 { color: ${config.colorPrimario}; margin: 0; font-size: 18pt; }
         .encabezado-info { flex-grow: 1; }
         .encabezado-info p { margin: 2px 0; font-size: 8pt; }
-        .titulo-factura { background: ${config.colorPrimario}; color: white; text-align: center; font-size: 10pt; font-weight: bold; padding: 8px; border-radius: 6px; margin: 10px 0; }
+        .titulo-factura { background: ${config.colorPrimario}; color: white; text-align: center; font-size: 9pt; font-weight: bold; padding: 6px 12px; border-radius: 4px; margin: 10px 0; display: inline-block; margin-left: auto; margin-right: auto; }
+        .titulo-factura-container { text-align: center; margin: 10px 0; }
         .resolucion-box { background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 8px 12px; margin: 10px 0; font-size: 8pt; border-radius: 4px; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
         .info-box { border: 1px solid #ddd; padding: 10px; border-radius: 5px; font-size: 9pt; }
@@ -2006,7 +2007,9 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
         ${config.mostrarBadges && currentEmpresa.es_gran_contribuyente ? `<div style="background: linear-gradient(135deg, ${config.colorPrimario}, #0ea5e9); color: white; padding: 8px 12px; border-radius: 8px; font-size: 8pt; text-align: center;"><strong>GRAN<br>CONTRIBUYENTE</strong></div>` : ''}
     </div>
     
-    <div class="titulo-factura">FACTURA ELECTRÓNICA ${numeroFactura}</div>
+    <div class="titulo-factura-container">
+        <div class="titulo-factura">FACTURA ELECTRÓNICA ${numeroFactura}</div>
+    </div>
     
     ${currentEmpresa.resolucion_dian ? `
     <div class="resolucion-box">

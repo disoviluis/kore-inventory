@@ -469,7 +469,11 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
     return successResponse(
       res,
       'Venta creada exitosamente',
-      { id: ventaId, numero_factura: numeroFactura },
+      { 
+        id: ventaId, 
+        numero_factura: numeroFactura,
+        cufe: cufe
+      },
       CONSTANTS.HTTP_STATUS.CREATED
     );
 
