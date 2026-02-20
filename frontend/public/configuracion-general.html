@@ -11,6 +11,58 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/dashboard.css">
+    
+    <style>
+        /* Estilos para plantillas responsivas */
+        .plantilla-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .plantilla-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .plantilla-card img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            max-height: 300px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        /* Responsive para tablets */
+        @media (max-width: 992px) {
+            .plantilla-card img {
+                max-height: 250px;
+            }
+        }
+        
+        /* Responsive para móviles */
+        @media (max-width: 768px) {
+            .plantilla-card img {
+                max-height: 200px;
+            }
+            
+            #plantillasGallery .col-md-4 {
+                margin-bottom: 1rem;
+            }
+        }
+        
+        /* Asegurar que las cards no se desborden */
+        .plantilla-card .card-body {
+            padding: 1rem;
+        }
+        
+        .plantilla-card .card-title {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .plantilla-card .card-text {
+            font-size: 0.85rem;
+        }
+    </style>
 </head>
 <body>
 
@@ -449,9 +501,9 @@
                                             
                                             <div class="row g-3" id="plantillasGallery">
                                                 <!-- Plantilla Clásica -->
-                                                <div class="col-md-4">
+                                                <div class="col-lg-4 col-md-6 col-sm-12">
                                                     <div class="card plantilla-card h-100" data-plantilla-id="1" style="cursor: pointer; border: 2px solid #e0e0e0;">
-                                                        <img src="https://placehold.co/400x500/f8f9fa/1E40AF/png?text=Plantilla+Clasica" class="card-img-top" alt="Plantilla Clásica">
+                                                        <img src="https://placehold.co/600x400/f8f9fa/1E40AF/png?text=Plantilla+Clasica" class="card-img-top img-fluid" alt="Plantilla Clásica">
                                                         <div class="card-body">
                                                             <h6 class="card-title d-flex align-items-center">
                                                                 <i class="bi bi-file-earmark-text text-primary me-2"></i>
@@ -472,9 +524,9 @@
                                                 </div>
 
                                                 <!-- Plantilla Moderna -->
-                                                <div class="col-md-4">
+                                                <div class="col-lg-4 col-md-6 col-sm-12">
                                                     <div class="card plantilla-card h-100" data-plantilla-id="2" style="cursor: pointer; border: 2px solid #e0e0e0;">
-                                                        <img src="https://placehold.co/400x500/e0f2fe/0284c7/png?text=Plantilla+Moderna" class="card-img-top" alt="Plantilla Moderna">
+                                                        <img src="https://placehold.co/600x400/e0f2fe/0284c7/png?text=Plantilla+Moderna" class="card-img-top img-fluid" alt="Plantilla Moderna">
                                                         <div class="card-body">
                                                             <h6 class="card-title d-flex align-items-center">
                                                                 <i class="bi bi-stars text-info me-2"></i>
@@ -495,9 +547,9 @@
                                                 </div>
 
                                                 <!-- Plantilla Minimalista -->
-                                                <div class="col-md-4">
+                                                <div class="col-lg-4 col-md-6 col-sm-12">
                                                     <div class="card plantilla-card h-100" data-plantilla-id="3" style="cursor: pointer; border: 2px solid #e0e0e0;">
-                                                        <img src="https://placehold.co/400x500/fafafa/6b7280/png?text=Plantilla+Minimalista" class="card-img-top" alt="Plantilla Minimalista">
+                                                        <img src="https://placehold.co/600x400/fafafa/6b7280/png?text=Plantilla+Minimalista" class="card-img-top img-fluid" alt="Plantilla Minimalista">
                                                         <div class="card-body">
                                                             <h6 class="card-title d-flex align-items-center">
                                                                 <i class="bi bi-border-style text-secondary me-2"></i>
