@@ -364,8 +364,8 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         subtotal, descuento, impuesto, total, 
         retenciones,
         estado, metodo_pago, notas, vendedor_id,
-        cufe
-      ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'pagada', ?, ?, ?, ?)`,
+        cufe, qr_code
+      ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'pagada', ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         numeroFactura,
@@ -378,7 +378,8 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         metodo_pago || 'efectivo',
         notas || null,
         vendedor_id || null,
-        cufe
+        cufe,
+        qrCode
       ]
     );
 
@@ -472,7 +473,8 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       { 
         id: ventaId, 
         numero_factura: numeroFactura,
-        cufe: cufe
+        cufe: cufe,
+        qr_code: qrCode
       },
       CONSTANTS.HTTP_STATUS.CREATED
     );
