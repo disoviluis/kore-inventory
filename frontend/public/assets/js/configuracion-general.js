@@ -751,7 +751,16 @@ function seleccionarPlantilla(plantillaId) {
         }
     }
     
-    showNotification(`Plantilla "${getNombrePlantilla(plantillaId)}" seleccionada`, 'info');
+    // Cerrar cualquier notificación previa y mostrar la nueva
+    const existingToasts = document.querySelectorAll('.toast.show');
+    existingToasts.forEach(toast => {
+        const bsToast = bootstrap.Toast.getInstance(toast);
+        if (bsToast) bsToast.hide();
+    });
+    
+    setTimeout(() => {
+        showNotification(`Plantilla "${getNombrePlantilla(plantillaId)}" seleccionada`, 'info');
+    }, 100);
 }
 
 // Función para previsualizar plantilla

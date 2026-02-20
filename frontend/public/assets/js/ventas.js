@@ -1961,6 +1961,13 @@ function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitComple
 
 // PLANTILLA 2: MODERNA
 function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    // Formatear fechas de resolución DIAN
+    const formatearFecha = (fecha) => {
+        if (!fecha) return 'N/A';
+        const d = new Date(fecha);
+        return d.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+    };
+
     return `
 <!DOCTYPE html>
 <html>
@@ -1972,7 +1979,13 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
         body { font-family: ${config.fuente}, sans-serif; font-size: 10pt; color: #000; padding: 8mm; }
         .encabezado { display: flex; align-items: center; margin-bottom: 5mm; padding-bottom: 3mm; border-bottom: 3px solid ${config.colorPrimario}; }
         .encabezado h2 { color: ${config.colorPrimario}; margin: 0; font-size: 18pt; }
+        .encabezado-info { flex-grow: 1; }
+        .encabezado-info p { margin: 2px 0; font-size: 8pt; }
         .titulo-factura { background: ${config.colorPrimario}; color: white; text-align: center; font-size: 10pt; font-weight: bold; padding: 8px; border-radius: 6px; margin: 10px 0; }
+        .resolucion-box { background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 8px 12px; margin: 10px 0; font-size: 8pt; border-radius: 4px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+        .info-box { border: 1px solid #ddd; padding: 10px; border-radius: 5px; font-size: 9pt; }
+        .info-box strong { color: ${config.colorPrimario}; display: block; margin-bottom: 5px; }
         table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 9pt; }
         th { background-color: ${config.colorPrimario}; color: white; padding: 2mm; text-align: left; }
         td { border: 1px solid #ddd; padding: 2mm; }
@@ -1983,19 +1996,40 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
 </head>
 <body>
     <div class="encabezado">
-        <div style="flex-grow: 1;">
+        <div class="encabezado-info">
             <h2>${currentEmpresa.nombre}</h2>
-            <p style="margin: 3px 0; font-size: 9pt; color: ${config.colorSecundario};">${currentEmpresa.razon_social}</p>
-            <p style="margin: 3px 0; font-size: 8pt;">NIT: ${nitCompleto} | ${currentEmpresa.telefono || ''}</p>
+            <p style="font-weight: 600; font-size: 9pt; color: ${config.colorSecundario};">${currentEmpresa.razon_social}</p>
+            <p>NIT: ${nitCompleto}</p>
+            <p>${currentEmpresa.direccion || ''} - ${currentEmpresa.ciudad || ''}</p>
+            <p>Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email || ''}</p>
         </div>
         ${config.mostrarBadges && currentEmpresa.es_gran_contribuyente ? `<div style="background: linear-gradient(135deg, ${config.colorPrimario}, #0ea5e9); color: white; padding: 8px 12px; border-radius: 8px; font-size: 8pt; text-align: center;"><strong>GRAN<br>CONTRIBUYENTE</strong></div>` : ''}
     </div>
     
     <div class="titulo-factura">FACTURA ELECTRÓNICA ${numeroFactura}</div>
     
-    <div style="display: flex; gap: 15px; margin: 15px 0;">
-        <div style="flex: 1; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"><strong>Fecha:</strong><br>${fecha}</div>
-        <div style="flex: 2; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"><strong>Cliente:</strong><br>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}</div>
+    ${currentEmpresa.resolucion_dian ? `
+    <div class="resolucion-box">
+        <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian}${currentEmpresa.fecha_resolucion ? ` del ${formatearFecha(currentEmpresa.fecha_resolucion)}` : ''}<br>
+        <strong>Vigencia:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)}<br>
+        <strong>Rango autorizado:</strong> ${currentEmpresa.prefijo_factura}-${currentEmpresa.rango_factura_desde} a ${currentEmpresa.prefijo_factura}-${currentEmpresa.rango_factura_hasta}
+    </div>` : ''}
+    
+    <div class="info-grid">
+        <div class="info-box">
+            <strong>📅 Información de Factura</strong>
+            Fecha: ${fecha}<br>
+            Forma de Pago: ${ventaData.forma_pago === 'credito' ? 'Crédito' : 'Contado'}<br>
+            Método de Pago: ${ventaData.metodo_pago || 'Efectivo'}<br>
+            ${ventaData.vendedor ? `Vendedor: ${currentUsuario.nombre} ${currentUsuario.apellido}` : ''}
+        </div>
+        <div class="info-box">
+            <strong>👤 Datos del Cliente</strong>
+            ${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>
+            ${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}<br>
+            ${ventaData.cliente.direccion ? `${ventaData.cliente.direccion}<br>` : ''}
+            ${ventaData.cliente.telefono || ventaData.cliente.celular || ''}
+        </div>
     </div>
     
     <table>
