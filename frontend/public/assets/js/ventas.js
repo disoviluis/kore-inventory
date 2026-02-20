@@ -2037,9 +2037,324 @@ async function descargarPDF() {
     }
 }
 
+// ============================================
+// FUNCIONES DE GENERACIÓN DE PLANTILLAS
+// ============================================
+
+function obtenerConfiguracionActual() {
+    return {
+        plantillaId: configuracionPlantilla?.plantilla_id || 1,
+        colorPrimario: configuracionPlantilla?.color_primario || currentEmpresa.color_primario || '#1E40AF',
+        colorSecundario: configuracionPlantilla?.color_secundario || '#6c757d',
+        fuente: configuracionPlantilla?.fuente || 'Arial',
+        mostrarLogo: configuracionPlantilla?.mostrar_logo !== false,
+        mostrarQR: configuracionPlantilla?.mostrar_qr !== false,
+        mostrarCUFE: configuracionPlantilla?.mostrar_cufe !== false,
+        mostrarBadges: configuracionPlantilla?.mostrar_badges !== false
+    };
+}
+
 function generarHTMLImpresion(formato = 'carta') {
     const venta = ultimaVentaGuardada;
     const ventaData = ultimaVentaData;
+    const config = obtenerConfiguracionActual();
+    
+    // Decidir qué plantilla usar según formato y configuración
+    if (formato === 'tirilla') {
+        return generarPlantillaTirilla(venta, ventaData, config);
+    } else if (formato === 'media-carta') {
+        return generarPlantillaMediaCarta(venta, ventaData, config);
+    } else {
+        // Formato carta - usar plantilla seleccionada
+        return generarPlantillaCarta(venta, ventaData, config);
+    }
+}
+
+// Generar plantilla formato CARTA según configuración
+function generarPlantillaCarta(venta, ventaData, config) {
+    const numeroFactura = venta.numero_factura;
+    const subtotal = ventaData.subtotal;
+    const descuento = ventaData.descuento || 0;
+    const impuesto = ventaData.impuesto;
+    const total = ventaData.total;
+    
+    const fecha = new Date().toLocaleString('es-CO', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
+    const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
+    
+    // Usar plantilla según configuración
+    switch (config.plantillaId) {
+        case 2: return generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+        case 3: return generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+        case 4: return generarPlantillaCorporativaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+        case 5: return generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+        default: return generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+    }
+}
+
+// PLANTILLA 1: CLÁSICA
+function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Factura_${numeroFactura}</title>
+    <style>
+        @page { size: letter; margin: 15mm; }
+        body { font-family: ${config.fuente}, sans-serif; font-size: 10pt; color: #000; padding: 8mm; }
+        .encabezado { text-align: center; margin-bottom: 5mm; padding-bottom: 3mm; border-bottom: 2px solid ${config.colorPrimario}; }
+        .encabezado h2 { font-size: 16pt; margin-bottom: 2mm; color: ${config.colorPrimario}; }
+        .titulo-factura { text-align: center; font-size: 13pt; font-weight: bold; margin: 4mm 0; padding: 3mm; border: 2px solid ${config.colorPrimario}; background-color: ${config.colorPrimario}15; border-radius: 3mm; }
+        .info-boxes { display: flex; justify-content: space-between; gap: 3mm; margin: 4mm 0; }
+        .info-box { flex: 1; border: 1px solid #ddd; padding: 3mm; border-radius: 2mm; font-size: 9pt; }
+        table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 9pt; }
+        th { background-color: ${config.colorPrimario}15; border: 1px solid #ddd; padding: 2mm; text-align: left; }
+        td { border: 1px solid #ddd; padding: 2mm; }
+        .text-right { text-align: right; }
+        .total-final { font-size: 11pt; font-weight: bold; background-color: ${config.colorPrimario}; color: white; }
+    </style>
+</head>
+<body>
+    <div class="encabezado">
+        <h2>${currentEmpresa.nombre}</h2>
+        <p>${currentEmpresa.razon_social}</p>
+        <p>NIT: ${nitCompleto} | ${currentEmpresa.telefono || ''}</p>
+        ${config.mostrarBadges && currentEmpresa.es_gran_contribuyente ? '<span style="background: #28a745; color: white; padding: 2mm 3mm; border-radius: 2mm; font-size: 8pt;">Gran Contribuyente</span>' : ''}
+    </div>
+    
+    <div class="titulo-factura">FACTURA ELECTRÓNICA DE VENTA<br>${numeroFactura}</div>
+    
+    <div class="info-boxes">
+        <div class="info-box"><strong>Fecha:</strong><br>${fecha}</div>
+        <div class="info-box">
+            <strong>Cliente:</strong><br>
+            ${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>
+            ${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}
+        </div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>#</th><th>Descripción</th><th class="text-right">Cant.</th><th class="text-right">Precio</th><th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${ventaData.productos.map((p, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${p.nombre}</td>
+                    <td class="text-right">${p.cantidad}</td>
+                    <td class="text-right">$${formatearNumero(p.precio_unitario)}</td>
+                    <td class="text-right">$${formatearNumero(p.subtotal)}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+    
+    <div style="display: flex; justify-content: flex-end;">
+        <table style="width: 250px;">
+            <tr><td>Subtotal:</td><td class="text-right">$${formatearNumero(subtotal)}</td></tr>
+            ${descuento > 0 ? `<tr><td>Descuento:</td><td class="text-right">-$${formatearNumero(descuento)}</td></tr>` : ''}
+            <tr><td>IVA (19%):</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            <tr class="total-final"><td style="padding: 8px;">TOTAL:</td><td class="text-right" style="padding: 8px;">$${formatearNumero(total)}</td></tr>
+        </table>
+    </div>
+    
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
+    
+    <script>
+        window.onload = function() {
+            setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250);
+        };
+    </script>
+</body>
+</html>`;
+}
+
+// PLANTILLA 2: MODERNA
+function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Factura_${numeroFactura}</title>
+    <style>
+        @page { size: letter; margin: 15mm; }
+        body { font-family: ${config.fuente}, sans-serif; font-size: 10pt; color: #000; padding: 8mm; }
+        .encabezado { display: flex; align-items: center; margin-bottom: 5mm; padding-bottom: 3mm; border-bottom: 3px solid ${config.colorPrimario}; }
+        .encabezado h2 { color: ${config.colorPrimario}; margin: 0; font-size: 18pt; }
+        .titulo-factura { background: ${config.colorPrimario}; color: white; text-align: center; font-size: 13pt; font-weight: bold; padding: 12px; border-radius: 8px; margin: 15px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 9pt; }
+        th { background-color: ${config.colorPrimario}; color: white; padding: 2mm; text-align: left; }
+        td { border: 1px solid #ddd; padding: 2mm; }
+        tbody tr:nth-child(even) { background: #f9f9f9; }
+        .text-right { text-align: right; }
+        .total-final { font-size: 11pt; font-weight: bold; background-color: ${config.colorPrimario}; color: white; }
+    </style>
+</head>
+<body>
+    <div class="encabezado">
+        <div style="flex-grow: 1;">
+            <h2>${currentEmpresa.nombre}</h2>
+            <p style="margin: 3px 0; font-size: 9pt; color: ${config.colorSecundario};">${currentEmpresa.razon_social}</p>
+            <p style="margin: 3px 0; font-size: 8pt;">NIT: ${nitCompleto} | ${currentEmpresa.telefono || ''}</p>
+        </div>
+        ${config.mostrarBadges && currentEmpresa.es_gran_contribuyente ? `<div style="background: linear-gradient(135deg, ${config.colorPrimario}, #0ea5e9); color: white; padding: 8px 12px; border-radius: 8px; font-size: 8pt; text-align: center;"><strong>GRAN<br>CONTRIBUYENTE</strong></div>` : ''}
+    </div>
+    
+    <div class="titulo-factura">FACTURA ELECTRÓNICA ${numeroFactura}</div>
+    
+    <div style="display: flex; gap: 15px; margin: 15px 0;">
+        <div style="flex: 1; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"><strong>Fecha:</strong><br>${fecha}</div>
+        <div style="flex: 2; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"><strong>Cliente:</strong><br>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}</div>
+    </div>
+    
+    <table>
+        <thead><tr><th>#</th><th>Descripción</th><th class="text-right">Cant.</th><th class="text-right">Precio</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+            ${ventaData.productos.map((p, i) => `<tr><td>${i + 1}</td><td>${p.nombre}</td><td class="text-right">${p.cantidad}</td><td class="text-right">$${formatearNumero(p.precio_unitario)}</td><td class="text-right">$${formatearNumero(p.subtotal)}</td></tr>`).join('')}
+        </tbody>
+    </table>
+    
+    <div style="display: flex; justify-content: flex-end;">
+        <table style="width: 250px;">
+            <tr><td>Subtotal:</td><td class="text-right">$${formatearNumero(subtotal)}</td></tr>
+            ${descuento > 0 ? `<tr><td>Descuento:</td><td class="text-right">-$${formatearNumero(descuento)}</td></tr>` : ''}
+            <tr><td>IVA (19%):</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            <tr class="total-final"><td style="padding: 8px;">TOTAL:</td><td class="text-right" style="padding: 8px;">$${formatearNumero(total)}</td></tr>
+        </table>
+    </div>
+    
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
+    
+    <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
+</body>
+</html>`;
+}
+
+// PLANTILLA 3: MINIMALISTA
+function generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Factura_${numeroFactura}</title>
+    <style>
+        @page { size: letter; margin: 15mm; }
+        body { font-family: ${config.fuente}, sans-serif; font-size: 10pt; color: #000; padding: 8mm; }
+        .encabezado { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0; }
+        .encabezado h2 { color: ${config.colorPrimario}; margin: 0 0 8px 0; font-size: 20pt; font-weight: 300; }
+        .titulo-factura { font-size: 11pt; font-weight: 300; margin: 20px 0; padding: 15px 0; border-top: 3px solid ${config.colorPrimario}; border-bottom: 1px solid ${config.colorPrimario}; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9pt; }
+        th { background-color: ${config.colorPrimario}15; padding: 8px; text-align: left; border-bottom: 2px solid ${config.colorPrimario}; }
+        td { padding: 6px; border-bottom: 1px solid #f0f0f0; }
+        .text-right { text-align: right; }
+        .total-final { font-size: 11pt; font-weight: bold; background-color: ${config.colorPrimario}; color: white; }
+    </style>
+</head>
+<body>
+    <div class="encabezado">
+        <h2>${currentEmpresa.nombre}</h2>
+        <p style="margin: 2px 0; font-size: 8pt; color: #999;">${currentEmpresa.razon_social}</p>
+        <p style="margin: 2px 0; font-size: 8pt; color: #999;">NIT: ${nitCompleto}</p>
+    </div>
+    
+    <div class="titulo-factura"><strong>FACTURA</strong> ${numeroFactura}</div>
+    
+    <div style="display: flex; gap: 15px; margin: 15px 0;">
+        <div style="flex: 1; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"><strong>Fecha:</strong><br>${fecha}</div>
+        <div style="flex: 2; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"><strong>Cliente:</strong><br>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}</div>
+    </div>
+    
+    <table>
+        <thead><tr><th>#</th><th>Descripción</th><th class="text-right">Cant.</th><th class="text-right">Precio</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+            ${ventaData.productos.map((p, i) => `<tr><td>${i + 1}</td><td>${p.nombre}</td><td class="text-right">${p.cantidad}</td><td class="text-right">$${formatearNumero(p.precio_unitario)}</td><td class="text-right">$${formatearNumero(p.subtotal)}</td></tr>`).join('')}
+        </tbody>
+    </table>
+    
+    <div style="display: flex; justify-content: flex-end;">
+        <table style="width: 250px; border: none;">
+            <tr><td style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">Subtotal:</td><td class="text-right" style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">$${formatearNumero(subtotal)}</td></tr>
+            ${descuento > 0 ? `<tr><td style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">Descuento:</td><td class="text-right" style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">-$${formatearNumero(descuento)}</td></tr>` : ''}
+            <tr><td style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">IVA (19%):</td><td class="text-right" style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">$${formatearNumero(impuesto)}</td></tr>
+            <tr class="total-final"><td style="padding: 8px;">TOTAL:</td><td class="text-right" style="padding: 8px;">$${formatearNumero(total)}</td></tr>
+        </table>
+    </div>
+    
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
+    
+    <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
+</body>
+</html>`;
+}
+
+// PLANTILLA 4: CORPORATIVA (Premium)
+function generarPlantillaCorporativaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    // Por ahora usar plantilla clásica con estilos corporativos
+    return generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+}
+
+// PLANTILLA 5: SIIGO STYLE (Premium)
+function generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    // Por ahora usar plantilla moderna con estilos SIIGO
+    return generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+}
+
+// FORMATO MEDIA CARTA - Escalado de formato carta
+function generarPlantillaMediaCarta(venta, ventaData, config) {
+    const numeroFactura = venta.numero_factura;
+    const subtotal = ventaData.subtotal;
+    const descuento = ventaData.descuento || 0;
+    const impuesto = ventaData.impuesto;
+    const total = ventaData.total;
+    
+    const fecha = new Date().toLocaleString('es-CO', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
+    const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
+    
+    // Usa la misma plantilla que carta pero con estilos adaptados a media carta
+    const htmlCarta = config.plantillaId === 2 ? 
+        generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) :
+        config.plantillaId === 3 ?
+        generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) :
+        generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
+    
+    // Ajustar estilos para media carta (5.5" x 8.5")
+    return htmlCarta
+        .replace('size: letter;', 'size: 5.5in 8.5in;')
+        .replace('margin: 15mm;', 'margin: 8mm;')
+        .replace('font-size: 10pt;', 'font-size: 8pt;')
+        .replace('font-size: 16pt;', 'font-size: 12pt;')
+        .replace('font-size: 13pt;', 'font-size: 10pt;')
+        .replace('font-size: 11pt;', 'font-size: 9pt;')
+        .replace(/padding: 8mm;/g, 'padding: 5mm;')
+        .replace(/padding: 12px;/g, 'padding: 8px;');
+}
+
+// FORMATO TIRILLA (mantiene formato térmico estándar - sin plantillas personalizadas)
+function generarPlantillaTirilla(venta, ventaData, config) {
     const numeroFactura = venta.numero_factura;
     
     const subtotal = ventaData.subtotal;
@@ -2213,660 +2528,7 @@ function generarHTMLImpresion(formato = 'carta') {
     </script>
 </body>
 </html>
-        `;
-    } else if (formato === 'media-carta') {
-        // FORMATO MEDIA CARTA (Half Letter 5.5" x 8.5")
-        const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
-        const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
-        
-        return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Factura_${numeroFactura}</title>
-    <style>
-        @page {
-            size: 5.5in 8.5in;
-            margin: 8mm;
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 8pt;
-            color: #000;
-            background: white;
-            padding: 5mm;
-        }
-        .encabezado {
-            text-align: center;
-            margin-bottom: 3mm;
-            padding-bottom: 2mm;
-            border-bottom: 1px solid #333;
-        }
-        .encabezado h2 {
-            font-size: 11pt;
-            margin-bottom: 1mm;
-            color: ${currentEmpresa.color_primario || '#1E40AF'};
-        }
-        .encabezado .slogan {
-            font-size: 7pt;
-            font-style: italic;
-            color: #666;
-            margin-bottom: 0.5mm;
-        }
-        .encabezado p {
-            font-size: 7pt;
-            margin: 0.3mm 0;
-        }
-        .badge-success {
-            background-color: #28a745;
-            color: white;
-            padding: 0.5mm 2mm;
-            border-radius: 1mm;
-            font-size: 6pt;
-        }
-        .titulo-factura {
-            text-align: center;
-            font-size: 10pt;
-            font-weight: bold;
-            margin: 2mm 0;
-            padding: 2mm;
-            border: 1px solid ${currentEmpresa.color_primario || '#1E40AF'};
-            background-color: ${currentEmpresa.color_primario || '#1E40AF'}15;
-            border-radius: 2mm;
-        }
-        .resolucion-dian {
-            background-color: #f8f9fa;
-            border-left: 2px solid #28a745;
-            padding: 2mm;
-            margin: 2mm 0;
-            font-size: 6pt;
-        }
-        .info-boxes {
-            display: flex;
-            justify-content: space-between;
-            gap: 2mm;
-            margin: 2mm 0;
-        }
-        .info-box {
-            flex: 1;
-            border: 1px solid #ddd;
-            padding: 2mm;
-            border-radius: 1mm;
-            font-size: 7pt;
-        }
-        .info-box strong {
-            color: ${currentEmpresa.color_primario || '#1E40AF'};
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 2mm 0;
-            font-size: 7pt;
-        }
-        th {
-            background-color: ${currentEmpresa.color_primario || '#1E40AF'}15;
-            border: 1px solid #ddd;
-            padding: 1mm;
-            text-align: left;
-            font-weight: bold;
-            color: #333;
-        }
-        td {
-            border: 1px solid #ddd;
-            padding: 1mm;
-        }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-danger { color: #dc3545; }
-        .totales-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 2mm;
-        }
-        .observaciones {
-            flex: 1;
-            padding-right: 3mm;
-            font-size: 7pt;
-        }
-        .totales {
-            width: 45%;
-        }
-        .totales table {
-            width: 100%;
-            margin: 0;
-        }
-        .totales td {
-            border: none;
-            border-bottom: 1px solid #ddd;
-            padding: 1mm;
-            font-size: 7pt;
-        }
-        .total-final {
-            font-size: 9pt;
-            font-weight: bold;
-            background-color: ${currentEmpresa.color_primario || '#1E40AF'};
-            color: white;
-        }
-        .cufe-section {
-            margin-top: 3mm;
-            padding: 2mm;
-            background-color: #f8f9fa;
-            border-radius: 2mm;
-            font-size: 6pt;
-        }
-        .qr-section {
-            text-align: center;
-            margin-top: 2mm;
-        }
-        .qr-section img {
-            width: 50px;
-            height: 50px;
-        }
-        .pie-pagina {
-            margin-top: 3mm;
-            padding-top: 2mm;
-            border-top: 1px solid #ddd;
-            font-size: 6pt;
-            text-align: center;
-        }
-        @media print {
-            body { padding: 0; }
-        }
-    </style>
-</head>
-<body>
-    <div class="encabezado">
-        <h2>${currentEmpresa.nombre}</h2>
-        ${currentEmpresa.slogan ? `<p class="slogan">${currentEmpresa.slogan}</p>` : ''}
-        <p>${currentEmpresa.razon_social}</p>
-        <p>NIT: ${nitCompleto}</p>
-        <p>${currentEmpresa.direccion || ''} | Tel: ${currentEmpresa.telefono || ''}</p>
-        <p>${currentEmpresa.email || ''} | ${currentEmpresa.sitio_web || ''}</p>
-        ${currentEmpresa.es_gran_contribuyente ? '<span class="badge-success">Gran Contribuyente</span>' : ''}
-        ${currentEmpresa.regimen_tributario ? `<span class="badge-success">${currentEmpresa.regimen_tributario}</span>` : ''}
-    </div>
-
-    <div class="titulo-factura">FACTURA ELECTRÓNICA DE VENTA<br>${numeroFactura}</div>
-
-    ${venta.cufe ? `
-    <div class="resolucion-dian">
-        <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian || 'Pendiente'}<br>
-        <strong>Prefijo:</strong> ${currentEmpresa.prefijo_factura || 'FV'} | 
-        <strong>Rango:</strong> ${currentEmpresa.numeracion_desde || 1} - ${currentEmpresa.numeracion_hasta || 99999}<br>
-        <strong>Vigencia:</strong> ${currentEmpresa.fecha_vigencia_desde ? new Date(currentEmpresa.fecha_vigencia_desde).toLocaleDateString('es-CO') : ''} - 
-        ${currentEmpresa.fecha_vigencia_hasta ? new Date(currentEmpresa.fecha_vigencia_hasta).toLocaleDateString('es-CO') : ''}
-    </div>
-    ` : ''}
-
-    <div class="info-boxes">
-        <div class="info-box">
-            <strong>Fecha de Emisión:</strong><br>${fecha}
-            ${ventaData.fecha_vencimiento ? `<br><strong>Fecha de Vencimiento:</strong><br>${new Date(ventaData.fecha_vencimiento).toLocaleDateString('es-CO')}` : ''}
-        </div>
-        <div class="info-box">
-            <strong>Cliente:</strong><br>
-            ${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}<br>
-            <strong>${ventaData.cliente.tipo_documento}:</strong> ${ventaData.cliente.numero_documento}<br>
-            ${ventaData.cliente.direccion ? `${ventaData.cliente.direccion}<br>` : ''}
-            ${ventaData.cliente.telefono ? `Tel: ${ventaData.cliente.telefono}` : ''}
-        </div>
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th class="text-center" style="width: 5%">#</th>
-                <th style="width: 40%">Descripción</th>
-                <th class="text-center" style="width: 10%">Cant.</th>
-                <th class="text-right" style="width: 15%">Precio Unit.</th>
-                <th class="text-right" style="width: 10%">IVA</th>
-                <th class="text-right" style="width: 20%">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${ventaData.productos.map((p, idx) => `
-            <tr>
-                <td class="text-center">${idx + 1}</td>
-                <td>${p.nombre}${p.codigo_barras ? `<br><small>Cód: ${p.codigo_barras}</small>` : ''}</td>
-                <td class="text-center">${p.cantidad}</td>
-                <td class="text-right">$${formatearNumero(p.precio_unitario)}</td>
-                <td class="text-right">$${formatearNumero(p.impuesto || 0)}</td>
-                <td class="text-right">$${formatearNumero(p.subtotal)}</td>
-            </tr>
-            `).join('')}
-        </tbody>
-    </table>
-
-    <div class="totales-container">
-        <div class="observaciones">
-            ${ventaData.observaciones ? `<strong>Observaciones:</strong><br>${ventaData.observaciones}` : ''}
-            ${ventaData.pagos && ventaData.pagos.length > 0 ? `
-            <div style="margin-top: 2mm;">
-                <strong>Forma de Pago:</strong><br>
-                ${ventaData.pagos.map(pago => {
-                    const nombres = {
-                        'efectivo': 'Efectivo',
-                        'tarjeta_debito': 'Tarjeta Débito',
-                        'tarjeta_credito': 'Tarjeta Crédito',
-                        'transferencia': 'Transferencia',
-                        'nequi': 'Nequi',
-                        'daviplata': 'Daviplata',
-                        'cheque': 'Cheque'
-                    };
-                    return `${nombres[pago.metodo_pago] || pago.metodo_pago}: $${formatearNumero(pago.monto)}`;
-                }).join('<br>')}
-            </div>
-            ` : ''}
-        </div>
-        <div class="totales">
-            <table>
-                <tr>
-                    <td>Subtotal:</td>
-                    <td class="text-right">$${formatearNumero(subtotal)}</td>
-                </tr>
-                ${descuento > 0 ? `
-                <tr>
-                    <td>Descuento:</td>
-                    <td class="text-right text-danger">-$${formatearNumero(descuento)}</td>
-                </tr>
-                ` : ''}
-                <tr>
-                    <td>IVA (19%):</td>
-                    <td class="text-right">$${formatearNumero(impuesto)}</td>
-                </tr>
-                ${venta.retencion_fuente > 0 ? `
-                <tr>
-                    <td>Retención Fuente (2.5%):</td>
-                    <td class="text-right text-danger">-$${formatearNumero(venta.retencion_fuente)}</td>
-                </tr>
-                ` : ''}
-                ${venta.retencion_iva > 0 ? `
-                <tr>
-                    <td>Retención IVA (15%):</td>
-                    <td class="text-right text-danger">-$${formatearNumero(venta.retencion_iva)}</td>
-                </tr>
-                ` : ''}
-                ${venta.retencion_ica > 0 ? `
-                <tr>
-                    <td>Retención ICA (1%):</td>
-                    <td class="text-right text-danger">-$${formatearNumero(venta.retencion_ica)}</td>
-                </tr>
-                ` : ''}
-                <tr class="total-final">
-                    <td>TOTAL A PAGAR:</td>
-                    <td class="text-right">$${formatearNumero(total)}</td>
-                </tr>
-            </table>
-        </div>
-    </div>
-
-    ${venta.cufe ? `
-    <div class="cufe-section">
-        <strong>CUFE (Código Único de Factura Electrónica):</strong><br>
-        <span style="word-break: break-all; font-family: 'Courier New', monospace;">${venta.cufe}</span>
-    </div>
-    ` : ''}
-
-    ${venta.qr_code ? `
-    <div class="qr-section">
-        <p style="font-size: 6pt; margin-bottom: 1mm;">Escanee para verificar autenticidad</p>
-        <img src="${venta.qr_code}" alt="QR Code">
-    </div>
-    ` : ''}
-
-    <div class="pie-pagina">
-        <p>${currentEmpresa.mensaje_agradecimiento || '¡Gracias por su compra!'}</p>
-        <p>Vendido por: ${currentUsuario.nombre} ${currentUsuario.apellido}</p>
-        <p style="margin-top: 1mm;">Documento generado electrónicamente de acuerdo con la normativa DIAN</p>
-    </div>
-
-    <script>
-        window.onload = function() {
-            setTimeout(function() {
-                window.print();
-                setTimeout(function() { window.close(); }, 100);
-            }, 250);
-        };
-    </script>
-</body>
-</html>
-        `;
-    } else {
-        // FORMATO CARTA (Letter 8.5" x 11")
-        const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
-        const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
-        
-        return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Factura_${numeroFactura}</title>
-    <style>
-        @page {
-            size: letter;
-            margin: 15mm;
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 10pt;
-            color: #000;
-            background: white;
-            padding: 8mm;
-        }
-        .encabezado {
-            text-align: center;
-            margin-bottom: 5mm;
-            padding-bottom: 3mm;
-            border-bottom: 2px solid #333;
-        }
-        .encabezado h2 {
-            font-size: 16pt;
-            margin-bottom: 2mm;
-            color: ${currentEmpresa.color_primario || '#1E40AF'};
-        }
-        .encabezado .slogan {
-            font-size: 9pt;
-            font-style: italic;
-            color: #666;
-            margin-bottom: 1mm;
-        }
-        .encabezado p {
-            font-size: 9pt;
-            margin: 0.5mm 0;
-        }
-        .badge-success {
-            background-color: #28a745;
-            color: white;
-            padding: 1mm 3mm;
-            border-radius: 2mm;
-            font-size: 8pt;
-        }
-        .titulo-factura {
-            text-align: center;
-            font-size: 13pt;
-            font-weight: bold;
-            margin: 4mm 0;
-            padding: 3mm;
-            border: 2px solid ${currentEmpresa.color_primario || '#1E40AF'};
-            background-color: ${currentEmpresa.color_primario || '#1E40AF'}15;
-            border-radius: 3mm;
-        }
-        .resolucion-dian {
-            background-color: #f8f9fa;
-            border-left: 3px solid #28a745;
-            padding: 3mm;
-            margin: 3mm 0;
-            font-size: 8pt;
-        }
-        .info-boxes {
-            display: flex;
-            justify-content: space-between;
-            gap: 3mm;
-            margin: 4mm 0;
-        }
-        .info-box {
-            flex: 1;
-            border: 1px solid #ddd;
-            padding: 3mm;
-            border-radius: 2mm;
-            font-size: 9pt;
-        }
-        .info-box strong {
-            color: ${currentEmpresa.color_primario || '#1E40AF'};
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 4mm 0;
-            font-size: 9pt;
-        }
-        th {
-            background-color: ${currentEmpresa.color_primario || '#1E40AF'}15;
-            border: 1px solid #ddd;
-            padding: 2mm;
-            text-align: left;
-            font-weight: bold;
-            color: #333;
-        }
-        td {
-            border: 1px solid #ddd;
-            padding: 2mm;
-        }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-danger { color: #dc3545; }
-        .totales-container {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 4mm;
-        }
-        .observaciones {
-            flex: 1;
-            padding-right: 5mm;
-        }
-        .totales {
-            width: 45%;
-        }
-        .totales table {
-            width: 100%;
-            margin: 0;
-        }
-        .totales td {
-            border: none;
-            border-bottom: 1px solid #ddd;
-            padding: 2mm;
-        }
-        .total-final {
-            font-size: 11pt;
-            font-weight: bold;
-            background-color: ${currentEmpresa.color_primario || '#1E40AF'};
-            color: white;
-        }
-        .cufe-section {
-            margin-top: 5mm;
-            padding: 3mm;
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 2mm;
-            font-size: 8pt;
-        }
-        .footer {
-            clear: both;
-            text-align: center;
-            margin-top: 8mm;
-            padding-top: 3mm;
-            border-top: 1px solid #ddd;
-            font-size: 8pt;
-            color: #666;
-        }
-        @media print {
-            body { padding: 0; }
-        }
-    </style>
-</head>
-<body>
-    <div class="encabezado">
-        <h2>${currentEmpresa.nombre}</h2>
-        ${currentEmpresa.slogan ? `<div class="slogan">${currentEmpresa.slogan}</div>` : ''}
-        <p><strong>${currentEmpresa.razon_social}</strong></p>
-        <p><strong>NIT: ${nitCompleto}</strong></p>
-        ${currentEmpresa.regimen_tributario ? `<p>Régimen ${currentEmpresa.regimen_tributario}</p>` : ''}
-        ${currentEmpresa.gran_contribuyente ? `<p><span class="badge-success">GRAN CONTRIBUYENTE</span></p>` : ''}
-        <p>${currentEmpresa.direccion || ''} - ${currentEmpresa.ciudad || ''}</p>
-        <p>Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email}</p>
-        ${currentEmpresa.sitio_web ? `<p>Web: ${currentEmpresa.sitio_web}</p>` : ''}
-    </div>
-    
-    <div class="titulo-factura">
-        FACTURA DE VENTA ELECTRÓNICA<br>
-        ${numeroFactura}
-    </div>
-    
-    ${currentEmpresa.resolucion_dian ? `
-    <div class="resolucion-dian">
-        <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian}${currentEmpresa.fecha_resolucion ? ` del ${formatearFecha(currentEmpresa.fecha_resolucion)}` : ''}<br>
-        <strong>Vigencia:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)} | 
-        <strong>Rango Autorizado:</strong> ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_desde || 1).padStart(6, '0')} al ${currentEmpresa.prefijo_factura || 'FAC'}-${String(currentEmpresa.rango_factura_hasta || 100000).padStart(6, '0')} | 
-        <strong>Ambiente:</strong> ${currentEmpresa.ambiente === 'produccion' ? 'Producción' : 'Pruebas'}
-    </div>
-    ` : ''}
-    
-    <div class="info-boxes">
-        <div class="info-box">
-            <strong>INFORMACIÓN DEL CLIENTE</strong><br>
-            <strong>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}</strong><br>
-            ${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}${ventaData.cliente.digito_verificacion ? '-' + ventaData.cliente.digito_verificacion : ''}<br>
-            ${ventaData.cliente.tipo_persona ? `Tipo: ${ventaData.cliente.tipo_persona === 'juridica' ? 'Persona Jurídica' : 'Persona Natural'}<br>` : ''}
-            ${ventaData.cliente.regimen_tributario ? `Régimen: ${ventaData.cliente.regimen_tributario}<br>` : ''}
-            ${ventaData.cliente.direccion ? `${ventaData.cliente.direccion}<br>` : ''}
-            ${ventaData.cliente.ciudad ? `${ventaData.cliente.ciudad}${ventaData.cliente.departamento ? ' - ' + ventaData.cliente.departamento : ''}<br>` : ''}
-            Tel: ${ventaData.cliente.telefono || ventaData.cliente.celular || 'N/A'}
-        </div>
-        <div class="info-box">
-            <strong>INFORMACIÓN DE LA VENTA</strong><br>
-            <strong>Fecha Emisión:</strong> ${fecha}<br>
-            <strong>Forma de Pago:</strong> ${ventaData.forma_pago === 'credito' ? 'Crédito' : 'Contado'}<br>
-            ${ventaData.fecha_vencimiento ? `<strong>Fecha Vencimiento:</strong> ${new Date(ventaData.fecha_vencimiento).toLocaleDateString('es-CO')}<br>` : ''}
-            <strong>Método de Pago:</strong> ${ventaData.metodo_pago}<br>
-            <strong>Vendedor:</strong> ${currentUsuario.nombre} ${currentUsuario.apellido}
-        </div>
-    </div>
-    
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 40%;">Producto / Descripción</th>
-                <th class="text-center" style="width: 8%;">Und.</th>
-                <th class="text-center" style="width: 8%;">Cant.</th>
-                <th class="text-right" style="width: 15%;">Precio Unit.</th>
-                <th class="text-center" style="width: 10%;">IVA %</th>
-                <th class="text-right" style="width: 19%;">Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${ventaData.productos.map(p => `
-                <tr>
-                    <td>
-                        <strong>${p.nombre}</strong>
-                        ${p.descripcion_adicional ? `<br><span style="font-size: 8pt; color: #666;">${p.descripcion_adicional}</span>` : ''}
-                    </td>
-                    <td class="text-center">${p.unidad_medida || 'UND'}</td>
-                    <td class="text-center">${p.cantidad}</td>
-                    <td class="text-right">$${formatearNumero(p.precio_unitario)}</td>
-                    <td class="text-center">${p.impuesto_porcentaje || 19}%</td>
-                    <td class="text-right">$${formatearNumero(p.subtotal)}</td>
-                </tr>
-            `).join('')}
-        </tbody>
-    </table>
-    
-    <div class="totales-container">
-        <div class="observaciones">
-            ${ventaData.observaciones ? `
-            <strong>OBSERVACIONES:</strong><br>
-            <p style="font-size: 9pt; color: #666; margin-top: 2mm;">${ventaData.observaciones}</p>
-            ` : ''}
-        </div>
-        <div class="totales">
-            <table>
-                <tr>
-                    <td><strong>Subtotal:</strong></td>
-                    <td class="text-right">$${formatearNumero(subtotal)}</td>
-                </tr>
-                ${descuento > 0 ? `
-                <tr>
-                    <td><strong>Descuento ${ventaData.descuento_porcentaje ? `(${ventaData.descuento_porcentaje}%)` : ''}:</strong></td>
-                    <td class="text-right text-danger">-$${formatearNumero(descuento)}</td>
-                </tr>
-                ` : ''}
-                <tr>
-                    <td><strong>IVA (19%):</strong></td>
-                    <td class="text-right">$${formatearNumero(impuesto)}</td>
-                </tr>
-                ${ventaData.retencion_fuente > 0 ? `
-                <tr>
-                    <td><strong>Retención Fuente:</strong></td>
-                    <td class="text-right text-danger">-$${formatearNumero(ventaData.retencion_fuente)}</td>
-                </tr>
-                ` : ''}
-                ${ventaData.retencion_iva > 0 ? `
-                <tr>
-                    <td><strong>Retención IVA:</strong></td>
-                    <td class="text-right text-danger">-$${formatearNumero(ventaData.retencion_iva)}</td>
-                </tr>
-                ` : ''}
-                ${ventaData.retencion_ica > 0 ? `
-                <tr>
-                    <td><strong>Retención ICA:</strong></td>
-                    <td class="text-right text-danger">-$${formatearNumero(ventaData.retencion_ica)}</td>
-                </tr>
-                ` : ''}
-                <tr class="total-final">
-                    <td><strong>TOTAL:</strong></td>
-                    <td class="text-right"><strong>$${formatearNumero(total)}</strong></td>
-                </tr>
-                ${ventaData.pagos && ventaData.pagos.length > 0 ? `
-                <tr style="border-top: 2px solid #000;">
-                    <td colspan="2" style="padding-top: 3mm; padding-bottom: 1mm;"><strong>FORMA DE PAGO:</strong></td>
-                </tr>
-                ${ventaData.pagos.map(pago => {
-                    const nombres = {
-                        'efectivo': 'Efectivo',
-                        'tarjeta_debito': 'Tarjeta Débito',
-                        'tarjeta_credito': 'Tarjeta Crédito',
-                        'transferencia': 'Transferencia',
-                        'nequi': 'Nequi',
-                        'daviplata': 'Daviplata',
-                        'cheque': 'Cheque'
-                    };
-                    return `<tr>
-                        <td>${nombres[pago.metodo_pago] || pago.metodo_pago}${pago.referencia ? ` (Ref: ${pago.referencia})` : ''}</td>
-                        <td class="text-right">$${formatearNumero(pago.monto)}</td>
-                    </tr>`;
-                }).join('')}
-                ` : ''}
-            </table>
-        </div>
-    </div>
-    
-    ${ventaData.cufe ? `
-    <div class="cufe-section">
-        <strong>CUFE (Código Único de Factura Electrónica):</strong><br>
-        <span style="word-break: break-all; font-family: monospace;">${ventaData.cufe}</span>
-    </div>
-    ` : ''}
-    
-    <div class="footer">
-        <p>¡Gracias por su compra!</p>
-        <p>${currentEmpresa.nombre} - ${currentEmpresa.telefono || ''}</p>
-    </div>
-    
-    <script>
-        window.onload = function() {
-            setTimeout(function() {
-                window.print();
-                setTimeout(function() { window.close(); }, 100);
-            }, 250);
-        };
-    </script>
-</body>
-</html>
-        `;
-    }
+    `;
 }
 
 // ============================================
