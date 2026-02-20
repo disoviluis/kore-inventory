@@ -354,15 +354,18 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
 
     const qrCode = await generarQRCode(qrData);
 
+    // Calcular total de retenciones
+    const totalRetenciones = retenciones.retencionIVA + retenciones.retencionFuente + retenciones.retencionICA;
+
     // Insertar venta
     const resultVenta = await query(
       `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, fecha_venta,
         subtotal, descuento, impuesto, total, 
-        retencion_iva, retencion_fuente, retencion_ica,
+        retenciones,
         estado, metodo_pago, notas, vendedor_id,
-        cufe, qr_code
-      ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, 'pagada', ?, ?, ?, ?, ?)`,
+        cufe
+      ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'pagada', ?, ?, ?, ?)`,
       [
         empresa_id,
         numeroFactura,
@@ -371,14 +374,11 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         descuento || 0,
         impuesto || 0,
         totalFinal,
-        retenciones.retencionIVA,
-        retenciones.retencionFuente,
-        retenciones.retencionICA,
+        totalRetenciones,
         metodo_pago || 'efectivo',
         notas || null,
         vendedor_id || null,
-        cufe,
-        qrCode
+        cufe
       ]
     );
 
