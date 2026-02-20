@@ -295,8 +295,8 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
 
     // Obtener datos del cliente para CUFE
     const clienteResult = await query(
-      `SELECT tipo_documento, numero_documento, tipo_persona, 
-              responsabilidad_fiscal FROM clientes WHERE id = ?`,
+      `SELECT tipo_documento, numero_documento, tipo_cliente, 
+              responsabilidad_tributaria FROM clientes WHERE id = ?`,
       [cliente_id]
     );
 
@@ -307,13 +307,13 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
     const cliente = clienteResult[0];
 
     // Calcular retenciones automáticamente
-    const esGranContribuyente = cliente.responsabilidad_fiscal?.includes('Gran Contribuyente') || false;
+    const esGranContribuyente = cliente.responsabilidad_tributaria?.includes('Gran Contribuyente') || false;
     const retenciones = calcularRetenciones(
       subtotal,
       impuesto,
       total,
       esGranContribuyente,
-      cliente.tipo_persona || 'natural'
+      cliente.tipo_cliente === 'empresa' ? 'juridica' : 'natural'
     );
 
     // Ajustar total con retenciones
