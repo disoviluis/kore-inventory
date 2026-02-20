@@ -2011,8 +2011,7 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
     ${currentEmpresa.resolucion_dian ? `
     <div class="resolucion-box">
         <strong>Resolución DIAN:</strong> ${currentEmpresa.resolucion_dian}${currentEmpresa.fecha_resolucion ? ` del ${formatearFecha(currentEmpresa.fecha_resolucion)}` : ''}<br>
-        <strong>Vigencia:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)}<br>
-        <strong>Rango autorizado:</strong> ${currentEmpresa.prefijo_factura}-${currentEmpresa.rango_factura_desde} a ${currentEmpresa.prefijo_factura}-${currentEmpresa.rango_factura_hasta}
+        <strong>Vigencia:</strong> ${formatearFecha(currentEmpresa.fecha_resolucion_desde)} al ${formatearFecha(currentEmpresa.fecha_resolucion_hasta)}
     </div>` : ''}
     
     <div class="info-grid">
@@ -2040,16 +2039,33 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
     </table>
     
     <div style="display: flex; justify-content: flex-end;">
-        <table style="width: 250px;">
-            <tr><td>Subtotal:</td><td class="text-right">$${formatearNumero(subtotal)}</td></tr>
-            ${descuento > 0 ? `<tr><td>Descuento:</td><td class="text-right">-$${formatearNumero(descuento)}</td></tr>` : ''}
-            <tr><td>IVA (19%):</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+        <table style="width: 250px; border: none;">
+            <tr style="border: none;"><td style="border: none; padding: 4px 8px;">Subtotal:</td><td class="text-right" style="border: none; padding: 4px 8px;">$${formatearNumero(subtotal)}</td></tr>
+            ${descuento > 0 ? `<tr style="border: none;"><td style="border: none; padding: 4px 8px;">Descuento:</td><td class="text-right" style="border: none; padding: 4px 8px;">-$${formatearNumero(descuento)}</td></tr>` : ''}
+            <tr style="border: none;"><td style="border: none; padding: 4px 8px;">IVA (19%):</td><td class="text-right" style="border: none; padding: 4px 8px;">$${formatearNumero(impuesto)}</td></tr>
             <tr class="total-final"><td style="padding: 8px;">TOTAL:</td><td class="text-right" style="padding: 8px;">$${formatearNumero(total)}</td></tr>
         </table>
     </div>
     
-    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
-    ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
+    <!-- Footer: CUFE y QR Code -->
+    ${config.mostrarCUFE && venta.cufe ? `
+    <div style="margin-top: 10px; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; font-size: 7pt;">
+        <strong style="color: ${config.colorPrimario};">CUFE (Código Único de Factura Electrónica):</strong><br>
+        <span style="font-family: monospace; word-break: break-all; color: #334155;">${venta.cufe}</span>
+    </div>` : ''}
+    
+    <div style="display: flex; align-items: center; gap: 15px; margin-top: 10px; padding: 10px 0; border-top: 2px solid #e2e8f0;">
+        ${config.mostrarQR && venta.qr_code ? `
+        <div style="text-align: center;">
+            <img src="${venta.qr_code}" style="width: 100px; height: 100px; border: 2px solid #e2e8f0; border-radius: 8px; padding: 5px; background: white;">
+            <p style="font-size: 7pt; color: #64748b; margin: 5px 0 0 0;">Escanea para verificar</p>
+        </div>` : ''}
+        <div style="flex: 1; font-size: 8pt; color: #475569;">
+            <p style="margin: 0 0 5px 0;"><strong style="color: ${config.colorPrimario};">¡Gracias por su compra!</strong></p>
+            <p style="margin: 0; line-height: 1.4;">Esta factura electrónica ha sido generada de acuerdo con la normativa DIAN vigente.</p>
+            ${currentEmpresa.descripcion ? `<p style="margin: 5px 0 0 0; font-style: italic; color: #64748b;">${currentEmpresa.descripcion}</p>` : ''}
+        </div>
+    </div>
     
     <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
 </body>
