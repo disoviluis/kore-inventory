@@ -10,6 +10,7 @@ import { query } from '../../shared/database';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
+import { generarNumeroFactura, generarCUFE, generarQRCode, calcularRetenciones, numeroATexto } from '../../shared/dian-utils';
 
 /**
  * Buscar clientes por documento o nombre
@@ -276,29 +277,92 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       }
     }
 
-    // Generar número de factura único
-    const ultimaFactura = await query(
-      `SELECT numero_factura FROM ventas 
-       WHERE empresa_id = ? 
-       ORDER BY id DESC LIMIT 1`,
+    // Obtener configuración de empresa para generar número de factura
+    const empresaResult = await query(
+      `SELECT prefijo_factura, numeracion_actual, software_id, pin_software, ambiente, nit
+       FROM empresas WHERE id = ?`,
       [empresa_id]
     );
 
-    let numeroFactura;
-    if (ultimaFactura.length > 0 && ultimaFactura[0].numero_factura) {
-      const ultimo = parseInt(ultimaFactura[0].numero_factura.replace(/\D/g, '')) || 0;
-      numeroFactura = `FAC-${String(ultimo + 1).padStart(6, '0')}`;
-    } else {
-      numeroFactura = 'FAC-000001';
+    if (empresaResult.length === 0) {
+      return errorResponse(res, 'Empresa no encontrada', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
     }
+
+    const empresa = empresaResult[0];
+    const prefijo = empresa.prefijo_factura || 'FAC';
+    const consecutivo = (empresa.numeracion_actual || 0) + 1;
+    const numeroFactura = generarNumeroFactura(prefijo, consecutivo);
+
+    // Obtener datos del cliente para CUFE
+    const clienteResult = await query(
+      `SELECT tipo_documento, numero_documento, tipo_persona, 
+              responsabilidad_fiscal FROM clientes WHERE id = ?`,
+      [cliente_id]
+    );
+
+    if (clienteResult.length === 0) {
+      return errorResponse(res, 'Cliente no encontrado', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
+    }
+
+    const cliente = clienteResult[0];
+
+    // Calcular retenciones automáticamente
+    const esGranContribuyente = cliente.responsabilidad_fiscal?.includes('Gran Contribuyente') || false;
+    const retenciones = calcularRetenciones(
+      subtotal,
+      impuesto,
+      total,
+      esGranContribuyente,
+      cliente.tipo_persona || 'natural'
+    );
+
+    // Ajustar total con retenciones
+    const totalFinal = total - retenciones.retencionFuente - retenciones.retencionIVA - retenciones.retencionICA;
+
+    // Generar CUFE
+    const fecha = new Date();
+    const fechaStr = fecha.toISOString().split('T')[0]; // YYYY-MM-DD
+    const horaStr = fecha.toTimeString().split(' ')[0]; // HH:MM:SS
+
+    const cufe = generarCUFE({
+      numeroFactura,
+      fecha: fechaStr,
+      hora: horaStr,
+      subtotal,
+      impuesto,
+      total: totalFinal,
+      nitEmisor: empresa.nit,
+      tipoDocAdquiriente: cliente.tipo_documento === 'nit' ? '31' : '13',
+      numDocAdquiriente: cliente.numero_documento,
+      softwareId: empresa.software_id || 'SW-12345678',
+      ambiente: empresa.ambiente === 'produccion' ? '1' : '2',
+      pin: empresa.pin_software || '98765'
+    });
+
+    // Generar QR Code
+    const qrData = {
+      NumFac: numeroFactura,
+      FecFac: fechaStr,
+      NitFac: empresa.nit,
+      DocAdq: cliente.numero_documento,
+      ValFac: subtotal.toFixed(2),
+      ValIva: impuesto.toFixed(2),
+      ValOtroIm: '0.00',
+      ValTotal: totalFinal.toFixed(2),
+      CUFE: cufe
+    };
+
+    const qrCode = await generarQRCode(qrData);
 
     // Insertar venta
     const resultVenta = await query(
       `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, fecha_venta,
-        subtotal, descuento, impuesto, total, estado, metodo_pago,
-        notas, vendedor_id
-      ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, 'pagada', ?, ?, ?)`,
+        subtotal, descuento, impuesto, total, 
+        retencion_iva, retencion_fuente, retencion_ica,
+        estado, metodo_pago, notas, vendedor_id,
+        cufe, qr_code
+      ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, 'pagada', ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         numeroFactura,
@@ -306,14 +370,25 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         subtotal || 0,
         descuento || 0,
         impuesto || 0,
-        total,
+        totalFinal,
+        retenciones.retencionIVA,
+        retenciones.retencionFuente,
+        retenciones.retencionICA,
         metodo_pago || 'efectivo',
         notas || null,
-        vendedor_id || null
+        vendedor_id || null,
+        cufe,
+        qrCode
       ]
     );
 
     const ventaId = resultVenta.insertId;
+
+    // Actualizar numeración en empresa
+    await query(
+      'UPDATE empresas SET numeracion_actual = ? WHERE id = ?',
+      [consecutivo, empresa_id]
+    );
 
     // Insertar detalles y actualizar stock
     for (const producto of productos) {
