@@ -518,43 +518,65 @@ function exportarProveedores() {
         return;
     }
 
-    // Preparar datos para exportar
-    const csvData = [
-        ['ID', 'Razón Social', 'Nombre Comercial', 'Tipo Doc', 'Número Doc', 'Contacto', 'Teléfono', 'Celular', 'Email', 'Dirección', 'Ciudad', 'País', 'Términos Pago', 'Días Crédito', 'Límite Crédito', 'Estado']
-    ];
+    try {
+        // Preparar datos para exportar
+        const datosExportar = proveedoresData.map(p => ({
+            'ID': p.id,
+            'Razón Social': p.razon_social,
+            'Nombre Comercial': p.nombre_comercial || '',
+            'Tipo Doc': p.tipo_documento,
+            'Número Doc': p.numero_documento,
+            'Contacto': p.nombre_contacto || '',
+            'Teléfono': p.telefono || '',
+            'Celular': p.celular || '',
+            'Email': p.email || '',
+            'Dirección': p.direccion || '',
+            'Ciudad': p.ciudad || '',
+            'País': p.pais || '',
+            'Términos Pago': p.terminos_pago || '',
+            'Días Crédito': p.dias_credito || 0,
+            'Límite Crédito': p.limite_credito || 0,
+            'Estado': p.estado == 1 ? 'Activo' : 'Inactivo'
+        }));
 
-    proveedoresData.forEach(p => {
-        csvData.push([
-            p.id,
-            p.razon_social,
-            p.nombre_comercial || '',
-            p.tipo_documento,
-            p.numero_documento,
-            p.nombre_contacto || '',
-            p.telefono || '',
-            p.celular || '',
-            p.email || '',
-            p.direccion || '',
-            p.ciudad || '',
-            p.pais || '',
-            p.terminos_pago || '',
-            p.dias_credito || 0,
-            p.limite_credito || 0,
-            p.estado == 1 ? 'Activo' : 'Inactivo'
-        ]);
-    });
+        // Crear libro de Excel
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(datosExportar);
 
-    // Convertir a CSV
-    const csv = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    
-    // Descargar
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `proveedores_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+        // Ajustar ancho de columnas
+        const colWidths = [
+            { wch: 6 },   // ID
+            { wch: 30 },  // Razón Social
+            { wch: 30 },  // Nombre Comercial
+            { wch: 10 },  // Tipo Doc
+            { wch: 15 },  // Número Doc
+            { wch: 25 },  // Contacto
+            { wch: 15 },  // Teléfono
+            { wch: 15 },  // Celular
+            { wch: 30 },  // Email
+            { wch: 35 },  // Dirección
+            { wch: 20 },  // Ciudad
+            { wch: 15 },  // País
+            { wch: 15 },  // Términos Pago
+            { wch: 12 },  // Días Crédito
+            { wch: 15 },  // Límite Crédito
+            { wch: 10 }   // Estado
+        ];
+        ws['!cols'] = colWidths;
 
-    mostrarAlerta('Proveedores exportados exitosamente', 'success');
+        // Agregar hoja al libro
+        XLSX.utils.book_append_sheet(wb, ws, 'Proveedores');
+
+        // Descargar archivo
+        const fecha = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `proveedores_${fecha}.xlsx`);
+
+        mostrarAlerta(`${proveedoresData.length} proveedores exportados exitosamente`, 'success');
+
+    } catch (error) {
+        console.error('Error al exportar proveedores:', error);
+        mostrarAlerta('Error al exportar proveedores a Excel', 'error');
+    }
 }
 
 function mostrarCargando(show) {

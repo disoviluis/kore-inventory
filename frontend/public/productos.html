@@ -429,6 +429,9 @@
                                         <button class="btn btn-outline-secondary" id="btnLimpiarFiltros">
                                             <i class="bi bi-x-circle me-1"></i>Limpiar
                                         </button>
+                                        <button class="btn btn-outline-success" id="btnImportar">
+                                            <i class="bi bi-upload me-1"></i>Importar
+                                        </button>
                                         <button class="btn btn-outline-primary" id="btnExportar">
                                             <i class="bi bi-download me-1"></i>Exportar
                                         </button>
@@ -499,6 +502,115 @@
         </footer>
 
     </main>
+
+    <!-- Modal Importar Productos -->
+    <div class="modal fade" id="importarModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-upload me-2"></i>Importar Productos desde Excel
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Instrucciones -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-info-circle me-2"></i>Instrucciones de Importación
+                        </h6>
+                        <ol class="mb-0">
+                            <li>Descarga la <strong>plantilla de Excel</strong> con el formato correcto</li>
+                            <li>Completa los datos de tus productos en la plantilla</li>
+                            <li>Sube el archivo Excel completado</li>
+                            <li>Revisa el resumen de validación antes de confirmar</li>
+                        </ol>
+                    </div>
+
+                    <!-- Botones de Plantilla -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary" id="btnDescargarPlantilla">
+                                    <i class="bi bi-file-earmark-excel me-2"></i>
+                                    Descargar Plantilla de Excel
+                                </button>
+                            </div>
+                            <small class="text-muted d-block mt-2">
+                                <i class="bi bi-lightbulb me-1"></i>
+                                La plantilla incluye todas las columnas necesarias y ejemplos de datos
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Upload Area -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="border rounded p-4 text-center" style="border-style: dashed !important;">
+                                <i class="bi bi-cloud-upload text-primary" style="font-size: 3rem;"></i>
+                                <h5 class="mt-3">Selecciona el archivo Excel</h5>
+                                <p class="text-muted">Archivos permitidos: .xlsx, .xls (máximo 5MB)</p>
+                                <input type="file" class="form-control d-none" id="archivoExcel" accept=".xlsx,.xls">
+                                <button class="btn btn-primary" id="btnSeleccionarArchivo">
+                                    <i class="bi bi-folder2-open me-2"></i>Seleccionar Archivo
+                                </button>
+                                <div id="archivoSeleccionado" class="mt-3" style="display: none;">
+                                    <div class="alert alert-success mb-0">
+                                        <i class="bi bi-file-earmark-check me-2"></i>
+                                        <span id="nombreArchivoSeleccionado"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resultado de Validación -->
+                    <div id="resultadoValidacion" class="mt-4" style="display: none;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-check-circle me-2"></i>Resultado de Validación
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            <div class="text-success fs-2 fw-bold" id="productosValidos">0</div>
+                                            <small class="text-muted">Productos Válidos</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            <div class="text-warning fs-2 fw-bold" id="productosAdvertencias">0</div>
+                                            <small class="text-muted">Con Advertencias</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            <div class="text-danger fs-2 fw-bold" id="productosErrores">0</div>
+                                            <small class="text-muted">Con Errores</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="listaErrores" class="mt-3" style="display: none;">
+                                    <hr>
+                                    <h6 class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Errores Encontrados</h6>
+                                    <div id="listaErroresDetalle" class="alert alert-danger" style="max-height: 200px; overflow-y: auto;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="btnConfirmarImportacion" disabled>
+                        <i class="bi bi-check-circle me-2"></i>Importar Productos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Producto -->
     <div class="modal fade" id="productoModal" tabindex="-1">
@@ -843,6 +955,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js"></script>
+    <!-- SheetJS Library for Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <!-- Sidebar Navigation (Common) -->
     <script src="assets/js/sidebar-navigation.js"></script>
     <!-- Custom JS -->

@@ -7,6 +7,403 @@
 
 ---
 
+## 🎯 INSTRUCTIVO DE DEPLOY - PASO A PASO
+
+### 📋 **Resumen Rápido: ¿Qué Hiciste?**
+
+| Cambio Realizado | Archivos Afectados | Build | Commit/Push | Deploy Frontend | Deploy Backend | Migración DB | Restart Server |
+|------------------|-------------------|-------|-------------|-----------------|----------------|--------------|----------------|
+| **HTML/CSS/JS** | `frontend/public/**` | ❌ No | ✅ Sí | ✅ Sí | ❌ No | ❌ No | ❌ No |
+| **Backend .ts** | `backend/src/**` | ✅ Sí | ✅ Sí | ❌ No | ✅ Sí | ❌ No | ✅ Sí (PM2) |
+| **Base de Datos** | `SQL/**` | ❌ No | ✅ Sí* | ❌ No | ❌ No | ✅ Sí | ❌ No |
+| **Front + Back** | Ambos | ✅ Sí | ✅ Sí | ✅ Sí | ✅ Sí | ❌ No | ✅ Sí (PM2) |
+| **Todo** | Front + Back + DB | ✅ Sí | ✅ Sí | ✅ Sí | ✅ Sí | ✅ Sí | ✅ Sí (PM2) |
+
+\* *Los archivos SQL se commitean pero NO se ejecutan automáticamente*
+
+---
+
+### 🟢 **OPCIÓN 1: Solo cambios en FRONTEND** 
+*(Archivos .html, .css, .js en /frontend/public)*
+
+#### **En tu PC Local:**
+
+```bash
+# 1. Verificar cambios
+git status
+
+# 2. Agregar cambios
+git add frontend/public/
+
+# 3. Commit con mensaje descriptivo
+git commit -m "feat(frontend): agregar importación/exportación de productos a Excel"
+
+# 4. Opcional: Ver qué archivos cambiaron
+git show --stat
+
+# 5. Push a GitHub
+git push origin main
+```
+
+#### **En el Servidor AWS (EC2):**
+
+```bash
+# 1. Conectar por SSH
+ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99
+
+# 2. Ir al repositorio
+cd /home/ubuntu/kore-inventory
+
+# 3. Actualizar código
+git pull origin main
+
+# 4. Verificar que llegaron los cambios
+git log --oneline -5
+ls -lt frontend/public/assets/js/ | head -5
+
+# 5. Salir del servidor
+exit
+```
+
+#### **En tu Navegador:**
+
+```bash
+# 1. Abrir la aplicación
+Ir a: http://18.191.181.99/
+
+# 2. Hard refresh (limpiar caché)
+Ctrl + Shift + R  (Chrome/Edge/Firefox)
+
+# 3. Verificar cambios
+- Abrir DevTools (F12) → Network
+- Verificar que los archivos .js tienen timestamp nuevo
+- Probar la nueva funcionalidad
+```
+
+**✅ Tiempo estimado:** 2-3 minutos  
+**⚠️ Downtime:** NINGUNO (cero downtime)
+
+---
+
+### 🔵 **OPCIÓN 2: Solo cambios en BACKEND**
+*(Archivos .ts en /backend/src)*
+
+#### **En tu PC Local:**
+
+```bash
+# 1. Verificar que el código compila sin errores
+cd backend
+npm run build
+# Verificar que no hay errores de TypeScript
+
+# 2. Agregar cambios
+git add backend/src/
+
+# 3. Commit con mensaje descriptivo
+git commit -m "feat(backend): agregar endpoints para exportar datos"
+
+# 4. Push a GitHub
+git push origin main
+```
+
+#### **En el Servidor AWS (EC2):**
+
+```bash
+# 1. Conectar por SSH
+ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99
+
+# 2. Ir al repositorio
+cd /home/ubuntu/kore-inventory
+
+# 3. Actualizar código
+git pull origin main
+
+# 4. Ir al backend y compilar
+cd backend
+npm run build
+
+# 5. Verificar que compiló correctamente
+ls -la dist/
+# Debe mostrar archivos .js con timestamp actualizado
+
+# 6. Reiniciar el servidor con PM2
+pm2 restart kore-backend
+
+# 7. Verificar que arrancó correctamente (IMPORTANTE)
+pm2 logs kore-backend --lines 30 --nostream
+
+# 8. Verificar que la API responde
+curl http://localhost:3000/api/ventas | head -20
+
+# 9. Mantener logs abiertos por 1 minuto para ver si hay errores
+pm2 logs kore-backend
+# Presionar Ctrl+C para salir cuando veas que funciona bien
+
+# 10. Salir del servidor
+exit
+```
+
+**✅ Tiempo estimado:** 5-7 minutos  
+**⚠️ Downtime:** ~10-15 segundos (durante pm2 restart)
+
+---
+
+### 🟣 **OPCIÓN 3: Cambios en BASE DE DATOS**
+*(Archivos .sql en /SQL o migraciones)*
+
+#### **En tu PC Local:**
+
+```bash
+# 1. Crear o modificar archivo de migración
+# Crear archivo: SQL/migration_[fecha]_[descripcion].sql
+
+# 2. PROBAR PRIMERO EN BASE DE DATOS LOCAL
+mysql -u root -p kore_inventory < SQL/migration_2026_03_11_agregar_campo_x.sql
+
+# 3. Verificar que funcionó
+mysql -u root -p
+USE kore_inventory;
+DESCRIBE productos;  # Ver si el cambio se aplicó
+SELECT * FROM productos LIMIT 1;  # Verificar datos
+
+# 4. Si todo está bien, agregar a git
+git add SQL/migration_*.sql
+
+# 5. Commit
+git commit -m "feat(db): agregar campo X a tabla productos"
+
+# 6. Push a GitHub
+git push origin main
+```
+
+#### **En el Servidor AWS (EC2):**
+
+```bash
+# 1. Conectar por SSH
+ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99
+
+# 2. Ir al repositorio
+cd /home/ubuntu/kore-inventory
+
+# 3. Actualizar código
+git pull origin main
+
+# 4. Ver el archivo SQL que llegó
+cat SQL/migration_2026_03_11_agregar_campo_x.sql
+
+# 5. HACER BACKUP DE LA BASE DE DATOS (MUY IMPORTANTE)
+mysqldump -h [RDS_HOST] -u [DB_USER] -p[DB_PASSWORD] kore_inventory > ~/backup_antes_migracion_$(date +%Y%m%d_%H%M%S).sql
+# Te pedirá la contraseña de la BD
+
+# 6. Verificar que el backup se creó
+ls -lh ~/backup_*.sql
+
+# 7. Conectar a la base de datos
+mysql -h [RDS_HOST] -u [DB_USER] -p[DB_PASSWORD] kore_inventory
+
+# 8. Dentro de MySQL, verificar estado actual
+SHOW TABLES;
+DESCRIBE productos;  # Ver estructura antes del cambio
+
+# 9. Ejecutar la migración
+SOURCE /home/ubuntu/kore-inventory/SQL/migration_2026_03_11_agregar_campo_x.sql;
+
+# 10. Verificar que se aplicó correctamente
+DESCRIBE productos;  # Ver estructura después del cambio
+SELECT * FROM productos LIMIT 1;  # Ver datos
+
+# 11. Salir de MySQL
+EXIT;
+
+# 12. Si el backend usa el nuevo campo, reiniciarlo
+cd /home/ubuntu/kore-inventory/backend
+pm2 restart kore-backend
+pm2 logs kore-backend --lines 20
+
+# 13. Salir del servidor
+exit
+```
+
+#### **Alternativa: Ejecutar SQL remotamente desde tu PC**
+
+```bash
+# Si tienes acceso directo a la BD desde tu PC:
+mysql -h [RDS_HOST] -u [DB_USER] -p[DB_PASSWORD] kore_inventory < SQL/migration_2026_03_11_agregar_campo_x.sql
+
+# O usar un túnel SSH:
+ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem -L 3307:[RDS_HOST]:3306 ubuntu@18.191.181.99
+# En otra terminal:
+mysql -h 127.0.0.1 -P 3307 -u [DB_USER] -p[DB_PASSWORD] kore_inventory < SQL/migration_2026_03_11_agregar_campo_x.sql
+```
+
+**✅ Tiempo estimado:** 10-15 minutos  
+**⚠️ Downtime:** DEPENDE del tipo de migración:
+- ALTER TABLE sin datos: ~1-5 segundos
+- ALTER TABLE con muchos datos: hasta varios minutos
+- INSERT/UPDATE: depende de la cantidad de registros
+
+**⚠️⚠️ MUY IMPORTANTE:**
+- **SIEMPRE hacer backup antes**
+- Probar en local primero
+- Ejecutar en horarios de bajo tráfico
+- Tener plan de rollback
+
+---
+
+### 🟠 **OPCIÓN 4: DEPLOY COMPLETO (Frontend + Backend + DB)**
+
+#### **En tu PC Local:**
+
+```bash
+# 1. Agregar todos los cambios
+git add .
+
+# 2. Commit todo
+git commit -m "feat: implementar módulo completo de productos con importación Excel
+
+- Frontend: agregar botones y modales de importación/exportación
+- Backend: agregar endpoints para procesar archivos Excel
+- Database: agregar campos para tracking de importaciones"
+
+# 3. Push
+git push origin main
+```
+
+#### **En el Servidor AWS (EC2):**
+
+```bash
+# 1. Conectar
+ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99
+
+# 2. Actualizar código
+cd /home/ubuntu/kore-inventory
+git pull origin main
+
+# 3. PRIMERO: Ejecutar migraciones de base de datos
+# (seguir pasos de OPCIÓN 3)
+mysql -h [RDS_HOST] -u [DB_USER] -p[DB_PASSWORD] kore_inventory < SQL/migration_X.sql
+
+# 4. SEGUNDO: Actualizar backend
+cd backend
+npm install  # Solo si hay nuevas dependencias
+npm run build
+pm2 restart kore-backend
+pm2 logs kore-backend --lines 30 --nostream
+
+# 5. TERCERO: Frontend (automático via symlink, pero verificar)
+ls -lt /home/ubuntu/kore-inventory/frontend/public/assets/js/ | head -5
+
+# 6. Verificar todo funciona
+curl http://localhost:3000/api/productos/empresa/1 | head -20
+pm2 status
+
+# 7. Salir
+exit
+```
+
+#### **En tu Navegador:**
+
+```bash
+Ctrl + Shift + R (hard refresh)
+Abrir DevTools y probar todas las funcionalidades nuevas
+```
+
+**✅ Tiempo estimado:** 15-20 minutos  
+**⚠️ Downtime:** 10-30 segundos (solo durante pm2 restart)
+
+---
+
+### ⚡ **COMANDOS DE DEPLOY RÁPIDO (Una Sola Línea)**
+
+#### **Deploy Frontend:**
+```bash
+ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99 "cd /home/ubuntu/kore-inventory && git pull origin main && ls -lt frontend/public/assets/js/ | head -5"
+```
+
+#### **Deploy Backend:**
+```bash
+ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99 "cd /home/ubuntu/kore-inventory && git pull origin main && cd backend && npm run build && pm2 restart kore-backend && pm2 logs kore-backend --lines 20 --nostream"
+```
+
+#### **Deploy Completo (Front + Back):**
+```bash
+ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99 "cd /home/ubuntu/kore-inventory && git pull origin main && cd backend && npm run build && pm2 restart kore-backend && pm2 logs kore-backend --lines 30 --nostream && pm2 status"
+```
+
+---
+
+### 📊 **CHECKLIST DE DEPLOY COMPLETO**
+
+#### **ANTES de hacer cambios:**
+- [ ] Crear rama de feature (opcional): `git checkout -b feature/nombre`
+- [ ] Verificar que estás en el directorio correcto
+- [ ] Backup de archivos importantes si modificas algo crítico
+
+#### **DURANTE el desarrollo:**
+- [ ] Probar cambios localmente: `http://localhost/kore-inventory/`
+- [ ] Si es backend: `cd backend && npm run build` sin errores
+- [ ] Si es DB: Probar migración en base de datos local primero
+- [ ] Verificar que no hay console.log() o código debug
+
+#### **ANTES de commit:**
+- [ ] `git status` - ver qué archivos cambiaron
+- [ ] `git diff` - revisar cambios línea por línea
+- [ ] Eliminar archivos temporales o de prueba
+- [ ] Actualizar documentación si es necesario
+
+#### **GIT - Local:**
+- [ ] `git add .` o `git add [archivos específicos]`
+- [ ] `git commit -m "tipo(alcance): descripción clara"`
+- [ ] `git log --oneline -5` - verificar que el commit está bien
+- [ ] `git push origin main` (o la rama correspondiente)
+
+#### **DEPLOY - Servidor:**
+- [ ] Conectar SSH al servidor EC2
+- [ ] `cd /home/ubuntu/kore-inventory`
+- [ ] `git pull origin main` - debe decir "Already up to date" o mostrar cambios
+- [ ] Verificar que no hay conflictos
+
+#### **Si hay cambios en BASE DE DATOS:**
+- [ ] **HACER BACKUP:** `mysqldump ... > backup_$(date +%Y%m%d).sql`
+- [ ] Verificar backup: `ls -lh ~/backup*.sql`
+- [ ] Ejecutar migración: `mysql ... < SQL/migration_X.sql`
+- [ ] Verificar cambios: `DESCRIBE tabla;`
+- [ ] Si falla: Restaurar backup inmediatamente
+
+#### **Si hay cambios en BACKEND:**
+- [ ] `cd backend`
+- [ ] `npm install` (solo si package.json cambió)
+- [ ] `npm run build` - debe completar sin errores
+- [ ] `ls -la dist/` - verificar archivos .js actualizados
+- [ ] `pm2 restart kore-backend`
+- [ ] **CRÍTICO:** `pm2 logs kore-backend --lines 30` - ver que no hay errores
+- [ ] Esperar 30 segundos viendo logs
+- [ ] `curl http://localhost:3000/api/ventas` - verificar API responde
+
+#### **Si hay cambios en FRONTEND:**
+- [ ] Verificar symlink: `ls -la /var/www/kore/kore-inventory`
+- [ ] Ver timestamps: `ls -lt frontend/public/assets/js/ | head -5`
+- [ ] Salir del servidor: `exit`
+- [ ] Abrir navegador: http://18.191.181.99/
+- [ ] Hard refresh: `Ctrl + Shift + R`
+- [ ] DevTools → Network → verificar archivos nuevos cargados
+- [ ] Probar funcionalidad modificada
+
+#### **VERIFICACIÓN FINAL:**
+- [ ] Frontend funciona correctamente
+- [ ] Backend responde: `curl http://18.191.181.99:3000/api/ventas`
+- [ ] PM2 en estado "online": `pm2 status`
+- [ ] No hay errores en logs: `pm2 logs kore-backend --lines 50`
+- [ ] Base de datos tiene los cambios esperados (si aplica)
+
+#### **DESPUÉS DEL DEPLOY:**
+- [ ] Documentar problemas encontrados
+- [ ] Notificar al equipo si hubo downtime
+- [ ] Actualizar este archivo si encontraste nuevos pasos necesarios
+- [ ] Actualizar commit actual en este archivo
+
+---
+
 ## ✅ CONFIGURACIÓN ACTUAL VERIFICADA (2026-02-19)
 
 ### 1️⃣ Repositorio Git (Código fuente) - ÚNICA FUENTE DE VERDAD
@@ -578,8 +975,13 @@ ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99
 
 ---
 
-**Última actualización:** 2026-02-19 13:30 UTC  
+**Última actualización:** 2026-03-11 (Instructivo de deploy completo)  
 **Última verificación:** 2026-02-19 (estructura validada con comandos SSH)  
 **Estado:** ✅ Funcionando correctamente  
 **Commit actual:** c8d71ca (Fase 2 - Backend facturación)  
-**Módulos activos:** Dashboard, Ventas (precios dinámicos, sobrepago), Productos, Facturación (backend)
+**Módulos activos:** Dashboard, Ventas (precios dinámicos, sobrepago), Productos (con importación/exportación Excel), Proveedores (exportación Excel), Facturación (backend)  
+**Últimos cambios:** 
+- ✅ Productos: Implementada importación/exportación de Excel (SheetJS)
+- ✅ Proveedores: Migrado de CSV a Excel (SheetJS)
+- ✅ Ventas: Migrado de CSV a Excel (SheetJS)
+

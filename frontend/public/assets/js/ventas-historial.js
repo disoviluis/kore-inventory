@@ -667,28 +667,55 @@ async function exportarVentas() {
         return;
     }
 
-    const csv = [
-        ['Nº Factura', 'Fecha', 'Cliente', 'Documento', 'Subtotal', 'Descuento', 'Impuesto', 'Total', 'Método Pago', 'Estado', 'Vendedor'],
-        ...ventasData.map(v => [
-            v.numero_factura,
-            new Date(v.fecha_venta).toLocaleString('es-CO'),
-            v.cliente_nombre,
-            v.cliente_documento,
-            v.subtotal,
-            v.descuento,
-            v.impuesto,
-            v.total,
-            v.metodo_pago,
-            v.estado,
-            v.vendedor_nombre
-        ])
-    ].map(row => row.join(',')).join('\n');
+    try {
+        // Preparar datos para exportar
+        const datosExportar = ventasData.map(v => ({
+            'Nº Factura': v.numero_factura,
+            'Fecha': new Date(v.fecha_venta).toLocaleString('es-CO'),
+            'Cliente': v.cliente_nombre,
+            'Documento': v.cliente_documento,
+            'Subtotal': v.subtotal,
+            'Descuento': v.descuento,
+            'Impuesto': v.impuesto,
+            'Total': v.total,
+            'Método Pago': v.metodo_pago,
+            'Estado': v.estado,
+            'Vendedor': v.vendedor_nombre
+        }));
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `ventas_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+        // Crear libro de Excel
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(datosExportar);
+
+        // Ajustar ancho de columnas
+        const colWidths = [
+            { wch: 15 },  // Nº Factura
+            { wch: 20 },  // Fecha
+            { wch: 30 },  // Cliente
+            { wch: 15 },  // Documento
+            { wch: 12 },  // Subtotal
+            { wch: 12 },  // Descuento
+            { wch: 12 },  // Impuesto
+            { wch: 12 },  // Total
+            { wch: 15 },  // Método Pago
+            { wch: 12 },  // Estado
+            { wch: 25 }   // Vendedor
+        ];
+        ws['!cols'] = colWidths;
+
+        // Agregar hoja al libro
+        XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+
+        // Descargar archivo
+        const fecha = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `ventas_${fecha}.xlsx`);
+
+        mostrarAlerta(`${ventasData.length} ventas exportadas exitosamente`, 'success');
+
+    } catch (error) {
+        console.error('Error al exportar ventas:', error);
+        mostrarAlerta('Error al exportar ventas a Excel', 'error');
+    }
 }
 
 function formatearNumero(numero) {

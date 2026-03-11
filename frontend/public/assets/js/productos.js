@@ -454,6 +454,16 @@ function initEventListeners() {
     document.getElementById('filterEstado').addEventListener('change', filtrarProductos);
     document.getElementById('btnLimpiarFiltros').addEventListener('click', limpiarFiltros);
     
+    // Exportar e Importar
+    document.getElementById('btnExportar').addEventListener('click', exportarProductos);
+    document.getElementById('btnImportar').addEventListener('click', abrirModalImportar);
+    document.getElementById('btnDescargarPlantilla').addEventListener('click', descargarPlantilla);
+    document.getElementById('btnSeleccionarArchivo').addEventListener('click', () => {
+        document.getElementById('archivoExcel').click();
+    });
+    document.getElementById('archivoExcel').addEventListener('change', procesarArchivoExcel);
+    document.getElementById('btnConfirmarImportacion').addEventListener('click', confirmarImportacion);
+    
     // Preview de imagen
     const imagenUrlInput = document.getElementById('productoImagenUrl');
     if (imagenUrlInput) {
@@ -967,4 +977,530 @@ function mostrarAlerta(mensaje, tipo = 'info') {
     setTimeout(() => {
         alertDiv.remove();
     }, 5000);
+}
+
+// ============================================
+// EXPORTAR PRODUCTOS A EXCEL
+// ============================================
+
+function exportarProductos() {
+    if (!productos || productos.length === 0) {
+        mostrarAlerta('No hay productos para exportar', 'warning');
+        return;
+    }
+
+    try {
+        // Preparar datos para exportar
+        const datosExportar = productos.map(p => ({
+            'ID': p.id,
+            'Tipo': p.tipo,
+            'Maneja Inventario': p.maneja_inventario ? 'Sí' : 'No',
+            'Nombre': p.nombre,
+            'Descripción': p.descripcion || '',
+            'SKU': p.sku,
+            'Código de Barras': p.codigo_barras || '',
+            'Categoría': p.categoria_nombre || 'Sin categoría',
+            'Precio Compra': p.precio_compra,
+            'Precio Minorista': p.precio_minorista,
+            'Precio Mayorista': p.precio_mayorista || '',
+            'Precio Distribuidor': p.precio_distribuidor || '',
+            'Precio Mínimo': p.precio_minimo || '',
+            'Precio Máximo': p.precio_maximo || '',
+            'Aplica IVA': p.aplica_iva ? 'Sí' : 'No',
+            'Porcentaje IVA': p.porcentaje_iva || 0,
+            'Tipo Impuesto': p.tipo_impuesto,
+            'IVA Incluido': p.iva_incluido_en_precio ? 'Sí' : 'No',
+            'Stock Actual': p.stock_actual,
+            'Stock Mínimo': p.stock_minimo,
+            'Stock Máximo': p.stock_maximo || '',
+            'Unidad Medida': p.unidad_medida,
+            'Ubicación Almacén': p.ubicacion_almacen || '',
+            'Permite Venta Sin Stock': p.permite_venta_sin_stock ? 'Sí' : 'No',
+            'Imagen URL': p.imagen_url || '',
+            'Estado': p.estado,
+            'Cuenta Ingreso': p.cuenta_ingreso || '',
+            'Cuenta Costo': p.cuenta_costo || '',
+            'Cuenta Inventario': p.cuenta_inventario || '',
+            'Cuenta Gasto': p.cuenta_gasto || '',
+            'Margen Minorista (%)': p.margen_minorista || 0,
+            'Margen Mayorista (%)': p.margen_mayorista || 0,
+            'Margen Distribuidor (%)': p.margen_distribuidor || 0
+        }));
+
+        // Crear libro de Excel
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(datosExportar);
+
+        // Ajustar ancho de columnas
+        const colWidths = [
+            { wch: 6 },   // ID
+            { wch: 10 },  // Tipo
+            { wch: 18 },  // Maneja Inventario
+            { wch: 30 },  // Nombre
+            { wch: 40 },  // Descripción
+            { wch: 15 },  // SKU
+            { wch: 18 },  // Código Barras
+            { wch: 20 },  // Categoría
+            { wch: 15 },  // Precio Compra
+            { wch: 15 },  // Precio Minorista
+            { wch: 15 },  // Precio Mayorista
+            { wch: 18 },  // Precio Distribuidor
+            { wch: 15 },  // Precio Mínimo
+            { wch: 15 },  // Precio Máximo
+            { wch: 12 },  // Aplica IVA
+            { wch: 15 },  // Porcentaje IVA
+            { wch: 15 },  // Tipo Impuesto
+            { wch: 13 },  // IVA Incluido
+            { wch: 12 },  // Stock Actual
+            { wch: 12 },  // Stock Mínimo
+            { wch: 12 }   // Stock Máximo
+        ];
+        ws['!cols'] = colWidths;
+
+        // Agregar hoja al libro
+        XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+
+        // Descargar archivo
+        const nombreEmpresa = currentEmpresa.nombre.replace(/[^a-zA-Z0-9]/g, '_');
+        const fecha = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `productos_${nombreEmpresa}_${fecha}.xlsx`);
+
+        mostrarAlerta(`${productos.length} productos exportados exitosamente`, 'success');
+
+    } catch (error) {
+        console.error('Error al exportar productos:', error);
+        mostrarAlerta('Error al exportar productos a Excel', 'danger');
+    }
+}
+
+// ============================================
+// DESCARGAR PLANTILLA DE IMPORTACIÓN
+// ============================================
+
+function descargarPlantilla() {
+    try {
+        // Datos de ejemplo para la plantilla
+        const plantillaData = [
+            {
+                'Nombre': 'Producto de Ejemplo',
+                'SKU': 'PROD-001',
+                'Descripción': 'Descripción detallada del producto',
+                'Tipo': 'producto',
+                'Maneja Inventario': 'Sí',
+                'Código de Barras': '7890123456789',
+                'Categoría': 'Nombre de categoría existente',
+                'Precio Compra': 1000,
+                'Precio Minorista': 1500,
+                'Precio Mayorista': 1300,
+                'Precio Distribuidor': 1200,
+                'Precio Mínimo': 1050,
+                'Precio Máximo': 2000,
+                'Aplica IVA': 'Sí',
+                'Porcentaje IVA': 19,
+                'Tipo Impuesto': 'gravado',
+                'IVA Incluido': 'No',
+                'Stock Actual': 100,
+                'Stock Mínimo': 10,
+                'Stock Máximo': 500,
+                'Unidad Medida': 'unidad',
+                'Ubicación Almacén': 'Estante A1',
+                'Permite Venta Sin Stock': 'No',
+                'Imagen URL': 'https://ejemplo.com/imagen.jpg',
+                'Estado': 'activo'
+            }
+        ];
+
+        // Crear hoja de datos
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(plantillaData);
+
+        // Ajustar ancho de columnas
+        const colWidths = [
+            { wch: 30 },  // Nombre
+            { wch: 15 },  // SKU
+            { wch: 40 },  // Descripción
+            { wch: 10 },  // Tipo
+            { wch: 18 },  // Maneja Inventario
+            { wch: 18 },  // Código Barras
+            { wch: 25 },  // Categoría
+            { wch: 15 },  // Precios...
+        ];
+        ws['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+
+        // Crear hoja de instrucciones
+        const instrucciones = [
+            { 'Columna': 'Nombre', 'Requerido': 'SÍ', 'Descripción': 'Nombre del producto (máximo 200 caracteres)' },
+            { 'Columna': 'SKU', 'Requerido': 'SÍ', 'Descripción': 'Código SKU único (máximo 100 caracteres)' },
+            { 'Columna': 'Descripción', 'Requerido': 'NO', 'Descripción': 'Descripción detallada del producto' },
+            { 'Columna': 'Tipo', 'Requerido': 'NO', 'Descripción': 'producto o servicio (por defecto: producto)' },
+            { 'Columna': 'Maneja Inventario', 'Requerido': 'NO', 'Descripción': 'Sí o No (por defecto: Sí)' },
+            { 'Columna': 'Código de Barras', 'Requerido': 'NO', 'Descripción': 'Código de barras del producto' },
+            { 'Columna': 'Categoría', 'Requerido': 'NO', 'Descripción': 'Nombre exacto de categoría existente' },
+            { 'Columna': 'Precio Compra', 'Requerido': 'NO', 'Descripción': 'Costo del producto (por defecto: 0)' },
+            { 'Columna': 'Precio Minorista', 'Requerido': 'SÍ', 'Descripción': 'Precio de venta al público' },
+            { 'Columna': 'Precio Mayorista', 'Requerido': 'NO', 'Descripción': 'Precio para mayoristas' },
+            { 'Columna': 'Precio Distribuidor', 'Requerido': 'NO', 'Descripción': 'Precio para distribuidores' },
+            { 'Columna': 'Precio Mínimo', 'Requerido': 'NO', 'Descripción': 'Precio mínimo de venta' },
+            { 'Columna': 'Precio Máximo', 'Requerido': 'NO', 'Descripción': 'Precio máximo sugerido' },
+            { 'Columna': 'Aplica IVA', 'Requerido': 'NO', 'Descripción': 'Sí o No (por defecto: Sí)' },
+            { 'Columna': 'Porcentaje IVA', 'Requerido': 'NO', 'Descripción': '0, 5 o 19 (por defecto: 19)' },
+            { 'Columna': 'Tipo Impuesto', 'Requerido': 'NO', 'Descripción': 'gravado, exento o excluido (por defecto: gravado)' },
+            { 'Columna': 'IVA Incluido', 'Requerido': 'NO', 'Descripción': 'Sí o No (por defecto: No)' },
+            { 'Columna': 'Stock Actual', 'Requerido': 'NO', 'Descripción': 'Cantidad actual en inventario (por defecto: 0)' },
+            { 'Columna': 'Stock Mínimo', 'Requerido': 'NO', 'Descripción': 'Stock mínimo de alerta (por defecto: 0)' },
+            { 'Columna': 'Stock Máximo', 'Requerido': 'NO', 'Descripción': 'Stock máximo permitido' },
+            { 'Columna': 'Unidad Medida', 'Requerido': 'NO', 'Descripción': 'unidad, kg, litro, etc. (por defecto: unidad)' },
+            { 'Columna': 'Ubicación Almacén', 'Requerido': 'NO', 'Descripción': 'Ubicación física en almacén' },
+            { 'Columna': 'Permite Venta Sin Stock', 'Requerido': 'NO', 'Descripción': 'Sí o No (por defecto: No)' },
+            { 'Columna': 'Imagen URL', 'Requerido': 'NO', 'Descripción': 'URL de la imagen del producto' },
+            { 'Columna': 'Estado', 'Requerido': 'NO', 'Descripción': 'activo o inactivo (por defecto: activo)' }
+        ];
+
+        const wsInstrucciones = XLSX.utils.json_to_sheet(instrucciones);
+        wsInstrucciones['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 60 }];
+        XLSX.utils.book_append_sheet(wb, wsInstrucciones, 'Instrucciones');
+
+        // Descargar archivo
+        const nombreEmpresa = currentEmpresa.nombre.replace(/[^a-zA-Z0-9]/g, '_');
+        XLSX.writeFile(wb, `plantilla_importacion_productos_${nombreEmpresa}.xlsx`);
+
+        mostrarAlerta('Plantilla descargada exitosamente', 'success');
+
+    } catch (error) {
+        console.error('Error al descargar plantilla:', error);
+        mostrarAlerta('Error al generar plantilla', 'danger');
+    }
+}
+
+// ============================================
+// ABRIR MODAL DE IMPORTACIÓN
+// ============================================
+
+function abrirModalImportar() {
+    // Resetear modal
+    document.getElementById('archivoExcel').value = '';
+    document.getElementById('archivoSeleccionado').style.display = 'none';
+    document.getElementById('resultadoValidacion').style.display = 'none';
+    document.getElementById('btnConfirmarImportacion').disabled = true;
+    
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('importarModal'));
+    modal.show();
+}
+
+// ============================================
+// PROCESAR ARCHIVO EXCEL
+// ============================================
+
+let productosImportar = [];
+
+async function procesarArchivoExcel(e) {
+    const file = e.target.files[0];
+    
+    if (!file) return;
+
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        mostrarAlerta('El archivo es muy grande. Máximo 5MB permitido', 'danger');
+        e.target.value = '';
+        return;
+    }
+
+    // Mostrar nombre del archivo
+    document.getElementById('nombreArchivoSeleccionado').textContent = file.name;
+    document.getElementById('archivoSeleccionado').style.display = 'block';
+
+    try {
+        // Leer archivo
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        
+        // Obtener primera hoja
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        
+        // Convertir a JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        if (jsonData.length === 0) {
+            mostrarAlerta('El archivo está vacío', 'warning');
+            return;
+        }
+
+        // Validar productos
+        await validarProductosImportados(jsonData);
+
+    } catch (error) {
+        console.error('Error al procesar archivo:', error);
+        mostrarAlerta('Error al leer el archivo Excel', 'danger');
+        e.target.value = '';
+    }
+}
+
+// ============================================
+// VALIDAR PRODUCTOS IMPORTADOS
+// ============================================
+
+async function validarProductosImportados(datos) {
+    const resultados = {
+        validos: [],
+        advertencias: [],
+        errores: []
+    };
+
+    // Crear mapa de categorías por nombre
+    const categoriasMap = {};
+    categorias.forEach(cat => {
+        categoriasMap[cat.nombre.toLowerCase().trim()] = cat.id;
+    });
+
+    // Validar cada producto
+    for (let i = 0; i < datos.length; i++) {
+        const fila = datos[i];
+        const numeroFila = i + 2; // +2 porque Excel empieza en 1 y tiene header
+        const erroresFila = [];
+        const advertenciasFila = [];
+
+        // Validaciones obligatorias
+        if (!fila['Nombre'] || fila['Nombre'].toString().trim() === '') {
+            erroresFila.push('Nombre es obligatorio');
+        }
+        if (!fila['SKU'] || fila['SKU'].toString().trim() === '') {
+            erroresFila.push('SKU es obligatorio');
+        }
+        if (!fila['Precio Minorista'] || parseFloat(fila['Precio Minorista']) <= 0) {
+            erroresFila.push('Precio Minorista es obligatorio y debe ser mayor a 0');
+        }
+
+        // Validar tipo
+        const tipo = (fila['Tipo'] || 'producto').toLowerCase();
+        if (!['producto', 'servicio'].includes(tipo)) {
+            erroresFila.push('Tipo debe ser "producto" o "servicio"');
+        }
+
+        // Validar tipo de impuesto
+        const tipoImpuesto = (fila['Tipo Impuesto'] || 'gravado').toLowerCase();
+        if (!['gravado', 'exento', 'excluido'].includes(tipoImpuesto)) {
+            erroresFila.push('Tipo Impuesto debe ser "gravado", "exento" o "excluido"');
+        }
+
+        // Validar estado
+        const estado = (fila['Estado'] || 'activo').toLowerCase();
+        if (!['activo', 'inactivo'].includes(estado)) {
+            erroresFila.push('Estado debe ser "activo" o "inactivo"');
+        }
+
+        // Validar categoría (si existe)
+        let categoriaId = null;
+        if (fila['Categoría'] && fila['Categoría'].toString().trim() !== '') {
+            const categoriaNombre = fila['Categoría'].toLowerCase().trim();
+            categoriaId = categoriasMap[categoriaNombre];
+            if (!categoriaId) {
+                advertenciasFila.push(`Categoría "${fila['Categoría']}" no existe. Se creará sin categoría`);
+            }
+        }
+
+        // Preparar objeto producto
+        const producto = {
+            nombre: fila['Nombre']?.toString().trim(),
+            sku: fila['SKU']?.toString().trim(),
+            descripcion: fila['Descripción']?.toString().trim() || null,
+            tipo: tipo,
+            maneja_inventario: convertirBoolean(fila['Maneja Inventario'], true),
+            codigo_barras: fila['Código de Barras']?.toString().trim() || null,
+            categoria_id: categoriaId,
+            precio_compra: parseFloat(fila['Precio Compra']) || 0,
+            precio_minorista: parseFloat(fila['Precio Minorista']) || 0,
+            precio_mayorista: parseFloat(fila['Precio Mayorista']) || null,
+            precio_distribuidor: parseFloat(fila['Precio Distribuidor']) || null,
+            precio_minimo: parseFloat(fila['Precio Mínimo']) || null,
+            precio_maximo: parseFloat(fila['Precio Máximo']) || null,
+            aplica_iva: convertirBoolean(fila['Aplica IVA'], true),
+            porcentaje_iva: parseFloat(fila['Porcentaje IVA']) || 19,
+            tipo_impuesto: tipoImpuesto,
+            iva_incluido_en_precio: convertirBoolean(fila['IVA Incluido'], false),
+            stock_actual: parseInt(fila['Stock Actual']) || 0,
+            stock_minimo: parseInt(fila['Stock Mínimo']) || 0,
+            stock_maximo: parseInt(fila['Stock Máximo']) || null,
+            unidad_medida: fila['Unidad Medida']?.toString().trim() || 'unidad',
+            ubicacion_almacen: fila['Ubicación Almacén']?.toString().trim() || null,
+            permite_venta_sin_stock: convertirBoolean(fila['Permite Venta Sin Stock'], false),
+            imagen_url: fila['Imagen URL']?.toString().trim() || null,
+            estado: estado,
+            empresa_id: currentEmpresa.id
+        };
+
+        // Clasificar resultado
+        if (erroresFila.length > 0) {
+            resultados.errores.push({
+                fila: numeroFila,
+                producto: producto,
+                errores: erroresFila
+            });
+        } else if (advertenciasFila.length > 0) {
+            resultados.advertencias.push({
+                fila: numeroFila,
+                producto: producto,
+                advertencias: advertenciasFila
+            });
+        } else {
+            resultados.validos.push({
+                fila: numeroFila,
+                producto: producto
+            });
+        }
+    }
+
+    // Guardar productos para importar
+    productosImportar = [...resultados.validos, ...resultados.advertencias];
+
+    // Mostrar resultados
+    mostrarResultadosValidacion(resultados);
+}
+
+// ============================================
+// MOSTRAR RESULTADOS DE VALIDACIÓN
+// ============================================
+
+function mostrarResultadosValidacion(resultados) {
+    document.getElementById('productosValidos').textContent = resultados.validos.length;
+    document.getElementById('productosAdvertencias').textContent = resultados.advertencias.length;
+    document.getElementById('productosErrores').textContent = resultados.errores.length;
+
+    // Mostrar errores si existen
+    const listaErrores = document.getElementById('listaErrores');
+    const listaErroresDetalle = document.getElementById('listaErroresDetalle');
+    
+    if (resultados.errores.length > 0) {
+        listaErrores.style.display = 'block';
+        let htmlErrores = '<ul class="mb-0">';
+        resultados.errores.forEach(error => {
+            htmlErrores += `<li><strong>Fila ${error.fila} (${error.producto.nombre || 'Sin nombre'}):</strong> ${error.errores.join(', ')}</li>`;
+        });
+        htmlErrores += '</ul>';
+        listaErroresDetalle.innerHTML = htmlErrores;
+    } else {
+        listaErrores.style.display = 'none';
+    }
+
+    // Habilitar/deshabilitar botón de importar
+    const btnConfirmar = document.getElementById('btnConfirmarImportacion');
+    if (productosImportar.length > 0 && resultados.errores.length === 0) {
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = `<i class="bi bi-check-circle me-2"></i>Importar ${productosImportar.length} Productos`;
+    } else {
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<i class="bi bi-x-circle me-2"></i>Corrige los errores para importar';
+    }
+
+    // Mostrar resultados
+    document.getElementById('resultadoValidacion').style.display = 'block';
+}
+
+// ============================================
+// CONFIRMAR IMPORTACIÓN
+// ============================================
+
+async function confirmarImportacion() {
+    if (productosImportar.length === 0) {
+        mostrarAlerta('No hay productos válidos para importar', 'warning');
+        return;
+    }
+
+    const btnConfirmar = document.getElementById('btnConfirmarImportacion');
+    const textoOriginal = btnConfirmar.innerHTML;
+    
+    try {
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importando...';
+
+        const token = localStorage.getItem('token');
+        let exitosos = 0;
+        let fallidos = 0;
+        const erroresImportacion = [];
+
+        // Importar productos uno por uno
+        for (const item of productosImportar) {
+            try {
+                const response = await fetch(`${API_URL}/productos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(item.producto)
+                });
+
+                if (response.ok) {
+                    exitosos++;
+                } else {
+                    const error = await response.json();
+                    fallidos++;
+                    erroresImportacion.push({
+                        fila: item.fila,
+                        nombre: item.producto.nombre,
+                        error: error.message || 'Error desconocido'
+                    });
+                }
+            } catch (error) {
+                fallidos++;
+                erroresImportacion.push({
+                    fila: item.fila,
+                    nombre: item.producto.nombre,
+                    error: error.message
+                });
+            }
+        }
+
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('importarModal'));
+        modal.hide();
+
+        // Mostrar resumen
+        if (exitosos > 0) {
+            mostrarAlerta(
+                `Importación completada: ${exitosos} productos importados${fallidos > 0 ? `, ${fallidos} fallidos` : ''}`,
+                fallidos > 0 ? 'warning' : 'success'
+            );
+        } else {
+            mostrarAlerta('No se pudo importar ningún producto', 'danger');
+        }
+
+        // Mostrar errores si existen
+        if (erroresImportacion.length > 0) {
+            console.error('Errores de importación:', erroresImportacion);
+        }
+
+        // Recargar productos
+        await cargarProductos();
+
+    } catch (error) {
+        console.error('Error en importación:', error);
+        mostrarAlerta('Error al importar productos', 'danger');
+    } finally {
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = textoOriginal;
+    }
+}
+
+// ============================================
+// UTILIDAD: CONVERTIR TEXTO A BOOLEAN
+// ============================================
+
+function convertirBoolean(valor, porDefecto) {
+    if (valor === undefined || valor === null || valor === '') {
+        return porDefecto ? 1 : 0;
+    }
+    
+    const valorStr = valor.toString().toLowerCase().trim();
+    
+    if (['si', 'sí', 'yes', 'true', '1'].includes(valorStr)) {
+        return 1;
+    } else if (['no', 'false', '0'].includes(valorStr)) {
+        return 0;
+    }
+    
+    return porDefecto ? 1 : 0;
 }
