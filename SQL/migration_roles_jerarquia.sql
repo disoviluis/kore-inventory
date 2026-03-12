@@ -164,7 +164,7 @@ DROP TRIGGER IF EXISTS `update_usuario_nivel_after_update_rol`;
 DELIMITER $$
 
 -- Trigger 1: Actualizar nivel cuando se asigna un rol a un usuario
-CREATE TRIGGER `update_usuario_nivel_after_insert`
+CREATE DEFINER=`admin`@`%` TRIGGER `update_usuario_nivel_after_insert`
 AFTER INSERT ON `usuario_rol`
 FOR EACH ROW
 BEGIN
@@ -183,7 +183,7 @@ BEGIN
 END$$
 
 -- Trigger 2: Actualizar nivel cuando se desasigna un rol de un usuario
-CREATE TRIGGER `update_usuario_nivel_after_delete`
+CREATE DEFINER=`admin`@`%` TRIGGER `update_usuario_nivel_after_delete`
 AFTER DELETE ON `usuario_rol`
 FOR EACH ROW
 BEGIN
@@ -202,7 +202,7 @@ BEGIN
 END$$
 
 -- Trigger 3: Actualizar nivel de usuarios cuando se modifica el nivel de un rol
-CREATE TRIGGER `update_usuario_nivel_after_update_rol`
+CREATE DEFINER=`admin`@`%` TRIGGER `update_usuario_nivel_after_update_rol`
 AFTER UPDATE ON `roles`
 FOR EACH ROW
 BEGIN
