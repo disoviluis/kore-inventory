@@ -1,0 +1,36 @@
+# Archivos de backup
+backup_*.sql
+*.backup
+*.bak
+
+# Variables de entorno
+backend/.env
+
+# Node modules
+node_modules/
+backend/node_modules/
+
+# Archivos compilados
+backend/dist/
+*.js.map
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos temporales
+*.tmp
+*.temp
+.cache/
