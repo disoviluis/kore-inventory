@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authMiddleware } from '../../core/middleware/auth.middleware';
 import * as superAdminController from './super-admin.controller';
 import * as empresasAdminController from './empresas-admin.controller';
 import * as usuariosAdminController from './usuarios-admin.controller';
@@ -11,9 +12,12 @@ const router = Router();
  * ========================================
  * RUTAS: MÓDULO SUPER ADMIN
  * ========================================
- * Todas estas rutas deben estar protegidas con middleware
- * que verifique tipo_usuario = 'super_admin'
+ * Todas estas rutas están protegidas con authMiddleware
+ * que verifica el token JWT y tipo_usuario = 'super_admin'
  */
+
+// Aplicar middleware de autenticación a todas las rutas
+router.use(authMiddleware);
 
 // ========================================
 // DASHBOARD Y MÉTRICAS
