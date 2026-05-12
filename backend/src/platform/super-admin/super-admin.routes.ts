@@ -3,6 +3,7 @@ import * as superAdminController from './super-admin.controller';
 import * as empresasAdminController from './empresas-admin.controller';
 import * as usuariosAdminController from './usuarios-admin.controller';
 import * as planesAdminController from './planes-admin.controller';
+import * as rolesGlobalesController from './roles-globales.controller';
 
 const router = Router();
 
@@ -60,5 +61,14 @@ router.get('/licencias/:id', planesAdminController.getLicenciaById);
 router.post('/licencias', planesAdminController.createLicencia);
 router.put('/licencias/:id', planesAdminController.updateLicencia);
 router.delete('/licencias/:id', planesAdminController.deleteLicencia);
+
+// ========================================
+// GESTIÓN DE ROLES GLOBALES
+// ========================================
+router.get('/roles-globales', rolesGlobalesController.getRolesGlobales);
+router.get('/roles-globales/:id', rolesGlobalesController.getRolGlobalById);
+router.post('/roles-globales', rolesGlobalesController.createRolGlobal);
+router.put('/roles-globales/:id', rolesGlobalesController.updateRolGlobal);
+router.delete('/roles-globales/:id', rolesGlobalesController.deleteRolGlobal);
 
 export default router;
