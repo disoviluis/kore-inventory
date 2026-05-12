@@ -39,7 +39,7 @@ SET @column_exists = (
 );
 
 SET @sql = IF(@column_exists = 0,
-    'ALTER TABLE proveedores ADD COLUMN tipo_sociedad VARCHAR(50) NULL AFTER representante_legal COMMENT "SAS, LTDA, SA, etc"',
+    'ALTER TABLE proveedores ADD COLUMN tipo_sociedad VARCHAR(50) NULL AFTER representante_legal',
     'SELECT "Campo tipo_sociedad ya existe" AS mensaje'
 );
 
@@ -111,7 +111,7 @@ SET @column_exists = (
 );
 
 SET @sql = IF(@column_exists = 0,
-    'ALTER TABLE proveedores ADD COLUMN actividad_economica VARCHAR(255) NULL AFTER fecha_matricula COMMENT "Actividad económica principal (CIIU)"',
+    'ALTER TABLE proveedores ADD COLUMN actividad_economica VARCHAR(255) NULL AFTER fecha_matricula',
     'SELECT "Campo actividad_economica ya existe" AS mensaje'
 );
 
