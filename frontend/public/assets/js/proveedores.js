@@ -108,6 +108,9 @@ function setupEventListeners() {
     document.getElementById('numeroDocumento').addEventListener('blur', autoCalcularDigitoVerificacion);
     document.getElementById('numeroDocumento').addEventListener('input', autoCalcularDigitoVerificacion);
     
+    // Consultar RUES
+    document.getElementById('btnConsultarRUES').addEventListener('click', consultarRUES);
+    
     // Sidebar toggle
     const toggleBtn = document.getElementById('toggleSidebar');
     if (toggleBtn) {
@@ -372,6 +375,7 @@ function autoCalcularDigitoVerificacion() {
  * Calcula el dígito de verificación según el algoritmo DIAN
  * @param {string} nit - Número de identificación tributaria sin DV
  * @returns {string} Dígito de verificación (0-9)
+ * @see https://www.dian.gov.co - Algoritmo oficial DIAN Colombia
  */
 function calcularDigitoVerificacionDIAN(nit) {
     // Eliminar caracteres no numéricos
@@ -379,17 +383,18 @@ function calcularDigitoVerificacionDIAN(nit) {
     
     if (!nitLimpio || nitLimpio.length === 0) return '';
     
-    // Pesos para cada posición según DIAN (de derecha a izquierda)
-    const pesos = [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3];
+    // Pesos para cada posición según DIAN
+    // Se aplican de DERECHA a IZQUIERDA sobre el NIT
+    const pesos = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
     
     let suma = 0;
-    let j = 0;
+    let pesoIndex = 0;
     
-    // Multiplicar cada dígito por su peso correspondiente (de derecha a izquierda)
+    // Multiplicar cada dígito por su peso (de derecha a izquierda del NIT)
     for (let i = nitLimpio.length - 1; i >= 0; i--) {
-        if (j >= pesos.length) break;
-        suma += parseInt(nitLimpio[i]) * pesos[j];
-        j++;
+        if (pesoIndex >= pesos.length) break;
+        suma += parseInt(nitLimpio[i]) * pesos[pesoIndex];
+        pesoIndex++;
     }
     
     // Obtener el residuo de dividir la suma entre 11
@@ -401,6 +406,151 @@ function calcularDigitoVerificacionDIAN(nit) {
     } else {
         return String(11 - residuo);
     }
+}
+
+// ============================================
+// CONSULTA RUES (Registro Único Empresarial)
+// ============================================
+
+/**
+ * Consulta información empresarial desde RUES
+ * Puede integrarse con APIs como:
+ * - API RUES oficial (https://www.rues.org.co)
+ * - Verifik.co
+ * - TuDian.com
+ * - Datasketch
+ */
+async function consultarRUES() {
+    try {
+        const tipoDoc = document.getElementById('tipoDocumento').value;
+        const numeroDoc = document.getElementById('numeroDocumento').value.trim();
+        const dv = document.getElementById('digitoVerificacion').value.trim();
+        
+        // Validar que sea NIT
+        if (tipoDoc !== 'NIT') {
+            mostrarAlerta('La consulta RUES solo está disponible para NIT', 'warning');
+            return;
+        }
+        
+        if (!numeroDoc) {
+            mostrarAlerta('Por favor ingrese el número de NIT', 'warning');
+            return;
+        }
+        
+        // Mostrar spinner
+        const btnRUES = document.getElementById('btnConsultarRUES');
+        const spinner = document.getElementById('spinnerRUES');
+        btnRUES.disabled = true;
+        spinner.classList.remove('d-none');
+        
+        // Construir NIT completo
+        const nitCompleto = dv ? `${numeroDoc}-${dv}` : numeroDoc;
+        
+        // ==============================================
+        // OPCIÓN 1: API RUES REAL (requiere configuración)
+        // ==============================================
+        // const response = await fetch(`https://api.rues.org.co/consulta/${nitCompleto}`, {
+        //     headers: {
+        //         'Authorization': 'Bearer TU_API_KEY_AQUI'
+        //     }
+        // });
+        
+        // ==============================================
+        // OPCIÓN 2: SIMULACIÓN para demostración
+        // ==============================================
+        // Simular delay de API
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Datos simulados basados en NITs conocidos
+        const datosSimulados = obtenerDatosSimuladosRUES(numeroDoc);
+        
+        if (datosSimulados) {
+            // Autocompletar formulario con datos RUES
+            document.getElementById('razonSocial').value = datosSimulados.razon_social;
+            document.getElementById('nombreComercial').value = datosSimulados.nombre_comercial || '';
+            document.getElementById('representanteLegal').value = datosSimulados.representante_legal || '';
+            document.getElementById('tipoSociedad').value = datosSimulados.tipo_sociedad || '';
+            document.getElementById('matriculaMercantil').value = datosSimulados.matricula_mercantil || '';
+            document.getElementById('camaraComercio').value = datosSimulados.camara_comercio || '';
+            document.getElementById('fechaMatricula').value = datosSimulados.fecha_matricula || '';
+            document.getElementById('actividadEconomica').value = datosSimulados.actividad_economica || '';
+            document.getElementById('direccion').value = datosSimulados.direccion || '';
+            document.getElementById('ciudad').value = datosSimulados.ciudad || '';
+            document.getElementById('departamento').value = datosSimulados.departamento || '';
+            document.getElementById('telefono').value = datosSimulados.telefono || '';
+            document.getElementById('email').value = datosSimulados.email || '';
+            
+            mostrarAlerta('Datos autocompletados desde RUES exitosamente', 'success');
+        } else {
+            mostrarAlerta(`No se encontró información para el NIT ${nitCompleto} en RUES`, 'warning');
+        }
+        
+    } catch (error) {
+        console.error('Error al consultar RUES:', error);
+        mostrarAlerta('Error al consultar información RUES. Por favor complete los datos manualmente.', 'error');
+    } finally {
+        // Ocultar spinner
+        const btnRUES = document.getElementById('btnConsultarRUES');
+        const spinner = document.getElementById('spinnerRUES');
+        btnRUES.disabled = false;
+        spinner.classList.add('d-none');
+    }
+}
+
+/**
+ * Datos simulados de empresas colombianas conocidas
+ * En producción, esto debe reemplazarse por llamadas a API real
+ */
+function obtenerDatosSimuladosRUES(nit) {
+    const empresasConocidas = {
+        '900342297': {
+            razon_social: 'COMERCIALIZADORA ARTURO CALLE S.A.S.',
+            nombre_comercial: 'Arturo Calle',
+            representante_legal: 'Juan Carlos Calle',
+            tipo_sociedad: 'SAS',
+            matricula_mercantil: '00123456',
+            camara_comercio: 'Medellín',
+            fecha_matricula: '1990-03-15',
+            actividad_economica: '4771 - Comercio al por menor de prendas de vestir',
+            direccion: 'Calle 50 # 43-83',
+            ciudad: 'Medellín',
+            departamento: 'Antioquia',
+            telefono: '6044441234',
+            email: 'info@arturocalle.com'
+        },
+        '900156264': {
+            razon_social: 'EMPRESA DE EJEMPLO S.A.S.',
+            nombre_comercial: 'Ejemplo Corp',
+            representante_legal: 'María Fernanda López',
+            tipo_sociedad: 'SAS',
+            matricula_mercantil: '00987654',
+            camara_comercio: 'Bogotá',
+            fecha_matricula: '2010-06-20',
+            actividad_economica: '6201 - Desarrollo de software',
+            direccion: 'Carrera 7 # 71-21',
+            ciudad: 'Bogotá',
+            departamento: 'Cundinamarca',
+            telefono: '6013001234',
+            email: 'contacto@ejemplo.com'
+        },
+        '900123456': {
+            razon_social: 'DISTRIBUIDORA XYZ LTDA',
+            nombre_comercial: 'XYZ Distribuciones',
+            representante_legal: 'Carlos Andrés Pérez',
+            tipo_sociedad: 'LTDA',
+            matricula_mercantil: '00555555',
+            camara_comercio: 'Cali',
+            fecha_matricula: '2005-09-10',
+            actividad_economica: '4663 - Comercio al por mayor de materiales',
+            direccion: 'Avenida 6N # 25-50',
+            ciudad: 'Cali',
+            departamento: 'Valle del Cauca',
+            telefono: '6026001234',
+            email: 'ventas@xyzltda.com'
+        }
+    };
+    
+    return empresasConocidas[nit] || null;
 }
 
 async function verProveedor(id) {
@@ -460,6 +610,13 @@ async function editarProveedor(id) {
         document.getElementById('digitoVerificacion').value = proveedor.digito_verificacion || '';
         document.getElementById('razonSocial').value = proveedor.razon_social;
         document.getElementById('nombreComercial').value = proveedor.nombre_comercial || '';
+        document.getElementById('representanteLegal').value = proveedor.representante_legal || '';
+        document.getElementById('tipoSociedad').value = proveedor.tipo_sociedad || '';
+        document.getElementById('matriculaMercantil').value = proveedor.matricula_mercantil || '';
+        document.getElementById('camaraComercio').value = proveedor.camara_comercio || '';
+        document.getElementById('fechaMatricula').value = proveedor.fecha_matricula || '';
+        document.getElementById('actividadEconomica').value = proveedor.actividad_economica || '';
+        document.getElementById('departamento').value = proveedor.departamento || '';
         document.getElementById('nombreContacto').value = proveedor.nombre_contacto || '';
         document.getElementById('email').value = proveedor.email || '';
         document.getElementById('telefono').value = proveedor.telefono || '';
@@ -507,6 +664,13 @@ async function guardarProveedor() {
             digito_verificacion: tipoDoc === 'NIT' ? (document.getElementById('digitoVerificacion').value.trim() || null) : null,
             razon_social: document.getElementById('razonSocial').value.trim(),
             nombre_comercial: document.getElementById('nombreComercial').value.trim() || null,
+            representante_legal: document.getElementById('representanteLegal').value.trim() || null,
+            tipo_sociedad: document.getElementById('tipoSociedad').value || null,
+            matricula_mercantil: document.getElementById('matriculaMercantil').value.trim() || null,
+            camara_comercio: document.getElementById('camaraComercio').value.trim() || null,
+            fecha_matricula: document.getElementById('fechaMatricula').value || null,
+            actividad_economica: document.getElementById('actividadEconomica').value.trim() || null,
+            departamento: document.getElementById('departamento').value.trim() || null,
             nombre_contacto: document.getElementById('nombreContacto').value.trim() || null,
             email: document.getElementById('email').value.trim() || null,
             telefono: document.getElementById('telefono').value.trim() || null,

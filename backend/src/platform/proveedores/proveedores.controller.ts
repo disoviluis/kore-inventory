@@ -25,6 +25,8 @@ export const getProveedores = async (req: Request, res: Response): Promise<Respo
     let sql = `
       SELECT 
         id, empresa_id, tipo_documento, numero_documento, digito_verificacion, razon_social, nombre_comercial,
+        representante_legal, tipo_sociedad, matricula_mercantil, camara_comercio, fecha_matricula,
+        actividad_economica, departamento,
         nombre_contacto, telefono, celular, email, sitio_web, direccion, ciudad, pais,
         codigo_postal, terminos_pago, dias_credito, limite_credito, productos_suministra,
         banco, tipo_cuenta, numero_cuenta, observaciones, estado, created_at, updated_at
@@ -118,10 +120,11 @@ export const createProveedor = async (req: Request, res: Response): Promise<Resp
     const sql = `
       INSERT INTO proveedores (
         empresa_id, tipo_documento, numero_documento, digito_verificacion, razon_social, nombre_comercial,
-        nombre_contacto, telefono, celular, email, sitio_web, direccion, ciudad, pais,
-        codigo_postal, terminos_pago, dias_credito, limite_credito, productos_suministra,
-        banco, tipo_cuenta, numero_cuenta, observaciones, estado
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        representante_legal, tipo_sociedad, matricula_mercantil, camara_comercio, fecha_matricula,
+        actividad_economica, departamento, nombre_contacto, telefono, celular, email, sitio_web, 
+        direccion, ciudad, pais, codigo_postal, terminos_pago, dias_credito, limite_credito, 
+        productos_suministra, banco, tipo_cuenta, numero_cuenta, observaciones, estado
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const params = [
@@ -131,6 +134,13 @@ export const createProveedor = async (req: Request, res: Response): Promise<Resp
       proveedorData.digito_verificacion || null,
       proveedorData.razon_social,
       proveedorData.nombre_comercial || null,
+      proveedorData.representante_legal || null,
+      proveedorData.tipo_sociedad || null,
+      proveedorData.matricula_mercantil || null,
+      proveedorData.camara_comercio || null,
+      proveedorData.fecha_matricula || null,
+      proveedorData.actividad_economica || null,
+      proveedorData.departamento || null,
       proveedorData.nombre_contacto || null,
       proveedorData.telefono || null,
       proveedorData.celular || null,

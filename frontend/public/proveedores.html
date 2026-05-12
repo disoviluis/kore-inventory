@@ -535,12 +535,63 @@
                                 <input type="text" class="form-control" id="digitoVerificacion" maxlength="1" placeholder="0-9">
                             </div>
                             <div class="col-12">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnConsultarRUES">
+                                    <i class="bi bi-search me-1"></i> Consultar RUES
+                                    <span class="spinner-border spinner-border-sm ms-2 d-none" id="spinnerRUES" role="status"></span>
+                                </button>
+                                <small class="text-muted ms-2">Autocompletar datos desde Registro Único Empresarial</small>
+                            </div>
+                            <div class="col-12">
                                 <label class="form-label">Razón Social <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="razonSocial" required placeholder="Nombre legal de la empresa">
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Nombre Comercial</label>
                                 <input type="text" class="form-control" id="nombreComercial" placeholder="Nombre con el que se conoce">
+                            </div>
+                        </div>
+
+                        <!-- Información RUES -->
+                        <div class="border-bottom mb-3 pb-2 mt-4">
+                            <h6 class="text-primary"><i class="bi bi-building me-2"></i>Información Empresarial (RUES)</h6>
+                        </div>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Representante Legal</label>
+                                <input type="text" class="form-control" id="representanteLegal" placeholder="Nombre completo">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Sociedad</label>
+                                <select class="form-select" id="tipoSociedad">
+                                    <option value="">Seleccione...</option>
+                                    <option value="SAS">SAS - Sociedad por Acciones Simplificada</option>
+                                    <option value="LTDA">LTDA - Sociedad Limitada</option>
+                                    <option value="SA">SA - Sociedad Anónima</option>
+                                    <option value="SCOL">S. Col - Sociedad Colectiva</option>
+                                    <option value="EU">E.U. - Empresa Unipersonal</option>
+                                    <option value="COOPERATIVA">Cooperativa</option>
+                                    <option value="FUNDACION">Fundación</option>
+                                    <option value="ASOCIACION">Asociación</option>
+                                    <option value="PERSONA_NATURAL">Persona Natural</option>
+                                    <option value="OTRA">Otra</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Matrícula Mercantil</label>
+                                <input type="text" class="form-control" id="matriculaMercantil" placeholder="Número de matrícula">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Cámara de Comercio</label>
+                                <input type="text" class="form-control" id="camaraComercio" placeholder="Ej: Bogotá, Medellín">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha de Matrícula</label>
+                                <input type="date" class="form-control" id="fechaMatricula">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Actividad Económica (CIIU)</label>
+                                <input type="text" class="form-control" id="actividadEconomica" placeholder="Código y descripción">
                             </div>
                         </div>
 
@@ -582,11 +633,15 @@
                                 <label class="form-label">Dirección</label>
                                 <textarea class="form-control" id="direccion" rows="2" placeholder="Dirección completa"></textarea>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Ciudad</label>
                                 <input type="text" class="form-control" id="ciudad" placeholder="Bogotá">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label class="form-label">Departamento</label>
+                                <input type="text" class="form-control" id="departamento" placeholder="Cundinamarca">
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label">País</label>
                                 <input type="text" class="form-control" id="pais" value="Colombia">
                             </div>
