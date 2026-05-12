@@ -8,7 +8,7 @@ echo "========================================="
 echo ""
 
 # Ejecutar migración
-mysql -h kore-inventory.cpifmq4gwbbf.us-east-2.rds.amazonaws.com \
+mysql -h kore-db.cp0s2wsom3o2.us-east-2.rds.amazonaws.com \
       -u admin \
       -p \
       kore_inventory < SQL/migration_add_campos_rues_proveedores.sql
@@ -18,7 +18,7 @@ echo "Migración ejecutada. Verificando campos..."
 echo ""
 
 # Verificar campos creados
-mysql -h kore-inventory.cpifmq4gwbbf.us-east-2.rds.amazonaws.com \
+mysql -h kore-db.cp0s2wsom3o2.us-east-2.rds.amazonaws.com \
       -u admin \
       -p \
       kore_inventory -e "
