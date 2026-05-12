@@ -24,7 +24,7 @@ export const getProveedores = async (req: Request, res: Response): Promise<Respo
 
     let sql = `
       SELECT 
-        id, empresa_id, tipo_documento, numero_documento, razon_social, nombre_comercial,
+        id, empresa_id, tipo_documento, numero_documento, digito_verificacion, razon_social, nombre_comercial,
         nombre_contacto, telefono, celular, email, sitio_web, direccion, ciudad, pais,
         codigo_postal, terminos_pago, dias_credito, limite_credito, productos_suministra,
         banco, tipo_cuenta, numero_cuenta, observaciones, estado, created_at, updated_at
@@ -108,19 +108,27 @@ export const createProveedor = async (req: Request, res: Response): Promise<Resp
       return errorResponse(res, 'Ya existe un proveedor con este número de documento', null, 400);
     }
 
+    // Validar dígito de verificación si se proporciona
+    if (proveedorData.digito_verificacion) {
+      if (!/^[0-9]$/.test(proveedorData.digito_verificacion)) {
+        return errorResponse(res, 'El dígito de verificación debe ser un número del 0 al 9', null, 400);
+      }
+    }
+
     const sql = `
       INSERT INTO proveedores (
-        empresa_id, tipo_documento, numero_documento, razon_social, nombre_comercial,
+        empresa_id, tipo_documento, numero_documento, digito_verificacion, razon_social, nombre_comercial,
         nombre_contacto, telefono, celular, email, sitio_web, direccion, ciudad, pais,
         codigo_postal, terminos_pago, dias_credito, limite_credito, productos_suministra,
         banco, tipo_cuenta, numero_cuenta, observaciones, estado
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const params = [
       proveedorData.empresa_id,
       proveedorData.tipo_documento || 'NIT',
       proveedorData.numero_documento,
+      proveedorData.digito_verificacion || null,
       proveedorData.razon_social,
       proveedorData.nombre_comercial || null,
       proveedorData.nombre_contacto || null,
@@ -175,6 +183,13 @@ export const updateProveedor = async (req: Request, res: Response): Promise<Resp
 
     if (existing.length === 0) {
       return errorResponse(res, 'Proveedor no encontrado', null, 404);
+    }
+
+    // Validar dígito de verificación si se proporciona
+    if (updateData.digito_verificacion !== undefined && updateData.digito_verificacion !== null && updateData.digito_verificacion !== '') {
+      if (!/^[0-9]$/.test(updateData.digito_verificacion.toString())) {
+        return errorResponse(res, 'El dígito de verificación debe ser un número del 0 al 9', null, 400);
+      }
     }
 
     // Si se actualiza el documento, verificar que no exista otro con el mismo

@@ -520,9 +520,19 @@
                                     <option value="PASAPORTE">Pasaporte</option>
                                 </select>
                             </div>
-                            <div class="col-md-8">
+                            <div class="col-md-6" id="numeroDocumentoContainer">
                                 <label class="form-label">Número Documento <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="numeroDocumento" required placeholder="Ej: 900123456-1">
+                                <input type="text" class="form-control" id="numeroDocumento" required placeholder="Ej: 900123456">
+                            </div>
+                            <div class="col-md-2" id="digitoVerificacionContainer" style="display: none;">
+                                <label class="form-label">
+                                    DV
+                                    <i class="bi bi-info-circle-fill text-info" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-placement="top" 
+                                       title="Dígito de verificación calculado automáticamente según DIAN. Editable si es necesario."></i>
+                                </label>
+                                <input type="text" class="form-control" id="digitoVerificacion" maxlength="1" placeholder="0-9">
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Razón Social <span class="text-danger">*</span></label>

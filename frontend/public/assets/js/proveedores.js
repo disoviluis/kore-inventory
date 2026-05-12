@@ -101,6 +101,13 @@ function setupEventListeners() {
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.addEventListener('click', cerrarSesion);
     
+    // Tipo documento para mostrar/ocultar DV
+    document.getElementById('tipoDocumento').addEventListener('change', toggleDigitoVerificacion);
+    
+    // Auto-calcular DV al escribir NIT
+    document.getElementById('numeroDocumento').addEventListener('blur', autoCalcularDigitoVerificacion);
+    document.getElementById('numeroDocumento').addEventListener('input', autoCalcularDigitoVerificacion);
+    
     // Sidebar toggle
     const toggleBtn = document.getElementById('toggleSidebar');
     if (toggleBtn) {
@@ -304,7 +311,96 @@ function abrirModalNuevo() {
     document.getElementById('pais').value = 'Colombia';
     document.getElementById('diasCredito').value = '30';
     document.getElementById('terminosPago').value = '30 días';
+    document.getElementById('tipoDocumento').value = 'NIT';
+    
+    // Mostrar campo DV para NIT por defecto
+    toggleDigitoVerificacion();
+    
+    // Inicializar tooltips
+    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(el => new bootstrap.Tooltip(el));
+
     proveedorModal.show();
+}
+
+// ============================================
+// DÍGITO DE VERIFICACIÓN (DIAN)
+// ============================================
+
+/**
+ * Muestra u oculta el campo de dígito de verificación según el tipo de documento
+ */
+function toggleDigitoVerificacion() {
+    const tipoDoc = document.getElementById('tipoDocumento').value;
+    const dvContainer = document.getElementById('digitoVerificacionContainer');
+    const numeroDocContainer = document.getElementById('numeroDocumentoContainer');
+    
+    if (tipoDoc === 'NIT') {
+        dvContainer.style.display = 'block';
+        numeroDocContainer.classList.remove('col-md-8');
+        numeroDocContainer.classList.add('col-md-6');
+        
+        // Auto-calcular si ya hay un número
+        autoCalcularDigitoVerificacion();
+    } else {
+        dvContainer.style.display = 'none';
+        numeroDocContainer.classList.remove('col-md-6');
+        numeroDocContainer.classList.add('col-md-8');
+        document.getElementById('digitoVerificacion').value = '';
+    }
+}
+
+/**
+ * Auto-calcula el dígito de verificación cuando el tipo es NIT
+ */
+function autoCalcularDigitoVerificacion() {
+    const tipoDoc = document.getElementById('tipoDocumento').value;
+    if (tipoDoc !== 'NIT') return;
+    
+    const nit = document.getElementById('numeroDocumento').value.trim();
+    if (!nit || nit.length < 6) {
+        document.getElementById('digitoVerificacion').value = '';
+        return;
+    }
+    
+    // Calcular DV
+    const dv = calcularDigitoVerificacionDIAN(nit);
+    document.getElementById('digitoVerificacion').value = dv;
+}
+
+/**
+ * Calcula el dígito de verificación según el algoritmo DIAN
+ * @param {string} nit - Número de identificación tributaria sin DV
+ * @returns {string} Dígito de verificación (0-9)
+ */
+function calcularDigitoVerificacionDIAN(nit) {
+    // Eliminar caracteres no numéricos
+    const nitLimpio = nit.replace(/\D/g, '');
+    
+    if (!nitLimpio || nitLimpio.length === 0) return '';
+    
+    // Pesos para cada posición según DIAN (de derecha a izquierda)
+    const pesos = [71, 67, 59, 53, 47, 43, 41, 37, 29, 23, 19, 17, 13, 7, 3];
+    
+    let suma = 0;
+    let j = 0;
+    
+    // Multiplicar cada dígito por su peso correspondiente (de derecha a izquierda)
+    for (let i = nitLimpio.length - 1; i >= 0; i--) {
+        if (j >= pesos.length) break;
+        suma += parseInt(nitLimpio[i]) * pesos[j];
+        j++;
+    }
+    
+    // Obtener el residuo de dividir la suma entre 11
+    const residuo = suma % 11;
+    
+    // Si el residuo es 0 o 1, el DV es 0, de lo contrario DV = 11 - residuo
+    if (residuo === 0 || residuo === 1) {
+        return '0';
+    } else {
+        return String(11 - residuo);
+    }
 }
 
 async function verProveedor(id) {
@@ -361,6 +457,7 @@ async function editarProveedor(id) {
         document.getElementById('proveedorId').value = proveedor.id;
         document.getElementById('tipoDocumento').value = proveedor.tipo_documento;
         document.getElementById('numeroDocumento').value = proveedor.numero_documento;
+        document.getElementById('digitoVerificacion').value = proveedor.digito_verificacion || '';
         document.getElementById('razonSocial').value = proveedor.razon_social;
         document.getElementById('nombreComercial').value = proveedor.nombre_comercial || '';
         document.getElementById('nombreContacto').value = proveedor.nombre_contacto || '';
@@ -381,6 +478,13 @@ async function editarProveedor(id) {
         document.getElementById('numeroCuenta').value = proveedor.numero_cuenta || '';
         document.getElementById('observaciones').value = proveedor.observaciones || '';
         document.getElementById('estado').value = proveedor.estado;
+        
+        // Mostrar/ocultar campo DV según tipo de documento
+        toggleDigitoVerificacion();
+        
+        // Inicializar tooltips
+        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltips.forEach(el => new bootstrap.Tooltip(el));
 
         document.getElementById('proveedorModalLabel').innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Proveedor';
         proveedorModal.show();
@@ -394,10 +498,13 @@ async function editarProveedor(id) {
 async function guardarProveedor() {
     try {
         const id = document.getElementById('proveedorId').value;
+        const tipoDoc = document.getElementById('tipoDocumento').value;
+        
         const proveedorData = {
             empresa_id: currentEmpresa.id,
-            tipo_documento: document.getElementById('tipoDocumento').value,
+            tipo_documento: tipoDoc,
             numero_documento: document.getElementById('numeroDocumento').value.trim(),
+            digito_verificacion: tipoDoc === 'NIT' ? (document.getElementById('digitoVerificacion').value.trim() || null) : null,
             razon_social: document.getElementById('razonSocial').value.trim(),
             nombre_comercial: document.getElementById('nombreComercial').value.trim() || null,
             nombre_contacto: document.getElementById('nombreContacto').value.trim() || null,
