@@ -714,6 +714,12 @@ function cambiarModulo(nombreModulo) {
           cargarProductos();
         }
         break;
+      case 'configuracion-global':
+        // Cargar módulo Super Admin - Configuración Global (Roles Globales)
+        if (typeof cargarRolesGlobales === 'function') {
+          cargarRolesGlobales();
+        }
+        break;
       // Agregar más módulos según se implementen
     }
     
@@ -3485,4 +3491,564 @@ function mostrarAlertaConfiguracion(faltantes) {
       localStorage.setItem(alertKey, now.toString());
     });
   }
+}
+// ==========================================
+// GESTIÓN DE ROLES GLOBALES (SUPER ADMIN)
+// ==========================================
+
+let permisosGlobalesSeleccionados = [];
+let modulosAccionesDataGlobal = null;
+
+/**
+ * Cargar Roles Globales
+ */
+async function cargarRolesGlobales() {
+  try {
+    console.log('🔄 Cargando roles globales...');
+    
+    const response = await fetch(`${API_URL}/super-admin/roles-globales`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error('No tienes permisos para gestionar roles globales (Solo Super Admin)');
+      }
+      throw new Error('Error al cargar roles globales');
+    }
+    
+    const data = await response.json();
+    const roles = data.data || [];
+    
+    console.log('✅ Roles globales recibidos:', roles.length);
+    
+    const tbody = document.getElementById('rolesGlobalesTableBody');
+    
+    if (roles.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-muted"></i>
+            <p class="text-muted mt-3 mb-0">No hay roles globales configurados</p>
+            <small class="text-muted">Crea el primer rol global para comenzar</small>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    tbody.innerHTML = roles.map(rol => {
+      // Badge de nivel con color según rango
+      let nivelBadge = '';
+      if (rol.nivel >= 95) {
+        nivelBadge = `<span class="badge bg-danger">${rol.nivel}</span>`;
+      } else if (rol.nivel >= 90) {
+        nivelBadge = `<span class="badge bg-warning">${rol.nivel}</span>`;
+      } else {
+        nivelBadge = `<span class="badge bg-info">${rol.nivel}</span>`;
+      }
+      
+      return `
+        <tr>
+          <td class="text-center">
+            <i class="bi bi-shield-fill-check text-primary fs-5"></i>
+          </td>
+          <td>
+            <strong>${rol.nombre}</strong>
+          </td>
+          <td>
+            <span class="text-muted">${rol.descripcion || 'Sin descripción'}</span>
+          </td>
+          <td class="text-center">
+            ${nivelBadge}
+          </td>
+          <td class="text-center">
+            <span class="badge bg-secondary" title="Empresas que usan este rol">
+              ${rol.empresas_usando || 0}
+            </span>
+          </td>
+          <td>
+            <span class="badge bg-${rol.activo ? 'success' : 'secondary'}">
+              ${rol.activo ? 'Activo' : 'Inactivo'}
+            </span>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary" 
+                    onclick="verDetalleRolGlobal(${rol.id})" 
+                    title="Ver permisos">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-warning" 
+                    onclick="editarRolGlobal(${rol.id})" 
+                    title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" 
+                    onclick="eliminarRolGlobal(${rol.id}, '${rol.nombre.replace(/'/g, "\\'")}', ${rol.empresas_usando || 0})" 
+                    title="Eliminar">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+    
+  } catch (error) {
+    console.error('Error al cargar roles globales:', error);
+    const tbody = document.getElementById('rolesGlobalesTableBody');
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center text-danger py-5">
+          <i class="bi bi-exclamation-triangle fs-1"></i>
+          <p class="mt-3 mb-0">${error.message}</p>
+        </td>
+      </tr>
+    `;
+  }
+}
+
+/**
+ * Abrir modal para crear/editar rol global
+ */
+async function abrirModalRolGlobal(rolId = null) {
+  const modal = new bootstrap.Modal(document.getElementById('rolGlobalModal'));
+  const form = document.getElementById('rolGlobalForm');
+  form.reset();
+  permisosGlobalesSeleccionados = [];
+  
+  document.getElementById('rolGlobalModalTitle').innerHTML = rolId 
+    ? '<i class="bi bi-shield-fill-check me-2"></i>Editar Rol Global' 
+    : '<i class="bi bi-shield-fill-check me-2"></i>Crear Rol Global';
+  document.getElementById('rolGlobalId').value = rolId || '';
+  
+  // Cargar módulos y acciones si no están en cache
+  if (!modulosAccionesDataGlobal) {
+    await cargarModulosAccionesGlobal();
+  }
+  
+  // Si es edición, cargar datos del rol
+  if (rolId) {
+    try {
+      const response = await fetch(`${API_URL}/super-admin/roles-globales/${rolId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Error al cargar rol global');
+      
+      const data = await response.json();
+      const rol = data.data;
+      
+      // Llenar formulario
+      document.getElementById('rolGlobalNombre').value = rol.nombre;
+      document.getElementById('rolGlobalDescripcion').value = rol.descripcion || '';
+      document.getElementById('rolGlobalNivel').value = rol.nivel;
+      document.getElementById('rolGlobalActivo').value = rol.activo ? '1' : '0';
+      
+      // Marcar permisos asignados
+      permisosGlobalesSeleccionados = rol.permisos.map(p => p.permiso_id);
+      
+      // Renderizar matriz con permisos marcados
+      renderizarMatrizPermisosGlobales();
+      
+    } catch (error) {
+      console.error('Error:', error);
+      mostrarAlertaConfigGlobal('Error al cargar datos del rol global', 'danger');
+      return;
+    }
+  } else {
+    // Renderizar matriz vacía para nuevo rol
+    renderizarMatrizPermisosGlobales();
+  }
+  
+  // Manejar submit del formulario
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    await guardarRolGlobal();
+  };
+  
+  modal.show();
+}
+
+/**
+ * Cargar módulos y acciones para roles globales
+ */
+async function cargarModulosAccionesGlobal() {
+  const container = document.getElementById('permisosGlobalesContainer');
+  container.innerHTML = `
+    <div class="text-center py-4">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="text-muted mt-2">Cargando permisos...</p>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch(`${API_URL}/modulos/acciones`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar módulos');
+    
+    const data = await response.json();
+    modulosAccionesDataGlobal = data.data;
+    
+    console.log('✅ Módulos y acciones cargados:', modulosAccionesDataGlobal);
+    
+  } catch (error) {
+    console.error('Error:', error);
+    container.innerHTML = `
+      <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Error al cargar permisos: ${error.message}
+      </div>
+    `;
+  }
+}
+
+/**
+ * Renderizar matriz de permisos para roles globales
+ */
+function renderizarMatrizPermisosGlobales() {
+  const container = document.getElementById('permisosGlobalesContainer');
+  
+  if (!modulosAccionesDataGlobal || modulosAccionesDataGlobal.length === 0) {
+    container.innerHTML = `
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        No se encontraron permisos disponibles
+      </div>
+    `;
+    return;
+  }
+  
+  // Agrupar por categoría
+  const categorias = {};
+  modulosAccionesDataGlobal.forEach(modulo => {
+    const cat = modulo.categoria || 'General';
+    if (!categorias[cat]) categorias[cat] = [];
+    categorias[cat].push(modulo);
+  });
+  
+  let html = '';
+  
+  Object.keys(categorias).forEach(categoria => {
+    html += `
+      <div class="mb-4">
+        <h6 class="text-uppercase text-muted small mb-3">
+          <i class="bi bi-folder2 me-2"></i>${categoria}
+        </h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 200px;">Módulo</th>
+                ${categorias[categoria][0].acciones.map(acc => 
+                  `<th class="text-center" style="width: 80px;">
+                    <small>${acc.nombre_accion}</small>
+                  </th>`
+                ).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${categorias[categoria].map(modulo => `
+                <tr>
+                  <td>
+                    <i class="bi ${modulo.icono || 'bi-circle'} me-2"></i>
+                    <strong>${modulo.nombre_modulo}</strong>
+                  </td>
+                  ${modulo.acciones.map(accion => {
+                    const permisoId = accion.permiso_id;
+                    const isChecked = permisosGlobalesSeleccionados.includes(permisoId);
+                    return `
+                      <td class="text-center">
+                        <input type="checkbox" 
+                               class="form-check-input permiso-checkbox-global" 
+                               data-permiso-id="${permisoId}"
+                               ${isChecked ? 'checked' : ''}
+                               onchange="togglePermisoGlobal(${permisoId})">
+                      </td>
+                    `;
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+/**
+ * Toggle permiso global
+ */
+function togglePermisoGlobal(permisoId) {
+  const index = permisosGlobalesSeleccionados.indexOf(permisoId);
+  if (index > -1) {
+    permisosGlobalesSeleccionados.splice(index, 1);
+  } else {
+    permisosGlobalesSeleccionados.push(permisoId);
+  }
+  console.log('Permisos globales seleccionados:', permisosGlobalesSeleccionados);
+}
+
+/**
+ * Seleccionar/deseleccionar todos los permisos globales
+ */
+function seleccionarTodosPermisosGlobales(seleccionar) {
+  const checkboxes = document.querySelectorAll('.permiso-checkbox-global');
+  permisosGlobalesSeleccionados = [];
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = seleccionar;
+    if (seleccionar) {
+      const permisoId = parseInt(checkbox.dataset.permisoId);
+      permisosGlobalesSeleccionados.push(permisoId);
+    }
+  });
+  
+  console.log('Permisos globales:', seleccionar ? 'Todos seleccionados' : 'Todos deseleccionados');
+}
+
+/**
+ * Guardar rol global
+ */
+async function guardarRolGlobal() {
+  const rolId = document.getElementById('rolGlobalId').value;
+  const nombre = document.getElementById('rolGlobalNombre').value.trim();
+  const descripcion = document.getElementById('rolGlobalDescripcion').value.trim();
+  const nivel = parseInt(document.getElementById('rolGlobalNivel').value);
+  const activo = document.getElementById('rolGlobalActivo').value === '1';
+  
+  // Validaciones
+  if (!nombre) {
+    mostrarAlertaConfigGlobal('El nombre del rol es requerido', 'warning');
+    return;
+  }
+  
+  if (!nivel || nivel < 80 || nivel > 99) {
+    mostrarAlertaConfigGlobal('Debes seleccionar un nivel válido (80-99)', 'warning');
+    return;
+  }
+  
+  if (permisosGlobalesSeleccionados.length === 0) {
+    const confirmar = confirm('No has seleccionado ningún permiso. ¿Deseas continuar?');
+    if (!confirmar) return;
+  }
+  
+  try {
+    const url = rolId 
+      ? `${API_URL}/super-admin/roles-globales/${rolId}`
+      : `${API_URL}/super-admin/roles-globales`;
+    
+    const method = rolId ? 'PUT' : 'POST';
+    
+    const payload = {
+      nombre,
+      descripcion,
+      nivel,
+      activo,
+      permisos: permisosGlobalesSeleccionados
+    };
+    
+    console.log('📤 Guardando rol global:', payload);
+    
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al guardar rol global');
+    }
+    
+    console.log('✅ Rol global guardado exitosamente');
+    
+    // Cerrar modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('rolGlobalModal'));
+    modal.hide();
+    
+    // Mostrar mensaje de éxito
+    mostrarAlertaConfigGlobal(
+      rolId ? 'Rol global actualizado exitosamente' : 'Rol global creado exitosamente',
+      'success'
+    );
+    
+    // Recargar tabla
+    cargarRolesGlobales();
+    
+  } catch (error) {
+    console.error('Error al guardar rol global:', error);
+    mostrarAlertaConfigGlobal(error.message, 'danger');
+  }
+}
+
+/**
+ * Ver detalle de rol global
+ */
+async function verDetalleRolGlobal(rolId) {
+  try {
+    const response = await fetch(`${API_URL}/super-admin/roles-globales/${rolId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar rol global');
+    
+    const data = await response.json();
+    const rol = data.data;
+    
+    // Mostrar modal con información
+    const permisosHtml = rol.permisos.length > 0
+      ? rol.permisos.map(p => `
+          <li class="list-group-item">
+            <i class="bi bi-check-circle text-success me-2"></i>
+            <strong>${p.modulo_nombre}</strong> - ${p.accion_nombre}
+          </li>
+        `).join('')
+      : '<li class="list-group-item text-muted">Sin permisos asignados</li>';
+    
+    const htmlContent = `
+      <div class="modal fade" id="modalDetalleRolGlobal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title">
+                <i class="bi bi-shield-fill-check me-2"></i>
+                Detalle: ${rol.nombre}
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <strong>Nivel de Privilegio:</strong><br>
+                  <span class="badge bg-info fs-6">${rol.nivel}</span>
+                </div>
+                <div class="col-md-6">
+                  <strong>Estado:</strong><br>
+                  <span class="badge bg-${rol.activo ? 'success' : 'secondary'} fs-6">
+                    ${rol.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+              </div>
+              <div class="mb-3">
+                <strong>Descripción:</strong><br>
+                <p class="text-muted">${rol.descripcion || 'Sin descripción'}</p>
+              </div>
+              <div>
+                <strong>Permisos Asignados (${rol.permisos.length}):</strong>
+                <ul class="list-group mt-2" style="max-height: 400px; overflow-y: auto;">
+                  ${permisosHtml}
+                </ul>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+              <button type="button" class="btn btn-warning" onclick="editarRolGlobal(${rol.id})" data-bs-dismiss="modal">
+                <i class="bi bi-pencil me-2"></i>Editar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remover modal anterior si existe
+    const oldModal = document.getElementById('modalDetalleRolGlobal');
+    if (oldModal) oldModal.remove();
+    
+    // Agregar nuevo modal
+    document.body.insertAdjacentHTML('beforeend', htmlContent);
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalDetalleRolGlobal'));
+    modal.show();
+    
+  } catch (error) {
+    console.error('Error:', error);
+    mostrarAlertaConfigGlobal('Error al cargar detalle del rol global', 'danger');
+  }
+}
+
+/**
+ * Editar rol global (abre modal con datos)
+ */
+function editarRolGlobal(rolId) {
+  abrirModalRolGlobal(rolId);
+}
+
+/**
+ * Eliminar rol global
+ */
+async function eliminarRolGlobal(rolId, nombre, empresasUsando) {
+  const mensaje = empresasUsando > 0
+    ? `El rol "${nombre}" está siendo usado por ${empresasUsando} empresa(s).\n\n¿Estás seguro de eliminarlo? Esto podría afectar a los usuarios que lo tienen asignado.`
+    : `¿Estás seguro de eliminar el rol global "${nombre}"?`;
+  
+  if (!confirm(mensaje)) return;
+  
+  try {
+    const response = await fetch(`${API_URL}/super-admin/roles-globales/${rolId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al eliminar rol global');
+    }
+    
+    console.log('✅ Rol global eliminado exitosamente');
+    
+    mostrarAlertaConfigGlobal('Rol global eliminado exitosamente', 'success');
+    cargarRolesGlobales();
+    
+  } catch (error) {
+    console.error('Error al eliminar rol global:', error);
+    mostrarAlertaConfigGlobal(error.message, 'danger');
+  }
+}
+
+/**
+ * Mostrar alerta en configuración global
+ */
+function mostrarAlertaConfigGlobal(mensaje, tipo = 'info') {
+  const container = document.getElementById('alertContainerConfigGlobal');
+  if (!container) {
+    alert(mensaje);
+    return;
+  }
+  
+  const alertHtml = `
+    <div class="alert alert-${tipo} alert-dismissible fade show" role="alert">
+      <i class="bi bi-${tipo === 'danger' ? 'exclamation-triangle' : tipo === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+      ${mensaje}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+  
+  container.innerHTML = alertHtml;
+  
+  // Auto-cerrar después de 5 segundos
+  setTimeout(() => {
+    container.innerHTML = '';
+  }, 5000);
 }

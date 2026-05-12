@@ -294,10 +294,9 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
+                                <a class="nav-link" href="#" onclick="cambiarModulo('configuracion-global'); return false;">
                                     <i class="bi bi-sliders"></i>
                                     <span>Configuración Global</span>
-                                    <span class="badge bg-secondary">Próximamente</span>
                                 </a>
                             </li>
                         </ul>
@@ -1339,6 +1338,144 @@
             </div>
         </div><!-- END IMPUESTOS MODULE -->
 
+        <!-- CONFIGURACIÓN GLOBAL MODULE (Super Admin) -->
+        <div id="configuracion-globalModule" class="module-content" style="display: none;">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div id="alertContainerConfigGlobal"></div>
+                    
+                    <!-- Page Header -->
+                    <div class="page-header mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h2 class="page-title mb-1">
+                                    <i class="bi bi-sliders text-primary me-2"></i>
+                                    Configuración Global
+                                </h2>
+                                <p class="text-muted mb-0">Gestión de roles globales y configuraciones del sistema (Solo Super Admin)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs de Configuración -->
+                    <ul class="nav nav-tabs mb-4" id="configTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="roles-globales-tab" data-bs-toggle="tab" data-bs-target="#roles-globales" type="button">
+                                <i class="bi bi-shield-check me-2"></i>Roles Globales
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link disabled" id="modulos-tab" data-bs-toggle="tab" data-bs-target="#modulos" type="button">
+                                <i class="bi bi-box me-2"></i>Módulos
+                                <span class="badge bg-secondary ms-2">Próximamente</span>
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="configTabContent">
+                        
+                        <!-- ROLES GLOBALES TAB -->
+                        <div class="tab-pane fade show active" id="roles-globales" role="tabpanel">
+                            
+                            <!-- Info Alert -->
+                            <div class="alert alert-info mb-4">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>¿Qué son los Roles Globales?</strong><br>
+                                Los roles globales son plantillas base que pueden ser usadas por todas las empresas del sistema:
+                                <ul class="mb-0 mt-2">
+                                    <li><strong>Nivel de Privilegio:</strong> De 80 a 99 (niveles 10-79 reservados para roles de empresa)</li>
+                                    <li><strong>Plantilla Reutilizable:</strong> Las empresas pueden crear roles basados en estos</li>
+                                    <li><strong>Jerarquía:</strong> Solo puedes crear roles con nivel inferior al tuyo (Super Admin = 100)</li>
+                                    <li><strong>Gestión Centralizada:</strong> Los permisos se definen una vez y se heredan en todas las empresas</li>
+                                </ul>
+                            </div>
+
+                            <!-- Header con boton crear -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-white">
+                                    <div class="row align-items-center">
+                                        <div class="col">
+                                            <h5 class="card-title mb-0">
+                                                <i class="bi bi-shield-fill-check text-primary me-2"></i>
+                                                Roles Globales Configurados
+                                            </h5>
+                                        </div>
+                                        <div class="col-auto">
+                                            <button class="btn btn-primary" onclick="abrirModalRolGlobal()">
+                                                <i class="bi bi-plus-circle me-2"></i>Crear Rol Global
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Filtros -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <input type="text" class="form-control" id="searchRolesGlobales" 
+                                                   placeholder="Buscar por nombre o descripción...">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <select class="form-select" id="filterNivelRolGlobal">
+                                                <option value="">Todos los niveles</option>
+                                                <option value="99">Nivel 99</option>
+                                                <option value="95">Nivel 95</option>
+                                                <option value="90">Nivel 90</option>
+                                                <option value="85">Nivel 85</option>
+                                                <option value="80">Nivel 80</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button class="btn btn-outline-primary w-100" onclick="cargarRolesGlobales()">
+                                                <i class="bi bi-arrow-clockwise me-2"></i>Actualizar
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tabla de Roles Globales -->
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 50px;"><i class="bi bi-shield-check"></i></th>
+                                                    <th>Nombre del Rol</th>
+                                                    <th>Descripción</th>
+                                                    <th class="text-center">Nivel</th>
+                                                    <th class="text-center">Empresas Usando</th>
+                                                    <th>Estado</th>
+                                                    <th class="text-end" style="width: 180px;">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="rolesGlobalesTableBody">
+                                                <tr>
+                                                    <td colspan="7" class="text-center py-5">
+                                                        <div class="spinner-border text-primary" role="status">
+                                                            <span class="visually-hidden">Cargando roles globales...</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div><!-- END ROLES GLOBALES TAB -->
+
+                        <!-- MÓDULOS TAB (Próximamente) -->
+                        <div class="tab-pane fade" id="modulos" role="tabpanel">
+                            <div class="alert alert-secondary">
+                                <i class="bi bi-clock-history me-2"></i>
+                                Esta funcionalidad estará disponible próximamente.
+                            </div>
+                        </div>
+
+                    </div><!-- END TAB CONTENT -->
+
+                </div>
+            </div>
+        </div><!-- END CONFIGURACIÓN GLOBAL MODULE -->
+
         <!-- Footer -->
         <footer class="main-footer">
             <div class="container-fluid">
@@ -2138,6 +2275,120 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" form="impuestoForm" class="btn btn-primary">
                         <i class="bi bi-save me-2"></i>Guardar Impuesto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Rol Global (Super Admin) -->
+    <div class="modal fade" id="rolGlobalModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="rolGlobalModalTitle">
+                        <i class="bi bi-shield-fill-check me-2"></i>Crear Rol Global
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="rolGlobalForm">
+                        <input type="hidden" id="rolGlobalId">
+                        
+                        <div class="row g-3">
+                            <!-- Información Básica -->
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2">
+                                    <i class="bi bi-info-circle me-2 text-primary"></i>Información Básica
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre del Rol <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="rolGlobalNombre" required 
+                                       placeholder="Ej: Gerente de Ventas, Contador, Supervisor">
+                                <small class="text-muted">Nombre descriptivo del rol global</small>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Nivel de Privilegio <span class="text-danger">*</span></label>
+                                <select class="form-select" id="rolGlobalNivel" required>
+                                    <option value="">Selecciona un nivel...</option>
+                                    <option value="99">Nivel 99 - Muy Alto</option>
+                                    <option value="95">Nivel 95 - Alto</option>
+                                    <option value="90">Nivel 90 - Alto Medio</option>
+                                    <option value="85">Nivel 85 - Medio Alto</option>
+                                    <option value="80">Nivel 80 - Medio</option>
+                                </select>
+                                <small class="text-muted">Solo puedes crear roles con nivel inferior al tuyo</small>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Estado <span class="text-danger">*</span></label>
+                                <select class="form-select" id="rolGlobalActivo" required>
+                                    <option value="1">Activo</option>
+                                    <option value="0">Inactivo</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" id="rolGlobalDescripcion" rows="2" 
+                                          placeholder="Describe las responsabilidades y alcance de este rol global"></textarea>
+                            </div>
+
+                            <!-- Alert Jerarquía -->
+                            <div class="col-12">
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <strong>Importante sobre Jerarquía:</strong>
+                                    <ul class="mb-0 mt-2 small">
+                                        <li>Los roles globales tienen niveles entre <strong>80 y 99</strong></li>
+                                        <li>Solo el <strong>Super Admin (nivel 100)</strong> puede gestionar roles globales</li>
+                                        <li>Los roles de empresa tienen niveles entre <strong>10 y 79</strong></li>
+                                        <li>Un usuario solo puede gestionar roles con <strong>nivel inferior</strong> al suyo</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Permisos -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">
+                                    <i class="bi bi-shield-check me-2 text-primary"></i>Permisos
+                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" 
+                                            onclick="seleccionarTodosPermisosGlobales(true)">
+                                        <i class="bi bi-check-all"></i> Seleccionar Todos
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" 
+                                            onclick="seleccionarTodosPermisosGlobales(false)">
+                                        <i class="bi bi-x"></i> Limpiar
+                                    </button>
+                                </h6>
+                                <p class="text-muted small mb-3">
+                                    Define los permisos base que tendrá este rol. Las empresas heredarán estos permisos pero podrán personalizarlos.
+                                </p>
+                            </div>
+
+                            <div class="col-12">
+                                <div id="permisosGlobalesContainer">
+                                    <!-- Matriz de permisos cargada dinámicamente -->
+                                    <div class="text-center py-4">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando permisos...</span>
+                                        </div>
+                                        <p class="text-muted mt-2">Cargando matriz de permisos...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" form="rolGlobalForm" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Guardar Rol Global
                     </button>
                 </div>
             </div>
