@@ -21,10 +21,18 @@ interface Rol extends RowDataPacket {
   slug: string;
   tipo: 'sistema' | 'personalizado';
   es_admin: boolean;
+  nivel: number; // Nivel de privilegio (10-100)
   activo: boolean;
   created_at: Date;
   updated_at: Date;
   created_by: number | null;
+}
+
+interface Usuario extends RowDataPacket {
+  id: number;
+  tipo_usuario: string;
+  empresa_id: number | null;
+  nivel_privilegio: number | null;
 }
 
 interface Permiso extends RowDataPacket {
@@ -62,6 +70,98 @@ interface Accion extends RowDataPacket {
 }
 
 // ============================================
+// FUNCIONES DE VALIDACIÓN DE JERARQUÍAS
+// ============================================
+
+/**
+ * Obtener nivel de privilegio del usuario actual
+ */
+async function obtenerNivelUsuario(usuarioId: number): Promise<number> {
+  const [result] = await pool.execute<RowDataPacket[]>(
+    `SELECT nivel_privilegio FROM usuarios WHERE id = ?`,
+    [usuarioId]
+  );
+
+  if (result.length === 0 || !result[0].nivel_privilegio) {
+    // Si no tiene nivel, buscar el más alto de sus roles
+    const [roles] = await pool.execute<RowDataPacket[]>(
+      `SELECT MAX(r.nivel) as max_nivel
+       FROM usuario_rol ur
+       INNER JOIN roles r ON ur.rol_id = r.id
+       WHERE ur.usuario_id = ?`,
+      [usuarioId]
+    );
+    return roles[0]?.max_nivel || 0;
+  }
+
+  return result[0].nivel_privilegio;
+}
+
+/**
+ * Validar jerarquía de roles
+ */
+async function validarJerarquiaRol(
+  usuario: any,
+  nivelRol: number,
+  empresaIdRol: number | null,
+  operacion: 'crear' | 'editar' | 'eliminar'
+): Promise<{ valid: boolean; message?: string }> {
+  // Obtener nivel del usuario
+  const nivelUsuario = await obtenerNivelUsuario(usuario.id);
+
+  // Regla 1: Solo puedes crear/editar/eliminar roles de nivel menor al tuyo
+  if (nivelRol >= nivelUsuario) {
+    return {
+      valid: false,
+      message: `No puedes ${operacion} un rol de nivel igual o superior al tuyo (${nivelUsuario})`
+    };
+  }
+
+  // Regla 2: Solo super_admin puede crear roles globales
+  if (empresaIdRol === null && usuario.tipo_usuario !== 'super_admin') {
+    return {
+      valid: false,
+      message: 'Solo el Super Admin puede crear roles globales'
+    };
+  }
+
+  // Regla 3: Admin empresa solo puede crear roles hasta nivel 60
+  if (usuario.tipo_usuario === 'admin_empresa' && nivelRol > 60) {
+    return {
+      valid: false,
+      message: 'No puedes crear roles de nivel superior a 60'
+    };
+  }
+
+  // Regla 4: Admin empresa solo crea roles para SU empresa
+  if (usuario.tipo_usuario === 'admin_empresa' && empresaIdRol !== usuario.empresa_id) {
+    return {
+      valid: false,
+      message: 'Solo puedes crear roles para tu empresa'
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Sincronizar nivel_privilegio de un usuario
+ */
+async function sincronizarNivelPrivilegio(connection: any, usuarioId: number): Promise<void> {
+  await connection.execute(
+    `UPDATE usuarios u
+     SET nivel_privilegio = (
+       SELECT MAX(r.nivel)
+       FROM usuario_rol ur
+       INNER JOIN roles r ON ur.rol_id = r.id
+       WHERE ur.usuario_id = ?
+     )
+     WHERE u.id = ?`,
+    [usuarioId, usuarioId]
+  );
+}
+
+// ============================================
 // OBTENER ROLES (filtrados por empresa o todos para super_admin)
 // ============================================
 
@@ -87,6 +187,7 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
         r.slug,
         r.tipo,
         r.es_admin,
+        r.nivel,
         r.activo,
         r.created_at,
         r.updated_at,
@@ -112,7 +213,7 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
       params.push(empresa_id);
     }
 
-    query += ' ORDER BY r.empresa_id IS NULL DESC, r.nombre ASC';
+    query += ' ORDER BY r.nivel DESC, r.empresa_id IS NULL DESC, r.nombre ASC';
 
     const [roles] = await pool.execute<Rol[]>(query, params);
 
@@ -336,7 +437,7 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
     await connection.beginTransaction();
 
     const usuario = (req as any).user;
-    const { nombre, descripcion, empresa_id, permisos_ids } = req.body;
+    const { nombre, descripcion, empresa_id, nivel, permisos_ids } = req.body;
 
     if (!usuario) {
       res.status(401).json({
@@ -348,12 +449,26 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Validaciones
+    // Validaciones básicas
     if (!nombre || !nombre.trim()) {
       res.status(400).json({
         success: false,
         message: 'El nombre del rol es obligatorio'
       });
+      await connection.rollback();
+      connection.release();
+      return;
+    }
+
+    // Validar nivel
+    const nivelFinal = nivel || 20; // Default nivel 20 si no se especifica
+    if (nivelFinal < 10 || nivelFinal > 100) {
+      res.status(400).json({
+        success: false,
+        message: 'El nivel del rol debe estar entre 10 y 100'
+      });
+      await connection.rollback();
+      connection.release();
       return;
     }
 
@@ -380,6 +495,25 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
         success: false,
         message: 'Ya existe un rol con ese nombre en esta empresa'
       });
+      connection.release();
+      return;
+    }
+
+    // ⭐ VALIDAR JERARQUÍA
+    const validacion = await validarJerarquiaRol(
+      usuario,
+      nivelFinal,
+      empresaIdFinal,
+      'crear'
+    );
+
+    if (!validacion.valid) {
+      res.status(403).json({
+        success: false,
+        message: validacion.message
+      });
+      await connection.rollback();
+      connection.release();
       return;
     }
 
@@ -397,11 +531,12 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
         descripcion,
         slug,
         tipo,
+        nivel,
         es_admin,
         activo,
         created_by
-      ) VALUES (?, ?, ?, ?, 'personalizado', 0, 1, ?)`,
-      [empresaIdFinal, nombre.trim(), descripcion || null, slug, usuario.id]
+      ) VALUES (?, ?, ?, ?, 'personalizado', ?, 0, 1, ?)`,
+      [empresaIdFinal, nombre.trim(), descripcion || null, slug, nivelFinal, usuario.id]
     );
 
     const rolId = result.insertId;
@@ -429,6 +564,7 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
         id: rolId,
         nombre,
         slug,
+        nivel: nivelFinal,
         permisos_count: permisos_ids?.length || 0
       }
     });
@@ -457,7 +593,7 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
 
     const { id } = req.params;
     const usuario = (req as any).user;
-    const { nombre, descripcion, activo, permisos_ids } = req.body;
+    const { nombre, descripcion, nivel, activo, permisos_ids } = req.body;
 
     if (!usuario) {
       res.status(401).json({
@@ -504,6 +640,37 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
           success: false,
           message: 'No tienes permiso para editar este rol'
         });
+        connection.release();
+        return;
+      }
+    }
+
+    // ⭐ VALIDAR JERARQUÍA si se cambia el nivel
+    if (nivel !== undefined && nivel !== rol.nivel) {
+      if (nivel < 10 || nivel > 100) {
+        res.status(400).json({
+          success: false,
+          message: 'El nivel del rol debe estar entre 10 y 100'
+        });
+        await connection.rollback();
+        connection.release();
+        return;
+      }
+
+      const validacion = await validarJerarquiaRol(
+        usuario,
+        nivel,
+        rol.empresa_id,
+        'editar'
+      );
+
+      if (!validacion.valid) {
+        res.status(403).json({
+          success: false,
+          message: validacion.message
+        });
+        await connection.rollback();
+        connection.release();
         return;
       }
     }
@@ -549,6 +716,11 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
         params.push(descripcion || null);
       }
 
+      if (nivel !== undefined) {
+        updates.push('nivel = ?');
+        params.push(nivel);
+      }
+
       if (activo !== undefined) {
         updates.push('activo = ?');
         params.push(activo ? 1 : 0);
@@ -582,6 +754,18 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
           `INSERT INTO rol_permiso (rol_id, permiso_id, created_by) VALUES ?`,
           [permisosValues]
         );
+      }
+    }
+
+    // ⭐ Si se actualizó el nivel, sincronizar nivel_privilegio de usuarios con este rol
+    if (nivel !== undefined && nivel !== rol.nivel) {
+      const [usuariosConRol] = await connection.execute<RowDataPacket[]>(
+        'SELECT DISTINCT usuario_id FROM usuario_rol WHERE rol_id = ?',
+        [id]
+      );
+
+      for (const row of usuariosConRol) {
+        await sincronizarNivelPrivilegio(connection, row.usuario_id);
       }
     }
 
@@ -642,6 +826,22 @@ export const deleteRol = async (req: Request, res: Response): Promise<void> => {
       res.status(403).json({
         success: false,
         message: 'No se pueden eliminar roles de sistema'
+      });
+      return;
+    }
+
+    // ⭐ VALIDAR JERARQUÍA
+    const validacion = await validarJerarquiaRol(
+      usuario,
+      rol.nivel,
+      rol.empresa_id,
+      'eliminar'
+    );
+
+    if (!validacion.valid) {
+      res.status(403).json({
+        success: false,
+        message: validacion.message
       });
       return;
     }
