@@ -571,8 +571,8 @@ export const deleteEmpresa = async (req: Request, res: Response) => {
     // 9. Eliminar productos_bodegas (inventario por bodega)
     await connection.query('DELETE pb FROM productos_bodegas pb INNER JOIN productos p ON pb.producto_id = p.id WHERE p.empresa_id = ?', [id]);
     
-    // 10. Eliminar movimientos de inventario
-    await connection.query('DELETE FROM inventario_movimientos WHERE empresa_id = ?', [id]);
+    // 10. Eliminar movimientos de inventario (a través de producto_id)
+    await connection.query('DELETE im FROM inventario_movimientos im INNER JOIN productos p ON im.producto_id = p.id WHERE p.empresa_id = ?', [id]);
     
     // 11. Eliminar productos
     await connection.query('DELETE FROM productos WHERE empresa_id = ?', [id]);
@@ -598,15 +598,18 @@ export const deleteEmpresa = async (req: Request, res: Response) => {
     // 18. Eliminar licencias
     await connection.query('DELETE FROM licencias WHERE empresa_id = ?', [id]);
     
-    // 19. Eliminar empresa
-    await connection.query('DELETE FROM empresas WHERE id = ?', [id]);
-
-    // Auditoría
+    // 19. Eliminar logs de auditoría de esta empresa
+    await connection.query('DELETE FROM auditoria_logs WHERE empresa_id = ?', [id]);
+    
+    // Auditoría - ANTES de eliminar la empresa
     await connection.query(`
       INSERT INTO auditoria_logs (
         usuario_id, empresa_id, accion, modulo, tabla, registro_id
       ) VALUES (?, ?, 'eliminar', 'super-admin', 'empresas', ?)
     `, [req.body.usuario_id || null, id, id]);
+    
+    // 20. Eliminar empresa
+    await connection.query('DELETE FROM empresas WHERE id = ?', [id]);
 
     await connection.commit();
 

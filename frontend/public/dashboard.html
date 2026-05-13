@@ -1522,9 +1522,35 @@
                                 <input type="text" class="form-control" id="empresaRazonSocial">
                             </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label">NIT <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="empresaNit" required>
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
+                                <select class="form-select" id="empresaTipoDocumento" required>
+                                    <option value="NIT" selected>NIT - Número de Identificación Tributaria</option>
+                                    <option value="CC">CC - Cédula de Ciudadanía</option>
+                                    <option value="CE">CE - Cédula de Extranjería</option>
+                                    <option value="PASAPORTE">Pasaporte</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" id="empresaNumeroDocumentoContainer">
+                                <label class="form-label">Número Documento <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="empresaNit" required placeholder="Ej: 900123456">
+                            </div>
+                            <div class="col-md-2" id="empresaDigitoVerificacionContainer">
+                                <label class="form-label">
+                                    DV
+                                    <i class="bi bi-info-circle-fill text-info" 
+                                       data-bs-toggle="tooltip" 
+                                       data-bs-placement="top" 
+                                       title="Dígito de verificación calculado automáticamente según DIAN. Editable si es necesario."></i>
+                                </label>
+                                <input type="text" class="form-control" id="empresaDigitoVerificacion" maxlength="1" placeholder="0-9">
+                            </div>
+                            <div class="col-12">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnConsultarRUESEmpresa">
+                                    <i class="bi bi-search me-1"></i> Consultar RUES
+                                    <span class="spinner-border spinner-border-sm ms-2 d-none" id="spinnerRUESEmpresa" role="status"></span>
+                                </button>
+                                <small class="text-muted ms-2">Autocompletar datos desde Registro Único Empresarial</small>
                             </div>
 
                             <div class="col-md-6">
@@ -1560,6 +1586,50 @@
                                 <input type="text" class="form-control" id="empresaPais" value="Colombia">
                             </div>
 
+                            <!-- Información Empresarial RUES -->
+                            <div class="col-12 mt-4">
+                                <div class="border-bottom mb-3 pb-2">
+                                    <h6 class="text-primary"><i class="bi bi-building me-2"></i>Información Empresarial (RUES)</h6>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Representante Legal</label>
+                                <input type="text" class="form-control" id="empresaRepresentanteLegal" placeholder="Nombre completo">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Sociedad</label>
+                                <select class="form-select" id="empresaTipoSociedad">
+                                    <option value="">Seleccione...</option>
+                                    <option value="SAS">SAS - Sociedad por Acciones Simplificada</option>
+                                    <option value="LTDA">LTDA - Sociedad Limitada</option>
+                                    <option value="SA">SA - Sociedad Anónima</option>
+                                    <option value="SCOL">S. Col - Sociedad Colectiva</option>
+                                    <option value="EU">E.U. - Empresa Unipersonal</option>
+                                    <option value="COOPERATIVA">Cooperativa</option>
+                                    <option value="FUNDACION">Fundación</option>
+                                    <option value="ASOCIACION">Asociación</option>
+                                    <option value="PERSONA_NATURAL">Persona Natural</option>
+                                    <option value="OTRA">Otra</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Matrícula Mercantil</label>
+                                <input type="text" class="form-control" id="empresaMatriculaMercantil" placeholder="Número de matrícula">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Cámara de Comercio</label>
+                                <input type="text" class="form-control" id="empresaCamaraComercio" placeholder="Ej: Bogotá, Medellín">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha de Matrícula</label>
+                                <input type="date" class="form-control" id="empresaFechaMatricula">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Actividad Económica (CIIU)</label>
+                                <input type="text" class="form-control" id="empresaActividadEconomica" placeholder="Código y descripción">
+                            </div>
+
                             <!-- Plan y Estado -->
                             <div class="col-12 mt-4">
                                 <h6 class="border-bottom pb-2">Plan y Estado</h6>
@@ -1568,8 +1638,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">Plan <span class="text-danger">*</span></label>
                                 <select class="form-select" id="empresaPlan" required>
-                                    <option value="">Seleccionar plan...</option>
-                                    <option value="1">Básico</option>
+                                    <option value="1" selected>Básico</option>
                                     <option value="2">Profesional</option>
                                     <option value="3">Enterprise</option>
                                 </select>
