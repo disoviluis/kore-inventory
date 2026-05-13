@@ -342,9 +342,15 @@ GROUP BY
     t.motivo, us.nombre, ua.nombre, ue.nombre, ur.nombre, t.created_at;
 
 -- =====================================================
--- 6. TRIGGER: Crear bodega principal al crear empresa
+-- 6. NOTA: Bodega Principal
 -- =====================================================
 
+-- La bodega principal se creará automáticamente desde el backend
+-- cuando se cree una nueva empresa, no mediante trigger
+-- Esto evita problemas con binary logging y privilegios SUPER
+
+/*
+-- TRIGGER DESHABILITADO (requiere SUPER privilege)
 DELIMITER $$
 
 DROP TRIGGER IF EXISTS after_empresa_create_bodega_principal$$
@@ -353,7 +359,6 @@ CREATE TRIGGER after_empresa_create_bodega_principal
 AFTER INSERT ON empresas
 FOR EACH ROW
 BEGIN
-    -- Crear bodega principal automáticamente
     INSERT INTO bodegas (
         empresa_id,
         codigo,
@@ -378,6 +383,7 @@ BEGIN
 END$$
 
 DELIMITER ;
+*/
 
 -- =====================================================
 -- 7. ÍNDICES ADICIONALES PARA PERFORMANCE
@@ -433,8 +439,9 @@ Vistas creadas:
 - vista_disponibilidad_producto
 - vista_traslados_completo
 
-Triggers creados:
-- after_empresa_create_bodega_principal
+Nota:
+- La bodega principal se crea automáticamente desde el backend
+  al crear una nueva empresa (no mediante trigger)
 
 Próximos pasos:
 1. Crear backends (controllers + routes)
