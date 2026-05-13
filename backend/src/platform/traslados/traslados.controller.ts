@@ -112,7 +112,7 @@ export const getTraslados = async (req: Request, res: Response) => {
 
     const [traslados] = await pool.query<RowDataPacket[]>(query, params);
 
-    res.json({
+    return res.json({
       success: true,
       data: traslados
     });
@@ -215,7 +215,7 @@ export const getTrasladoById = async (req: Request, res: Response) => {
       ORDER BY td.id
     `, [traslado.bodega_origen_id, traslado.bodega_destino_id, id]);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         ...traslado,
