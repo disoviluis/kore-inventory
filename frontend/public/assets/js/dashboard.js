@@ -707,6 +707,7 @@ function cambiarModulo(nombreModulo) {
         break;
       case 'usuarios':
         // Cargar módulo de Usuarios de Empresa (admin_empresa)
+        console.log('🔄 Cambiando a módulo de usuarios...');
         cargarUsuariosEmpresa();
         break;
       case 'productos':
@@ -2859,28 +2860,54 @@ let rolesDisponiblesEmpresa = []; // Cache de roles para checkboxes
  * Cargar lista de usuarios de la empresa
  */
 async function cargarUsuariosEmpresa() {
+  console.log('🔍 Iniciando carga de usuarios de empresa...');
+  
   try {
     const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    console.log('📦 Empresa activa:', empresaActiva);
     
-    if (!empresaActiva) {
-      mostrarError('No hay empresa activa seleccionada');
+    const tbody = document.getElementById('usuariosTableBody');
+    
+    if (!empresaActiva || !empresaActiva.id) {
+      console.warn('⚠️ No hay empresa activa seleccionada');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center py-4">
+            <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
+            <p class="text-muted mt-2 mb-0">No hay empresa activa seleccionada</p>
+            <small class="text-muted">Por favor, selecciona una empresa en el selector superior</small>
+          </td>
+        </tr>
+      `;
       return;
     }
     
-    const response = await fetch(`${API_URL}/usuarios?empresa_id=${empresaActiva.id}`, {
+    const url = `${API_URL}/usuarios?empresa_id=${empresaActiva.id}`;
+    console.log('🌐 Llamando a API:', url);
+    
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
     
-    if (!response.ok) throw new Error('Error al cargar usuarios');
+    console.log('📡 Respuesta recibida, status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Error en respuesta:', errorText);
+      throw new Error(`Error al cargar usuarios (${response.status})`);
+    }
     
     const data = await response.json();
+    console.log('✅ Datos recibidos:', data);
+    
     const usuarios = data.data || [];
     
-    const tbody = document.getElementById('usuariosTableBody');
+    console.log(`📊 Total usuarios encontrados: ${usuarios.length}`);
     
     if (usuarios.length === 0) {
+      console.log('ℹ️ No hay usuarios para mostrar');
       tbody.innerHTML = `
         <tr>
           <td colspan="8" class="text-center py-4">
@@ -2893,6 +2920,7 @@ async function cargarUsuariosEmpresa() {
       return;
     }
     
+    console.log('🎨 Renderizando usuarios en tabla...');
     tbody.innerHTML = usuarios.map(usuario => {
       const nombreCompleto = `${usuario.nombre} ${usuario.apellido || ''}`.trim();
       const ultimoLogin = usuario.ultimo_login 
@@ -2941,16 +2969,22 @@ async function cargarUsuariosEmpresa() {
       `;
     }).join('');
     
+    console.log('✅ Usuarios cargados correctamente en la tabla');
+    
   } catch (error) {
-    console.error('Error al cargar usuarios:', error);
-    document.getElementById('usuariosTableBody').innerHTML = `
-      <tr>
-        <td colspan="8" class="text-center text-danger py-4">
-          <i class="bi bi-exclamation-triangle fs-1"></i>
-          <p class="mt-2 mb-0">${error.message}</p>
-        </td>
-      </tr>
-    `;
+    console.error('❌ Error al cargar usuarios:', error);
+    const tbody = document.getElementById('usuariosTableBody');
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center text-danger py-4">
+            <i class="bi bi-exclamation-triangle fs-1"></i>
+            <p class="mt-2 mb-0">Error: ${error.message}</p>
+            <small class="text-muted">Revisa la consola para más detalles</small>
+          </td>
+        </tr>
+      `;
+    }
   }
 }
 
