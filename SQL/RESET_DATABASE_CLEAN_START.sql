@@ -48,18 +48,14 @@ INSERT INTO auditoria_logs (
     usuario_id, 
     modulo, 
     accion, 
-    descripcion, 
     ip, 
-    user_agent,
-    created_at
+    user_agent
 ) VALUES (
     1, 
     'SISTEMA', 
-    'RESET_DATABASE', 
-    'Inicio de reset completo de base de datos - Eliminación de datos de prueba', 
+    'RESET_DATABASE_START', 
     'SCRIPT',
-    'SQL_MANUAL',
-    NOW()
+    'SQL_MANUAL_RESET'
 );
 
 -- =====================================================
@@ -317,18 +313,14 @@ INSERT INTO auditoria_logs (
     usuario_id, 
     modulo, 
     accion, 
-    descripcion, 
     ip, 
-    user_agent,
-    created_at
+    user_agent
 ) VALUES (
     1, 
     'SISTEMA', 
-    'RESET_DATABASE', 
-    'Finalización exitosa de reset completo de base de datos', 
+    'RESET_DATABASE_COMPLETE', 
     'SCRIPT',
-    'SQL_MANUAL',
-    NOW()
+    'SQL_MANUAL_RESET'
 );
 
 -- =====================================================
