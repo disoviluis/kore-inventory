@@ -68,8 +68,16 @@ export const getEmpresaById = async (req: Request, res: Response): Promise<Respo
         nombre, 
         razon_social, 
         nit, 
+        tipo_documento,
+        digito_verificacion,
         email, 
         telefono,
+        representante_legal,
+        tipo_sociedad,
+        matricula_mercantil,
+        camara_comercio,
+        fecha_matricula,
+        actividad_economica,
         direccion,
         ciudad,
         pais,
@@ -220,7 +228,10 @@ export const updateEmpresa = async (req: Request, res: Response): Promise<Respon
   try {
     const { id } = req.params;
     const {
-      nombre, razon_social, nit, email, telefono, direccion, ciudad, pais,
+      nombre, razon_social, nit, tipo_documento, digito_verificacion,
+      representante_legal, tipo_sociedad, matricula_mercantil,
+      camara_comercio, fecha_matricula, actividad_economica,
+      email, telefono, direccion, ciudad, pais,
       logo_url, sitio_web, descripcion, slogan, regimen_tributario,
       tipo_contribuyente, gran_contribuyente, autoretenedor,
       agente_retenedor_iva, agente_retenedor_ica, resolucion_dian,
@@ -240,7 +251,10 @@ export const updateEmpresa = async (req: Request, res: Response): Promise<Respon
 
     await query(
       `UPDATE empresas SET 
-        nombre = ?, razon_social = ?, nit = ?, email = ?, telefono = ?, direccion = ?,
+        nombre = ?, razon_social = ?, nit = ?, tipo_documento = ?, digito_verificacion = ?,
+        representante_legal = ?, tipo_sociedad = ?, matricula_mercantil = ?,
+        camara_comercio = ?, fecha_matricula = ?, actividad_economica = ?,
+        email = ?, telefono = ?, direccion = ?,
         ciudad = ?, pais = ?, logo_url = ?, sitio_web = ?, descripcion = ?, slogan = ?,
         regimen_tributario = ?, tipo_contribuyente = ?, gran_contribuyente = ?, autoretenedor = ?,
         agente_retenedor_iva = ?, agente_retenedor_ica = ?, resolucion_dian = ?,
@@ -249,7 +263,10 @@ export const updateEmpresa = async (req: Request, res: Response): Promise<Respon
         software_id = ?, pin_software = ?, ambiente = ?, updated_at = NOW()
       WHERE id = ?`,
       [
-        nombre, razon_social || null, nit, email, telefono || null, direccion || null,
+        nombre, razon_social || null, nit, tipo_documento || 'NIT', digito_verificacion || null,
+        representante_legal || null, tipo_sociedad || null, matricula_mercantil || null,
+        camara_comercio || null, fecha_matricula || null, actividad_economica || null,
+        email, telefono || null, direccion || null,
         ciudad || null, pais || 'Colombia', logo_url || null, sitio_web || null,
         descripcion || null, slogan || null, regimen_tributario || 'simplificado',
         tipo_contribuyente || 'persona_juridica', gran_contribuyente || false, autoretenedor || false,
