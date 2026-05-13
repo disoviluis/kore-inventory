@@ -544,55 +544,61 @@ export const deleteEmpresa = async (req: Request, res: Response) => {
     const { id } = req.params;
 
     // Eliminar registros relacionados en orden por dependencias
-    // 1. Eliminar detalles de ventas primero
-    await connection.query('DELETE dv FROM detalle_ventas dv INNER JOIN ventas v ON dv.venta_id = v.id WHERE v.empresa_id = ?', [id]);
+    // 1. Eliminar impuestos de ventas
+    await connection.query('DELETE vi FROM venta_impuestos vi INNER JOIN ventas v ON vi.venta_id = v.id WHERE v.empresa_id = ?', [id]);
     
-    // 2. Eliminar ventas
+    // 2. Eliminar pagos de ventas
+    await connection.query('DELETE vp FROM venta_pagos vp INNER JOIN ventas v ON vp.venta_id = v.id WHERE v.empresa_id = ?', [id]);
+    
+    // 3. Eliminar detalles de ventas
+    await connection.query('DELETE vd FROM venta_detalle vd INNER JOIN ventas v ON vd.venta_id = v.id WHERE v.empresa_id = ?', [id]);
+    
+    // 4. Eliminar ventas
     await connection.query('DELETE FROM ventas WHERE empresa_id = ?', [id]);
     
-    // 3. Eliminar detalles de compras
-    await connection.query('DELETE dc FROM detalle_compras dc INNER JOIN compras c ON dc.compra_id = c.id WHERE c.empresa_id = ?', [id]);
+    // 5. Eliminar detalles de compras
+    await connection.query('DELETE cd FROM compras_detalle cd INNER JOIN compras c ON cd.compra_id = c.id WHERE c.empresa_id = ?', [id]);
     
-    // 4. Eliminar compras
+    // 6. Eliminar compras
     await connection.query('DELETE FROM compras WHERE empresa_id = ?', [id]);
     
-    // 5. Eliminar detalles de traslados
-    await connection.query('DELETE dt FROM detalle_traslados dt INNER JOIN traslados t ON dt.traslado_id = t.id WHERE t.empresa_id = ?', [id]);
+    // 7. Eliminar detalles de traslados
+    await connection.query('DELETE td FROM traslados_detalle td INNER JOIN traslados t ON td.traslado_id = t.id WHERE t.empresa_id = ?', [id]);
     
-    // 6. Eliminar traslados
+    // 8. Eliminar traslados (incluyendo mensajeros si existe la columna)
     await connection.query('DELETE FROM traslados WHERE empresa_id = ?', [id]);
     
-    // 7. Eliminar inventario
-    await connection.query('DELETE FROM inventario WHERE empresa_id = ?', [id]);
+    // 9. Eliminar productos_bodegas (inventario por bodega)
+    await connection.query('DELETE pb FROM productos_bodegas pb INNER JOIN productos p ON pb.producto_id = p.id WHERE p.empresa_id = ?', [id]);
     
-    // 8. Eliminar movimientos de inventario
+    // 10. Eliminar movimientos de inventario
     await connection.query('DELETE FROM inventario_movimientos WHERE empresa_id = ?', [id]);
     
-    // 9. Eliminar productos
+    // 11. Eliminar productos
     await connection.query('DELETE FROM productos WHERE empresa_id = ?', [id]);
     
-    // 10. Eliminar clientes
+    // 12. Eliminar clientes
     await connection.query('DELETE FROM clientes WHERE empresa_id = ?', [id]);
     
-    // 11. Eliminar proveedores
+    // 13. Eliminar proveedores
     await connection.query('DELETE FROM proveedores WHERE empresa_id = ?', [id]);
     
-    // 12. Eliminar mensajeros
-    await connection.query('DELETE FROM mensajeros WHERE empresa_id = ?', [id]);
-    
-    // 13. Eliminar bodegas
+    // 14. Eliminar bodegas (incluyendo mensajeros si existe relación)
     await connection.query('DELETE FROM bodegas WHERE empresa_id = ?', [id]);
     
-    // 14. Eliminar categorías
+    // 15. Eliminar categorías
     await connection.query('DELETE FROM categorias WHERE empresa_id = ?', [id]);
     
-    // 15. Eliminar relaciones usuario-empresa
+    // 16. Eliminar configuración de facturación
+    await connection.query('DELETE FROM configuracion_factura WHERE empresa_id = ?', [id]);
+    
+    // 17. Eliminar relaciones usuario-empresa
     await connection.query('DELETE FROM usuario_empresa WHERE empresa_id = ?', [id]);
     
-    // 16. Eliminar licencias
+    // 18. Eliminar licencias
     await connection.query('DELETE FROM licencias WHERE empresa_id = ?', [id]);
     
-    // 17. Eliminar empresa
+    // 19. Eliminar empresa
     await connection.query('DELETE FROM empresas WHERE id = ?', [id]);
 
     // Auditoría
