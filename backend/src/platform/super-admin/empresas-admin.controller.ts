@@ -191,7 +191,16 @@ export const createEmpresa = async (req: Request, res: Response) => {
 
     const {
       nombre,
+      razon_social,
+      tipo_documento,
       nit,
+      digito_verificacion,
+      representante_legal,
+      tipo_sociedad,
+      matricula_mercantil,
+      camara_comercio,
+      fecha_matricula,
+      actividad_economica,
       email,
       telefono,
       direccion,
@@ -220,12 +229,18 @@ export const createEmpresa = async (req: Request, res: Response) => {
     // Crear empresa
     const [result] = await connection.query<ResultSetHeader>(`
       INSERT INTO empresas (
-        nombre, nit, email, telefono, direccion, ciudad, pais,
+        nombre, razon_social, tipo_documento, nit, digito_verificacion,
+        representante_legal, tipo_sociedad, matricula_mercantil,
+        camara_comercio, fecha_matricula, actividad_economica,
+        email, telefono, direccion, ciudad, pais,
         regimen_tributario, tipo_contribuyente, estado, plan_id,
         fecha_inicio_trial, fecha_fin_trial
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL ? DAY))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL ? DAY))
     `, [
-      nombre, nit, email, telefono, direccion, ciudad, pais,
+      nombre, razon_social || null, tipo_documento || 'NIT', nit, digito_verificacion || null,
+      representante_legal || null, tipo_sociedad || null, matricula_mercantil || null,
+      camara_comercio || null, fecha_matricula || null, actividad_economica || null,
+      email, telefono, direccion, ciudad, pais,
       regimen_tributario, tipo_contribuyente,
       dias_trial > 0 ? 'trial' : 'activa',
       plan_id,
@@ -360,7 +375,16 @@ export const updateEmpresa = async (req: Request, res: Response) => {
     const { id } = req.params;
     const {
       nombre,
+      razon_social,
+      tipo_documento,
       nit,
+      digito_verificacion,
+      representante_legal,
+      tipo_sociedad,
+      matricula_mercantil,
+      camara_comercio,
+      fecha_matricula,
+      actividad_economica,
       email,
       telefono,
       direccion,
@@ -389,7 +413,16 @@ export const updateEmpresa = async (req: Request, res: Response) => {
     await pool.query(`
       UPDATE empresas SET
         nombre = ?,
+        razon_social = ?,
+        tipo_documento = ?,
         nit = ?,
+        digito_verificacion = ?,
+        representante_legal = ?,
+        tipo_sociedad = ?,
+        matricula_mercantil = ?,
+        camara_comercio = ?,
+        fecha_matricula = ?,
+        actividad_economica = ?,
         email = ?,
         telefono = ?,
         direccion = ?,
@@ -402,7 +435,10 @@ export const updateEmpresa = async (req: Request, res: Response) => {
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
-      nombre, nit, email, telefono, direccion, ciudad, pais,
+      nombre, razon_social || null, tipo_documento || 'NIT', nit, digito_verificacion || null,
+      representante_legal || null, tipo_sociedad || null, matricula_mercantil || null,
+      camara_comercio || null, fecha_matricula || null, actividad_economica || null,
+      email, telefono, direccion, ciudad, pais,
       regimen_tributario, tipo_contribuyente, estado, plan_id, id
     ]);
 
