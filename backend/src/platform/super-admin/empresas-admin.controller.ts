@@ -290,6 +290,15 @@ export const createEmpresa = async (req: Request, res: Response) => {
 
     logger.info(`${categoriasDefault.length} categorías por defecto creadas para empresa ${empresaId}`);
 
+    // Crear bodega principal por defecto
+    await connection.query(`
+      INSERT INTO bodegas (
+        empresa_id, codigo, nombre, tipo, es_principal, permite_ventas, activa
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [empresaId, 'BOD-PRINCIPAL', 'Bodega Principal', 'bodega', true, true, true]);
+
+    logger.info(`Bodega principal creada para empresa ${empresaId}`);
+
     // TODO: Crear configuraciones por defecto cuando la tabla exista
     // const configuracionesDefault = [
     //   ['moneda_simbolo', '$', 'texto', 'general', 'Símbolo de la moneda'],
