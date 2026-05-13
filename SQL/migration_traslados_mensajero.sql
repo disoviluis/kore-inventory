@@ -45,13 +45,12 @@ ALTER TABLE traslados
 
 -- Auditoría
 INSERT INTO auditoria_logs (
-    empresa_id, accion, modulo, tabla, descripcion_cambio
+    empresa_id, accion, modulo, tabla
 ) VALUES (
     NULL, 
     'migration', 
     'traslados', 
-    'traslados', 
-    'Agregados campos para módulo de mensajero: mensajero_id, datos destinatario, firma digital, geolocalización'
+    'traslados'
 );
 
 SELECT 
