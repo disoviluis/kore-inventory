@@ -8,7 +8,7 @@
 
 import { Request, Response } from 'express';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
-import { pool } from '../../shared/database';
+import pool from '../../shared/database';
 import logger from '../../shared/logger';
 
 /**

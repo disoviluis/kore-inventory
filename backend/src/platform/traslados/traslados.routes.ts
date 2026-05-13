@@ -14,7 +14,7 @@ import {
   cancelarTraslado,
   getMisTrasladosMensajero
 } from './traslados.controller';
-import { authenticateToken } from '../../middleware/auth';
+import { authenticateToken } from '../../core/auth/auth.middleware';
 
 const router = Router();
 
