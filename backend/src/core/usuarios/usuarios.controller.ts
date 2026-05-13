@@ -289,6 +289,28 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
 
       // Asignar roles si se proporcionaron
       if (roles_ids && Array.isArray(roles_ids) && roles_ids.length > 0) {
+        // VALIDAR que admin_empresa NO pueda asignar roles de sistema
+        if (usuario.tipo_usuario !== 'super_admin') {
+          // Verificar que todos los roles sean válidos para admin_empresa
+          const [rolesAValidar] = await connection.execute<RowDataPacket[]>(
+            `SELECT id, nombre, tipo, nivel 
+             FROM roles 
+             WHERE id IN (${roles_ids.map(() => '?').join(',')})`,
+            roles_ids
+          );
+
+          for (const rol of rolesAValidar) {
+            if (rol.tipo === 'sistema' || rol.nivel >= 80) {
+              await connection.rollback();
+              res.status(403).json({
+                success: false,
+                message: `No tienes permiso para asignar el rol "${rol.nombre}" (es un rol de sistema)`
+              });
+              return;
+            }
+          }
+        }
+        
         for (const rolId of roles_ids) {
           await connection.execute(
             `INSERT INTO usuario_rol (usuario_id, rol_id, empresa_id, created_by)
@@ -412,6 +434,28 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
 
     // Actualizar roles si se proporcionaron
     if (roles_ids !== undefined && Array.isArray(roles_ids)) {
+      // VALIDAR que admin_empresa NO pueda asignar roles de sistema
+      if (usuario.tipo_usuario !== 'super_admin' && roles_ids.length > 0) {
+        // Verificar que todos los roles sean válidos para admin_empresa
+        const [rolesAValidar] = await connection.execute<RowDataPacket[]>(
+          `SELECT id, nombre, tipo, nivel 
+           FROM roles 
+           WHERE id IN (${roles_ids.map(() => '?').join(',')})`,
+          roles_ids
+        );
+
+        for (const rol of rolesAValidar) {
+          if (rol.tipo === 'sistema' || rol.nivel >= 80) {
+            await connection.rollback();
+            res.status(403).json({
+              success: false,
+              message: `No tienes permiso para asignar el rol "${rol.nombre}" (es un rol de sistema)`
+            });
+            return;
+          }
+        }
+      }
+      
       // Eliminar roles actuales de esta empresa
       await connection.execute(
         'DELETE FROM usuario_rol WHERE usuario_id = ? AND empresa_id = ?',

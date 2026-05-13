@@ -3020,6 +3020,10 @@ async function cargarUsuariosEmpresa() {
 async function cargarRolesParaUsuario() {
   try {
     const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    const usuarioActual = JSON.parse(localStorage.getItem('usuario') || '{}');
+    
+    console.log('🔐 Cargando roles para asignación...');
+    console.log('👤 Usuario actual:', usuarioActual.tipo_usuario);
     
     const response = await fetch(`${API_URL}/roles?empresa_id=${empresaActiva.id}`, {
       headers: {
@@ -3031,6 +3035,8 @@ async function cargarRolesParaUsuario() {
     
     const data = await response.json();
     rolesDisponiblesEmpresa = data.data || [];
+    
+    console.log('📋 Roles disponibles:', rolesDisponiblesEmpresa);
     
     // Renderizar checkboxes
     const container = document.getElementById('rolesCheckboxContainer');
@@ -3045,7 +3051,36 @@ async function cargarRolesParaUsuario() {
       return;
     }
     
-    container.innerHTML = rolesDisponiblesEmpresa.map(rol => `
+    // Filtrar roles según tipo de usuario
+    const rolesFiltrados = rolesDisponiblesEmpresa.filter(rol => {
+      // Super admin puede asignar cualquier rol
+      if (usuarioActual.tipo_usuario === 'super_admin') {
+        return true;
+      }
+      
+      // Admin empresa NO puede asignar roles de sistema (nivel >= 80)
+      if (rol.tipo === 'sistema' || rol.nivel >= 80) {
+        console.warn(`⚠️ Rol "${rol.nombre}" filtrado (tipo: ${rol.tipo}, nivel: ${rol.nivel})`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    console.log('✅ Roles disponibles para asignación:', rolesFiltrados.length);
+    
+    if (rolesFiltrados.length === 0) {
+      container.innerHTML = `
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>
+          <strong>No hay roles disponibles para asignar.</strong><br>
+          <small>Como administrador de empresa, puedes crear roles personalizados en el módulo "Roles y Permisos".</small>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = rolesFiltrados.map(rol => `
       <div class="form-check mb-2">
         <input class="form-check-input rol-checkbox" type="checkbox" value="${rol.id}" id="rol_${rol.id}">
         <label class="form-check-label" for="rol_${rol.id}">
@@ -3054,12 +3089,13 @@ async function cargarRolesParaUsuario() {
           <span class="badge bg-${rol.tipo === 'sistema' ? 'secondary' : 'primary'} ms-2">
             ${rol.tipo === 'sistema' ? 'Sistema' : 'Personalizado'}
           </span>
+          <span class="badge bg-info ms-1">Nivel ${rol.nivel}</span>
         </label>
       </div>
     `).join('');
     
   } catch (error) {
-    console.error('Error:', error);
+    console.error('❌ Error al cargar roles:', error);
     document.getElementById('rolesCheckboxContainer').innerHTML = `
       <div class="alert alert-danger">
         <i class="bi bi-exclamation-triangle me-2"></i>
