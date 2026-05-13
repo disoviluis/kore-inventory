@@ -262,7 +262,7 @@ SELECT
         ELSE 'Normal'
     END as estado_stock,
     p.precio_compra,
-    p.precio_venta,
+    p.precio_minorista as precio_venta,
     (pb.stock_actual * p.precio_compra) as valor_inventario,
     b.estado as bodega_estado,
     b.permite_ventas
