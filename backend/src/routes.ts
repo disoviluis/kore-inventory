@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import authRoutes from './core/auth/auth.routes';
+import publicRoutes from './core/public/public.routes';
 import empresasRoutes from './platform/empresas/empresas.routes';
 import dashboardRoutes from './core/dashboard/dashboard.routes';
 import productosRoutes from './platform/productos/productos.routes';
@@ -25,6 +26,11 @@ import bodegasRoutes from './platform/bodegas/bodegas.routes';
 import trasladosRoutes from './platform/traslados/traslados.routes';
 
 const router = Router();
+
+// ============================================
+// RUTAS PÚBLICAS (Sin autenticación)
+// ============================================
+router.use('/public', publicRoutes);
 
 // ============================================
 // RUTAS DE AUTENTICACIÓN

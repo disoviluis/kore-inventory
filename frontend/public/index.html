@@ -200,77 +200,11 @@
                 <h2 class="display-5 fw-bold text-primary">Planes y Productos</h2>
                 <p class="lead text-muted">Escoge el plan perfecto para tu negocio</p>
             </div>
-            <div class="row g-4 justify-content-center">
-                <div class="col-lg-4 col-md-6">
-                    <div class="card h-100 border-0 shadow">
-                        <div class="card-header bg-white border-0 pt-4 pb-0">
-                            <h4 class="text-center fw-bold">Plan Básico</h4>
-                            <div class="text-center py-3">
-                                <h2 class="display-4 fw-bold text-primary">$29<small class="fs-6 text-muted">/mes</small></h2>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-unstyled">
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>1 Empresa</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>5 Usuarios</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>POS Básico</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Gestión Inventario</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Reportes Básicos</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte Email</li>
-                            </ul>
-                            <div class="d-grid">
-                                <a href="login.html" class="btn btn-outline-primary">Comenzar</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-4 col-md-6">
-                    <div class="card h-100 border-0 shadow-lg border-primary" style="transform: scale(1.05);">
-                        <div class="card-header bg-primary text-white border-0 pt-4 pb-0">
-                            <div class="badge bg-warning text-dark mb-2">MÁS POPULAR</div>
-                            <h4 class="text-center fw-bold">Plan Profesional</h4>
-                            <div class="text-center py-3">
-                                <h2 class="display-4 fw-bold">$79<small class="fs-6">/mes</small></h2>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-unstyled">
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>5 Empresas</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>20 Usuarios</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>POS Avanzado</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Inventario Multi-bodega</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Contabilidad Completa</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Reportes Avanzados</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte Prioritario</li>
-                            </ul>
-                            <div class="d-grid">
-                                <a href="login.html" class="btn btn-primary">Comenzar</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-4 col-md-6">
-                    <div class="card h-100 border-0 shadow">
-                        <div class="card-header bg-white border-0 pt-4 pb-0">
-                            <h4 class="text-center fw-bold">Plan Enterprise</h4>
-                            <div class="text-center py-3">
-                                <h2 class="display-4 fw-bold text-primary">$199<small class="fs-6 text-muted">/mes</small></h2>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-unstyled">
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Empresas Ilimitadas</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Usuarios Ilimitados</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Todos los Módulos</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>API Completa</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>White Label</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte 24/7</li>
-                                <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Gestor Dedicado</li>
-                            </ul>
-                            <div class="d-grid">
-                                <a href="#contacto" class="btn btn-outline-primary">Contactar</a>
-                            </div>
-                        </div>
+            <!-- Planes se cargan dinámicamente desde la API -->
+            <div id="planes-container" class="row g-4 justify-content-center">
+                <div class="col-12 text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando planes...</span>
                     </div>
                 </div>
             </div>
@@ -451,5 +385,109 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
     <script src="assets/js/main.js"></script>
+    
+    <!-- Cargar planes dinámicamente desde API -->
+    <script>
+        // URL base de la API
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000/api'
+            : 'http://18.191.181.99/api';
+
+        /**
+         * Cargar planes desde la API pública
+         */
+        async function cargarPlanes() {
+            const container = document.getElementById('planes-container');
+            
+            try {
+                const response = await fetch(`${API_URL}/public/planes`);
+                const data = await response.json();
+                
+                if (!data.success || !data.data || data.data.length === 0) {
+                    throw new Error('No se pudieron cargar los planes');
+                }
+                
+                const planes = data.data;
+                container.innerHTML = '';
+                
+                planes.forEach((plan, index) => {
+                    const esDestacado = plan.destacado === 1;
+                    const col = document.createElement('div');
+                    col.className = 'col-lg-4 col-md-6';
+                    
+                    // Parsear módulos incluidos
+                    let modulos = [];
+                    try {
+                        modulos = JSON.parse(plan.modulos_incluidos);
+                    } catch (e) {
+                        modulos = [];
+                    }
+                    
+                    // Mapear nombres de características
+                    const caracteristicas = [
+                        plan.max_empresas === null ? 'Empresas Ilimitadas' : `${plan.max_empresas} ${plan.max_empresas === 1 ? 'Empresa' : 'Empresas'}`,
+                        plan.max_usuarios_por_empresa === null ? 'Usuarios Ilimitados' : `${plan.max_usuarios_por_empresa} Usuarios`,
+                        modulos.includes('pos') ? 'POS Completo' : null,
+                        plan.multi_bodega ? 'Inventario Multi-bodega' : 'Gestión Inventario',
+                        plan.reportes_avanzados ? 'Reportes Avanzados' : 'Reportes Básicos',
+                        plan.api_access ? 'API Completa' : null,
+                        plan.white_label ? 'White Label' : null,
+                        plan.soporte_nivel === '24/7' ? 'Soporte 24/7' : plan.soporte_nivel === 'prioritario' ? 'Soporte Prioritario' : 'Soporte Email'
+                    ].filter(Boolean);
+                    
+                    // Determinar estilo del card
+                    const cardClass = esDestacado ? 'card h-100 border-0 shadow-lg border-primary' : 'card h-100 border-0 shadow';
+                    const cardStyle = esDestacado ? 'style="transform: scale(1.05);"' : '';
+                    const headerClass = esDestacado ? 'card-header bg-primary text-white border-0 pt-4 pb-0' : 'card-header bg-white border-0 pt-4 pb-0';
+                    const priceClass = esDestacado ? 'display-4 fw-bold' : 'display-4 fw-bold text-primary';
+                    const priceSmallClass = esDestacado ? 'fs-6' : 'fs-6 text-muted';
+                    const btnClass = esDestacado ? 'btn btn-primary' : 'btn btn-outline-primary';
+                    const btnText = plan.nombre === 'Enterprise' ? 'Contactar' : 'Comenzar';
+                    const btnHref = plan.nombre === 'Enterprise' ? '#contacto' : 'login.html';
+                    
+                    col.innerHTML = `
+                        <div class="${cardClass}" ${cardStyle}>
+                            <div class="${headerClass}">
+                                ${esDestacado ? '<div class="badge bg-warning text-dark mb-2">MÁS POPULAR</div>' : ''}
+                                <h4 class="text-center fw-bold">Plan ${plan.nombre}</h4>
+                                <div class="text-center py-3">
+                                    <h2 class="${priceClass}">$${plan.precio_mensual}<small class="${priceSmallClass}">/mes</small></h2>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled">
+                                    ${caracteristicas.map(c => `<li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>${c}</li>`).join('')}
+                                </ul>
+                                <div class="d-grid">
+                                    <a href="${btnHref}" class="${btnClass}">${btnText}</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(col);
+                });
+                
+            } catch (error) {
+                console.error('Error al cargar planes:', error);
+                // Fallback: mostrar mensaje de error
+                container.innerHTML = `
+                    <div class="col-12 text-center">
+                        <div class="alert alert-warning" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            No se pudieron cargar los planes. Por favor, recarga la página.
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Cargar planes cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', cargarPlanes);
+        } else {
+            cargarPlanes();
+        }
+    </script>
 </body>
 </html>
