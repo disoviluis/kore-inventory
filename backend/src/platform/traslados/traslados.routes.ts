@@ -14,12 +14,12 @@ import {
   cancelarTraslado,
   getMisTrasladosMensajero
 } from './traslados.controller';
-import { authenticateToken } from '../../core/auth/auth.middleware';
+import { authMiddleware } from '../../core/middleware/auth.middleware';
 
 const router = Router();
 
 // Todas las rutas requieren autenticación
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 /**
  * GET /api/traslados
