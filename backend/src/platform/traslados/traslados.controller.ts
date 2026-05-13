@@ -16,7 +16,7 @@ import logger from '../../shared/logger';
  * Lista todos los traslados con filtros opcionales
  * Query params: empresa_id, estado, mensajero_id, fecha_desde, fecha_hasta
  */
-export const getTraslados = async (req: Request, res: Response): Promise<void> => {
+export const getTraslados = async (req: Request, res: Response) => {
   try {
     const { 
       empresa_id, 
@@ -131,7 +131,7 @@ export const getTraslados = async (req: Request, res: Response): Promise<void> =
  * GET /api/traslados/:id
  * Obtiene un traslado específico con su detalle
  */
-export const getTrasladoById = async (req: Request, res: Response): Promise<void> => {
+export const getTrasladoById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const usuario = (req as any).usuario;
