@@ -389,15 +389,13 @@ DELIMITER ;
 -- 7. ÍNDICES ADICIONALES PARA PERFORMANCE
 -- =====================================================
 
--- Índice para búsquedas rápidas de productos con stock bajo
-CREATE INDEX idx_stock_bajo_por_bodega 
-ON productos_bodegas (bodega_id, stock_actual, stock_minimo)
-WHERE stock_actual <= stock_minimo;
+-- Índice compuesto para búsquedas de stock bajo por bodega
+CREATE INDEX idx_stock_bodega_nivel 
+ON productos_bodegas (bodega_id, stock_actual, stock_minimo);
 
--- Índice para traslados pendientes
-CREATE INDEX idx_traslados_pendientes 
-ON traslados (empresa_id, estado, fecha_solicitud)
-WHERE estado IN ('pendiente_aprobacion', 'aprobado', 'en_transito');
+-- Índice compuesto para traslados por empresa y estado
+CREATE INDEX idx_traslados_empresa_estado_fecha 
+ON traslados (empresa_id, estado, fecha_solicitud);
 
 -- =====================================================
 -- 8. REGISTRAR MIGRACIÓN
