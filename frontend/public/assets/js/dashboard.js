@@ -172,9 +172,26 @@ async function cargarEmpresas(usuarioId) {
       companySelector.addEventListener('change', (e) => {
         const empresaId = e.target.value;
         const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
+        console.log('🔄 Cambio de empresa detectado:', empresaSeleccionada);
         localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
         cargarEstadisticas(empresaId);
         verificarConfiguracionFacturacion();
+        
+        // Recargar el contenido del módulo activo
+        const moduloActivo = document.querySelector('.module-content:not([style*="display: none"])');
+        if (moduloActivo) {
+          const moduloId = moduloActivo.id;
+          console.log('🔄 Recargando módulo activo:', moduloId);
+          
+          // Recargar según el módulo activo
+          if (moduloId === 'usuariosModule' && typeof cargarUsuariosEmpresa === 'function') {
+            cargarUsuariosEmpresa();
+          } else if (moduloId === 'rolesModule' && typeof cargarRoles === 'function') {
+            cargarRoles();
+          } else if (moduloId === 'impuestosModule' && typeof cargarImpuestos === 'function') {
+            cargarImpuestos();
+          }
+        }
       });
       
     } else {
@@ -2864,7 +2881,16 @@ async function cargarUsuariosEmpresa() {
   
   try {
     const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
-    console.log('📦 Empresa activa:', empresaActiva);
+    console.log('📦 Empresa activa (localStorage):', empresaActiva);
+    
+    // Verificar que el dropdown también tenga la misma empresa seleccionada
+    const companySelector = document.getElementById('companySelector');
+    if (companySelector) {
+      console.log('🔍 Empresa en dropdown:', {
+        value: companySelector.value,
+        texto: companySelector.options[companySelector.selectedIndex]?.text
+      });
+    }
     
     const tbody = document.getElementById('usuariosTableBody');
     
