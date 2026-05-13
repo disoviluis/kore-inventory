@@ -1089,7 +1089,7 @@ async function cargarMetricasUsuarios() {
 
 // Renderizar tabla de usuarios
 function renderizarTablaUsuarios(usuarios) {
-  const tbody = document.getElementById('usuariosTableBody');
+  const tbody = document.getElementById('usuariosAdminTableBody');
   if (!tbody) return;
 
   if (!usuarios || usuarios.length === 0) {
@@ -2892,7 +2892,7 @@ async function cargarUsuariosEmpresa() {
       });
     }
     
-    const tbody = document.getElementById('usuariosTableBody');
+    const tbody = document.getElementById('usuariosEmpresaTableBody');
     
     if (!empresaActiva || !empresaActiva.id) {
       console.warn('⚠️ No hay empresa activa seleccionada');
@@ -2999,7 +2999,7 @@ async function cargarUsuariosEmpresa() {
     
   } catch (error) {
     console.error('❌ Error al cargar usuarios:', error);
-    const tbody = document.getElementById('usuariosTableBody');
+    const tbody = document.getElementById('usuariosEmpresaTableBody');
     if (tbody) {
       tbody.innerHTML = `
         <tr>
@@ -3381,7 +3381,8 @@ function filtrarUsuarios() {
   const searchText = document.getElementById('searchUsuarios')?.value.toLowerCase() || '';
   const activoFilter = document.getElementById('filterUsuarioActivo')?.value || '';
   
-  const rows = document.querySelectorAll('#usuariosTableBody tr');
+  // Buscar tabla en el módulo activo (puede ser Admin o Empresa)
+  const rows = document.querySelectorAll('#usuariosEmpresaTableBody tr, #usuariosAdminTableBody tr');
   
   rows.forEach(row => {
     const nombre = row.cells[1]?.textContent.toLowerCase() || '';
