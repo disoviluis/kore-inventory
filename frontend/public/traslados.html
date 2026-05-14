@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traslados - KORE Inventory</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+    <style>
+        .traslado-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .traslado-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important;
+        }
+        .avatar-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+        }
+        .producto-item {
+            border-left: 3px solid #0d6efd;
+            background: #f8f9fa;
+            transition: background 0.2s;
+        }
+        .producto-item:hover {
+            background: #e9ecef;
+        }
+        .timeline-vertical {
+            position: relative;
+            padding-left: 30px;
+        }
+        .timeline-vertical::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+        .timeline-step {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -25px;
+            top: 5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 3px solid;
+            background: white;
+        }
+        .producto-selector {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mobile Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="d-flex align-items-center">
+                <div class="logo-container-sidebar me-2">
+                    <i class="bi bi-boxes"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0 fw-bold text-white">KORE<span class="text-warning">.</span>inventory</h5>
+                    <small class="text-white-50">ERP SaaS</small>
+                </div>
+            </div>
+            <button class="btn-close-sidebar d-lg-none" id="closeSidebar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <!-- User Info -->
+        <div class="sidebar-user">
+            <div class="d-flex align-items-center">
+                <div class="user-avatar me-3">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="user-name" id="userName">Cargando...</div>
+                    <div class="user-role" id="userRole">-</div>
+                </div>
+                <div class="dropdown">
+                    <button class="btn-user-menu" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Mi Perfil</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Configuración</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Company Selector -->
+        <div class="company-selector">
+            <label class="form-label text-white-50 small mb-2">Empresa Activa</label>
+            <select class="form-select form-select-sm" id="companySelector">
+                <option value="">Cargando empresas...</option>
+            </select>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="sidebar-nav" id="sidebarNav">
+            <ul class="nav flex-column">
+                <!-- Dashboard -->
+                <li class="nav-item">
+                    <a class="nav-link" href="dashboard.html">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                <!-- OPERACIONES Section -->
+                <li class="nav-item">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#operacionesCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>OPERACIONES</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                    </a>
+                    <div class="collapse" id="operacionesCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link" href="ventas.html">
+                                    <i class="bi bi-cart-check"></i>
+                                    <span>Punto de Venta</span>
+                                    <span class="badge bg-success">POS</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="ventas-historial.html">
+                                    <i class="bi bi-receipt"></i>
+                                    <span>Ventas</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="clientes.html">
+                                    <i class="bi bi-people"></i>
+                                    <span>Clientes</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="inventario.html">
+                                    <i class="bi bi-box-seam"></i>
+                                    <span>Inventario</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="productos.html">
+                                    <i class="bi bi-tags"></i>
+                                    <span>Productos</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="proveedores.html">
+                                    <i class="bi bi-truck"></i>
+                                    <span>Proveedores</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="compras.html">
+                                    <i class="bi bi-bag-check"></i>
+                                    <span>Compras</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- LOGÍSTICA Section -->
+                <li class="nav-item">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#logisticaCollapse" role="button" aria-expanded="true">
+                        <i class="bi bi-geo-alt"></i>
+                        <span>LOGÍSTICA</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                    </a>
+                    <div class="collapse show" id="logisticaCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link" href="bodegas.html">
+                                    <i class="bi bi-building"></i>
+                                    <span>Bodegas</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="traslados.html">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    <span>Traslados</span>
+                                    <span class="badge bg-info">Nuevo</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="mensajeros-dashboard.html">
+                                    <i class="bi bi-truck"></i>
+                                    <span>Control Mensajeros</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- REPORTES Section -->
+                <li class="nav-item">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#reportesCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        <span>REPORTES</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                    </a>
+                    <div class="collapse" id="reportesCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-bar-chart-line"></i>
+                                    <span>Ventas</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#">
+                                    <i class="bi bi-boxes"></i>
+                                    <span>Inventario</span>
+                                    <span class="badge bg-secondary">Próximamente</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+
+                <!-- ADMINISTRACIÓN Section -->
+                <li class="nav-item">
+                    <a class="nav-link nav-section" data-bs-toggle="collapse" href="#administracionCollapse" role="button" aria-expanded="false">
+                        <i class="bi bi-gear"></i>
+                        <span>ADMINISTRACIÓN</span>
+                        <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                    </a>
+                    <div class="collapse" id="administracionCollapse">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a class="nav-link" href="roles.html">
+                                    <i class="bi bi-shield-lock"></i>
+                                    <span>Roles y Permisos</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="usuarios.html">
+                                    <i class="bi bi-person-badge"></i>
+                                    <span>Usuarios</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="configuracion.html">
+                                    <i class="bi bi-sliders"></i>
+                                    <span>Configuración</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <button class="btn-menu d-lg-none" id="menuToggle">
+                <i class="bi bi-list"></i>
+            </button>
+            <h1 class="page-title mb-0">
+                <i class="bi bi-arrow-left-right me-2 text-primary"></i>
+                Gestión de Traslados
+            </h1>
+            <div class="user-actions">
+               <span class="badge bg-success">Sistema Activo</span>
+            </div>
+        </div>
+
+        <!-- Page Content -->
+        <div class="content-wrapper">
+            
+            <!-- Action Bar -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="searchTraslado" 
+                                       placeholder="Buscar por número...">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="filterEstado">
+                                <option value="">Todos los estados</option>
+                                <option value="borrador">Borrador</option>
+                                <option value="pendiente_aprobacion">Pendiente</option>
+                                <option value="aprobado">Aprobado</option>
+                                <option value="en_transito">En Tránsito</option>
+                                <option value="recibido">Recibido</option>
+                                <option value="cancelado">Cancelado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select" id="filterBodega">
+                                <option value="">Todas las bodegas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" class="form-control" id="filterFecha">
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-primary" id="btnNuevoTraslado">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Nuevo Traslado
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-icon bg-primary bg-opacity-10 text-primary">
+                                        <i class="bi bi-arrow-left-right fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="text-muted small">Total Traslados</div>
+                                    <div class="fs-4 fw-bold" id="statTotal">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-icon bg-warning bg-opacity-10 text-warning">
+                                        <i class="bi bi-clock-history fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="text-muted small">Pendientes</div>
+                                    <div class="fs-4 fw-bold" id="statPendientes">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-icon bg-info bg-opacity-10 text-info">
+                                        <i class="bi bi-truck fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="text-muted small">En Tránsito</div>
+                                    <div class="fs-4 fw-bold" id="statEnTransito">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-icon bg-success bg-opacity-10 text-success">
+                                        <i class="bi bi-check-circle fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="text-muted small">Completados</div>
+                                    <div class="fs-4 fw-bold" id="statCompletados">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Traslados Table -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Lista de Traslados</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="100">Número</th>
+                                    <th>Origen → Destino</th>
+                                    <th width="100" class="text-center">Productos</th>
+                                    <th width="130">Estado</th>
+                                    <th width="130">Fecha</th>
+                                    <th width="150">Responsable</th>
+                                    <th width="150" class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trasladosTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Cargando...</span>
+                                        </div>
+                                        <p class="mt-2 text-muted">Cargando traslados...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal Crear/Editar Traslado -->
+    <div class="modal fade" id="modalTraslado" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTrasladoTitle">Nuevo Traslado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="trasladoForm">
+                        <input type="hidden" id="trasladoId">
+                        
+                        <!-- Información Básica -->
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 text-primary">
+                                    <i class="bi bi-info-circle me-2"></i>Información del Traslado
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Bodega Origen <span class="text-danger">*</span></label>
+                                <select class="form-select" id="bodegaOrigen" required>
+                                    <option value="">Seleccionar bodega...</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Bodega Destino <span class="text-danger">*</span></label>
+                                <select class="form-select" id="bodegaDestino" required>
+                                    <option value="">Seleccionar bodega...</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea class="form-control" id="observaciones" rows="2" placeholder="Motivo o notas del traslado..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Información Destinatario -->
+                        <div class="row g-3 mt-3">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 text-primary">
+                                    <i class="bi bi-person-vcard me-2"></i>Información del Destinatario
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre Completo</label>
+                                <input type="text" class="form-control" id="destinatarioNombre" placeholder="Quien recibe">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Documento</label>
+                                <input type="text" class="form-control" id="destinatarioDocumento" placeholder="CC o identificación">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="destinatarioTelefono" placeholder="Contacto">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Cargo</label>
+                                <input type="text" class="form-control" id="destinatarioCargo" placeholder="Cargo en bodega destino">
+                            </div>
+                        </div>
+
+                        <!-- Productos -->
+                        <div class="row g-3 mt-3">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2 text-primary">
+                                    <i class="bi bi-box-seam me-2"></i>Productos a Trasladar
+                                </h6>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="input-group mb-3">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="searchProducto" 
+                                           placeholder="Buscar producto por nombre o código..." disabled>
+                                    <button class="btn btn-outline-secondary" type="button" id="btnBuscarProducto" disabled>
+                                        <i class="bi bi-plus-circle me-1"></i>Agregar
+                                    </button>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Primero selecciona la bodega origen para ver productos disponibles
+                                </small>
+                            </div>
+
+                            <div class="col-12">
+                                <div id="productosSeleccionados" class="border rounded p-3 bg-light">
+                                    <p class="text-muted text-center mb-0">
+                                        <i class="bi bi-inbox fs-3"></i><br>
+                                        No hay productos agregados
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarTraslado">
+                        <i class="bi bi-save me-2"></i>Guardar Traslado
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle Traslado -->
+    <div class="modal fade" id="modalDetalle" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-text me-2"></i>
+                        Detalle Traslado <span id="detalleNumero" class="badge bg-secondary"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalDetalleContent">
+                    <!-- Contenido cargado dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Seleccionar Productos -->
+    <div class="modal fade" id="modalProductos" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-seam me-2"></i>Seleccionar Productos
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchProductoModal" 
+                               placeholder="Buscar por nombre o código...">
+                    </div>
+                    <div class="producto-selector" id="listaProductosModal">
+                        <!-- Productos cargados dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5.3 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Custom JS -->
+    <script src="assets/js/traslados.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Mis Entregas - KORE Mensajero</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --gray-100: #f8f9fa;
+            --gray-800: #343a40;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--gray-100);
+            padding-bottom: 80px;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .mobile-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0a58ca 100%);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .mobile-header h2 {
+            font-size: 1.25rem;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .mobile-header .user-info {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        /* Tabs */
+        .mobile-tabs {
+            background: white;
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            position: sticky;
+            top: 85px;
+            z-index: 999;
+        }
+
+        .mobile-tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            border: none;
+            background: transparent;
+            color: var(--gray-800);
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .mobile-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .mobile-tab .badge {
+            margin-left: 0.5rem;
+        }
+
+        /* Content */
+        .mobile-content {
+            padding: 1rem;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* Entrega Card */
+        .entrega-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .entrega-card.pendiente {
+            border-left-color: var(--warning-color);
+        }
+
+        .entrega-card.en-transito {
+            border-left-color: var(--primary-color);
+        }
+
+        .entrega-card.completado {
+            border-left-color: var(--success-color);
+        }
+
+        .entrega-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+        }
+
+        .entrega-id {
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 1rem;
+        }
+
+        .entrega-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .entrega-info {
+            margin-bottom: 0.5rem;
+        }
+
+        .entrega-info i {
+            width: 20px;
+            color: var(--primary-color);
+        }
+
+        .entrega-info span {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+
+        .entrega-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-entrega {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .btn-view {
+            background: var(--gray-100);
+            color: var(--gray-800);
+        }
+
+        .btn-start {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Detalle Modal */
+        .modal-detalle {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            z-index: 2000;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+            overflow-y: auto;
+        }
+
+        .modal-detalle.show {
+            transform: translateY(0);
+        }
+
+        .modal-header-mobile {
+            background: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .btn-back {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            padding: 0;
+            margin-right: 1rem;
+        }
+
+        .modal-body-mobile {
+            padding: 1rem;
+        }
+
+        .info-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid #dee2e6;
+        }
+
+        .info-section h6 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+
+        .info-value {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        /* GPS Section */
+        .gps-section {
+            background: #e7f3ff;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .btn-gps {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            width: 100%;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-gps i {
+            font-size: 1.5rem;
+        }
+
+        .gps-coords {
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+
+        /* Photo Section */
+        .photo-section {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .photo-preview {
+            width: 100%;
+            max-height: 300px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .photo-preview.show {
+            display: block;
+        }
+
+        .btn-photo {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            width: 100%;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-photo i {
+            font-size: 1.5rem;
+        }
+
+        /* Signature Section */
+        .signature-section {
+            margin-bottom: 1rem;
+        }
+
+        .signature-canvas {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            width: 100%;
+            height: 200px;
+            touch-action: none;
+            background: white;
+        }
+
+        .signature-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-clear-signature {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .recipient-name {
+            margin-top: 0.75rem;
+        }
+
+        .recipient-name input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 1rem;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        .btn-complete {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            width: 100%;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .btn-complete:disabled {
+            background: #6c757d;
+            opacity: 0.5;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            border-top: 1px solid #dee2e6;
+            z-index: 1000;
+        }
+
+        .bottom-nav-item {
+            flex: 1;
+            padding: 0.75rem;
+            text-align: center;
+            border: none;
+            background: transparent;
+            color: #6c757d;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            transition: color 0.2s;
+        }
+
+        .bottom-nav-item.active {
+            color: var(--primary-color);
+        }
+
+        .bottom-nav-item i {
+            font-size: 1.5rem;
+        }
+
+        .bottom-nav-item span {
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #dee2e6;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h5 {
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            color: #adb5bd;
+            font-size: 0.875rem;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="mobile-header">
+        <h2><i class="bi bi-truck me-2"></i>Mis Entregas</h2>
+        <div class="user-info">
+            <i class="bi bi-person-circle me-1"></i>
+            <span id="mensajeroNombre">Cargando...</span>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="mobile-tabs">
+        <button class="mobile-tab active" data-tab="pendientes">
+            Pendientes
+            <span class="badge bg-warning text-dark" id="badgePendientes">0</span>
+        </button>
+        <button class="mobile-tab" data-tab="en-transito">
+            En tránsito
+            <span class="badge bg-primary" id="badgeEnTransito">0</span>
+        </button>
+        <button class="mobile-tab" data-tab="completadas">
+            Completadas
+            <span class="badge bg-success" id="badgeCompletadas">0</span>
+        </button>
+    </div>
+
+    <!-- Content -->
+    <div class="mobile-content">
+        <!-- Tab Pendientes -->
+        <div class="tab-pane active" id="tab-pendientes">
+            <div id="listaPendientes"></div>
+        </div>
+
+        <!-- Tab En Tránsito -->
+        <div class="tab-pane" id="tab-en-transito">
+            <div id="listaEnTransito"></div>
+        </div>
+
+        <!-- Tab Completadas -->
+        <div class="tab-pane" id="tab-completadas">
+            <div id="listaCompletadas"></div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle -->
+    <div class="modal-detalle" id="modalDetalle">
+        <div class="modal-header-mobile">
+            <button class="btn-back" id="btnCerrarDetalle">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <h5 class="mb-0">Detalle de Entrega</h5>
+                <small id="detalleTraslado">Traslado #---</small>
+            </div>
+        </div>
+
+        <div class="modal-body-mobile">
+            <!-- Información del Traslado -->
+            <div class="info-section">
+                <h6><i class="bi bi-info-circle me-2"></i>Información</h6>
+                <div class="info-row">
+                    <span class="info-label">Origen:</span>
+                    <span class="info-value" id="detalleOrigen">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Destino:</span>
+                    <span class="info-value" id="detalleDestino">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Productos:</span>
+                    <span class="info-value" id="detalleProductos">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Observaciones:</span>
+                    <span class="info-value" id="detalleObservaciones">-</span>
+                </div>
+            </div>
+
+            <!-- Geolocalización -->
+            <div class="info-section gps-section" id="sectionGPS" style="display: none;">
+                <h6 class="text-primary"><i class="bi bi-geo-alt me-2"></i>Ubicación de Entrega</h6>
+                <button class="btn-gps" id="btnCapturarGPS">
+                    <i class="bi bi-crosshair"></i>
+                    <span>Capturar Mi Ubicación</span>
+                </button>
+                <div class="gps-coords" id="gpsCoords" style="display: none;">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i>
+                    <span id="coordsText">-</span>
+                </div>
+            </div>
+
+            <!-- Foto de Evidencia -->
+            <div class="info-section" id="sectionFoto" style="display: none;">
+                <h6><i class="bi bi-camera me-2"></i>Foto de Evidencia</h6>
+                <input type="file" accept="image/*" capture="environment" style="display: none;" id="inputFoto">
+                <button class="btn-photo" id="btnTomarFoto">
+                    <i class="bi bi-camera-fill"></i>
+                    <span>Tomar Foto</span>
+                </button>
+                <img class="photo-preview" id="photoPreview" alt="Preview">
+            </div>
+
+            <!-- Firma Digital -->
+            <div class="info-section signature-section" id="sectionFirma" style="display: none;">
+                <h6><i class="bi bi-pen me-2"></i>Firma del Receptor</h6>
+                <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+                <div class="signature-controls">
+                    <button class="btn-clear-signature" id="btnClearSignature">
+                        <i class="bi bi-eraser me-1"></i>Limpiar
+                    </button>
+                </div>
+                <div class="recipient-name">
+                    <input type="text" id="inputRecipientName" placeholder="Nombre de quien recibe" class="form-control">
+                </div>
+            </div>
+
+            <!-- Botón Completar (solo para en tránsito) -->
+            <div class="action-buttons" id="actionButtons" style="display: none;">
+                <button class="btn-complete" id="btnCompletarEntrega" disabled>
+                    <i class="bi bi-check-circle me-2"></i>Completar Entrega
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Signature Pad -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <!-- Custom JS -->
+    <script src="assets/js/mensajero-mobile.js"></script>
+
+</body>
+</html>
