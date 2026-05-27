@@ -6,8 +6,8 @@
  * Filtra módulos según permisos del usuario
  */
 
-// API URL - fallback si no está definido en la página
-const API_URL = window.API_URL || 'http://18.191.181.99:3000/api';
+// API URL - usar el global o fallback
+const SIDEBAR_API_URL = typeof API_URL !== 'undefined' ? API_URL : 'http://18.191.181.99:3000/api';
 
 /**
  * Mapeo de enlaces del sidebar a nombres de módulos
@@ -54,7 +54,7 @@ async function cargarModulosPermitidos() {
       return null;
     }
     
-    const response = await fetch(`${API_URL}/auth/permisos/modulos`, {
+    const response = await fetch(`${SIDEBAR_API_URL}/auth/permisos/modulos`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
