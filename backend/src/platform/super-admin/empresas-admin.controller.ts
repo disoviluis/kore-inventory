@@ -180,10 +180,11 @@ export const getEmpresaById = async (req: Request, res: Response) => {
 };
 
 /**
- * POST /api/super-admin/empresas
- * Crea una nueva empresa con licencia
+ * POST /api/super-admin/empresas/trial
+ * Crea una nueva empresa con período de prueba gratuito
+ * RECOMENDADO: Usar este endpoint para nuevas empresas
  */
-export const createEmpresa = async (req: Request, res: Response) => {
+export const createEmpresaTrial = async (req: Request, res: Response) => {
   const connection = await pool.getConnection();
   
   try {
@@ -208,11 +209,14 @@ export const createEmpresa = async (req: Request, res: Response) => {
       pais = 'Colombia',
       regimen_tributario,
       tipo_contribuyente,
-      plan_id,
-      tipo_facturacion = 'mensual',
-      dias_trial = 15,
-      auto_renovacion = true
+      plan_id = 1  // Plan Básico por defecto
     } = req.body;
+
+    // Obtener días de trial desde configuración (default: 30)
+    const [config] = await connection.query<RowDataPacket[]>(
+      "SELECT valor FROM sistema_configuracion WHERE clave = 'dias_trial_default' LIMIT 1"
+    );
+    const diasTrial = config.length > 0 ? parseInt(config[0].valor) : 30;
 
     // Validar plan
     const [planes] = await connection.query<RowDataPacket[]>(
@@ -226,7 +230,7 @@ export const createEmpresa = async (req: Request, res: Response) => {
 
     const plan = planes[0];
 
-    // Crear empresa
+    // Crear empresa en modo TRIAL
     const [result] = await connection.query<ResultSetHeader>(`
       INSERT INTO empresas (
         nombre, razon_social, tipo_documento, nit, digito_verificacion,
@@ -235,51 +239,66 @@ export const createEmpresa = async (req: Request, res: Response) => {
         email, telefono, direccion, ciudad, pais,
         regimen_tributario, tipo_contribuyente, estado, plan_id,
         fecha_inicio_trial, fecha_fin_trial
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL ? DAY))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'trial', ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL ? DAY))
     `, [
       nombre, razon_social || null, tipo_documento || 'NIT', nit, digito_verificacion || null,
       representante_legal || null, tipo_sociedad || null, matricula_mercantil || null,
       camara_comercio || null, fecha_matricula || null, actividad_economica || null,
       email, telefono, direccion, ciudad, pais,
       regimen_tributario, tipo_contribuyente,
-      dias_trial > 0 ? 'trial' : 'activa',
       plan_id,
-      dias_trial
+      diasTrial
     ]);
 
     const empresaId = result.insertId;
 
-    // Crear licencia
+    // Crear licencia de TRIAL (monto = 0)
     const fechaInicio = new Date();
     const fechaFin = new Date();
-    
-    if (dias_trial > 0) {
-      fechaFin.setDate(fechaFin.getDate() + dias_trial);
-    } else {
-      if (tipo_facturacion === 'mensual') {
-        fechaFin.setMonth(fechaFin.getMonth() + 1);
-      } else {
-        fechaFin.setFullYear(fechaFin.getFullYear() + 1);
-      }
-    }
+    fechaFin.setDate(fechaFin.getDate() + diasTrial);
 
     await connection.query(`
       INSERT INTO licencias (
         empresa_id, plan_id, estado, fecha_inicio, fecha_fin,
-        tipo_facturacion, auto_renovacion,
+        tipo_facturacion, auto_renovacion, monto, moneda,
         limite_usuarios, limite_productos, limite_facturas_mes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, 'activa', ?, ?, 'mensual', 0, 0.00, 'COP', ?, ?, ?)
     `, [
       empresaId,
       plan_id,
-      'activa', // Las licencias siempre son 'activa', el estado trial va solo en empresas
       fechaInicio,
       fechaFin,
-      tipo_facturacion,
-      auto_renovacion ? 1 : 0,
       plan.max_usuarios_por_empresa,
       plan.max_productos,
       plan.max_facturas_mes
+    ]);
+
+    // Registrar pago de trial (monto 0)
+    await connection.query(`
+      INSERT INTO pagos_licencias (
+        licencia_id, empresa_id, plan_id,
+        monto, moneda, tipo, estado,
+        periodo_inicio, periodo_fin, fecha_pago,
+        descripcion
+      ) SELECT 
+        id, empresa_id, plan_id,
+        0.00, 'COP', 'trial_inicial', 'exitoso',
+        fecha_inicio, fecha_fin, NOW(),
+        CONCAT('Período de prueba gratuito de ', ?, ' días')
+      FROM licencias 
+      WHERE empresa_id = ? 
+      ORDER BY id DESC 
+      LIMIT 1
+    `, [diasTrial, empresaId]);
+
+    // Registrar evento
+    await connection.query(`
+      INSERT INTO licencias_eventos (empresa_id, evento, descripcion, datos)
+      VALUES (?, 'trial_iniciado', ?, ?)
+    `, [
+      empresaId, 
+      `Período de prueba de ${diasTrial} días iniciado`,
+      JSON.stringify({ dias_trial: diasTrial, plan: plan.nombre })
     ]);
 
     // Crear categorías por defecto para la nueva empresa
@@ -314,24 +333,6 @@ export const createEmpresa = async (req: Request, res: Response) => {
 
     logger.info(`Bodega principal creada para empresa ${empresaId}`);
 
-    // TODO: Crear configuraciones por defecto cuando la tabla exista
-    // const configuracionesDefault = [
-    //   ['moneda_simbolo', '$', 'texto', 'general', 'Símbolo de la moneda'],
-    //   ['moneda_codigo', 'COP', 'texto', 'general', 'Código de moneda ISO'],
-    //   ['formato_fecha', 'dd/mm/yyyy', 'texto', 'general', 'Formato de fecha'],
-    //   ['requiere_autorizacion_descuentos', '1', 'boolean', 'ventas', 'Requiere autorización para descuentos'],
-    //   ['maximo_descuento_sin_autorizacion', '5', 'numero', 'ventas', 'Máximo descuento sin autorización (%)'],
-    //   ['permite_ventas_credito', '1', 'boolean', 'ventas', 'Permite ventas a crédito'],
-    //   ['dias_credito_default', '30', 'numero', 'ventas', 'Días de crédito por defecto']
-    // ];
-
-    // for (const [clave, valor, tipo, categoria, descripcion] of configuracionesDefault) {
-    //   await connection.query(`
-    //     INSERT INTO empresa_configuracion (empresa_id, clave, valor, tipo, categoria, descripcion)
-    //     VALUES (?, ?, ?, ?, ?, ?)
-    //   `, [empresaId, clave, valor, tipo, categoria, descripcion]);
-    // }
-
     // Auditoría
     await connection.query(`
       INSERT INTO auditoria_logs (
@@ -341,21 +342,23 @@ export const createEmpresa = async (req: Request, res: Response) => {
 
     await connection.commit();
 
-    logger.info(`Empresa creada exitosamente: ${nombre} (ID: ${empresaId})`);
+    logger.info(`Empresa trial creada exitosamente: ${nombre} (ID: ${empresaId}) - ${diasTrial} días`);
 
     res.status(201).json({
       success: true,
-      message: 'Empresa creada exitosamente',
+      message: 'Empresa creada exitosamente con período de prueba gratuito',
       data: {
         id: empresaId,
         nombre,
-        estado: dias_trial > 0 ? 'trial' : 'activa'
+        estado: 'trial',
+        dias_trial: diasTrial,
+        fecha_fin_trial: fechaFin
       }
     });
 
   } catch (error: any) {
     await connection.rollback();
-    logger.error('Error al crear empresa:', error);
+    logger.error('Error al crear empresa trial:', error);
     res.status(500).json({
       success: false,
       message: 'Error al crear empresa',
@@ -365,6 +368,182 @@ export const createEmpresa = async (req: Request, res: Response) => {
     connection.release();
   }
 };
+
+/**
+ * POST /api/super-admin/empresas/:id/activar-licencia
+ * Activa una licencia de pago para una empresa (después del trial)
+ */
+export const activarLicenciaPagada = async (req: Request, res: Response) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    const { id } = req.params;
+    const {
+      plan_id,
+      tipo_facturacion = 'mensual', // 'mensual' o 'anual'
+      auto_renovacion = true,
+      monto, // Monto del pago
+      metodo_pago, // 'tarjeta', 'transferencia', etc.
+      referencia_pago, // ID de transacción de la pasarela
+      datos_pago // JSON con datos adicionales
+    } = req.body;
+
+    // Validar empresa
+    const [empresas] = await connection.query<RowDataPacket[]>(
+      'SELECT * FROM empresas WHERE id = ?',
+      [id]
+    );
+
+    if (empresas.length === 0) {
+      throw new Error('Empresa no encontrada');
+    }
+
+    const empresa = empresas[0];
+
+    // Validar plan
+    const [planes] = await connection.query<RowDataPacket[]>(
+      'SELECT * FROM planes WHERE id = ? AND activo = 1',
+      [plan_id]
+    );
+
+    if (planes.length === 0) {
+      throw new Error('Plan no válido');
+    }
+
+    const plan = planes[0];
+
+    // Calcular monto si no se especificó
+    const montoFinal = monto || (tipo_facturacion === 'anual' ? plan.precio_anual : plan.precio_mensual);
+
+    // Calcular fechas
+    const fechaInicio = new Date();
+    const fechaFin = new Date();
+    
+    if (tipo_facturacion === 'mensual') {
+      fechaFin.setMonth(fechaFin.getMonth() + 1);
+    } else {
+      fechaFin.setFullYear(fechaFin.getFullYear() + 1);
+    }
+
+    // Desactivar licencias anteriores (trial)
+    await connection.query(`
+      UPDATE licencias
+      SET estado = 'cancelada', updated_at = CURRENT_TIMESTAMP
+      WHERE empresa_id = ? AND estado = 'activa'
+    `, [id]);
+
+    // Crear nueva licencia PAGADA
+    const [licenciaResult] = await connection.query<ResultSetHeader>(`
+      INSERT INTO licencias (
+        empresa_id, plan_id, estado, fecha_inicio, fecha_fin,
+        tipo_facturacion, auto_renovacion, monto, moneda,
+        limite_usuarios, limite_productos, limite_facturas_mes
+      ) VALUES (?, ?, 'activa', ?, ?, ?, ?, ?, 'COP', ?, ?, ?)
+    `, [
+      id,
+      plan_id,
+      fechaInicio,
+      fechaFin,
+      tipo_facturacion,
+      auto_renovacion ? 1 : 0,
+      montoFinal,
+      plan.max_usuarios_por_empresa,
+      plan.max_productos,
+      plan.max_facturas_mes
+    ]);
+
+    const licenciaId = licenciaResult.insertId;
+
+    // Registrar pago
+    await connection.query(`
+      INSERT INTO pagos_licencias (
+        licencia_id, empresa_id, plan_id,
+        monto, moneda, tipo, metodo_pago, estado,
+        referencia_pago, datos_pago,
+        periodo_inicio, periodo_fin, fecha_pago,
+        descripcion
+      ) VALUES (?, ?, ?, ?, 'COP', ?, ?, 'exitoso', ?, ?, ?, ?, NOW(), ?)
+    `, [
+      licenciaId, id, plan_id,
+      montoFinal,
+      tipo_facturacion === 'anual' ? 'anual' : 'mensual',
+      metodo_pago || 'manual',
+      referencia_pago || null,
+      datos_pago ? JSON.stringify(datos_pago) : null,
+      fechaInicio,
+      fechaFin,
+      `Licencia ${tipo_facturacion} - Plan ${plan.nombre}`
+    ]);
+
+    // Actualizar estado de la empresa a ACTIVA
+    await connection.query(`
+      UPDATE empresas
+      SET estado = 'activa', plan_id = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [plan_id, id]);
+
+    // Registrar evento
+    await connection.query(`
+      INSERT INTO licencias_eventos (empresa_id, licencia_id, evento, descripcion, datos)
+      VALUES (?, ?, 'licencia_activada', ?, ?)
+    `, [
+      id,
+      licenciaId,
+      `Licencia ${tipo_facturacion} activada - Plan ${plan.nombre}`,
+      JSON.stringify({
+        plan: plan.nombre,
+        tipo_facturacion,
+        monto: montoFinal,
+        fecha_fin: fechaFin
+      })
+    ]);
+
+    // Auditoría
+    await connection.query(`
+      INSERT INTO auditoria_logs (
+        usuario_id, empresa_id, accion, modulo, tabla, registro_id
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `, [req.body.usuario_id || null, id, 'activar_licencia', 'super-admin', 'licencias', licenciaId]);
+
+    await connection.commit();
+
+    logger.info(`Licencia activada para empresa ${id}: ${tipo_facturacion} - ${montoFinal}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Licencia activada exitosamente',
+      data: {
+        licencia_id: licenciaId,
+        empresa_id: id,
+        plan: plan.nombre,
+        tipo_facturacion,
+        monto: montoFinal,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        auto_renovacion
+      }
+    });
+
+  } catch (error: any) {
+    await connection.rollback();
+    logger.error('Error al activar licencia:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al activar licencia',
+      error: error.message
+    });
+  } finally {
+    connection.release();
+  }
+};
+
+/**
+ * POST /api/super-admin/empresas (DEPRECATED - usar createEmpresaTrial)
+ * Mantener por compatibilidad
+ */
+export const createEmpresa = createEmpresaTrial;
 
 /**
  * PUT /api/super-admin/empresas/:id

@@ -1,0 +1,317 @@
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    FLUJO DE LICENCIAS - KORE INVENTORY                        ║
+║                           (Recomendación SaaS)                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  FASE 1: REGISTRO Y TRIAL GRATUITO (30 días)                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Cliente se registra en kore-inventory.com
+         │
+         ▼
+  ┌─────────────────────┐
+  │  Crear Empresa      │
+  │  estado: 'trial'    │
+  │  fecha_fin: +30d    │
+  └──────────┬──────────┘
+             │
+             ▼
+  ┌──────────────────────┐
+  │  Crear Licencia      │
+  │  estado: 'activa'    │
+  │  monto: $0.00        │
+  │  fecha_fin: +30d     │
+  └──────────┬───────────┘
+             │
+             ▼
+  [✅ Acceso completo al sistema por 30 días]
+  [📧 Email día 1: "Bienvenido, tienes 30 días gratis"]
+  [📧 Email día 23: "Te quedan 7 días de trial"]
+  [📧 Email día 27: "Te quedan 3 días, elige un plan"]
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  FASE 2A: VENCIMIENTO SIN PAGO (Cliente no paga)                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Día 30 - Cron ejecuta verificación
+         │
+         ▼
+  ┌──────────────────────┐
+  │  Update Licencia     │
+  │  estado: 'vencida'   │
+  └──────────┬───────────┘
+             │
+             ▼
+  ┌──────────────────────┐
+  │  Update Empresa      │
+  │  estado: 'suspendida'│
+  └──────────┬───────────┘
+             │
+             ▼
+  [❌ Acceso BLOQUEADO al sistema]
+  [📧 Email: "Tu trial expiró - Elige un plan ahora"]
+  
+  Al intentar login:
+  ┌─────────────────────────────────────┐
+  │  🔒 Tu prueba gratuita ha expirado  │
+  │                                      │
+  │  Elige un plan para continuar:      │
+  │  ▶ Básico    - $15.99/mes           │
+  │  ▶ Pro       - $29.99/mes           │
+  │  ▶ Enterprise - $99.99/mes          │
+  │                                      │
+  │  [Seleccionar Plan]                 │
+  └─────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  FASE 2B: CLIENTE PAGA LICENCIA (Mensual)                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Cliente selecciona "Plan Básico - Mensual"
+         │
+         ▼
+  Pasarela de Pago (Stripe/PayU/MercadoPago)
+         │
+         ▼
+  [💳 Pago exitoso: $15.99]
+         │
+         ▼
+  ┌──────────────────────────────────┐
+  │  Crear Registro en pagos_licencias│
+  │  monto: $15.99                   │
+  │  estado: 'exitoso'               │
+  │  referencia: "ch_abc123"         │
+  └──────────┬───────────────────────┘
+             │
+             ▼
+  ┌──────────────────────────────────┐
+  │  Crear NUEVA Licencia            │
+  │  estado: 'activa'                │
+  │  tipo_facturacion: 'mensual'     │
+  │  auto_renovacion: TRUE           │
+  │  fecha_inicio: HOY               │
+  │  fecha_fin: HOY + 30 días        │
+  │  monto: $15.99                   │
+  └──────────┬───────────────────────┘
+             │
+             ▼
+  ┌──────────────────────┐
+  │  Update Empresa      │
+  │  estado: 'activa'    │
+  └──────────┬───────────┘
+             │
+             ▼
+  [✅ Acceso completo restaurado]
+  [📧 Email: "¡Bienvenido! Tu suscripción está activa"]
+  [🧾 Factura electrónica generada]
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  FASE 3A: RENOVACIÓN AUTOMÁTICA (auto_renovacion = true)                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Día 23 (7 días antes de vencer)
+         │
+         ▼
+  [📧 Email: "Tu renovación será el 30 de junio - $15.99"]
+  
+  Día 30 - Fecha de vencimiento
+         │
+         ▼
+  ┌──────────────────────────────────┐
+  │  Intentar cobro automático       │
+  │  Stripe/PayU procesa...          │
+  └──────────┬───────────────────────┘
+             │
+        ┌────┴─────┐
+        │          │
+    ✅ Éxito   ❌ Falla
+        │          │
+        ▼          ▼
+  ┌──────────┐  ┌────────────────────┐
+  │ Renovar  │  │ Período de gracia  │
+  │ +30 días │  │ 3 días intentos    │
+  └──────────┘  └────────────────────┘
+        │              │
+        ▼              ▼
+  [✅ Activo]   [⚠️ Suspender si falla]
+  
+  Si pago EXITOSO:
+  ┌──────────────────────────────────┐
+  │  Crear Registro Pago             │
+  │  monto: $15.99                   │
+  │  estado: 'exitoso'               │
+  └──────────┬───────────────────────┘
+             │
+             ▼
+  ┌──────────────────────────────────┐
+  │  Update Licencia                 │
+  │  fecha_fin: fecha_fin + 30 días  │
+  │  estado: sigue 'activa'          │
+  └──────────┬───────────────────────┘
+             │
+             ▼
+  [✅ Acceso continúa sin interrupción]
+  [📧 Email: "Pago procesado - Gracias"]
+  [🧾 Factura del período]
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  FASE 3B: RENOVACIÓN MANUAL (auto_renovacion = false)                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Día 23 (7 días antes)
+         │
+         ▼
+  [📧 Email: "Tu licencia vence en 7 días - Renueva ahora"]
+  
+  Día 30 - Vencimiento
+         │
+         ▼
+  ┌──────────────────────┐
+  │  Update Licencia     │
+  │  estado: 'vencida'   │
+  └──────────┬───────────┘
+             │
+             ▼
+  ┌──────────────────────┐
+  │  Update Empresa      │
+  │  estado: 'suspendida'│
+  └──────────┬───────────┘
+             │
+             ▼
+  [❌ Acceso BLOQUEADO]
+  [📧 Email: "Tu licencia expiró - Renueva para continuar"]
+  
+  Cliente entra al sistema:
+  ┌─────────────────────────────────────┐
+  │  ⚠️ Tu licencia ha expirado         │
+  │                                      │
+  │  Última renovación: 30-may-2026     │
+  │  Vencimiento: 30-jun-2026           │
+  │                                      │
+  │  [Renovar por $15.99]               │
+  └─────────────────────────────────────┘
+         │
+         ▼
+  Cliente paga → Mismo proceso FASE 2B
+  
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ESCENARIO: LICENCIA ANUAL                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Cliente elige "Plan Básico - Anual"
+         │
+         ▼
+  [💳 Pago: $159.90] (17% descuento vs mensual)
+         │
+         ▼
+  ┌──────────────────────────────────┐
+  │  Crear Licencia                  │
+  │  tipo_facturacion: 'anual'       │
+  │  fecha_inicio: HOY               │
+  │  fecha_fin: HOY + 365 días       │
+  │  monto: $159.90                  │
+  └──────────────────────────────────┘
+         │
+         ▼
+  [✅ Activo por 12 meses completos]
+  [📧 Email mes 11: "Se renueva en 30 días"]
+  
+  Día 365:
+  - Si auto_renovacion = true → Cobra $159.90 + 365 días
+  - Si auto_renovacion = false → Suspende hasta pago manual
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  VERIFICACIÓN DIARIA (CRON JOB - 00:00 AM)                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  CRON ejecuta script cada día
+         │
+         ▼
+  ┌────────────────────────────────────────┐
+  │ 1. Marcar licencias vencidas           │
+  │    UPDATE licencias SET estado='vencida'│
+  │    WHERE fecha_fin < HOY               │
+  │    AND estado = 'activa'               │
+  └────────────┬───────────────────────────┘
+               │
+               ▼
+  ┌────────────────────────────────────────┐
+  │ 2. Suspender empresas vencidas         │
+  │    UPDATE empresas SET estado='suspendida'│
+  │    WHERE licencia vencida              │
+  └────────────┬───────────────────────────┘
+               │
+               ▼
+  ┌────────────────────────────────────────┐
+  │ 3. Procesar renovaciones automáticas   │
+  │    WHERE fecha_fin = HOY               │
+  │    AND auto_renovacion = true          │
+  │    → Intentar cobro                    │
+  └────────────┬───────────────────────────┘
+               │
+               ▼
+  ┌────────────────────────────────────────┐
+  │ 4. Enviar emails de recordatorio       │
+  │    - 7 días antes: "Recordatorio"      │
+  │    - 3 días antes: "Urgente"           │
+  │    - 1 día antes: "Mañana vence"       │
+  └────────────────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  TABLA DE ESTADOS                                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  EMPRESA                      LICENCIA                ACCESO
+  ───────────────────────────────────────────────────────────
+  trial                        activa (monto=0)        ✅ SI
+  activa                       activa (pagada)         ✅ SI
+  suspendida                   vencida                 ❌ NO
+  cancelada                    cancelada               ❌ NO
+  
+  
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MIDDLEWARE DE VERIFICACIÓN (Cada Request)                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Usuario hace login
+         │
+         ▼
+  ┌────────────────────────────────────────┐
+  │  Verificar licencia activa             │
+  │  SELECT * FROM licencias               │
+  │  WHERE empresa_id = X                  │
+  │  AND estado = 'activa'                 │
+  │  AND fecha_fin >= HOY                  │
+  └────────────┬───────────────────────────┘
+               │
+          ┌────┴─────┐
+          │          │
+      ✅ Existe  ❌ No existe
+          │          │
+          ▼          ▼
+  [Acceso OK]  [Redirigir a /planes]
+                [Mostrar: "Licencia vencida"]
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+💡 MÉTRICAS IMPORTANTES A MEDIR:
+
+  MRR (Monthly Recurring Revenue)
+  ARR (Annual Recurring Revenue)
+  Churn Rate (tasa de cancelación)
+  Trial → Paid conversion rate
+  Lifetime Value (LTV)
+  Customer Acquisition Cost (CAC)
+
+═══════════════════════════════════════════════════════════════════════════════
+```

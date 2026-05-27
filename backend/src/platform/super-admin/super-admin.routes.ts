@@ -5,6 +5,7 @@ import * as empresasAdminController from './empresas-admin.controller';
 import * as usuariosAdminController from './usuarios-admin.controller';
 import * as planesAdminController from './planes-admin.controller';
 import * as rolesGlobalesController from './roles-globales.controller';
+import * as licenciasAdminController from './licencias-admin.controller';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.get('/empresas/:id', empresasAdminController.getEmpresaById);
 router.post('/empresas', empresasAdminController.createEmpresa);
 router.put('/empresas/:id', empresasAdminController.updateEmpresa);
 router.put('/empresas/:id/estado', empresasAdminController.cambiarEstadoEmpresa);
+router.post('/empresas/:id/activar-licencia', empresasAdminController.activarLicenciaPagada);
 router.delete('/empresas/:id', empresasAdminController.deleteEmpresa);
 
 // ========================================
@@ -65,6 +67,12 @@ router.get('/licencias/:id', planesAdminController.getLicenciaById);
 router.post('/licencias', planesAdminController.createLicencia);
 router.put('/licencias/:id', planesAdminController.updateLicencia);
 router.delete('/licencias/:id', planesAdminController.deleteLicencia);
+
+// Endpoints nuevos para procesamiento automático
+router.post('/licencias/procesar-notificaciones', licenciasAdminController.procesarNotificaciones);
+router.post('/licencias/procesar-renovaciones', licenciasAdminController.procesarRenovaciones);
+router.get('/licencias/estado', licenciasAdminController.getEstadoLicencias);
+router.get('/licencias/:id/historial', licenciasAdminController.getHistorialLicencia);
 
 // ========================================
 // GESTIÓN DE ROLES GLOBALES
