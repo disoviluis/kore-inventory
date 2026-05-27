@@ -3960,15 +3960,15 @@ function mostrarAlertaConfiguracion(faltantes) {
   // Mostrar lista de pendientes
   listaElement.innerHTML = items.map(item => `<li>${item}</li>`).join('');
   
-  // Obtener empresa activa para el alertKey
-  const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
-  if (!empresaActiva || !empresaActiva.id) {
+  // Obtener empresa activa para el alertKey (ahora solo es el ID)
+  const empresaActivaId = localStorage.getItem('empresaActiva');
+  if (!empresaActivaId) {
     alertElement.style.display = 'none';
     return;
   }
   
   // Guardar en localStorage que se mostró (para no molestar mucho)
-  const alertKey = `alertFacturacion_${empresaActiva.id}`;
+  const alertKey = `alertFacturacion_${empresaActivaId}`;
   const lastShown = localStorage.getItem(alertKey);
   const now = new Date().getTime();
   
