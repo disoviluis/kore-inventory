@@ -12,33 +12,30 @@ import { verificarEmpresaActiva } from '../../core/middleware/licencia.middlewar
 
 const router = Router();
 
-// Aplicar autenticación a todas las rutas
-router.use(authMiddleware);
-
 // ============================================
 // CONFIGURACIÓN DE FACTURACIÓN
 // ============================================
 
 // Obtener configuración de facturación
-router.get('/configuracion/:empresaId', verificarEmpresaActiva, facturacionController.getConfiguracionFacturacion);
+router.get('/configuracion/:empresaId', authMiddleware, verificarEmpresaActiva, facturacionController.getConfiguracionFacturacion);
 
 // Actualizar configuración de facturación
-router.put('/configuracion/:empresaId', verificarEmpresaActiva, facturacionController.updateConfiguracionFacturacion);
+router.put('/configuracion/:empresaId', authMiddleware, verificarEmpresaActiva, facturacionController.updateConfiguracionFacturacion);
 
 // ============================================
 // RETENCIONES
 // ============================================
 
 // Obtener retenciones de una empresa
-router.get('/retenciones/:empresaId', verificarEmpresaActiva, facturacionController.getRetenciones);
+router.get('/retenciones/:empresaId', authMiddleware, verificarEmpresaActiva, facturacionController.getRetenciones);
 
 // Crear retención
-router.post('/retenciones', verificarEmpresaActiva, facturacionController.createRetencion);
+router.post('/retenciones', authMiddleware, verificarEmpresaActiva, facturacionController.createRetencion);
 
 // Actualizar retención
-router.put('/retenciones/:id', verificarEmpresaActiva, facturacionController.updateRetencion);
+router.put('/retenciones/:id', authMiddleware, verificarEmpresaActiva, facturacionController.updateRetencion);
 
 // Eliminar retención
-router.delete('/retenciones/:id', verificarEmpresaActiva, facturacionController.deleteRetencion);
+router.delete('/retenciones/:id', authMiddleware, verificarEmpresaActiva, facturacionController.deleteRetencion);
 
 export default router;
