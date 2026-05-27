@@ -4,10 +4,10 @@
  * ========================================
  * Maneja la navegación del sidebar en todas las páginas
  * Filtra módulos según permisos del usuario
- * 
- * NOTA: Este script requiere que API_URL esté declarado
- * Debe cargarse DESPUÉS del archivo JS de cada página que declara API_URL
  */
+
+// API URL - fallback si no está definido en la página
+const API_URL = window.API_URL || 'http://18.191.181.99:3000/api';
 
 /**
  * Mapeo de enlaces del sidebar a nombres de módulos

@@ -231,8 +231,8 @@ async function cargarEmpresas(usuarioId) {
                         cargarResumen(),
                         cargarMovimientos(),
                         cargarAlertas(),
-                    cargarProductosParaAjuste()
-                ]);
+                        cargarProductosParaAjuste()
+                    ]);
             });
             
         } else {
