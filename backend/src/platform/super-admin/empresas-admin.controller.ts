@@ -272,7 +272,7 @@ export const createEmpresa = async (req: Request, res: Response) => {
     `, [
       empresaId,
       plan_id,
-      dias_trial > 0 ? 'trial' : 'activa',
+      'activa', // Las licencias siempre son 'activa', el estado trial va solo en empresas
       fechaInicio,
       fechaFin,
       tipo_facturacion,
