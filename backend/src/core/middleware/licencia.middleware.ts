@@ -230,19 +230,26 @@ export const verificarEmpresaActiva = async (
     const usuario = (req as any).user;
     
     if (!usuario) {
+      logger.warning('verificarEmpresaActiva: No hay usuario en req.user');
       res.status(401).json({ success: false, message: 'No autenticado' });
       return;
     }
 
+    logger.info(`verificarEmpresaActiva: Usuario ${usuario.email} (${usuario.tipo_usuario}), empresa_id en JWT: ${usuario.empresa_id}`);
+
     if (usuario.tipo_usuario === 'super_admin') {
+      logger.info('Super admin detectado - saltando validación de licencia');
       next();
       return;
     }
 
     // Soportar ambos formatos: empresa_id y empresaId
     const empresaId = req.query.empresa_id || req.query.empresaId || req.body.empresa_id || req.body.empresaId || usuario.empresa_id;
+    
+    logger.info(`verificarEmpresaActiva: empresaId detectado: ${empresaId} (query: ${req.query.empresaId}, body: ${req.body.empresaId}, user: ${usuario.empresa_id})`);
 
     if (!empresaId) {
+      logger.warning('verificarEmpresaActiva: No se proporcionó empresa_id');
       res.status(400).json({ success: false, message: 'empresa_id requerido' });
       return;
     }

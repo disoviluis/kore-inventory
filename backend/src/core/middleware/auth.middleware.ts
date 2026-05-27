@@ -31,6 +31,7 @@ export const authMiddleware = (
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      logger.warning(`authMiddleware: Token no proporcionado en ${req.method} ${req.url}`);
       return errorResponse(
         res,
         CONSTANTS.MESSAGES.UNAUTHORIZED,
@@ -40,6 +41,8 @@ export const authMiddleware = (
     }
 
     const token = authHeader.substring(7); // Remover 'Bearer '
+    
+    logger.info(`authMiddleware: Verificando token para ${req.method} ${req.url}`);
 
     // Verificar token
     const decoded = jwt.verify(
@@ -47,12 +50,14 @@ export const authMiddleware = (
       process.env.JWT_SECRET || 'secret_key_default'
     ) as JwtPayload;
 
+    logger.info(`authMiddleware: Token válido para usuario ${decoded.email} (${decoded.tipo_usuario})`);
+
     // Agregar usuario al request
     (req as any).user = decoded;
 
     next();
   } catch (error: any) {
-    logger.warning('Token inválido o expirado', error.message);
+    logger.warning(`authMiddleware: Token inválido o expirado en ${req.method} ${req.url} - ${error.message}`);
 
     if (error.name === 'TokenExpiredError') {
       return errorResponse(
