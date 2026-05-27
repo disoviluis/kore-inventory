@@ -167,7 +167,7 @@ export const getEmpresasByUsuario = async (req: Request, res: Response): Promise
     const usuario = usuarios[0];
     let empresas;
 
-    // Si es super_admin, devolver todas las empresas activas
+    // Si es super_admin, devolver todas las empresas activas y en trial
     if (usuario.tipo_usuario === 'super_admin') {
       empresas = await query(
         `SELECT 
@@ -179,7 +179,7 @@ export const getEmpresasByUsuario = async (req: Request, res: Response): Promise
           logo_url,
           estado
         FROM empresas
-        WHERE estado = 'activa'
+        WHERE estado IN ('activa', 'trial')
         ORDER BY nombre ASC`
       );
     } else {
