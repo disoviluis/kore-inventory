@@ -24,6 +24,7 @@ import usuariosRoutes from './core/usuarios/usuarios.routes';
 import facturacionRoutes from './platform/facturacion/facturacion.routes';
 import bodegasRoutes from './platform/bodegas/bodegas.routes';
 import trasladosRoutes from './platform/traslados/traslados.routes';
+import { verificarEmpresaActiva } from './core/middleware/licencia.middleware';
 
 const router = Router();
 
@@ -63,17 +64,18 @@ router.use('/roles', rolesRoutes);
 
 // ============================================
 // RUTAS TENANT (Por empresa)
+// Requieren licencia activa para funcionar
 // ============================================
-router.use('/productos', productosRoutes);
-router.use('/categorias', categoriasRoutes);
-router.use('/clientes', clientesRoutes);
-router.use('/ventas', ventasRoutes);
-router.use('/proveedores', proveedoresRoutes);
-router.use('/inventario', inventarioRoutes);
-router.use('/compras', comprasRoutes);
-router.use('/impuestos', impuestosRoutes);
-router.use('/facturacion', facturacionRoutes);
-router.use('/bodegas', bodegasRoutes);
-router.use('/traslados', trasladosRoutes);
+router.use('/productos', verificarEmpresaActiva, productosRoutes);
+router.use('/categorias', verificarEmpresaActiva, categoriasRoutes);
+router.use('/clientes', verificarEmpresaActiva, clientesRoutes);
+router.use('/ventas', verificarEmpresaActiva, ventasRoutes);
+router.use('/proveedores', verificarEmpresaActiva, proveedoresRoutes);
+router.use('/inventario', verificarEmpresaActiva, inventarioRoutes);
+router.use('/compras', verificarEmpresaActiva, comprasRoutes);
+router.use('/impuestos', verificarEmpresaActiva, impuestosRoutes);
+router.use('/facturacion', verificarEmpresaActiva, facturacionRoutes);
+router.use('/bodegas', verificarEmpresaActiva, bodegasRoutes);
+router.use('/traslados', verificarEmpresaActiva, trasladosRoutes);
 
 export default router;

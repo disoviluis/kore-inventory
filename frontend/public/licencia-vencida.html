@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Licencia Vencida - Kore Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .license-card {
+      max-width: 900px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+
+    .license-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .license-header i {
+      font-size: 80px;
+      margin-bottom: 20px;
+      opacity: 0.9;
+    }
+
+    .license-header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .license-body {
+      padding: 40px;
+    }
+
+    .alert-custom {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+
+    .plan-card {
+      border: 2px solid #e0e0e0;
+      border-radius: 15px;
+      padding: 30px;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .plan-card:hover {
+      border-color: #667eea;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+      transform: translateY(-5px);
+    }
+
+    .plan-card.popular {
+      border-color: #667eea;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .plan-card.popular::before {
+      content: "MÁS POPULAR";
+      position: absolute;
+      top: 15px;
+      right: -35px;
+      background: #667eea;
+      color: white;
+      padding: 5px 40px;
+      transform: rotate(45deg);
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .plan-price {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #667eea;
+      margin: 20px 0;
+    }
+
+    .plan-price small {
+      font-size: 1rem;
+      color: #666;
+      font-weight: 400;
+    }
+
+    .plan-features {
+      list-style: none;
+      padding: 0;
+      margin: 30px 0;
+    }
+
+    .plan-features li {
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .plan-features li:last-child {
+      border-bottom: none;
+    }
+
+    .plan-features i {
+      color: #28a745;
+      margin-right: 10px;
+    }
+
+    .btn-select-plan {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: white;
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+      width: 100%;
+    }
+
+    .btn-select-plan:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .savings-badge {
+      background: #28a745;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .contact-support {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 2px solid #f0f0f0;
+    }
+
+    .contact-support a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .contact-support a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      .license-header h1 {
+        font-size: 1.5rem;
+      }
+      
+      .plan-price {
+        font-size: 2rem;
+      }
+
+      .license-body {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="license-card">
+      <!-- Header -->
+      <div class="license-header">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <h1>Tu período de prueba ha finalizado</h1>
+        <p class="mb-0">Selecciona un plan para continuar usando Kore Inventory</p>
+      </div>
+
+      <!-- Body -->
+      <div class="license-body">
+        <!-- Alert Info -->
+        <div class="alert-custom">
+          <h5><i class="bi bi-info-circle-fill text-warning"></i> Tu licencia ha vencido</h5>
+          <p class="mb-0">
+            Para continuar disfrutando de todas las funcionalidades de Kore Inventory,
+            por favor selecciona uno de nuestros planes de suscripción.
+          </p>
+        </div>
+
+        <!-- Planes -->
+        <h3 class="text-center mb-4">Elige el plan perfecto para tu negocio</h3>
+        
+        <div class="row g-4">
+          <!-- Plan Mensual -->
+          <div class="col-md-6">
+            <div class="plan-card" onclick="selectPlan('mensual')">
+              <h3>Plan Mensual</h3>
+              <div class="plan-price">
+                $15.990
+                <small>/mes</small>
+              </div>
+              
+              <ul class="plan-features">
+                <li><i class="bi bi-check-circle-fill"></i> Hasta 5 usuarios</li>
+                <li><i class="bi bi-check-circle-fill"></i> Productos ilimitados</li>
+                <li><i class="bi bi-check-circle-fill"></i> Facturación electrónica</li>
+                <li><i class="bi bi-check-circle-fill"></i> Inventario en tiempo real</li>
+                <li><i class="bi bi-check-circle-fill"></i> Reportes avanzados</li>
+                <li><i class="bi bi-check-circle-fill"></i> Soporte técnico 24/7</li>
+              </ul>
+
+              <button class="btn btn-select-plan" onclick="selectPlan('mensual')">
+                Seleccionar Plan Mensual
+              </button>
+            </div>
+          </div>
+
+          <!-- Plan Anual -->
+          <div class="col-md-6">
+            <div class="plan-card popular" onclick="selectPlan('anual')">
+              <span class="savings-badge">AHORRA 20%</span>
+              <h3>Plan Anual</h3>
+              <div class="plan-price">
+                $153.500
+                <small>/año</small>
+              </div>
+              <p class="text-muted mb-0">
+                <small><s>$191.880/año</s> - Ahorra $38.380</small>
+              </p>
+              
+              <ul class="plan-features">
+                <li><i class="bi bi-check-circle-fill"></i> Hasta 5 usuarios</li>
+                <li><i class="bi bi-check-circle-fill"></i> Productos ilimitados</li>
+                <li><i class="bi bi-check-circle-fill"></i> Facturación electrónica</li>
+                <li><i class="bi bi-check-circle-fill"></i> Inventario en tiempo real</li>
+                <li><i class="bi bi-check-circle-fill"></i> Reportes avanzados</li>
+                <li><i class="bi bi-check-circle-fill"></i> Soporte técnico 24/7</li>
+                <li><i class="bi bi-star-fill text-warning"></i> <strong>2 meses gratis</strong></li>
+              </ul>
+
+              <button class="btn btn-select-plan" onclick="selectPlan('anual')">
+                Seleccionar Plan Anual
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Support -->
+        <div class="contact-support">
+          <p class="mb-2">
+            <i class="bi bi-headset"></i> ¿Necesitas un plan personalizado para tu empresa?
+          </p>
+          <p>
+            <a href="mailto:soporte@koreinventory.com">
+              Contáctanos: soporte@koreinventory.com
+            </a> o llámanos al 
+            <a href="tel:+573001234567">+57 300 123 4567</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación -->
+  <div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-credit-card"></i> Confirmar Suscripción
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-4">
+            <i class="bi bi-cash-stack text-success" style="font-size: 60px;"></i>
+          </div>
+          <h5 class="text-center mb-3" id="planTitle"></h5>
+          <p class="text-center text-muted" id="planDescription"></p>
+          
+          <div class="alert alert-info">
+            <h6><i class="bi bi-shield-check"></i> Pago 100% Seguro</h6>
+            <p class="mb-0 small">
+              Tu pago será procesado de forma segura a través de nuestra pasarela de pagos.
+              Aceptamos tarjetas de crédito, débito y PSE.
+            </p>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Método de Pago</label>
+            <select class="form-select" id="metodoPago">
+              <option value="tarjeta">Tarjeta de Crédito/Débito</option>
+              <option value="pse">PSE - Débito a Cuenta Corriente/Ahorros</option>
+              <option value="transferencia">Transferencia Bancaria</option>
+            </select>
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="autoRenovacion" checked>
+            <label class="form-check-label" for="autoRenovacion">
+              Activar renovación automática
+              <small class="text-muted d-block">
+                Tu suscripción se renovará automáticamente al finalizar el período
+              </small>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button type="button" class="btn btn-primary" onclick="procesarPago()">
+            <i class="bi bi-check-lg"></i> Proceder al Pago
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let selectedPlanType = '';
+
+    // Obtener datos de la empresa desde sessionStorage
+    const empresaId = sessionStorage.getItem('empresa_id');
+    const empresaNombre = sessionStorage.getItem('empresa_nombre');
+
+    // Información de planes
+    const planes = {
+      mensual: {
+        id: 1,
+        nombre: 'Plan Mensual',
+        monto: 15990,
+        tipo: 'mensual',
+        descripcion: 'Suscripción mensual por $15.990 COP'
+      },
+      anual: {
+        id: 1,
+        nombre: 'Plan Anual',
+        monto: 153500,
+        tipo: 'anual',
+        descripcion: 'Suscripción anual por $153.500 COP (Ahorra 20%)'
+      }
+    };
+
+    function selectPlan(planType) {
+      selectedPlanType = planType;
+      const plan = planes[planType];
+      
+      // Actualizar modal
+      document.getElementById('planTitle').textContent = plan.nombre;
+      document.getElementById('planDescription').textContent = plan.descripcion;
+      
+      // Mostrar modal
+      const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+      modal.show();
+    }
+
+    async function procesarPago() {
+      if (!empresaId) {
+        alert('Error: No se encontró información de la empresa. Por favor inicia sesión nuevamente.');
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const plan = planes[selectedPlanType];
+      const metodoPago = document.getElementById('metodoPago').value;
+      const autoRenovacion = document.getElementById('autoRenovacion').checked;
+
+      // Mostrar loading
+      const btnPagar = event.target;
+      const originalText = btnPagar.innerHTML;
+      btnPagar.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
+      btnPagar.disabled = true;
+
+      try {
+        // TODO: Integrar pasarela de pago real (Wompi, PayU, Stripe, etc.)
+        // Por ahora simularemos un pago exitoso
+
+        const token = sessionStorage.getItem('token');
+        
+        const response = await fetch(`http://localhost:3000/api/super-admin/empresas/${empresaId}/activar-licencia`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            plan_id: plan.id,
+            tipo_facturacion: plan.tipo,
+            auto_renovacion: autoRenovacion,
+            monto: plan.monto,
+            metodo_pago: metodoPago,
+            referencia_pago: `PAY-${Date.now()}`, // Simulated payment reference
+            datos_pago: {
+              metodo: metodoPago,
+              fecha: new Date().toISOString()
+            }
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Cerrar modal
+          bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+          
+          // Mostrar mensaje de éxito
+          alert(`¡Pago exitoso! Tu licencia ${plan.nombre} ha sido activada. Redirigiendo...`);
+          
+          // Actualizar estado de la empresa en sessionStorage
+          sessionStorage.setItem('empresa_estado', 'activa');
+          
+          // Redirigir al dashboard
+          setTimeout(() => {
+            window.location.href = '/dashboard.html';
+          }, 2000);
+        } else {
+          throw new Error(result.message || 'Error al procesar el pago');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error al procesar el pago: ' + error.message);
+        
+        // Restaurar botón
+        btnPagar.innerHTML = originalText;
+        btnPagar.disabled = false;
+      }
+    }
+
+    // Verificar si el usuario está autenticado
+    if (!empresaId || !sessionStorage.getItem('token')) {
+      window.location.href = '/login.html';
+    }
+  </script>
+</body>
+</html>
