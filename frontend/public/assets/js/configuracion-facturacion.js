@@ -1,7 +1,7 @@
 // configuracion-facturacion.js
 // Gestión de configuración de facturación
 
-const API_BASE = 'http://localhost:3000/api';
+const API_URL = 'http://18.191.181.99:3000/api';
 let empresaActual = null;
 
 // ============================
@@ -66,20 +66,62 @@ function logout() {
 async function cargarEmpresas() {
     try {
         const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
-        const empresaId = usuario.empresa_id;
+        const token = localStorage.getItem('token');
         
-        if (!empresaId) {
-            mostrarAlerta('No se encontró empresa asociada', 'warning');
+        if (!usuario.id) {
+            mostrarAlerta('No se encontró información de usuario', 'warning');
+            return;
+        }
+        
+        // Obtener empresas del usuario
+        const response = await fetch(`${API_URL}/empresas/usuario/${usuario.id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al obtener empresas');
+        }
+        
+        const data = await response.json();
+        const empresas = data.data || [];
+        
+        if (empresas.length === 0) {
+            mostrarAlerta('No tiene empresas asociadas', 'warning');
             return;
         }
         
         const select = document.getElementById('empresaSelect');
-        const empresa = JSON.parse(localStorage.getItem('empresa') || '{}');
+        select.innerHTML = '';
         
-        select.innerHTML = `<option value="${empresaId}" selected>${empresa.nombre || 'Empresa Actual'}</option>`;
-        empresaActual = empresaId;
+        empresas.forEach(empresa => {
+            const option = document.createElement('option');
+            option.value = empresa.id;
+            option.textContent = empresa.nombre;
+            select.appendChild(option);
+        });
         
-        // Cargar configuración de esta empresa
+        // Obtener empresa activa de localStorage o usar la primera
+        const empresaActivaId = localStorage.getItem('empresaActiva');
+        if (empresaActivaId && empresas.find(e => e.id == empresaActivaId)) {
+            select.value = empresaActivaId;
+            empresaActual = empresaActivaId;
+        } else {
+            empresaActual = empresas[0].id;
+            select.value = empresaActual;
+            localStorage.setItem('empresaActiva', empresaActual);
+        }
+        
+        // Evento de cambio de empresa
+        select.addEventListener('change', async function() {
+            empresaActual = this.value;
+            localStorage.setItem('empresaActiva', empresaActual);
+            await cargarConfiguracion();
+        });
+        
+        // Cargar configuración de la empresa seleccionada
         await cargarConfiguracion();
         
     } catch (error) {
@@ -106,7 +148,7 @@ async function cargarConfiguracion() {
         form.style.display = 'none';
         
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE}/facturacion/configuracion/${empresaActual}`, {
+        const response = await fetch(`${API_URL}/facturacion/configuracion/${empresaActual}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -336,7 +378,7 @@ async function guardarConfiguracion(event) {
     
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE}/facturacion/configuracion/${empresaActual}`, {
+        const response = await fetch(`${API_URL}/facturacion/configuracion/${empresaActual}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
