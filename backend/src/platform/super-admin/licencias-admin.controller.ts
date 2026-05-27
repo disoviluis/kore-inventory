@@ -303,7 +303,7 @@ export const getEstadoLicencias = async (req: Request, res: Response) => {
  * GET /api/super-admin/licencias/:id/historial
  * Obtiene el historial de pagos y eventos de una licencia
  */
-export const getHistorialLicencia = async (req: Request, res: Response): Promise<void> => {
+export const getHistorialLicencia = async (req: Request, res: Response) => {
   const connection = await pool.getConnection();
   
   try {
