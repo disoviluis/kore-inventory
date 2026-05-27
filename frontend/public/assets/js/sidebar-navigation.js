@@ -306,5 +306,72 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }, 100);
   }
+
+  // ============================================
+  // TOGGLE SIDEBAR - FUNCIONA EN PC Y MÓVIL
+  // ============================================
+  initializeSidebarToggle();
 });
+
+/**
+ * Inicializar toggle del sidebar para PC y móvil
+ * Elimina event listeners previos para evitar duplicados
+ */
+function initializeSidebarToggle() {
+  const toggleSidebar = document.getElementById('toggleSidebar');
+  const closeSidebar = document.getElementById('closeSidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  
+  if (toggleSidebar) {
+    // Eliminar event listeners previos clonando el botón
+    const newToggleSidebar = toggleSidebar.cloneNode(true);
+    toggleSidebar.parentNode.replaceChild(newToggleSidebar, toggleSidebar);
+    
+    // Agregar nuevo event listener
+    newToggleSidebar.addEventListener('click', () => {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      const mainContent = document.querySelector('.main-content');
+      
+      if (window.innerWidth >= 992) {
+        // En DESKTOP (PC): colapsar sidebar para ver módulos completos
+        if (sidebar) sidebar.classList.toggle('collapsed');
+        if (mainContent) mainContent.classList.toggle('expanded');
+      } else {
+        // En MÓVIL: mostrar sidebar con overlay
+        if (sidebar) sidebar.classList.toggle('active');
+        if (overlay) overlay.classList.toggle('active');
+      }
+    });
+    
+    console.log('✅ Toggle sidebar inicializado (PC y móvil)');
+  }
+
+  // Cerrar sidebar en móvil
+  if (closeSidebar) {
+    // Eliminar listeners previos
+    const newCloseSidebar = closeSidebar.cloneNode(true);
+    closeSidebar.parentNode.replaceChild(newCloseSidebar, closeSidebar);
+    
+    newCloseSidebar.addEventListener('click', () => {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar) sidebar.classList.remove('active');
+      if (overlay) overlay.classList.remove('active');
+    });
+  }
+
+  // Cerrar al hacer clic en el overlay (móvil)
+  if (sidebarOverlay) {
+    // Eliminar listeners previos
+    const newSidebarOverlay = sidebarOverlay.cloneNode(true);
+    sidebarOverlay.parentNode.replaceChild(newSidebarOverlay, sidebarOverlay);
+    
+    newSidebarOverlay.addEventListener('click', () => {
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar) sidebar.classList.remove('active');
+      newSidebarOverlay.classList.remove('active');
+    });
+  }
+}
 
