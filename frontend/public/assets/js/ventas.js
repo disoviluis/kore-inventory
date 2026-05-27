@@ -424,7 +424,7 @@ async function buscarPorDocumento() {
 
         if (!response.ok) {
             if (response.status === 401) {
-                handleUnauthorized();
+                mostrarAlerta('Sesión expirada. Por favor refresca la página (F5)', 'warning');
                 return;
             }
             throw new Error('Error al buscar cliente');
@@ -468,7 +468,7 @@ async function buscarPorNombre() {
 
         if (!response.ok) {
             if (response.status === 401) {
-                handleUnauthorized();
+                mostrarAlerta('Sesión expirada. Por favor refresca la página (F5)', 'warning');
                 return;
             }
             throw new Error('Error al buscar cliente');
@@ -571,7 +571,7 @@ async function buscarProductos() {
 
         if (!response.ok) {
             if (response.status === 401) {
-                handleUnauthorized();
+                mostrarAlerta('Sesión expirada. Por favor refresca la página (F5)', 'warning');
                 return;
             }
             throw new Error('Error al buscar productos');
@@ -2704,13 +2704,13 @@ async function cargarImpuestosActivos() {
         console.log('📡 Response impuestos status:', response.status);
         
         if (!response.ok) {
-            if (response.status === 401) {
-                handleUnauthorized();
-                return;
-            }
             const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
             console.error('❌ Error del backend (impuestos):', errorData);
-            throw new Error(errorData.message || 'Error al cargar impuestos');
+            if (response.status === 401) {
+                console.warn('⚠️ Token inválido al cargar impuestos - puede necesitar refrescar la página');
+            }
+            // NO cerrar sesión aquí - solo fallar silenciosamente
+            return;
         }
         
         const data = await response.json();
@@ -2810,13 +2810,13 @@ async function cargarCatalogoProductos() {
         console.log('📡 Response catálogo status:', response.status);
         
         if (!response.ok) {
-            if (response.status === 401) {
-                handleUnauthorized();
-                return;
-            }
             const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
             console.error('❌ Error del backend (catálogo):', errorData);
-            throw new Error(errorData.message || 'Error al cargar productos');
+            if (response.status === 401) {
+                console.warn('⚠️ Token inválido al cargar catálogo - puede necesitar refrescar la página');
+            }
+            // NO cerrar sesión aquí - solo fallar silenciosamente
+            return;
         }
 
         const data = await response.json();
@@ -3066,7 +3066,7 @@ async function seleccionarPublicoGeneral() {
 
         if (!response.ok) {
             if (response.status === 401) {
-                handleUnauthorized();
+                mostrarAlerta('Sesión expirada. Por favor refresca la página (F5)', 'warning');
                 return;
             }
             throw new Error('Error al buscar cliente');
@@ -3098,7 +3098,7 @@ async function seleccionarPublicoGeneral() {
 
             if (!createResponse.ok) {
                 if (createResponse.status === 401) {
-                    handleUnauthorized();
+                    mostrarAlerta('Sesión expirada. Por favor refresca la página (F5)', 'warning');
                     return;
                 }
                 throw new Error('Error al crear cliente público');
@@ -3245,13 +3245,13 @@ async function cargarUltimasVentas() {
         console.log('📡 Response ventas status:', response.status);
         
         if (!response.ok) {
-            if (response.status === 401) {
-                handleUnauthorized();
-                return;
-            }
             const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
             console.error('❌ Error del backend (ventas):', errorData);
-            throw new Error(errorData.message || 'Error al cargar ventas');
+            if (response.status === 401) {
+                console.warn('⚠️ Token inválido al cargar ventas - puede necesitar refrescar la página');
+            }
+            // NO cerrar sesión aquí - solo fallar silenciosamente
+            return;
         }
 
         const data = await response.json();
