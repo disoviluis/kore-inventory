@@ -45,7 +45,8 @@ export const verificarLicenciaActiva = async (
     }
 
     // Obtener empresa_id del contexto (query, body o usuario)
-    const empresaId = req.query.empresa_id || req.body.empresa_id || usuario.empresa_id;
+    // Soportar ambos formatos: empresa_id y empresaId
+    const empresaId = req.query.empresa_id || req.query.empresaId || req.body.empresa_id || req.body.empresaId || usuario.empresa_id;
 
     if (!empresaId) {
       res.status(400).json({
