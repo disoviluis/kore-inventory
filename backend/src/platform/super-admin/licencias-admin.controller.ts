@@ -343,7 +343,7 @@ export const getHistorialLicencia = async (req: Request, res: Response) => {
       ORDER BY fecha DESC
     `, [id]);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         licencia: licencias[0],
@@ -354,7 +354,7 @@ export const getHistorialLicencia = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     logger.error('Error al obtener historial de licencia:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error al obtener historial',
       error: error.message
