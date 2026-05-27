@@ -1920,9 +1920,6 @@ function abrirModalUsuario(usuarioId = null) {
   const title = document.getElementById('usuarioModalTitle');
   const passwordRequired = document.querySelectorAll('#passwordRequired, #passwordConfirmRequired');
   
-  // Cargar empresas disponibles
-  cargarEmpresasSelect();
-  
   if (usuarioId) {
     title.textContent = 'Editar Usuario';
     // En modo edición, la contraseña es opcional
@@ -1938,12 +1935,14 @@ function abrirModalUsuario(usuarioId = null) {
     document.getElementById('usuarioPasswordConfirm').setAttribute('required', 'required');
     document.getElementById('usuarioForm').reset();
     document.getElementById('usuarioId').value = '';
+    // Cargar checkboxes de empresas vacíos (ninguna seleccionada)
+    cargarEmpresasCheckboxes([]);
   }
   
   modal.show();
 }
 
-async function cargarEmpresasSelect() {
+async function cargarEmpresasCheckboxes(empresasAsignadas = []) {
   try {
     const response = await fetch(`${API_URL}/super-admin/empresas`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -1952,20 +1951,34 @@ async function cargarEmpresasSelect() {
     if (!response.ok) throw new Error('Error al cargar empresas');
     const data = await response.json();
     
-    const select = document.getElementById('usuarioEmpresaDefault');
-    select.innerHTML = '<option value="">Sin empresa asignada</option>';
+    const container = document.getElementById('empresasCheckboxContainer');
     
-    data.data.forEach(empresa => {
-      // Mostrar empresas activas y en trial
-      if (empresa.estado === 'activa' || empresa.estado === 'trial') {
-        const option = document.createElement('option');
-        option.value = empresa.id;
-        option.textContent = `${empresa.nombre}${empresa.estado === 'trial' ? ' (Trial)' : ''}`;
-        select.appendChild(option);
-      }
-    });
+    const empresasActivas = data.data.filter(e => e.estado === 'activa' || e.estado === 'trial');
+    
+    if (empresasActivas.length === 0) {
+      container.innerHTML = '<div class="text-center text-muted py-3"><i class="bi bi-building"></i> No hay empresas disponibles</div>';
+      return;
+    }
+    
+    container.innerHTML = empresasActivas.map(empresa => {
+      const isChecked = empresasAsignadas.includes(empresa.id);
+      return `
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" value="${empresa.id}" 
+                 id="empresa_${empresa.id}" ${isChecked ? 'checked' : ''}>
+          <label class="form-check-label" for="empresa_${empresa.id}">
+            <strong>${empresa.nombre}</strong>
+            <span class="badge bg-${empresa.estado === 'trial' ? 'warning' : 'success'} ms-2">
+              ${empresa.estado === 'trial' ? 'Trial' : 'Activa'}
+            </span>
+          </label>
+        </div>
+      `;
+    }).join('');
   } catch (error) {
     console.error('Error al cargar empresas:', error);
+    const container = document.getElementById('empresasCheckboxContainer');
+    container.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-triangle"></i> Error al cargar empresas</div>';
   }
 }
 
@@ -1979,6 +1992,9 @@ async function cargarDatosUsuarioAdmin(id) {
     const data = await response.json();
     const usuario = data.data;
     
+    // Obtener IDs de empresas asignadas
+    const empresasAsignadas = (usuario.empresas || []).map(e => e.id);
+    
     document.getElementById('usuarioId').value = usuario.id;
     document.getElementById('usuarioNombre').value = usuario.nombre;
     document.getElementById('usuarioApellido').value = usuario.apellido || '';
@@ -1986,7 +2002,9 @@ async function cargarDatosUsuarioAdmin(id) {
     document.getElementById('usuarioTelefono').value = usuario.telefono || '';
     document.getElementById('usuarioTipo').value = usuario.tipo_usuario;
     document.getElementById('usuarioActivo').value = usuario.activo ? '1' : '0';
-    document.getElementById('usuarioEmpresaDefault').value = usuario.empresa_id_default || '';
+    
+    // Cargar checkboxes con empresas asignadas
+    await cargarEmpresasCheckboxes(empresasAsignadas);
   } catch (error) {
     console.error('Error:', error);
     mostrarError('Error al cargar datos de usuario');
@@ -2018,14 +2036,17 @@ async function guardarUsuario() {
     return;
   }
   
+  // Obtener empresas seleccionadas
+  const checkboxes = document.querySelectorAll('#empresasCheckboxContainer input[type="checkbox"]:checked');
+  const empresasSeleccionadas = Array.from(checkboxes).map(cb => parseInt(cb.value));
+  
   const usuario = {
     nombre: document.getElementById('usuarioNombre').value,
     apellido: document.getElementById('usuarioApellido').value,
     email: document.getElementById('usuarioEmail').value,
     telefono: document.getElementById('usuarioTelefono').value,
     tipo_usuario: document.getElementById('usuarioTipo').value,
-    activo: parseInt(document.getElementById('usuarioActivo').value),
-    empresa_id_default: document.getElementById('usuarioEmpresaDefault').value || null
+    activo: parseInt(document.getElementById('usuarioActivo').value)
   };
   
   // Solo incluir password si se proporcionó
@@ -2034,6 +2055,7 @@ async function guardarUsuario() {
   }
   
   try {
+    // 1. Crear o actualizar usuario
     const url = id 
       ? `${API_URL}/super-admin/usuarios/${id}`
       : `${API_URL}/super-admin/usuarios`;
@@ -2050,6 +2072,46 @@ async function guardarUsuario() {
     if (!response.ok) {
       const data = await response.json();
       throw new Error(data.message || 'Error al guardar usuario');
+    }
+    
+    const userData = await response.json();
+    const usuarioId = id || userData.data?.id;
+    
+    // 2. Gestionar empresas asignadas (si hay empresas seleccionadas)
+    if (usuarioId && empresasSeleccionadas.length > 0) {
+      // Obtener empresas actuales si es edición
+      let empresasActuales = [];
+      if (id) {
+        const userResponse = await fetch(`${API_URL}/super-admin/usuarios/${id}`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          empresasActuales = (userData.data.empresas || []).map(e => e.id);
+        }
+      }
+      
+      // Desasignar empresas que fueron desmarcadas
+      const empresasADesasignar = empresasActuales.filter(empId => !empresasSeleccionadas.includes(empId));
+      for (const empresaId of empresasADesasignar) {
+        await fetch(`${API_URL}/super-admin/usuarios/${usuarioId}/empresas/${empresaId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+      }
+      
+      // Asignar nuevas empresas
+      const empresasAAsignar = empresasSeleccionadas.filter(empId => !empresasActuales.includes(empId));
+      for (const empresaId of empresasAAsignar) {
+        await fetch(`${API_URL}/super-admin/usuarios/${usuarioId}/empresas`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ empresa_id: empresaId })
+        });
+      }
     }
     
     mostrarExito(id ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente');
