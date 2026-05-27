@@ -121,7 +121,10 @@ function getTipoUsuarioTexto(tipo) {
 
 async function cargarEmpresas(usuarioId) {
     const token = localStorage.getItem('token');
+    const usuario = JSON.parse(localStorage.getItem('usuario'));
     const companySelector = document.getElementById('companySelector');
+    const companyText = document.getElementById('companyText');
+    const companyNameText = document.getElementById('companyNameText');
     
     if (!companySelector) return;
     
@@ -136,46 +139,67 @@ async function cargarEmpresas(usuarioId) {
         const data = await response.json();
         
         if (data.success && data.data.length > 0) {
-            // Limpiar selector
-            companySelector.innerHTML = '';
+            // Determinar si mostrar selector o texto según tipo de usuario y cantidad de empresas
+            const esUsuarioRegular = usuario.tipo_usuario === 'usuario';
+            const tieneSoloUnaEmpresa = data.data.length === 1;
             
-            // Agregar opciones
-            data.data.forEach(empresa => {
-                const option = document.createElement('option');
-                option.value = empresa.id;
-                option.textContent = empresa.nombre;
-                companySelector.appendChild(option);
-            });
-            
-            // Seleccionar la primera empresa o la guardada
-            const empresaGuardada = localStorage.getItem('empresaActiva');
-            if (empresaGuardada) {
-                const empresaObj = JSON.parse(empresaGuardada);
-                // Verificar que la empresa guardada existe en la lista
-                const empresaExiste = data.data.find(emp => emp.id == empresaObj.id);
-                if (empresaExiste) {
-                    companySelector.value = empresaObj.id;
+            if (esUsuarioRegular || tieneSoloUnaEmpresa) {
+                // Usuario Regular o Admin con 1 sola empresa: mostrar solo texto
+                companySelector.style.display = 'none';
+                companyText.style.display = 'block';
+                companyNameText.textContent = data.data[0].nombre;
+                
+                // Establecer empresa activa
+                localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                currentEmpresa = data.data[0];
+            } else {
+                // Admin Empresa con múltiples empresas: mostrar selector
+                companySelector.style.display = 'block';
+                companyText.style.display = 'none';
+                
+                // Limpiar selector
+                companySelector.innerHTML = '';
+                
+                // Agregar opciones
+                data.data.forEach(empresa => {
+                    const option = document.createElement('option');
+                    option.value = empresa.id;
+                    option.textContent = empresa.nombre;
+                    companySelector.appendChild(option);
+                });
+                
+                // Seleccionar la primera empresa o la guardada
+                const empresaGuardada = localStorage.getItem('empresaActiva');
+                if (empresaGuardada) {
+                    const empresaObj = JSON.parse(empresaGuardada);
+                    // Verificar que la empresa guardada existe en la lista
+                    const empresaExiste = data.data.find(emp => emp.id == empresaObj.id);
+                    if (empresaExiste) {
+                        companySelector.value = empresaObj.id;
+                    } else {
+                        // Si no existe, usar la primera empresa
+                        companySelector.value = data.data[0].id;
+                        localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                        currentEmpresa = data.data[0];
+                    }
                 } else {
-                    // Si no existe, usar la primera empresa
+                    // No hay empresa guardada, usar la primera
                     companySelector.value = data.data[0].id;
                     localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
                     currentEmpresa = data.data[0];
                 }
-            } else {
-                // No hay empresa guardada, usar la primera
-                companySelector.value = data.data[0].id;
-                localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
-                currentEmpresa = data.data[0];
+                
+                // Event listener para cambio de empresa
+                companySelector.addEventListener('change', (e) => {
+                    const empresaId = e.target.value;
+                    const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
+                    localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
+                    currentEmpresa = empresaSeleccionada;
+                    // Recargar datos del módulo
+                    cargarProductos();
+                    cargarCategorias();
+                });
             }
-            
-            // Event listener para cambio de empresa
-            companySelector.addEventListener('change', (e) => {
-                const empresaId = e.target.value;
-                const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
-                localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
-                // Recargar datos del módulo
-                cargarProductos();
-            });
             
         } else {
             companySelector.innerHTML = '<option value="">Sin empresas asignadas</option>';

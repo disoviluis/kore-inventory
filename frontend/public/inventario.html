@@ -61,9 +61,15 @@
         <!-- Company Selector -->
         <div class="company-selector">
             <label class="form-label text-white-50 small mb-2">Empresa Activa</label>
-            <select class="form-select form-select-sm" id="companySelector">
+            <!-- Versión selector (Admin Empresa con múltiples empresas) -->
+            <select class="form-select form-select-sm" id="companySelector" style="display: none;">
                 <option value="">Cargando empresas...</option>
             </select>
+            <!-- Versión solo texto (Usuario Regular) -->
+            <div id="companyText" class="bg-dark text-white small px-3 py-2 rounded" style="display: none;">
+                <i class="bi bi-building me-2"></i>
+                <span id="companyNameText">Cargando...</span>
+            </div>
         </div>
 
         <!-- Navigation Menu -->
