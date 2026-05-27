@@ -53,19 +53,18 @@ CREATE TABLE IF NOT EXISTS pagos_licencias (
   INDEX idx_referencia (referencia_pago)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Historial de pagos de licencias';
 
--- 2. Agregar campo para contar intentos de cobro fallidos
+-- 2. Agregar campos nuevos a la tabla licencias (verificar antes de ejecutar si ya existen)
+-- Si ya existen, comentar estas líneas
 ALTER TABLE licencias 
-ADD COLUMN IF NOT EXISTS intentos_cobro_fallidos INT DEFAULT 0 
+ADD COLUMN intentos_cobro_fallidos INT DEFAULT 0 
 COMMENT 'Contador de intentos fallidos de renovación automática';
 
--- 3. Agregar campo para fecha del último intento de cobro
 ALTER TABLE licencias 
-ADD COLUMN IF NOT EXISTS ultima_fecha_intento_cobro DATETIME 
+ADD COLUMN ultima_fecha_intento_cobro DATETIME 
 COMMENT 'Fecha del último intento de cobro automático';
 
--- 4. Agregar campo para indicar si está en período de gracia
 ALTER TABLE licencias 
-ADD COLUMN IF NOT EXISTS en_periodo_gracia BOOLEAN DEFAULT FALSE 
+ADD COLUMN en_periodo_gracia BOOLEAN DEFAULT FALSE 
 COMMENT 'TRUE si está en período de gracia por fallo de pago';
 
 -- 5. Crear tabla de configuración del sistema
