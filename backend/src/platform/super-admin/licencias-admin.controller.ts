@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
-import pool from '../../database/connection';
-import logger from '../../utils/logger';
+import pool from '../../shared/database';
+import logger from '../../shared/logger';
 
 /**
  * POST /api/super-admin/licencias/procesar-notificaciones
@@ -120,7 +120,10 @@ export const procesarRenovaciones = async (req: Request, res: Response) => {
         AND e.estado = 'activa'
     `);
 
-    const renovaciones = {
+    const renovaciones: {
+      exitosas: any[];
+      fallidas: any[];
+    } = {
       exitosas: [],
       fallidas: []
     };
@@ -300,7 +303,7 @@ export const getEstadoLicencias = async (req: Request, res: Response) => {
  * GET /api/super-admin/licencias/:id/historial
  * Obtiene el historial de pagos y eventos de una licencia
  */
-export const getHistorialLicencia = async (req: Request, res: Response) => {
+export const getHistorialLicencia = async (req: Request, res: Response): Promise<void> => {
   const connection = await pool.getConnection();
   
   try {
