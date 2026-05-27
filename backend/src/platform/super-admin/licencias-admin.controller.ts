@@ -322,6 +322,7 @@ export const getHistorialLicencia = async (req: Request, res: Response) => {
     `, [id]);
 
     if (licencias.length === 0) {
+      connection.release();
       return res.status(404).json({
         success: false,
         message: 'Licencia no encontrada'
