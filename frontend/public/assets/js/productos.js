@@ -57,13 +57,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Cargar empresas del usuario
         await cargarEmpresas(usuario.id);
 
-        // Obtener empresa activa
+        // Obtener empresa activa (debe estar configurada por cargarEmpresas)
         currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
-        if (!currentEmpresa) {
-            mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
+        
+        console.log('📍 Estado de empresaActiva:', currentEmpresa);
+        
+        if (!currentEmpresa || !currentEmpresa.id) {
+            console.error('❌ No hay empresa activa configurada');
+            mostrarAlerta('No tienes empresas asignadas. Contacta al administrador.', 'warning');
             setTimeout(() => window.location.href = 'dashboard.html', 2000);
             return;
         }
+        
+        console.log(`✅ Empresa activa: ${currentEmpresa.nombre} (ID: ${currentEmpresa.id})`);
 
         // Cargar datos iniciales
         await Promise.all([
@@ -145,10 +151,21 @@ async function cargarEmpresas(usuarioId) {
             const empresaGuardada = localStorage.getItem('empresaActiva');
             if (empresaGuardada) {
                 const empresaObj = JSON.parse(empresaGuardada);
-                companySelector.value = empresaObj.id;
+                // Verificar que la empresa guardada existe en la lista
+                const empresaExiste = data.data.find(emp => emp.id == empresaObj.id);
+                if (empresaExiste) {
+                    companySelector.value = empresaObj.id;
+                } else {
+                    // Si no existe, usar la primera empresa
+                    companySelector.value = data.data[0].id;
+                    localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                    currentEmpresa = data.data[0];
+                }
             } else {
+                // No hay empresa guardada, usar la primera
                 companySelector.value = data.data[0].id;
                 localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                currentEmpresa = data.data[0];
             }
             
             // Event listener para cambio de empresa
@@ -177,13 +194,25 @@ async function cargarEmpresas(usuarioId) {
 async function cargarCategorias() {
     try {
         const token = localStorage.getItem('token');
+        
+        if (!currentEmpresa || !currentEmpresa.id) {
+            console.error('❌ cargarCategorias: No hay empresa activa');
+            return;
+        }
+        
+        console.log(`📡 Cargando categorías para empresa ${currentEmpresa.id}...`);
+        
         const response = await fetch(`${API_URL}/categorias?empresaId=${currentEmpresa.id}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
 
-        if (!response.ok) throw new Error('Error al cargar categorías');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('❌ Error HTTP al cargar categorías:', response.status, errorData);
+            throw new Error(errorData.message || 'Error al cargar categorías');
+        }
 
         const data = await response.json();
         categorias = data.data || [];
@@ -214,13 +243,25 @@ async function cargarCategorias() {
 async function cargarProductos() {
     try {
         const token = localStorage.getItem('token');
+        
+        if (!currentEmpresa || !currentEmpresa.id) {
+            console.error('❌ cargarProductos: No hay empresa activa');
+            return;
+        }
+        
+        console.log(`📡 Cargando productos para empresa ${currentEmpresa.id}...`);
+        
         const response = await fetch(`${API_URL}/productos?empresaId=${currentEmpresa.id}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
 
-        if (!response.ok) throw new Error('Error al cargar productos');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('❌ Error HTTP al cargar productos:', response.status, errorData);
+            throw new Error(errorData.message || 'Error al cargar productos');
+        }
 
         const data = await response.json();
         productos = data.data || [];

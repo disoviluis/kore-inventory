@@ -60,11 +60,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Obtener empresa activa
         currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
-        if (!currentEmpresa) {
-            mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
+        
+        console.log('📍 Estado de empresaActiva:', currentEmpresa);
+        
+        if (!currentEmpresa || !currentEmpresa.id) {
+            console.error('❌ No hay empresa activa configurada');
+            mostrarAlerta('No tienes empresas asignadas. Contacta al administrador.', 'warning');
             setTimeout(() => window.location.href = 'dashboard.html', 2000);
             return;
         }
+        
+        console.log(`✅ Empresa activa: ${currentEmpresa.nombre} (ID: ${currentEmpresa.id})`);
         
         // Guardar usuario actual
         currentUsuario = usuario;
@@ -176,10 +182,21 @@ async function cargarEmpresas(usuarioId) {
             const empresaGuardada = localStorage.getItem('empresaActiva');
             if (empresaGuardada) {
                 const empresaObj = JSON.parse(empresaGuardada);
-                companySelector.value = empresaObj.id;
+                // Verificar que la empresa guardada existe en la lista
+                const empresaExiste = data.data.find(emp => emp.id == empresaObj.id);
+                if (empresaExiste) {
+                    companySelector.value = empresaObj.id;
+                } else {
+                    // Si no existe, usar la primera empresa
+                    companySelector.value = data.data[0].id;
+                    localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                    currentEmpresa = data.data[0];
+                }
             } else {
+                // No hay empresa guardada, usar la primera
                 companySelector.value = data.data[0].id;
                 localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                currentEmpresa = data.data[0];
             }
             
             // Event listener para cambio de empresa
