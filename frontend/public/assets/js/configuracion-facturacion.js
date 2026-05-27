@@ -46,10 +46,9 @@ function verificarAutenticacion() {
 
 async function cargarDatosUsuario() {
     const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
-    const empresa = JSON.parse(localStorage.getItem('empresa') || '{}');
     
     document.getElementById('userName').textContent = usuario.nombre || 'Usuario';
-    document.getElementById('userRole').textContent = empresa.nombre || 'Sin empresa';
+    document.getElementById('userRole').textContent = 'Cargando empresa...';
 }
 
 function logout() {
@@ -105,19 +104,41 @@ async function cargarEmpresas() {
         
         // Obtener empresa activa de localStorage o usar la primera
         const empresaActivaId = localStorage.getItem('empresaActiva');
+        let empresaSeleccionada;
+        
         if (empresaActivaId && empresas.find(e => e.id == empresaActivaId)) {
             select.value = empresaActivaId;
             empresaActual = empresaActivaId;
+            empresaSeleccionada = empresas.find(e => e.id == empresaActivaId);
         } else {
             empresaActual = empresas[0].id;
             select.value = empresaActual;
             localStorage.setItem('empresaActiva', empresaActual);
+            empresaSeleccionada = empresas[0];
+        }
+        
+        // Actualizar nombre de empresa en sidebar
+        if (empresaSeleccionada) {
+            const userRoleElement = document.getElementById('userRole');
+            if (userRoleElement) {
+                userRoleElement.textContent = empresaSeleccionada.nombre;
+            }
         }
         
         // Evento de cambio de empresa
         select.addEventListener('change', async function() {
             empresaActual = this.value;
             localStorage.setItem('empresaActiva', empresaActual);
+            
+            // Actualizar nombre de empresa en sidebar
+            const empresaNueva = empresas.find(e => e.id == empresaActual);
+            if (empresaNueva) {
+                const userRoleElement = document.getElementById('userRole');
+                if (userRoleElement) {
+                    userRoleElement.textContent = empresaNueva.nombre;
+                }
+            }
+            
             await cargarConfiguracion();
         });
         
