@@ -25,6 +25,7 @@ import facturacionRoutes from './platform/facturacion/facturacion.routes';
 import bodegasRoutes from './platform/bodegas/bodegas.routes';
 import trasladosRoutes from './platform/traslados/traslados.routes';
 import { verificarEmpresaActiva } from './core/middleware/licencia.middleware';
+import { authMiddleware } from './core/middleware/auth.middleware';
 
 const router = Router();
 
@@ -64,18 +65,19 @@ router.use('/roles', rolesRoutes);
 
 // ============================================
 // RUTAS TENANT (Por empresa)
-// Requieren licencia activa para funcionar
+// Requieren autenticación Y licencia activa para funcionar
+// Orden: authMiddleware → verificarEmpresaActiva → routes
 // ============================================
-router.use('/productos', verificarEmpresaActiva, productosRoutes);
-router.use('/categorias', verificarEmpresaActiva, categoriasRoutes);
-router.use('/clientes', verificarEmpresaActiva, clientesRoutes);
-router.use('/ventas', verificarEmpresaActiva, ventasRoutes);
-router.use('/proveedores', verificarEmpresaActiva, proveedoresRoutes);
-router.use('/inventario', verificarEmpresaActiva, inventarioRoutes);
-router.use('/compras', verificarEmpresaActiva, comprasRoutes);
-router.use('/impuestos', verificarEmpresaActiva, impuestosRoutes);
-router.use('/facturacion', verificarEmpresaActiva, facturacionRoutes);
-router.use('/bodegas', verificarEmpresaActiva, bodegasRoutes);
-router.use('/traslados', verificarEmpresaActiva, trasladosRoutes);
+router.use('/productos', authMiddleware, verificarEmpresaActiva, productosRoutes);
+router.use('/categorias', authMiddleware, verificarEmpresaActiva, categoriasRoutes);
+router.use('/clientes', authMiddleware, verificarEmpresaActiva, clientesRoutes);
+router.use('/ventas', authMiddleware, verificarEmpresaActiva, ventasRoutes);
+router.use('/proveedores', authMiddleware, verificarEmpresaActiva, proveedoresRoutes);
+router.use('/inventario', authMiddleware, verificarEmpresaActiva, inventarioRoutes);
+router.use('/compras', authMiddleware, verificarEmpresaActiva, comprasRoutes);
+router.use('/impuestos', authMiddleware, verificarEmpresaActiva, impuestosRoutes);
+router.use('/facturacion', authMiddleware, verificarEmpresaActiva, facturacionRoutes);
+router.use('/bodegas', authMiddleware, verificarEmpresaActiva, bodegasRoutes);
+router.use('/traslados', authMiddleware, verificarEmpresaActiva, trasladosRoutes);
 
 export default router;
