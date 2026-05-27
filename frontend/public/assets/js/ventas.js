@@ -2652,13 +2652,26 @@ function formatearFecha(fecha) {
 async function cargarImpuestosActivos() {
     try {
         const empresaId = currentEmpresa?.id;
-        if (!empresaId) return;
+        console.log('📋 cargarImpuestosActivos - empresaId:', empresaId);
+        if (!empresaId) {
+            console.warn('⚠️ No hay empresaId para cargar impuestos');
+            return;
+        }
 
-        const response = await fetch(`${API_URL}/impuestos/activos?empresaId=${empresaId}`, {
+        const url = `${API_URL}/impuestos/activos?empresaId=${empresaId}`;
+        console.log('📡 Fetching impuestos:', url);
+        
+        const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
 
-        if (!response.ok) throw new Error('Error al cargar impuestos');
+        console.log('📡 Response impuestos status:', response.status);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+            console.error('❌ Error del backend (impuestos):', errorData);
+            throw new Error(errorData.message || 'Error al cargar impuestos');
+        }
         
         const data = await response.json();
         impuestosDisponibles = data.data || [];
@@ -2739,16 +2752,28 @@ function toggleImpuesto(impuestoId) {
  * Cargar catálogo completo de productos
  */
 async function cargarCatalogoProductos() {
-    if (!currentEmpresa) return;
+    console.log('📦 cargarCatalogoProductos - currentEmpresa:', currentEmpresa);
+    if (!currentEmpresa) {
+        console.warn('⚠️ No hay currentEmpresa para cargar catálogo');
+        return;
+    }
     
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(
-            `${API_URL}/productos?empresaId=${currentEmpresa.id}&estado=activo`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+        const url = `${API_URL}/productos?empresaId=${currentEmpresa.id}&estado=activo`;
+        console.log('📡 Fetching catálogo:', url);
+        
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-        if (!response.ok) throw new Error('Error al cargar productos');
+        console.log('📡 Response catálogo status:', response.status);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+            console.error('❌ Error del backend (catálogo):', errorData);
+            throw new Error(errorData.message || 'Error al cargar productos');
+        }
 
         const data = await response.json();
         todosCatalogo = data.data || [];
@@ -3145,18 +3170,29 @@ function reproducirSonido(tipo) {
  * Cargar últimas ventas del día
  */
 async function cargarUltimasVentas() {
-    if (!currentEmpresa) return;
+    console.log('💰 cargarUltimasVentas - currentEmpresa:', currentEmpresa);
+    if (!currentEmpresa) {
+        console.warn('⚠️ No hay currentEmpresa para cargar ventas');
+        return;
+    }
     
     try {
         const token = localStorage.getItem('token');
         const hoy = new Date().toISOString().split('T')[0];
+        const url = `${API_URL}/ventas?empresaId=${currentEmpresa.id}&fecha_desde=${hoy}&fecha_hasta=${hoy}`;
+        console.log('📡 Fetching últimas ventas:', url);
         
-        const response = await fetch(
-            `${API_URL}/ventas?empresaId=${currentEmpresa.id}&fecha_desde=${hoy}&fecha_hasta=${hoy}`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-        if (!response.ok) throw new Error('Error al cargar ventas');
+        console.log('📡 Response ventas status:', response.status);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+            console.error('❌ Error del backend (ventas):', errorData);
+            throw new Error(errorData.message || 'Error al cargar ventas');
+        }
 
         const data = await response.json();
         ultimasVentas = data.data || [];
