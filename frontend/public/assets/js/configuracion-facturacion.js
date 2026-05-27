@@ -14,6 +14,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     await cargarEmpresas();
     inicializarEventos();
     
+    // Mostrar sidebar (agregar clase para que sea visible)
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    if (sidebarNav) {
+        sidebarNav.classList.add('permissions-loaded');
+    }
+    
     // Sidebar toggle
     document.getElementById('toggleSidebar').addEventListener('click', function() {
         document.getElementById('sidebar').classList.toggle('active');
