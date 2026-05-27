@@ -31,6 +31,16 @@ let configuracionPlantilla = null; // Configuración de plantilla de factura
 console.log('🚀 Ventas.js cargado - Versión 2.0.0 - POS Profesional');
 
 // ============================================
+// FUNCIÓN GLOBAL: Manejar errores de autenticación
+// ============================================
+function handleUnauthorized(message = 'Tu sesión ha expirado') {
+    console.error('🔒 Sesión expirada o token inválido');
+    localStorage.clear();
+    alert(message + '. Por favor inicia sesión nuevamente.');
+    window.location.href = 'index.html';
+}
+
+// ============================================
 // FUNCIÓN GLOBAL: Calcular Dígito de Verificación NIT (DIAN)
 // ============================================
 function calcularDigitoVerificacion(nit) {
@@ -412,7 +422,13 @@ async function buscarPorDocumento() {
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
 
-        if (!response.ok) throw new Error('Error al buscar cliente');
+        if (!response.ok) {
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
+            throw new Error('Error al buscar cliente');
+        }
 
         const data = await response.json();
         const clientes = data.data;
@@ -450,7 +466,13 @@ async function buscarPorNombre() {
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
 
-        if (!response.ok) throw new Error('Error al buscar cliente');
+        if (!response.ok) {
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
+            throw new Error('Error al buscar cliente');
+        }
 
         const data = await response.json();
         mostrarOpcionesClientes(data.data, 'resultadosNombre');
@@ -547,7 +569,13 @@ async function buscarProductos() {
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
 
-        if (!response.ok) throw new Error('Error al buscar productos');
+        if (!response.ok) {
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
+            throw new Error('Error al buscar productos');
+        }
 
         const data = await response.json();
         mostrarOpcionesProductos(data.data);
@@ -1273,6 +1301,10 @@ async function guardarVenta() {
         });
 
         if (!response.ok) {
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
             const error = await response.json();
             throw new Error(error.message || 'Error al guardar venta');
         }
@@ -1484,6 +1516,10 @@ async function guardarClienteRapido() {
         console.log('Respuesta del servidor:', response.status);
 
         if (!response.ok) {
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
             const error = await response.json();
             console.error('Error del servidor:', error);
             throw new Error(error.message || 'Error al guardar cliente');
@@ -2668,6 +2704,10 @@ async function cargarImpuestosActivos() {
         console.log('📡 Response impuestos status:', response.status);
         
         if (!response.ok) {
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
             const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
             console.error('❌ Error del backend (impuestos):', errorData);
             throw new Error(errorData.message || 'Error al cargar impuestos');
@@ -2770,6 +2810,10 @@ async function cargarCatalogoProductos() {
         console.log('📡 Response catálogo status:', response.status);
         
         if (!response.ok) {
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
             const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
             console.error('❌ Error del backend (catálogo):', errorData);
             throw new Error(errorData.message || 'Error al cargar productos');
@@ -3020,7 +3064,13 @@ async function seleccionarPublicoGeneral() {
             { headers: { 'Authorization': `Bearer ${token}` } }
         );
 
-        if (!response.ok) throw new Error('Error al buscar cliente');
+        if (!response.ok) {
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
+            throw new Error('Error al buscar cliente');
+        }
 
         const data = await response.json();
         let clientePublico = data.data && data.data.length > 0 ? data.data[0] : null;
@@ -3046,7 +3096,13 @@ async function seleccionarPublicoGeneral() {
                 })
             });
 
-            if (!createResponse.ok) throw new Error('Error al crear cliente público');
+            if (!createResponse.ok) {
+                if (createResponse.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+                throw new Error('Error al crear cliente público');
+            }
             
             const createData = await createResponse.json();
             clientePublico = {
@@ -3189,6 +3245,10 @@ async function cargarUltimasVentas() {
         console.log('📡 Response ventas status:', response.status);
         
         if (!response.ok) {
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
             const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
             console.error('❌ Error del backend (ventas):', errorData);
             throw new Error(errorData.message || 'Error al cargar ventas');
