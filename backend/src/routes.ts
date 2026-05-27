@@ -76,7 +76,7 @@ router.use('/proveedores', authMiddleware, verificarEmpresaActiva, proveedoresRo
 router.use('/inventario', authMiddleware, verificarEmpresaActiva, inventarioRoutes);
 router.use('/compras', authMiddleware, verificarEmpresaActiva, comprasRoutes);
 router.use('/impuestos', authMiddleware, verificarEmpresaActiva, impuestosRoutes);
-router.use('/facturacion', authMiddleware, verificarEmpresaActiva, facturacionRoutes);
+router.use('/facturacion', facturacionRoutes); // Middlewares aplicados dentro del módulo
 router.use('/bodegas', authMiddleware, verificarEmpresaActiva, bodegasRoutes);
 router.use('/traslados', authMiddleware, verificarEmpresaActiva, trasladosRoutes);
 
