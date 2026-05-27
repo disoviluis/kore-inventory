@@ -133,12 +133,21 @@ async function validarJerarquiaRol(
     };
   }
 
-  // Regla 4: Admin empresa solo crea roles para SU empresa
-  if (usuario.tipo_usuario === 'admin_empresa' && empresaIdRol !== usuario.empresa_id) {
-    return {
-      valid: false,
-      message: 'Solo puedes crear roles para tu empresa'
-    };
+  // Regla 4: Admin empresa solo crea roles para empresas a las que tiene acceso
+  if (usuario.tipo_usuario === 'admin_empresa' && empresaIdRol !== null) {
+    // Verificar que el usuario tenga acceso a esta empresa
+    const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+      `SELECT empresa_id FROM usuario_empresa 
+       WHERE usuario_id = ? AND empresa_id = ? AND activo = 1`,
+      [usuario.id, empresaIdRol]
+    );
+
+    if (empresasUsuario.length === 0) {
+      return {
+        valid: false,
+        message: 'Solo puedes crear roles para empresas a las que tienes acceso'
+      };
+    }
   }
 
   return { valid: true };
@@ -196,7 +205,7 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
         (SELECT COUNT(*) FROM usuario_rol WHERE rol_id = r.id) AS usuarios_count
       FROM roles r
       LEFT JOIN empresas e ON r.empresa_id = e.id
-      WHERE 1=1
+      WHERE r.activo = 1
     `;
 
     const params: any[] = [];
@@ -205,11 +214,35 @@ export const getRoles = async (req: Request, res: Response): Promise<void> => {
     // admin_empresa ve SOLO roles de su empresa (tipo='personalizado')
     // admin_empresa NO puede ver roles de sistema (nivel >= 80) ni roles globales
     if (usuario.tipo_usuario !== 'super_admin') {
+      // Validar que empresa_id sea requerido para admin_empresa
+      if (!empresa_id) {
+        res.status(400).json({
+          success: false,
+          message: 'El parámetro empresa_id es requerido'
+        });
+        return;
+      }
+
+      // Validar que el usuario tenga acceso a esta empresa
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        `SELECT empresa_id FROM usuario_empresa 
+         WHERE usuario_id = ? AND empresa_id = ? AND activo = 1`,
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        res.status(403).json({
+          success: false,
+          message: 'No tienes acceso a esta empresa'
+        });
+        return;
+      }
+
       // Filtrar por empresa y EXCLUIR roles de sistema
       query += ` AND r.empresa_id = ? 
                  AND r.tipo = 'personalizado' 
                  AND r.nivel < 80`;
-      params.push(empresa_id || usuario.empresa_id);
+      params.push(empresa_id);
     } else if (empresa_id) {
       // super_admin puede filtrar por empresa (ve sistema + personalizados)
       query += ' AND (r.empresa_id = ? OR r.empresa_id IS NULL)';
@@ -272,14 +305,23 @@ export const getRolById = async (req: Request, res: Response): Promise<void> => 
 
     const rol = roles[0];
 
-    // Verificar permisos: admin_empresa solo puede ver roles de su empresa
+    // Verificar permisos: admin_empresa solo puede ver roles de empresas a las que tiene acceso
     if (usuario.tipo_usuario !== 'super_admin') {
-      if (rol.empresa_id !== null && rol.empresa_id !== usuario.empresa_id) {
-        res.status(403).json({
-          success: false,
-          message: 'No tienes permiso para ver este rol'
-        });
-        return;
+      if (rol.empresa_id !== null) {
+        // Validar acceso a la empresa del rol vía usuario_empresa
+        const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+          `SELECT empresa_id FROM usuario_empresa 
+           WHERE usuario_id = ? AND empresa_id = ? AND activo = 1`,
+          [usuario.id, rol.empresa_id]
+        );
+
+        if (empresasUsuario.length === 0) {
+          res.status(403).json({
+            success: false,
+            message: 'No tienes permiso para ver este rol'
+          });
+          return;
+        }
       }
     }
 
@@ -478,7 +520,17 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
     // Validar que admin_empresa solo pueda crear roles para su empresa
     let empresaIdFinal: number | null = null;
     if (usuario.tipo_usuario !== 'super_admin') {
-      empresaIdFinal = usuario.empresa_id;
+      // Admin empresa DEBE especificar la empresa_id
+      if (!empresa_id) {
+        await connection.rollback();
+        res.status(400).json({
+          success: false,
+          message: 'Debes especificar la empresa_id para crear un rol'
+        });
+        connection.release();
+        return;
+      }
+      empresaIdFinal = empresa_id;
     } else {
       empresaIdFinal = empresa_id || null;
     }
@@ -635,13 +687,30 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Validar que admin_empresa solo edite roles de su empresa
+    // Validar que admin_empresa solo edite roles de empresas a las que tiene acceso
     if (usuario.tipo_usuario !== 'super_admin') {
-      if (rol.empresa_id !== usuario.empresa_id) {
+      if (rol.empresa_id === null) {
         await connection.rollback();
         res.status(403).json({
           success: false,
-          message: 'No tienes permiso para editar este rol'
+          message: 'No puedes editar roles globales'
+        });
+        connection.release();
+        return;
+      }
+
+      // Verificar que el usuario tenga acceso a esta empresa
+      const [empresasUsuario] = await connection.execute<RowDataPacket[]>(
+        `SELECT empresa_id FROM usuario_empresa 
+         WHERE usuario_id = ? AND empresa_id = ? AND activo = 1`,
+        [usuario.id, rol.empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        await connection.rollback();
+        res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar roles de esta empresa'
         });
         connection.release();
         return;
@@ -849,12 +918,27 @@ export const deleteRol = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Validar permisos
+    // Validar permisos - admin_empresa solo puede eliminar roles de empresas a las que tiene acceso
     if (usuario.tipo_usuario !== 'super_admin') {
-      if (rol.empresa_id !== usuario.empresa_id) {
+      if (rol.empresa_id === null) {
         res.status(403).json({
           success: false,
-          message: 'No tienes permiso para eliminar este rol'
+          message: 'No puedes eliminar roles globales'
+        });
+        return;
+      }
+
+      // Verificar que el usuario tenga acceso a esta empresa
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        `SELECT empresa_id FROM usuario_empresa 
+         WHERE usuario_id = ? AND empresa_id = ? AND activo = 1`,
+        [usuario.id, rol.empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para eliminar roles de esta empresa'
         });
         return;
       }

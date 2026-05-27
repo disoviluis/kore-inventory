@@ -3,8 +3,237 @@
  * SIDEBAR NAVIGATION - COMMON SCRIPT
  * ========================================
  * Maneja la navegación del sidebar en todas las páginas
- * Incluye soporte para módulos de PLATAFORMA (Super Admin)
+ * Filtra módulos según permisos del usuario
+ * 
+ * NOTA: Este script requiere que API_URL esté declarado
+ * Debe cargarse DESPUÉS del archivo JS de cada página que declara API_URL
  */
+
+/**
+ * Mapeo de enlaces del sidebar a nombres de módulos
+ * Clave: href de la página o nombre del módulo
+ * Valor: nombre del módulo en la tabla modulos
+ */
+const MODULE_MAP = {
+  // OPERACIONES
+  'ventas.html': 'ventas',
+  'ventas-historial.html': 'ventas',
+  'clientes.html': 'clientes',
+  'inventario.html': 'inventario',
+  'productos.html': 'productos',
+  'proveedores.html': 'proveedores',
+  'compras.html': 'compras',
+  
+  // LOGÍSTICA
+  'bodegas.html': 'bodegas',
+  'traslados.html': 'traslados',
+  'mensajeros-dashboard.html': 'mensajeros',
+  
+  // ADMINISTRACIÓN (módulos del dashboard)
+  'usuarios': 'usuarios',
+  'roles': 'roles',
+  'impuestos': 'impuestos',
+  'empresa': 'empresas',
+  'facturacion': 'facturacion',
+  
+  // PLATAFORMA
+  'empresas': 'empresas',
+  'licencias': 'licencias',
+  'auditoria': 'auditoria'
+};
+
+/**
+ * Cargar módulos permitidos desde la API
+ */
+async function cargarModulosPermitidos() {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.warn('⚠️ No hay token - No se pueden cargar permisos');
+      return null;
+    }
+    
+    const response = await fetch(`${API_URL}/auth/permisos/modulos`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      console.error('❌ Error al cargar módulos permitidos:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      console.log('✅ Módulos permitidos cargados:', data.data.modulos);
+      
+      // Guardar en localStorage
+      localStorage.setItem('modulosPermitidos', JSON.stringify(data.data.modulos));
+      
+      return data.data.modulos;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ Error al cargar módulos permitidos:', error);
+    return null;
+  }
+}
+
+/**
+ * Obtener módulos permitidos (desde localStorage o API)
+ */
+async function getModulosPermitidos() {
+  // Intentar obtener desde localStorage primero
+  const cached = localStorage.getItem('modulosPermitidos');
+  
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      console.warn('⚠️ Error al parsear módulos en cache, recargando...');
+    }
+  }
+  
+  // Si no hay cache, cargar desde API
+  return await cargarModulosPermitidos();
+}
+
+/**
+ * Verificar si el usuario tiene acceso a un módulo
+ */
+function tienePermisoModulo(moduloNombre, modulosPermitidos) {
+  if (!modulosPermitidos || modulosPermitidos.length === 0) {
+    return false;
+  }
+  
+  return modulosPermitidos.some(m => m.nombre === moduloNombre);
+}
+
+/**
+ * Filtrar sidebar según módulos permitidos
+ */
+async function filtrarSidebarPorPermisos() {
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+  
+  // Super admin ve todo (pero aún mostrar sidebar)
+  if (usuario.tipo_usuario === 'super_admin') {
+    console.log('👑 Super Admin - Sin restricciones de módulos');
+    
+    // Mostrar sidebar inmediatamente para super admin
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    if (sidebarNav) {
+      sidebarNav.classList.add('permissions-loaded');
+    }
+    
+    return;
+  }
+  
+  // Cargar módulos permitidos
+  const modulosPermitidos = await getModulosPermitidos();
+  
+  if (!modulosPermitidos) {
+    console.warn('⚠️ No se pudieron cargar los módulos permitidos');
+    
+    // FALLBACK: Mostrar sidebar de todos modos para evitar quedar invisible
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    if (sidebarNav) {
+      sidebarNav.classList.add('permissions-loaded');
+      console.log('⚠️ Sidebar mostrado sin filtrar (fallback por error)');
+    }
+    
+    return;
+  }
+  
+  console.log('🔍 Filtrando sidebar según permisos...');
+  
+  // Obtener todos los nav-items del sidebar
+  const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
+  
+  navItems.forEach(item => {
+    const link = item.querySelector('a.nav-link');
+    
+    if (!link) return;
+    
+    // No filtrar Dashboard ni secciones principales
+    if (link.classList.contains('nav-section') || 
+        link.getAttribute('href') === 'dashboard.html') {
+      return;
+    }
+    
+    // Obtener el href o el módulo desde onclick
+    let moduloNombre = null;
+    const href = link.getAttribute('href');
+    const onclick = link.getAttribute('onclick');
+    
+    if (href && href !== '#') {
+      // Extraer nombre de archivo del href
+      const fileName = href.split('/').pop();
+      moduloNombre = MODULE_MAP[fileName];
+    } else if (onclick) {
+      // Extraer módulo de cambiarModulo('xxx')
+      const match = onclick.match(/cambiarModulo\('([^']+)'\)/);
+      if (match) {
+        moduloNombre = MODULE_MAP[match[1]] || match[1];
+      }
+    }
+    
+    // Si encontramos el módulo, verificar permisos
+    if (moduloNombre) {
+      const tienePermiso = tienePermisoModulo(moduloNombre, modulosPermitidos);
+      
+      if (!tienePermiso) {
+        console.log(`🚫 Ocultando módulo sin permiso: ${moduloNombre}`);
+        item.style.display = 'none';
+      } else {
+        console.log(`✅ Módulo permitido: ${moduloNombre}`);
+        item.style.display = 'block';
+      }
+    }
+  });
+  
+  // Ocultar secciones completas si no tienen módulos visibles
+  ocultarSeccionesVacias();
+  
+  // ✅ Marcar sidebar como cargado (mostrar con transición)
+  const sidebarNav = document.querySelector('.sidebar-nav');
+  if (sidebarNav) {
+    sidebarNav.classList.add('permissions-loaded');
+    console.log('✅ Sidebar visible - Permisos aplicados');
+  }
+}
+
+/**
+ * Ocultar secciones que no tienen módulos visibles
+ */
+function ocultarSeccionesVacias() {
+  const secciones = [
+    { id: 'operacionesCollapse', parentSelector: '[href="#operacionesCollapse"]' },
+    { id: 'logisticaCollapse', parentSelector: '[href="#logisticaCollapse"]' },
+    { id: 'finanzasCollapse', parentSelector: '[href="#finanzasCollapse"]' },
+    { id: 'reportesCollapse', parentSelector: '[href="#reportesCollapse"]' }
+  ];
+  
+  secciones.forEach(seccion => {
+    const collapse = document.getElementById(seccion.id);
+    const parentLink = document.querySelector(seccion.parentSelector);
+    
+    if (!collapse || !parentLink) return;
+    
+    // Contar nav-items visibles (excluir disabled)
+    const itemsVisibles = collapse.querySelectorAll('.nav-item:not([style*="display: none"]) .nav-link:not(.disabled)');
+    
+    if (itemsVisibles.length === 0) {
+      console.log(`🚫 Ocultando sección vacía: ${seccion.id}`);
+      parentLink.closest('.nav-item').style.display = 'none';
+    } else {
+      parentLink.closest('.nav-item').style.display = 'block';
+    }
+  });
+}
 
 /**
  * Mostrar/ocultar sección de PLATAFORMA para super admin
@@ -50,16 +279,22 @@ function configurarSidebarAdministracion() {
 /**
  * Inicializar sidebar navigation
  */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('🔧 Sidebar Navigation inicializado');
   
-  // Configurar visibilidad de PLATAFORMA
+  // 1. Cargar módulos permitidos desde la API
+  await cargarModulosPermitidos();
+  
+  // 2. Filtrar sidebar según permisos
+  await filtrarSidebarPorPermisos();
+  
+  // 3. Configurar visibilidad de PLATAFORMA
   configurarSidebarSuperAdmin();
   
-  // Configurar visibilidad de ADMINISTRACIÓN
+  // 4. Configurar visibilidad de ADMINISTRACIÓN
   configurarSidebarAdministracion();
   
-  // Si estamos en dashboard.html y hay un hash, activar ese módulo
+  // 5. Si estamos en dashboard.html y hay un hash, activar ese módulo
   if (window.location.pathname.includes('dashboard.html') && window.location.hash) {
     const moduleName = window.location.hash.substring(1); // Remover el #
     console.log(`🎯 Activando módulo desde hash: ${moduleName}`);
@@ -72,3 +307,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
   }
 });
+

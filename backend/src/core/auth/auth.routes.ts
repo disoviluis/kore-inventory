@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import { login, verifyToken, logout } from './auth.controller';
+import { getModulosPermitidos, getPermisosUsuario } from './permisos.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -31,5 +32,19 @@ router.get('/verify', authMiddleware, verifyToken);
  * @access  Private
  */
 router.post('/logout', authMiddleware, logout);
+
+/**
+ * @route   GET /api/auth/permisos/modulos
+ * @desc    Obtener módulos permitidos para el usuario actual
+ * @access  Private
+ */
+router.get('/permisos/modulos', authMiddleware, getModulosPermitidos);
+
+/**
+ * @route   GET /api/auth/permisos
+ * @desc    Obtener permisos detallados del usuario actual
+ * @access  Private
+ */
+router.get('/permisos', authMiddleware, getPermisosUsuario);
 
 export default router;

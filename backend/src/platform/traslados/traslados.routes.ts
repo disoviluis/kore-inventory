@@ -10,11 +10,13 @@ import {
   createTraslado,
   aprobarTraslado,
   enviarTraslado,
+  iniciarEntrega,
   recibirTraslado,
   cancelarTraslado,
   getMisTrasladosMensajero
 } from './traslados.controller';
 import { authMiddleware } from '../../core/middleware/auth.middleware';
+import { requirePermission, requireModuleAccess } from '../../core/middleware/permissions.middleware';
 
 const router = Router();
 
@@ -25,14 +27,16 @@ router.use(authMiddleware);
  * GET /api/traslados
  * Lista traslados con filtros
  * Query: empresa_id, estado, mensajero_id, fecha_desde, fecha_hasta
+ * ⚠️ Requiere permiso: view en traslados
  */
-router.get('/', getTraslados);
+router.get('/', requireModuleAccess('traslados'), getTraslados);
 
 /**
  * GET /api/traslados/mensajero/mis-traslados
  * Módulo de mensajero: lista traslados asignados
+ * ⚠️ Requiere permiso: view_own en traslados
  */
-router.get('/mensajero/mis-traslados', getMisTrasladosMensajero);
+router.get('/mensajero/mis-traslados', requirePermission('traslados', 'view_own'), getMisTrasladosMensajero);
 
 /**
  * GET /api/traslados/:id
@@ -45,8 +49,9 @@ router.get('/:id', getTrasladoById);
  * Crea un nuevo traslado
  * Body: empresa_id, bodega_origen_id, bodega_destino_id, motivo, 
  *       destinatario_nombre, destinatario_documento, productos[]
+ * ⚠️ CRÍTICO: Requiere permiso CREATE - Mensajero NO debe tener este permiso
  */
-router.post('/', createTraslado);
+router.post('/', requirePermission('traslados', 'create'), createTraslado);
 
 /**
  * PUT /api/traslados/:id/aprobar
@@ -63,11 +68,19 @@ router.put('/:id/aprobar', aprobarTraslado);
 router.put('/:id/enviar', enviarTraslado);
 
 /**
+ * PUT /api/traslados/:id/iniciar
+ * Mensajero inicia la entrega (marca que salió a entregar)
+ * ⚠️ Requiere permiso: deliver en traslados
+ */
+router.put('/:id/iniciar', requirePermission('traslados', 'deliver'), iniciarEntrega);
+
+/**
  * PUT /api/traslados/:id/recibir
  * Recibe un traslado con firma digital
  * Body: productos_recibidos[], firma_recepcion, gps_latitud, gps_longitud
+ * ⚠️ Requiere permiso: receive en traslados
  */
-router.put('/:id/recibir', recibirTraslado);
+router.put('/:id/recibir', requirePermission('traslados', 'receive'), recibirTraslado);
 
 /**
  * PUT /api/traslados/:id/cancelar

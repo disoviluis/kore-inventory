@@ -164,6 +164,17 @@ body {
 .sidebar-nav {
     flex: 1;
     padding: 20px 0;
+    /* INICIO: Prevenir FOUC - Ocultar hasta que permisos se carguen */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in, visibility 0.3s;
+    /* FIN: Prevenir FOUC */
+}
+
+/* Mostrar sidebar después de cargar permisos */
+.sidebar-nav.permissions-loaded {
+    opacity: 1;
+    visibility: visible;
 }
 
 .sidebar-nav .nav {

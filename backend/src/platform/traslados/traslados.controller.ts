@@ -27,14 +27,35 @@ export const getTraslados = async (req: Request, res: Response): Promise<any> =>
       bodega_origen_id,
       bodega_destino_id
     } = req.query;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
-    // Validar permisos
-    if (usuario.tipo_usuario === 'admin_empresa' && empresa_id != usuario.empresa_id_default) {
-      return res.status(403).json({
+    if (!usuario) {
+      return res.status(401).json({
         success: false,
-        message: 'No tiene permisos para acceder a traslados de otra empresa'
+        message: 'Usuario no autenticado'
       });
+    }
+
+    if (!empresa_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'El parámetro empresa_id es requerido'
+      });
+    }
+
+    // Validar acceso a la empresa (excepto super_admin)
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tiene permisos para acceder a los traslatos de esta empresa'
+        });
+      }
     }
 
     // Si es mensajero, solo puede ver sus traslados asignados
@@ -134,7 +155,7 @@ export const getTraslados = async (req: Request, res: Response): Promise<any> =>
 export const getTrasladoById = async (req: Request, res: Response): Promise<any> => {
   try {
     const { id } = req.params;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
     // Obtener traslado principal
     const [traslados] = await pool.query<RowDataPacket[]>(`
@@ -179,11 +200,20 @@ export const getTrasladoById = async (req: Request, res: Response): Promise<any>
 
     // Validar permisos
     const esMensajero = usuario.tipo_usuario === 'mensajero';
-    if (usuario.tipo_usuario === 'admin_empresa' && traslado.empresa_id != usuario.empresa_id_default) {
-      return res.status(403).json({
-        success: false,
-        message: 'No tiene permisos para ver este traslado'
-      });
+    
+    // Validar acceso a la empresa (excepto super_admin y mensajero)
+    if (usuario.tipo_usuario !== 'super_admin' && !esMensajero) {
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, traslado.empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tiene permisos para ver este traslado'
+        });
+      }
     }
 
     if (esMensajero && traslado.mensajero_id != usuario.id) {
@@ -197,11 +227,10 @@ export const getTrasladoById = async (req: Request, res: Response): Promise<any>
     const [detalle] = await pool.query<RowDataPacket[]>(`
       SELECT 
         td.*,
-        p.codigo as producto_codigo,
+        p.sku as producto_codigo,
         p.nombre as producto_nombre,
-        p.referencia as producto_referencia,
+        p.codigo_barras as producto_referencia,
         p.descripcion as producto_descripcion,
-        p.marca,
         p.unidad_medida,
         pb_origen.stock_actual as stock_origen,
         pb_destino.stock_actual as stock_destino
@@ -256,11 +285,18 @@ export const createTraslado = async (req: Request, res: Response) => {
       productos // Array de { producto_id, cantidad_solicitada }
     } = req.body;
 
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
-    // Validar permisos
-    if (usuario.tipo_usuario === 'admin_empresa' && empresa_id != usuario.empresa_id_default) {
-      throw new Error('No tiene permisos para crear traslados en otra empresa');
+    // Validar acceso a la empresa (excepto super_admin)
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await connection.query<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        throw new Error('No tiene permisos para crear traslados en esta empresa');
+      }
     }
 
     // Validar que las bodegas sean diferentes
@@ -397,7 +433,7 @@ export const aprobarTraslado = async (req: Request, res: Response) => {
 
     const { id } = req.params;
     const { productos_aprobados } = req.body; // Opcional: ajustar cantidades
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
     // Obtener traslado
     const [traslados] = await connection.query<RowDataPacket[]>(`
@@ -482,7 +518,7 @@ export const enviarTraslado = async (req: Request, res: Response) => {
 
     const { id } = req.params;
     const { mensajero_id } = req.body;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
     // Obtener traslado
     const [traslados] = await connection.query<RowDataPacket[]>(`
@@ -573,7 +609,7 @@ export const recibirTraslado = async (req: Request, res: Response) => {
       gps_longitud,
       dispositivo_recepcion
     } = req.body;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
     // Obtener IP del request
     const ip_recepcion = req.ip || req.connection.remoteAddress;
@@ -598,23 +634,31 @@ export const recibirTraslado = async (req: Request, res: Response) => {
       throw new Error('Debe especificar las cantidades recibidas');
     }
 
+    // Obtener detalle completo primero para validaciones
+    const [detalleCompleto] = await connection.query<RowDataPacket[]>(`
+      SELECT producto_id, cantidad_aprobada, cantidad_recibida
+      FROM traslados_detalle
+      WHERE traslado_id = ?
+    `, [id]);
+
     // Actualizar detalle con cantidades recibidas
     let todasRecibidas = true;
     for (const item of productos_recibidos) {
+      // Solo actualizar cantidad_recibida, cantidad_diferencia es VIRTUAL GENERATED
       await connection.query(`
         UPDATE traslados_detalle
-        SET cantidad_recibida = ?,
-            diferencia = cantidad_aprobada - ?
+        SET cantidad_recibida = ?
         WHERE traslado_id = ? AND producto_id = ?
-      `, [item.cantidad_recibida, item.cantidad_recibida, id, item.producto_id]);
+      `, [item.cantidad_recibida, id, item.producto_id]);
 
-      // Si hay diferencia, marca como parcialmente recibido
-      if (item.cantidad_recibida < item.cantidad_aprobada) {
+      // Validar si todas fueron recibidas completamente
+      const detalleItem = detalleCompleto.find(d => d.producto_id === item.producto_id);
+      if (detalleItem && item.cantidad_recibida < detalleItem.cantidad_aprobada) {
         todasRecibidas = false;
       }
     }
 
-    // Obtener detalle completo
+    // Obtener detalle actualizado para mover stock
     const [detalle] = await connection.query<RowDataPacket[]>(`
       SELECT producto_id, cantidad_aprobada, cantidad_recibida
       FROM traslados_detalle
@@ -718,7 +762,7 @@ export const cancelarTraslado = async (req: Request, res: Response) => {
 
     const { id } = req.params;
     const { motivo_cancelacion } = req.body;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
 
     // Obtener traslado
     const [traslados] = await connection.query<RowDataPacket[]>(`
@@ -794,12 +838,76 @@ export const cancelarTraslado = async (req: Request, res: Response) => {
 };
 
 /**
+ * PUT /api/traslados/:id/iniciar
+ * El mensajero inicia la entrega (marca que salió a entregar)
+ */
+export const iniciarEntrega = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const usuario = (req as any).user;
+
+    // Obtener traslado
+    const [traslados] = await pool.query<RowDataPacket[]>(`
+      SELECT * FROM traslados WHERE id = ?
+    `, [id]);
+
+    if (traslados.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Traslado no encontrado'
+      });
+    }
+
+    const traslado = traslados[0];
+
+    // Verificar que es el mensajero asignado
+    if (traslado.mensajero_id !== usuario.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'No tiene permisos para iniciar este traslado'
+      });
+    }
+
+    // Solo se puede iniciar si está en estado 'en_transito'
+    if (traslado.estado !== 'en_transito') {
+      return res.status(400).json({
+        success: false,
+        message: `Solo se pueden iniciar traslados en tránsito. Estado actual: ${traslado.estado}`
+      });
+    }
+
+    // Ya está iniciado, solo actualizamos timestamp si quiere re-iniciar
+    // No cambiamos estado, solo registramos la acción
+    await pool.query(`
+      INSERT INTO auditoria_logs (
+        usuario_id, empresa_id, accion, modulo, tabla, registro_id
+      ) VALUES (?, ?, 'iniciar_entrega', 'traslados', 'traslados', ?)
+    `, [usuario.id, traslado.empresa_id, id]);
+
+    logger.info(`Mensajero ${usuario.nombre} inició entrega de traslado ${traslado.numero_traslado}`);
+
+    return res.json({
+      success: true,
+      message: 'Entrega iniciada exitosamente'
+    });
+
+  } catch (error: any) {
+    logger.error('Error al iniciar entrega:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al iniciar entrega',
+      error: error.message
+    });
+  }
+};
+
+/**
  * GET /api/traslados/mensajero/mis-traslados
  * Para el módulo de mensajero: lista sus traslados asignados
  */
 export const getMisTrasladosMensajero = async (req: Request, res: Response) => {
   try {
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user;
     const { estado } = req.query;
 
     let query = `
@@ -846,3 +954,4 @@ export const getMisTrasladosMensajero = async (req: Request, res: Response) => {
     });
   }
 };
+

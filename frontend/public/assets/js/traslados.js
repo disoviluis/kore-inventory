@@ -20,31 +20,38 @@ let trasladoEditando = null;
 document.addEventListener('DOMContentLoaded', async () => {
     // Check authentication
     const usuario = JSON.parse(localStorage.getItem('usuario'));
-    const empresaActiva = localStorage.getItem('empresa_activa');
     
     if (!usuario) {
         window.location.href = 'login.html';
         return;
     }
 
-    currentEmpresaId = usuario.tipo_usuario === 'super_admin' 
-        ? empresaActiva 
-        : usuario.empresa_id_default;
-
-    if (!currentEmpresaId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Empresa no seleccionada',
-            text: 'Por favor selecciona una empresa primero'
-        });
-        return;
-    }
-
-    // Initialize
+    // Initialize user info
     loadUserInfo();
+    initializeEventListeners();
+    
+    // ✅ Inicializar sistema de permisos
+    if (typeof PermisosUtils !== 'undefined') {
+        await PermisosUtils.inicializarPermisos();
+    }
+    
+    // Wait for empresaActiva to be loaded by company-selector.js
+    setTimeout(async () => {
+        const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
+        if (empresaActiva && empresaActiva.id) {
+            currentEmpresaId = empresaActiva.id;
+            await loadBodegas();
+            await loadTraslados();
+        }
+    }, 500);
+});
+
+// Listen for empresa change event from company-selector.js
+window.addEventListener('empresaCambiada', async (event) => {
+    console.log('🔄 Empresa cambiada en Traslados:', event.detail.empresa);
+    currentEmpresaId = event.detail.empresa.id;
     await loadBodegas();
     await loadTraslados();
-    initializeEventListeners();
 });
 
 // ==========================================

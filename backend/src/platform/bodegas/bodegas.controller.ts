@@ -50,21 +50,30 @@ export const getBodegas = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    let empresaIdFinal: number;
-
-    // super_admin puede especificar empresa_id, admin_empresa usa la suya
-    if (usuario.tipo_usuario === 'super_admin' && empresa_id) {
-      empresaIdFinal = parseInt(empresa_id as string);
-    } else {
-      empresaIdFinal = usuario.empresa_id;
-    }
-
-    if (!empresaIdFinal) {
+    if (!empresa_id) {
       res.status(400).json({
         success: false,
-        message: 'ID de empresa requerido'
+        message: 'El parámetro empresa_id es requerido'
       });
       return;
+    }
+
+    let empresaIdFinal: number = parseInt(empresa_id as string);
+
+    // Validar acceso a la empresa (excepto super_admin)
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, empresaIdFinal]
+      );
+
+      if (empresasUsuario.length === 0) {
+        res.status(403).json({
+          success: false,
+          message: 'No tiene permisos para acceder a las bodegas de esta empresa'
+        });
+        return;
+      }
     }
 
     const [bodegas] = await pool.execute<Bodega[]>(
@@ -100,7 +109,32 @@ export const getBodegas = async (req: Request, res: Response): Promise<void> => 
 export const getBodegaById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const { empresa_id } = req.query;
     const usuario = (req as any).user;
+
+    if (!empresa_id) {
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro empresa_id es requerido'
+      });
+      return;
+    }
+
+    // Validar acceso a la empresa (excepto super_admin)
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        res.status(403).json({
+          success: false,
+          message: 'No tiene permisos para acceder a esta bodega'
+        });
+        return;
+      }
+    }
 
     const [bodegas] = await pool.execute<Bodega[]>(
       `SELECT 
@@ -111,8 +145,8 @@ export const getBodegaById = async (req: Request, res: Response): Promise<void> 
       FROM bodegas b
       LEFT JOIN usuarios u ON b.responsable_id = u.id
       INNER JOIN empresas e ON b.empresa_id = e.id
-      WHERE b.id = ?`,
-      [id]
+      WHERE b.id = ? AND b.empresa_id = ?`,
+      [id, empresa_id]
     );
 
     if (bodegas.length === 0) {
@@ -124,15 +158,6 @@ export const getBodegaById = async (req: Request, res: Response): Promise<void> 
     }
 
     const bodega = bodegas[0];
-
-    // Verificar permisos
-    if (usuario.tipo_usuario !== 'super_admin' && bodega.empresa_id !== usuario.empresa_id) {
-      res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para ver esta bodega'
-      });
-      return;
-    }
 
     res.json({
       success: true,
@@ -185,18 +210,33 @@ export const createBodega = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Determinar empresa_id
-    const empresaIdFinal = usuario.tipo_usuario === 'super_admin' && empresa_id
-      ? empresa_id
-      : usuario.empresa_id;
-
-    if (!empresaIdFinal) {
+    // Validar empresa_id
+    if (!empresa_id) {
       await connection.rollback();
       res.status(400).json({
         success: false,
-        message: 'ID de empresa requerido'
+        message: 'El campo empresa_id es requerido'
       });
       return;
+    }
+
+    const empresaIdFinal = parseInt(empresa_id);
+
+    // Validar acceso a la empresa (excepto super_admin)
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, empresaIdFinal]
+      );
+
+      if (empresasUsuario.length === 0) {
+        await connection.rollback();
+        res.status(403).json({
+          success: false,
+          message: 'No tiene permisos para crear bodegas en esta empresa'
+        });
+        return;
+      }
     }
 
     // Verificar que el código no exista para esta empresa
@@ -296,6 +336,7 @@ export const updateBodega = async (req: Request, res: Response): Promise<void> =
     const { id } = req.params;
     const usuario = (req as any).user;
     const {
+      empresa_id,
       codigo,
       nombre,
       descripcion,
@@ -311,10 +352,36 @@ export const updateBodega = async (req: Request, res: Response): Promise<void> =
       estado
     } = req.body;
 
+    if (!empresa_id) {
+      await connection.rollback();
+      res.status(400).json({
+        success: false,
+        message: 'El campo empresa_id es requerido'
+      });
+      return;
+    }
+
+    // Validar acceso a la empresa (excepto super_admin)
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        await connection.rollback();
+        res.status(403).json({
+          success: false,
+          message: 'No tiene permisos para actualizar bodegas en esta empresa'
+        });
+        return;
+      }
+    }
+
     // Verificar que existe
     const [bodegas] = await connection.execute<Bodega[]>(
-      'SELECT * FROM bodegas WHERE id = ?',
-      [id]
+      'SELECT * FROM bodegas WHERE id = ? AND empresa_id = ?',
+      [id, empresa_id]
     );
 
     if (bodegas.length === 0) {
@@ -327,16 +394,6 @@ export const updateBodega = async (req: Request, res: Response): Promise<void> =
     }
 
     const bodega = bodegas[0];
-
-    // Verificar permisos
-    if (usuario.tipo_usuario !== 'super_admin' && bodega.empresa_id !== usuario.empresa_id) {
-      await connection.rollback();
-      res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para actualizar esta bodega'
-      });
-      return;
-    }
 
     // Si se marca como principal, desmarcar otras
     if (es_principal && !bodega.es_principal) {
@@ -411,12 +468,39 @@ export const deleteBodega = async (req: Request, res: Response): Promise<void> =
     await connection.beginTransaction();
 
     const { id } = req.params;
+    const { empresa_id } = req.query;
     const usuario = (req as any).user;
+
+    if (!empresa_id) {
+      await connection.rollback();
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro empresa_id es requerido'
+      });
+      return;
+    }
+
+    // Validar acceso a la empresa (excepto super_admin)
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        await connection.rollback();
+        res.status(403).json({
+          success: false,
+          message: 'No tiene permisos para eliminar bodegas en esta empresa'
+        });
+        return;
+      }
+    }
 
     // Verificar que existe
     const [bodegas] = await connection.execute<Bodega[]>(
-      'SELECT * FROM bodegas WHERE id = ?',
-      [id]
+      'SELECT * FROM bodegas WHERE id = ? AND empresa_id = ?',
+      [id, empresa_id]
     );
 
     if (bodegas.length === 0) {
@@ -429,16 +513,6 @@ export const deleteBodega = async (req: Request, res: Response): Promise<void> =
     }
 
     const bodega = bodegas[0];
-
-    // Verificar permisos
-    if (usuario.tipo_usuario !== 'super_admin' && bodega.empresa_id !== usuario.empresa_id) {
-      await connection.rollback();
-      res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para eliminar esta bodega'
-      });
-      return;
-    }
 
     // No permitir eliminar bodega principal
     if (bodega.es_principal) {
@@ -494,26 +568,43 @@ export const deleteBodega = async (req: Request, res: Response): Promise<void> =
 export const getStockPorBodega = async (req: Request, res: Response): Promise<void> => {
   try {
     const { bodega_id } = req.params;
+    const { empresa_id } = req.query;
     const usuario = (req as any).user;
 
-    // Verificar permisos
+    if (!empresa_id) {
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro empresa_id es requerido'
+      });
+      return;
+    }
+
+    // Validar acceso a la empresa (excepto super_admin)
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        res.status(403).json({
+          success: false,
+          message: 'No tiene permisos para consultar el stock de esta empresa'
+        });
+        return;
+      }
+    }
+
+    // Verificar que la bodega existe y pertenece a la empresa
     const [bodegas] = await pool.execute<Bodega[]>(
-      'SELECT * FROM bodegas WHERE id = ?',
-      [bodega_id]
+      'SELECT * FROM bodegas WHERE id = ? AND empresa_id = ?',
+      [bodega_id, empresa_id]
     );
 
     if (bodegas.length === 0) {
       res.status(404).json({
         success: false,
         message: 'Bodega no encontrada'
-      });
-      return;
-    }
-
-    if (usuario.tipo_usuario !== 'super_admin' && bodegas[0].empresa_id !== usuario.empresa_id) {
-      res.status(403).json({
-        success: false,
-        message: 'No tienes permiso para ver el stock de esta bodega'
       });
       return;
     }

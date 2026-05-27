@@ -23,6 +23,215 @@ function mostrarExito(mensaje) {
   alert(mensaje);
 }
 
+// ============================================
+// FUNCIONES PARA EMPRESAS - DÍGITO VERIFICACIÓN Y RUES
+// ============================================
+
+/**
+ * Mostrar/ocultar campo dígito de verificación según tipo de documento
+ */
+function toggleDigitoVerificacionEmpresa() {
+    const tipoDoc = document.getElementById('empresaTipoDocumento')?.value;
+    const dvContainer = document.getElementById('empresaDigitoVerificacionContainer');
+    const numeroDocContainer = document.getElementById('empresaNumeroDocumentoContainer');
+    
+    if (!tipoDoc || !dvContainer || !numeroDocContainer) return;
+    
+    if (tipoDoc === 'NIT') {
+        dvContainer.style.display = 'block';
+        numeroDocContainer.classList.remove('col-md-8');
+        numeroDocContainer.classList.add('col-md-6');
+        
+        // Auto-calcular si ya hay un número
+        autoCalcularDigitoVerificacionEmpresa();
+    } else {
+        dvContainer.style.display = 'none';
+        numeroDocContainer.classList.remove('col-md-6');
+        numeroDocContainer.classList.add('col-md-8');
+        const dvInput = document.getElementById('empresaDigitoVerificacion');
+        if (dvInput) dvInput.value = '';
+    }
+}
+
+/**
+ * Auto-calcula el dígito de verificación cuando el tipo es NIT
+ */
+function autoCalcularDigitoVerificacionEmpresa() {
+    const tipoDoc = document.getElementById('empresaTipoDocumento')?.value;
+    if (tipoDoc !== 'NIT') return;
+    
+    const nitInput = document.getElementById('empresaNit');
+    const dvInput = document.getElementById('empresaDigitoVerificacion');
+    
+    if (!nitInput || !dvInput) return;
+    
+    const nit = nitInput.value.trim();
+    if (!nit || nit.length < 6) {
+        dvInput.value = '';
+        return;
+    }
+    
+    // Calcular DV
+    const dv = calcularDigitoVerificacionDIAN(nit);
+    dvInput.value = dv;
+}
+
+/**
+ * Calcula el dígito de verificación según el algoritmo DIAN
+ * @param {string} nit - Número de identificación tributaria sin DV
+ * @returns {string} Dígito de verificación (0-9)
+ * @see https://www.dian.gov.co - Algoritmo oficial DIAN Colombia
+ */
+function calcularDigitoVerificacionDIAN(nit) {
+    // Eliminar caracteres no numéricos
+    const nitLimpio = nit.replace(/\D/g, '');
+    
+    if (!nitLimpio || nitLimpio.length === 0) return '';
+    
+    // Pesos para cada posición según DIAN
+    // Se aplican de DERECHA a IZQUIERDA sobre el NIT
+    const pesos = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+    
+    let suma = 0;
+    let pesoIndex = 0;
+    
+    // Multiplicar cada dígito por su peso (de derecha a izquierda del NIT)
+    for (let i = nitLimpio.length - 1; i >= 0; i--) {
+        if (pesoIndex >= pesos.length) break;
+        suma += parseInt(nitLimpio[i]) * pesos[pesoIndex];
+        pesoIndex++;
+    }
+    
+    // Obtener el residuo de dividir la suma entre 11
+    const residuo = suma % 11;
+    
+    // Si el residuo es 0 o 1, el DV es 0, de lo contrario DV = 11 - residuo
+    if (residuo === 0 || residuo === 1) {
+        return '0';
+    } else {
+        return String(11 - residuo);
+    }
+}
+
+/**
+ * Consulta información empresarial desde RUES
+ * Similar a la función en proveedores.js pero adaptada para empresas
+ */
+async function consultarRUESEmpresa() {
+    try {
+        const tipoDoc = document.getElementById('empresaTipoDocumento')?.value;
+        const numeroDoc = document.getElementById('empresaNit')?.value?.trim();
+        const dv = document.getElementById('empresaDigitoVerificacion')?.value?.trim();
+        
+        // Validar que sea NIT
+        if (tipoDoc !== 'NIT') {
+            mostrarError('La consulta RUES solo está disponible para NIT');
+            return;
+        }
+        
+        if (!numeroDoc) {
+            mostrarError('Por favor ingrese el número de NIT');
+            return;
+        }
+        
+        // Mostrar spinner
+        const btnRUES = document.getElementById('btnConsultarRUESEmpresa');
+        const spinner = document.getElementById('spinnerRUESEmpresa');
+        if (btnRUES) btnRUES.disabled = true;
+        if (spinner) spinner.classList.remove('d-none');
+        
+        // Construir NIT completo
+        const nitCompleto = dv ? `${numeroDoc}-${dv}` : numeroDoc;
+        
+        // NOTA: Esta es una implementación simulada
+        // En producción, aquí iría la llamada a la API RUES real
+        // Por ejemplo: const response = await fetch(`${API_URL}/rues/consultar?nit=${nitCompleto}`);
+        
+        // Simulación con timeout para demostrar funcionalidad
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Datos simulados (en producción vendrían de la API)
+        const datosRUES = {
+            razon_social: `EMPRESA DEMO ${numeroDoc} S.A.S`,
+            representante_legal: 'Juan Pérez Gómez',
+            tipo_sociedad: 'SAS',
+            matricula_mercantil: `${Math.floor(Math.random() * 1000000)}`,
+            camara_comercio: 'Bogotá',
+            fecha_matricula: '2020-01-15',
+            actividad_economica: '4711 - Comercio al por menor',
+            direccion: 'Calle 100 # 10-20',
+            ciudad: 'Bogotá',
+            telefono: '6011234567'
+        };
+        
+        // Autocompletar campos
+        if (datosRUES.razon_social) {
+            const razonSocial = document.getElementById('empresaRazonSocial');
+            if (razonSocial && !razonSocial.value) razonSocial.value = datosRUES.razon_social;
+            
+            const nombre = document.getElementById('empresaNombre');
+            if (nombre && !nombre.value) nombre.value = datosRUES.razon_social;
+        }
+        
+        if (datosRUES.representante_legal) {
+            const repLegal = document.getElementById('empresaRepresentanteLegal');
+            if (repLegal) repLegal.value = datosRUES.representante_legal;
+        }
+        
+        if (datosRUES.tipo_sociedad) {
+            const tipoSoc = document.getElementById('empresaTipoSociedad');
+            if (tipoSoc) tipoSoc.value = datosRUES.tipo_sociedad;
+        }
+        
+        if (datosRUES.matricula_mercantil) {
+            const matricula = document.getElementById('empresaMatriculaMercantil');
+            if (matricula) matricula.value = datosRUES.matricula_mercantil;
+        }
+        
+        if (datosRUES.camara_comercio) {
+            const camara = document.getElementById('empresaCamaraComercio');
+            if (camara) camara.value = datosRUES.camara_comercio;
+        }
+        
+        if (datosRUES.fecha_matricula) {
+            const fecha = document.getElementById('empresaFechaMatricula');
+            if (fecha) fecha.value = datosRUES.fecha_matricula;
+        }
+        
+        if (datosRUES.actividad_economica) {
+            const actividad = document.getElementById('empresaActividadEconomica');
+            if (actividad) actividad.value = datosRUES.actividad_economica;
+        }
+        
+        if (datosRUES.direccion) {
+            const direccion = document.getElementById('empresaDireccion');
+            if (direccion && !direccion.value) direccion.value = datosRUES.direccion;
+        }
+        
+        if (datosRUES.ciudad) {
+            const ciudad = document.getElementById('empresaCiudad');
+            if (ciudad && !ciudad.value) ciudad.value = datosRUES.ciudad;
+        }
+        
+        if (datosRUES.telefono) {
+            const telefono = document.getElementById('empresaTelefono');
+            if (telefono && !telefono.value) telefono.value = datosRUES.telefono;
+        }
+        
+        mostrarExito('Datos autocompletados desde RUES (simulado)');
+        
+    } catch (error) {
+        console.error('Error en consulta RUES:', error);
+        mostrarError('Error al consultar RUES: ' + error.message);
+    } finally {
+        // Ocultar spinner
+        const btnRUES = document.getElementById('btnConsultarRUESEmpresa');
+        const spinner = document.getElementById('spinnerRUESEmpresa');
+        if (btnRUES) btnRUES.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+    }
+}
+
 /**
  * Verificar autenticación al cargar
  */
@@ -817,6 +1026,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // Event listeners para empresas - Dígito Verificación y RUES
+  const empresaTipoDoc = document.getElementById('empresaTipoDocumento');
+  if (empresaTipoDoc) {
+    empresaTipoDoc.addEventListener('change', toggleDigitoVerificacionEmpresa);
+  }
+  
+  const empresaNitInput = document.getElementById('empresaNit');
+  if (empresaNitInput) {
+    empresaNitInput.addEventListener('blur', autoCalcularDigitoVerificacionEmpresa);
+    empresaNitInput.addEventListener('input', autoCalcularDigitoVerificacionEmpresa);
+  }
+  
+  const btnConsultarRUESEmpresa = document.getElementById('btnConsultarRUESEmpresa');
+  if (btnConsultarRUESEmpresa) {
+    btnConsultarRUESEmpresa.addEventListener('click', consultarRUESEmpresa);
+  }
+  
   // Event listener para formulario de usuario
   const usuarioForm = document.getElementById('usuarioForm');
   if (usuarioForm) {
@@ -861,10 +1087,19 @@ document.addEventListener('DOMContentLoaded', () => {
 // Guardar empresa (crear o actualizar)
 async function guardarEmpresa() {
   const id = document.getElementById('empresaId').value;
+  
+  // Construir NIT completo con DV si aplica
+  const tipoDoc = document.getElementById('empresaTipoDocumento').value;
+  const numeroDoc = document.getElementById('empresaNit').value;
+  const dv = document.getElementById('empresaDigitoVerificacion').value;
+  const nitCompleto = (tipoDoc === 'NIT' && dv) ? `${numeroDoc}-${dv}` : numeroDoc;
+  
   const empresa = {
     nombre: document.getElementById('empresaNombre').value,
     razon_social: document.getElementById('empresaRazonSocial').value,
-    nit: document.getElementById('empresaNit').value,
+    tipo_documento: tipoDoc,
+    nit: nitCompleto,
+    digito_verificacion: tipoDoc === 'NIT' ? dv : null,
     email: document.getElementById('empresaEmail').value,
     telefono: document.getElementById('empresaTelefono').value,
     tipo_contribuyente: document.getElementById('empresaTipoContribuyente').value,
@@ -873,7 +1108,14 @@ async function guardarEmpresa() {
     pais: document.getElementById('empresaPais').value,
     plan_id: parseInt(document.getElementById('empresaPlan').value),
     estado: document.getElementById('empresaEstado').value,
-    regimen_tributario: document.getElementById('empresaRegimenTributario').value
+    regimen_tributario: document.getElementById('empresaRegimenTributario').value,
+    // Campos RUES
+    representante_legal: document.getElementById('empresaRepresentanteLegal').value || null,
+    tipo_sociedad: document.getElementById('empresaTipoSociedad').value || null,
+    matricula_mercantil: document.getElementById('empresaMatriculaMercantil').value || null,
+    camara_comercio: document.getElementById('empresaCamaraComercio').value || null,
+    fecha_matricula: document.getElementById('empresaFechaMatricula').value || null,
+    actividad_economica: document.getElementById('empresaActividadEconomica').value || null
   };
   
   try {
@@ -1365,6 +1607,13 @@ function abrirModalEmpresa(empresaId = null) {
     title.textContent = 'Nueva Empresa';
     document.getElementById('empresaForm').reset();
     document.getElementById('empresaId').value = '';
+    
+    // Configurar tipo de documento por defecto (NIT) y mostrar DV
+    const tipoDocSelect = document.getElementById('empresaTipoDocumento');
+    if (tipoDocSelect) {
+      tipoDocSelect.value = 'NIT';
+      toggleDigitoVerificacionEmpresa();
+    }
   }
   
   modal.show();
@@ -1409,7 +1658,27 @@ async function cargarDatosEmpresa(id) {
     document.getElementById('empresaId').value = empresa.id;
     document.getElementById('empresaNombre').value = empresa.nombre;
     document.getElementById('empresaRazonSocial').value = empresa.razon_social || '';
-    document.getElementById('empresaNit').value = empresa.nit || '';
+    
+    // Tipo documento y NIT
+    document.getElementById('empresaTipoDocumento').value = empresa.tipo_documento || 'NIT';
+    
+    // Separar NIT y DV si viene con guión
+    const nitCompleto = empresa.nit || '';
+    let numeroDoc = nitCompleto;
+    let dv = '';
+    
+    if (nitCompleto.includes('-')) {
+      const partes = nitCompleto.split('-');
+      numeroDoc = partes[0];
+      dv = partes[1] || '';
+    } else if (empresa.digito_verificacion) {
+      dv = empresa.digito_verificacion;
+    }
+    
+    document.getElementById('empresaNit').value = numeroDoc;
+    document.getElementById('empresaDigitoVerificacion').value = dv;
+    toggleDigitoVerificacionEmpresa(); // Mostrar/ocultar DV según tipo
+    
     document.getElementById('empresaEmail').value = empresa.email;
     document.getElementById('empresaTelefono').value = empresa.telefono || '';
     document.getElementById('empresaTipoContribuyente').value = empresa.tipo_contribuyente;
@@ -1419,6 +1688,14 @@ async function cargarDatosEmpresa(id) {
     document.getElementById('empresaPlan').value = empresa.plan_id;
     document.getElementById('empresaEstado').value = empresa.estado;
     document.getElementById('empresaRegimenTributario').value = empresa.regimen_tributario;
+    
+    // Campos RUES
+    document.getElementById('empresaRepresentanteLegal').value = empresa.representante_legal || '';
+    document.getElementById('empresaTipoSociedad').value = empresa.tipo_sociedad || '';
+    document.getElementById('empresaMatriculaMercantil').value = empresa.matricula_mercantil || '';
+    document.getElementById('empresaCamaraComercio').value = empresa.camara_comercio || '';
+    document.getElementById('empresaFechaMatricula').value = empresa.fecha_matricula || '';
+    document.getElementById('empresaActividadEconomica').value = empresa.actividad_economica || '';
   } catch (error) {
     console.error('Error:', error);
     mostrarError('Error al cargar datos de empresa');
@@ -2676,18 +2953,27 @@ document.getElementById('rolForm')?.addEventListener('submit', async (e) => {
     mostrarError('El nombre del rol es obligatorio');
     return;
   }
+
+  // Validar que el usuario tenga una empresa activa seleccionada
+  if (!empresaActiva || !empresaActiva.id) {
+    mostrarError('Debes seleccionar una empresa para crear roles. Por favor, selecciona una empresa del menú superior.');
+    console.error('❌ No hay empresa activa:', empresaActiva);
+    return;
+  }
   
   if (permisosSeleccionados.length === 0) {
     if (!confirm('No has seleccionado ningún permiso. ¿Deseas continuar?')) {
       return;
     }
   }
+
+  console.log('📋 Creando rol para empresa:', empresaActiva);
   
   const datosRol = {
     nombre,
     descripcion: descripcion || null,
     activo,
-    empresa_id: empresaActiva?.id || null,
+    empresa_id: empresaActiva.id,
     permisos_ids: permisosSeleccionados
   };
   
@@ -3140,7 +3426,13 @@ async function abrirModalUsuarioEmpresa(usuarioId = null) {
   // Si es edición, cargar datos del usuario
   if (usuarioId) {
     try {
-      const response = await fetch(`${API_URL}/usuarios/${usuarioId}`, {
+      const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
+      if (!empresaActiva || !empresaActiva.id) {
+        mostrarError('No hay empresa seleccionada');
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/usuarios/${usuarioId}?empresa_id=${empresaActiva.id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -3218,12 +3510,20 @@ document.getElementById('usuarioEmpresaForm')?.addEventListener('submit', async 
     }
   }
   
+  const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+  
+  if (!empresaActiva || !empresaActiva.id) {
+    mostrarError('No hay empresa activa seleccionada. Por favor, selecciona una empresa del menú superior.');
+    return;
+  }
+  
   const datosUsuario = {
     nombre,
     apellido: apellido || null,
     email,
     telefono: telefono || null,
     activo,
+    empresa_id: empresaActiva.id,
     roles_ids: rolesSeleccionados
   };
   
@@ -3382,14 +3682,19 @@ function editarUsuarioEmpresa(usuarioId) {
  * Desactivar usuario
  */
 async function desactivarUsuarioEmpresa(usuarioId, nombre, activo) {
-  const accion = activo ? 'desactivar' : 'activar';
-  
-  if (!confirm(`¿Estás seguro de ${accion} al usuario "${nombre}"?`)) {
+  if (!confirm(`⚠️ ¿Estás seguro de ELIMINAR PERMANENTEMENTE al usuario "${nombre}"?\n\nEsta acción NO se puede deshacer y se eliminarán:\n• Todos sus roles asignados\n• Su acceso a la empresa\n• Todos sus datos de usuario`)) {
     return;
   }
   
   try {
-    const response = await fetch(`${API_URL}/usuarios/${usuarioId}`, {
+    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    
+    if (!empresaActiva || !empresaActiva.id) {
+      mostrarError('No hay empresa activa seleccionada');
+      return;
+    }
+    
+    const response = await fetch(`${API_URL}/usuarios/${usuarioId}?empresa_id=${empresaActiva.id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -3398,10 +3703,10 @@ async function desactivarUsuarioEmpresa(usuarioId, nombre, activo) {
     
     if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.message || `Error al ${accion} usuario`);
+      throw new Error(data.message || 'Error al eliminar usuario');
     }
     
-    mostrarExito(`Usuario ${activo ? 'desactivado' : 'activado'} exitosamente`);
+    mostrarExito('✅ Usuario eliminado permanentemente');
     cargarUsuariosEmpresa();
     
   } catch (error) {

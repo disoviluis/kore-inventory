@@ -917,6 +917,11 @@ async function guardarUsuario() {
         const empresasSelect = document.getElementById('usuarioEmpresas');
         const empresasIds = Array.from(empresasSelect.selectedOptions).map(opt => opt.value);
         
+        // Validar que admin_empresa tenga al menos una empresa asignada
+        if ((tipo === 'admin_empresa' || tipo === 'usuario') && empresasIds.length === 0) {
+            throw new Error('Debes asignar al menos una empresa para usuarios tipo "admin_empresa" o "usuario"');
+        }
+        
         const body = {
             nombre,
             apellido,

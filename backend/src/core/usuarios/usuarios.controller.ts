@@ -45,26 +45,35 @@ export const getUsuariosEmpresa = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    let empresaIdFinal: number;
-
-    // super_admin puede especificar empresa_id, admin_empresa usa la suya
-    if (usuario.tipo_usuario === 'super_admin') {
-      empresaIdFinal = empresa_id ? Number(empresa_id) : usuario.empresa_id;
-    } else {
-      // admin_empresa usa empresa_id del query (viene del frontend con empresaActiva)
-      // Si no tiene empresa_id en el token JWT, usar el del query
-      empresaIdFinal = empresa_id ? Number(empresa_id) : usuario.empresa_id;
-    }
-
-    if (!empresaIdFinal) {
+    // empresa_id es REQUERIDO (viene del frontend con empresaActiva)
+    if (!empresa_id) {
       res.status(400).json({
         success: false,
-        message: 'empresa_id es requerido'
+        message: 'El parámetro empresa_id es requerido'
       });
       return;
     }
 
-    console.log(`[USUARIOS] Usuario tipo: ${usuario.tipo_usuario}, empresa_id: ${empresaIdFinal}, query empresa_id: ${empresa_id}`);
+    // Para admin_empresa, validar que tenga acceso a la empresa
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        `SELECT empresa_id FROM usuario_empresa 
+         WHERE usuario_id = ? AND empresa_id = ? AND activo = 1`,
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        res.status(403).json({
+          success: false,
+          message: 'No tienes acceso a esta empresa'
+        });
+        return;
+      }
+    }
+
+    const empresaIdFinal = Number(empresa_id);
+
+    console.log(`[USUARIOS] Usuario tipo: ${usuario.tipo_usuario}, empresa_id: ${empresaIdFinal}`);
 
     const query = `
       SELECT 
@@ -122,7 +131,33 @@ export const getUsuariosEmpresa = async (req: Request, res: Response): Promise<v
 export const getUsuarioById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const { empresa_id } = req.query;
     const usuario = (req as any).user;
+
+    // Validar empresa_id si no es super_admin
+    if (usuario.tipo_usuario !== 'super_admin') {
+      if (!empresa_id) {
+        res.status(400).json({
+          success: false,
+          message: 'El parámetro empresa_id es requerido'
+        });
+        return;
+      }
+
+      // Validar que el usuario actual tenga acceso a la empresa
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        res.status(403).json({
+          success: false,
+          message: 'No tiene permisos para acceder a usuarios de esta empresa'
+        });
+        return;
+      }
+    }
 
     // Obtener información del usuario
     const [usuarios] = await pool.execute<Usuario[]>(
@@ -148,15 +183,15 @@ export const getUsuarioById = async (req: Request, res: Response): Promise<void>
 
     const usuarioData = usuarios[0];
 
-    // Verificar permisos: admin_empresa solo puede ver usuarios de su empresa
+    // Para usuarios no super_admin, verificar que el usuario consultado pertenezca a la empresa
     if (usuario.tipo_usuario !== 'super_admin') {
       const empresasIds = usuarioData.empresas_ids ? 
         usuarioData.empresas_ids.split(',').map(Number) : [];
       
-      if (!empresasIds.includes(usuario.empresa_id)) {
+      if (!empresasIds.includes(parseInt(empresa_id as string))) {
         res.status(403).json({
           success: false,
-          message: 'No tienes permiso para ver este usuario'
+          message: 'Este usuario no pertenece a la empresa seleccionada'
         });
         return;
       }
@@ -275,10 +310,59 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
 
     const usuarioId = result.insertId;
 
-    // Asignar a la empresa del admin
-    const empresaId = usuario.tipo_usuario === 'super_admin' && req.body.empresa_id
-      ? req.body.empresa_id
-      : usuario.empresa_id;
+    // Asignar a la empresa - obtener empresa_id del contexto
+    let empresaId: number | null = null;
+    
+    if (usuario.tipo_usuario === 'super_admin') {
+      // Super admin puede especificar cualquier empresa_id
+      empresaId = req.body.empresa_id || null;
+    } else {
+      // Admin empresa DEBE enviar empresa_id en el body
+      empresaId = req.body.empresa_id;
+      
+      if (!empresaId) {
+        await connection.rollback();
+        res.status(400).json({
+          success: false,
+          message: 'Debes especificar la empresa_id para crear usuarios'
+        });
+        return;
+      }
+
+      // Validar que el admin tenga acceso a esta empresa
+      const [tieneAcceso] = await connection.execute<RowDataPacket[]>(
+        `SELECT empresa_id FROM usuario_empresa 
+         WHERE usuario_id = ? AND empresa_id = ? AND activo = 1`,
+        [usuario.id, empresaId]
+      );
+
+      if (tieneAcceso.length === 0) {
+        await connection.rollback();
+        res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para crear usuarios en esta empresa'
+        });
+        return;
+      }
+
+      // Validar que existan roles activos para asignar al usuario
+      const [rolesDisponibles] = await connection.execute<RowDataPacket[]>(
+        `SELECT COUNT(*) as count FROM roles 
+         WHERE (empresa_id = ? OR empresa_id IS NULL) 
+         AND activo = 1 
+         AND tipo = 'personalizado'`,
+        [empresaId]
+      );
+
+      if (rolesDisponibles[0].count === 0) {
+        await connection.rollback();
+        res.status(400).json({
+          success: false,
+          message: 'No puedes crear usuarios sin roles disponibles. Por favor, crea primero al menos un rol en el módulo "Roles y Permisos".'
+        });
+        return;
+      }
+    }
 
     if (empresaId) {
       await connection.execute(
@@ -363,16 +447,47 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       telefono,
       activo,
       password,
-      roles_ids
+      roles_ids,
+      empresa_id
     } = req.body;
 
-    // Verificar que el usuario existe y pertenece a la empresa
+    // Validar que empresa_id es requerido para admin_empresa
+    if (usuario.tipo_usuario !== 'super_admin' && !empresa_id) {
+      await connection.rollback();
+      res.status(400).json({
+        success: false,
+        message: 'El parámetro empresa_id es requerido'
+      });
+      return;
+    }
+
+    // Validar que el usuario actual tenga acceso a la empresa
+    if (usuario.tipo_usuario !== 'super_admin') {
+      const [empresasUsuario] = await connection.execute<RowDataPacket[]>(
+        `SELECT empresa_id FROM usuario_empresa 
+         WHERE usuario_id = ? AND empresa_id = ? AND activo = 1`,
+        [usuario.id, empresa_id]
+      );
+
+      if (empresasUsuario.length === 0) {
+        await connection.rollback();
+        res.status(403).json({
+          success: false,
+          message: 'No tienes acceso a esta empresa'
+        });
+        return;
+      }
+    }
+
+    const empresaIdToUse = empresa_id;
+
+    // Verificar que el usuario a editar existe y pertenece a la empresa
     const [usuarios] = await connection.execute<Usuario[]>(
       `SELECT u.*, ue.empresa_id
        FROM usuarios u
        INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
        WHERE u.id = ? AND ue.empresa_id = ?`,
-      [id, usuario.empresa_id]
+      [id, empresaIdToUse]
     );
 
     if (usuarios.length === 0) {
@@ -459,7 +574,7 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       // Eliminar roles actuales de esta empresa
       await connection.execute(
         'DELETE FROM usuario_rol WHERE usuario_id = ? AND empresa_id = ?',
-        [id, usuario.empresa_id]
+        [id, empresaIdToUse]
       );
 
       // Insertar nuevos roles
@@ -468,7 +583,7 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
           await connection.execute(
             `INSERT INTO usuario_rol (usuario_id, rol_id, empresa_id, created_by)
              VALUES (?, ?, ?, ?)`,
-            [id, rolId, usuario.empresa_id, usuario.id]
+            [id, rolId, empresaIdToUse, usuario.id]
           );
         }
       }
@@ -501,15 +616,48 @@ export const deleteUsuario = async (req: Request, res: Response): Promise<void> 
   try {
     const { id } = req.params;
     const usuario = (req as any).user;
+    const empresaId = req.query.empresa_id || req.body.empresa_id;
 
-    // Verificar que el usuario existe y pertenece a la empresa
-    const [usuarios] = await pool.execute<Usuario[]>(
-      `SELECT u.*, ue.empresa_id
-       FROM usuarios u
-       INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
-       WHERE u.id = ? AND ue.empresa_id = ?`,
-      [id, usuario.empresa_id]
-    );
+    if (!empresaId && usuario.tipo_usuario !== 'super_admin') {
+      res.status(400).json({
+        success: false,
+        message: 'Debes especificar la empresa_id'
+      });
+      return;
+    }
+
+    // Verificar que el usuario existe
+    let usuarios: Usuario[];
+    
+    if (usuario.tipo_usuario === 'super_admin') {
+      [usuarios] = await pool.execute<Usuario[]>(
+        'SELECT * FROM usuarios WHERE id = ?',
+        [id]
+      );
+    } else {
+      // Admin empresa: verificar que el usuario pertenece a su empresa
+      const [empresasUsuario] = await pool.execute<RowDataPacket[]>(
+        `SELECT empresa_id FROM usuario_empresa 
+         WHERE usuario_id = ? AND empresa_id = ? AND activo = 1`,
+        [usuario.id, empresaId]
+      );
+
+      if (empresasUsuario.length === 0) {
+        res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para administrar usuarios en esta empresa'
+        });
+        return;
+      }
+
+      [usuarios] = await pool.execute<Usuario[]>(
+        `SELECT u.*
+         FROM usuarios u
+         INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
+         WHERE u.id = ? AND ue.empresa_id = ?`,
+        [id, empresaId]
+      );
+    }
 
     if (usuarios.length === 0) {
       res.status(404).json({
@@ -519,30 +667,56 @@ export const deleteUsuario = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // No permitir desactivar super_admin ni admin_empresa
+    // No permitir eliminar super_admin ni admin_empresa
     if (['super_admin', 'admin_empresa'].includes(usuarios[0].tipo_usuario)) {
       res.status(403).json({
         success: false,
-        message: 'No se pueden desactivar administradores'
+        message: 'No se pueden eliminar administradores'
       });
       return;
     }
 
-    // Desactivar usuario (soft delete)
-    await pool.execute(
-      'UPDATE usuarios SET activo = 0 WHERE id = ?',
-      [id]
-    );
+    // HARD DELETE - Eliminar todas las relaciones primero
+    const connection = await pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
 
-    res.json({
-      success: true,
-      message: 'Usuario desactivado exitosamente'
-    });
+      // Eliminar roles del usuario
+      await connection.execute(
+        'DELETE FROM usuario_rol WHERE usuario_id = ?',
+        [id]
+      );
+
+      // Eliminar relación con empresas
+      await connection.execute(
+        'DELETE FROM usuario_empresa WHERE usuario_id = ?',
+        [id]
+      );
+
+      // Eliminar el usuario
+      await connection.execute(
+        'DELETE FROM usuarios WHERE id = ?',
+        [id]
+      );
+
+      await connection.commit();
+
+      res.json({
+        success: true,
+        message: 'Usuario eliminado exitosamente'
+      });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   } catch (error: any) {
-    console.error('Error al desactivar usuario:', error);
+    console.error('Error al eliminar usuario:', error);
     res.status(500).json({
       success: false,
-      message: 'Error al desactivar usuario',
+      message: 'Error al eliminar usuario',
       error: error.message
     });
   }

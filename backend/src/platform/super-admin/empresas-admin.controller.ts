@@ -308,9 +308,9 @@ export const createEmpresa = async (req: Request, res: Response) => {
     // Crear bodega principal por defecto
     await connection.query(`
       INSERT INTO bodegas (
-        empresa_id, codigo, nombre, tipo, es_principal, permite_ventas, activa
+        empresa_id, codigo, nombre, tipo, es_principal, permite_ventas, estado
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [empresaId, 'BOD-PRINCIPAL', 'Bodega Principal', 'bodega', true, true, true]);
+    `, [empresaId, 'BOD-PRINCIPAL', 'Bodega Principal', 'bodega', true, true, 'activa']);
 
     logger.info(`Bodega principal creada para empresa ${empresaId}`);
 
