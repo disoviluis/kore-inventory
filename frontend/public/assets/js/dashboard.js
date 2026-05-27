@@ -359,8 +359,8 @@ async function cargarEmpresas(usuarioId) {
         if (companyText) companyText.style.display = 'block';
         if (companyNameText) companyNameText.textContent = data.data[0].nombre;
         
-        // Establecer empresa activa
-        localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+        // Establecer empresa activa (solo ID)
+        localStorage.setItem('empresaActiva', data.data[0].id);
         
         // Cargar estadísticas
         cargarEstadisticas(data.data[0].id);
@@ -383,26 +383,25 @@ async function cargarEmpresas(usuarioId) {
         
         // Seleccionar la primera empresa o la guardada
         let empresaSeleccionadaId;
-        const empresaGuardada = localStorage.getItem('empresaActiva');
+        const empresaGuardadaId = localStorage.getItem('empresaActiva');
         
-        if (empresaGuardada) {
-          const empresaObj = JSON.parse(empresaGuardada);
+        if (empresaGuardadaId) {
           // Verificar que la empresa guardada existe en la lista
-          const empresaExiste = data.data.find(emp => emp.id == empresaObj.id);
+          const empresaExiste = data.data.find(emp => emp.id == empresaGuardadaId);
           if (empresaExiste) {
-            companySelector.value = empresaObj.id;
-            empresaSeleccionadaId = empresaObj.id;
+            companySelector.value = empresaGuardadaId;
+            empresaSeleccionadaId = empresaGuardadaId;
           } else {
             // Si no existe, usar la primera empresa
             companySelector.value = data.data[0].id;
             empresaSeleccionadaId = data.data[0].id;
-            localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+            localStorage.setItem('empresaActiva', data.data[0].id);
           }
         } else {
           // No hay empresa guardada, usar la primera
           companySelector.value = data.data[0].id;
           empresaSeleccionadaId = data.data[0].id;
-          localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+          localStorage.setItem('empresaActiva', data.data[0].id);
         }
         
         // Cargar estadísticas de la empresa seleccionada
@@ -418,7 +417,7 @@ async function cargarEmpresas(usuarioId) {
           const empresaId = e.target.value;
           const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
           console.log('🔄 Cambio de empresa detectado:', empresaSeleccionada);
-          localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
+          localStorage.setItem('empresaActiva', empresaId);
           cargarEstadisticas(empresaId);
           verificarConfiguracionFacturacion();
           
@@ -3861,9 +3860,9 @@ function limpiarFiltrosUsuarios() {
  */
 async function verificarConfiguracionFacturacion() {
   const token = localStorage.getItem('token');
-  const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+  const empresaActivaId = localStorage.getItem('empresaActiva');
   
-  if (!empresaActiva || !empresaActiva.id) {
+  if (!empresaActivaId) {
     return; // No hay empresa seleccionada
   }
   
@@ -3871,7 +3870,7 @@ async function verificarConfiguracionFacturacion() {
   if (!alertElement) return;
   
   try {
-    const response = await fetch(`${API_URL}/facturacion/configuracion/${empresaActiva.id}`, {
+    const response = await fetch(`${API_URL}/facturacion/configuracion/${empresaActivaId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
