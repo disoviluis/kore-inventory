@@ -44,9 +44,9 @@ export const verificarLicenciaActiva = async (
       return;
     }
 
-    // Obtener empresa_id del contexto (query, body o usuario)
+    // Obtener empresa_id del contexto (params, query, body o usuario)
     // Soportar ambos formatos: empresa_id y empresaId
-    const empresaId = req.query.empresa_id || req.query.empresaId || req.body.empresa_id || req.body.empresaId || usuario.empresa_id;
+    const empresaId = req.params.empresaId || req.params.empresa_id || req.query.empresa_id || req.query.empresaId || req.body.empresa_id || req.body.empresaId || usuario.empresa_id;
 
     if (!empresaId) {
       res.status(400).json({
@@ -244,9 +244,10 @@ export const verificarEmpresaActiva = async (
     }
 
     // Soportar ambos formatos: empresa_id y empresaId
-    const empresaId = req.query.empresa_id || req.query.empresaId || req.body.empresa_id || req.body.empresaId || usuario.empresa_id;
+    // Buscar en params, query, body, y usuario (en ese orden)
+    const empresaId = req.params.empresaId || req.params.empresa_id || req.query.empresa_id || req.query.empresaId || req.body.empresa_id || req.body.empresaId || usuario.empresa_id;
     
-    logger.info(`verificarEmpresaActiva: empresaId detectado: ${empresaId} (query: ${req.query.empresaId}, body: ${req.body.empresaId}, user: ${usuario.empresa_id})`);
+    logger.info(`verificarEmpresaActiva: empresaId detectado: ${empresaId} (params: ${req.params.empresaId}, query: ${req.query.empresaId}, body: ${req.body.empresaId}, user: ${usuario.empresa_id})`);
 
     if (!empresaId) {
       logger.warning('verificarEmpresaActiva: No se proporcionó empresa_id');
