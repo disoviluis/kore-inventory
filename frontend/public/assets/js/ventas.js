@@ -197,13 +197,25 @@ function cargarInfoUsuario(usuario) {
 // ============================================
 
 async function cargarEmpresas(usuarioId) {
+    console.log('🔍 === INICIO cargarEmpresas ===' );
     const token = localStorage.getItem('token');
     const usuario = JSON.parse(localStorage.getItem('usuario'));
+    console.log('📋 Usuario:', usuario);
+    
     const companySelector = document.getElementById('companySelector');
     const companyText = document.getElementById('companyText');
     const companyNameText = document.getElementById('companyNameText');
     
-    if (!companySelector) return;
+    console.log('🎯 Elementos DOM:', {
+        companySelector: !!companySelector,
+        companyText: !!companyText,
+        companyNameText: !!companyNameText
+    });
+    
+    if (!companySelector) {
+        console.error('❌ companySelector no encontrado en DOM');
+        return;
+    }
     
     try {
         const response = await fetch(`${API_URL}/empresas/usuario/${usuarioId}`, {
@@ -214,25 +226,42 @@ async function cargarEmpresas(usuarioId) {
         });
         
         const data = await response.json();
+        console.log('📥 Respuesta empresas:', data);
         
         if (data.success && data.data.length > 0) {
+            console.log('✅ Empresas recibidas:', data.data.length);
+            
             // Determinar si mostrar selector o texto según tipo de usuario y cantidad de empresas
             const esUsuarioRegular = usuario.tipo_usuario === 'usuario';
             const tieneSoloUnaEmpresa = data.data.length === 1;
             
+            console.log('🔍 Decisión de UI:', {
+                esUsuarioRegular,
+                tieneSoloUnaEmpresa,
+                cantidadEmpresas: data.data.length,
+                tipoUsuario: usuario.tipo_usuario
+            });
+            
             if (esUsuarioRegular || tieneSoloUnaEmpresa) {
+                console.log('📝 Mostrando TEXTO (una empresa)');
                 // Usuario Regular o Admin con 1 sola empresa: mostrar solo texto
                 companySelector.style.display = 'none';
                 if (companyText) companyText.style.display = 'block';
                 if (companyNameText) companyNameText.textContent = data.data[0].nombre;
                 
+                console.log('✅ Texto actualizado a:', data.data[0].nombre);
+                
                 // Establecer empresa activa (solo ID en localStorage)
                 localStorage.setItem('empresaActiva', data.data[0].id.toString());
                 currentEmpresa = data.data[0];
+                console.log('✅ currentEmpresa establecido:', currentEmpresa);
             } else {
+                console.log('📋 Mostrando SELECTOR (múltiples empresas)');
                 // Admin Empresa con múltiples empresas: mostrar selector
                 companySelector.style.display = 'block';
                 if (companyText) companyText.style.display = 'none';
+                
+                console.log('✅ Selector visible, texto oculto');
                 
                 // Limpiar selector
                 companySelector.innerHTML = '';
@@ -245,26 +274,35 @@ async function cargarEmpresas(usuarioId) {
                     companySelector.appendChild(option);
                 });
                 
+                console.log('✅ Opciones agregadas al selector:', data.data.length);
+                
                 // Seleccionar la primera empresa o la guardada
                 const empresaGuardadaId = localStorage.getItem('empresaActiva');
+                console.log('💾 Empresa guardada en localStorage:', empresaGuardadaId);
+                
                 if (empresaGuardadaId) {
                     // Verificar que la empresa guardada existe en la lista
                     const empresaExiste = data.data.find(emp => emp.id == empresaGuardadaId);
                     if (empresaExiste) {
+                        console.log('✅ Empresa guardada existe, seleccionándola:', empresaExiste.nombre);
                         companySelector.value = empresaGuardadaId;
                         currentEmpresa = empresaExiste;
                     } else {
+                        console.log('⚠️ Empresa guardada no existe, usando primera');
                         // Si no existe, usar la primera empresa
                         companySelector.value = data.data[0].id;
                         localStorage.setItem('empresaActiva', data.data[0].id.toString());
                         currentEmpresa = data.data[0];
                     }
                 } else {
+                    console.log('📝 No hay empresa guardada, usando primera');
                     // No hay empresa guardada, usar la primera
                     companySelector.value = data.data[0].id;
                     localStorage.setItem('empresaActiva', data.data[0].id.toString());
                     currentEmpresa = data.data[0];
                 }
+                
+                console.log('✅ currentEmpresa establecido:', currentEmpresa);
                 
                 // Event listener para cambio de empresa
                 companySelector.addEventListener('change', async (e) => {
@@ -282,13 +320,16 @@ async function cargarEmpresas(usuarioId) {
             }
             
         } else {
+            console.log('⚠️ No hay empresas disponibles');
             companySelector.innerHTML = '<option value="">Sin empresas asignadas</option>';
         }
         
     } catch (error) {
-        console.error('Error al cargar empresas:', error);
+        console.error('❌ Error al cargar empresas:', error);
         companySelector.innerHTML = '<option value="">Error al cargar empresas</option>';
     }
+    
+    console.log('🔍 === FIN cargarEmpresas ===');
 }
 
 // ============================================
@@ -326,19 +367,35 @@ async function actualizarDatosEmpresa(empresaId) {
  * Recarga todos los datos dependientes de la empresa activa
  */
 async function recargarDatosEmpresa() {
+    console.log('🔄 === INICIO recargarDatosEmpresa ===');
+    console.log('📋 currentEmpresa:', currentEmpresa);
+    
     if (!currentEmpresa || !currentEmpresa.id) {
         console.warn('⚠️ No hay empresa activa para recargar datos');
         return;
     }
     
     try {
-        // Actualizar UI con el nombre de la empresa
+        // Actualizar UI con el nombre de la empresa SOLO si el elemento está visible
         const companyNameText = document.getElementById('companyNameText');
-        if (companyNameText) {
+        const companyText = document.getElementById('companyText');
+        
+        console.log('🎯 Elementos para actualizar:', {
+            companyNameText: !!companyNameText,
+            companyText: !!companyText,
+            companyTextVisible: companyText ? companyText.style.display : 'N/A'
+        });
+        
+        // Solo actualizar el texto si el div contenedor está visible (usuario con 1 empresa)
+        if (companyNameText && companyText && companyText.style.display !== 'none') {
+            console.log('✏️ Actualizando nombre de empresa en texto:', currentEmpresa.nombre);
             companyNameText.textContent = currentEmpresa.nombre;
+        } else {
+            console.log('ℹ️ No se actualiza companyNameText (selector activo o elemento no visible)');
         }
         
         // Recargar todos los datos dependientes de la empresa
+        console.log('📡 Cargando datos de empresa...');
         await cargarConfiguracionPlantilla();
         await cargarImpuestosActivos();
         await cargarCatalogoProductos();
@@ -348,6 +405,8 @@ async function recargarDatosEmpresa() {
         console.error('❌ Error al recargar datos de empresa:', error);
         mostrarAlerta('Error al cargar datos de la empresa', 'danger');
     }
+    
+    console.log('🔄 === FIN recargarDatosEmpresa ===');
 }
 
 // ============================================
