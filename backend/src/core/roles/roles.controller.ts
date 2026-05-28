@@ -397,10 +397,12 @@ export const getModulosAcciones = async (req: Request, res: Response): Promise<v
       WHERE activo = 1
     `;
 
-    // admin_empresa solo ve módulos core y tenant (no platform)
+    // Admin empresa solo ve módulos core y tenant (no platform)
+    // Super admin ve TODOS los módulos (core, tenant, platform) para roles globales
     if (usuario.tipo_usuario !== 'super_admin') {
       modulosQuery += ` AND nivel IN ('core', 'tenant')`;
     }
+    // Si es super_admin, no se aplica filtro - ve todos los módulos
 
     modulosQuery += ` ORDER BY orden ASC, nombre_mostrar ASC`;
 
