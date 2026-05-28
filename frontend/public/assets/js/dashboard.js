@@ -4185,7 +4185,7 @@ async function cargarModulosAccionesGlobal() {
   `;
   
   try {
-    const response = await fetch(`${API_URL}/modulos/acciones`, {
+    const response = await fetch(`${API_URL}/roles/modulos-acciones`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
