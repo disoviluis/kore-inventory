@@ -245,6 +245,12 @@ async function cargarDatosEmpresa(empresaId) {
         if (data.success && data.data) {
             currentEmpresa = data.data;
             console.log('✅ Datos completos de empresa cargados:', currentEmpresa.nombre);
+            
+            // Actualizar el nombre de la empresa en el DOM
+            const companyNameText = document.getElementById('companyNameText');
+            if (companyNameText) {
+                companyNameText.textContent = currentEmpresa.nombre;
+            }
         } else {
             console.error('❌ Error al obtener datos de empresa:', data.message);
         }
