@@ -46,35 +46,33 @@ async function cargarEmpresas(usuarioId) {
       const empresaGuardada = localStorage.getItem('empresaActiva');
       
       if (empresaGuardada) {
-        const empresaObj = JSON.parse(empresaGuardada);
         // Verificar que la empresa guardada existe en la lista
-        const empresaExiste = data.data.find(emp => emp.id == empresaObj.id);
+        const empresaExiste = data.data.find(emp => emp.id == empresaGuardada);
         if (empresaExiste) {
-          companySelector.value = empresaObj.id;
-          empresaSeleccionadaId = empresaObj.id;
+          companySelector.value = empresaGuardada;
+          empresaSeleccionadaId = empresaGuardada;
         } else {
           // Si no existe, usar la primera empresa
           companySelector.value = data.data[0].id;
           empresaSeleccionadaId = data.data[0].id;
-          localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+          localStorage.setItem('empresaActiva', empresaSeleccionadaId);
         }
       } else {
         // No hay empresa guardada, usar la primera
         companySelector.value = data.data[0].id;
         empresaSeleccionadaId = data.data[0].id;
-        localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+        localStorage.setItem('empresaActiva', empresaSeleccionadaId);
       }
       
       // Event listener para cambio de empresa
       companySelector.addEventListener('change', (e) => {
         const empresaId = e.target.value;
-        const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
-        console.log('🔄 Cambio de empresa detectado:', empresaSeleccionada);
-        localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
+        console.log('🔄 Cambio de empresa detectado:', empresaId);
+        localStorage.setItem('empresaActiva', empresaId);
         
         // Disparar evento personalizado para que cada página maneje el cambio
         const eventoEmpresaCambiada = new CustomEvent('empresaCambiada', {
-          detail: { empresa: empresaSeleccionada }
+          detail: { empresaId: empresaId }
         });
         window.dispatchEvent(eventoEmpresaCambiada);
       });

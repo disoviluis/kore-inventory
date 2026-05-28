@@ -30,9 +30,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Obtener empresa activa (igual que otros módulos)
-    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
+    const empresaActivaId = localStorage.getItem('empresaActiva');
     
-    if (!empresaActiva || !empresaActiva.id) {
+    if (!empresaActivaId) {
         Swal.fire({
             icon: 'warning',
             title: 'Empresa no seleccionada',
@@ -43,8 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    currentEmpresaId = empresaActiva.id;
-    console.log('📍 Empresa activa:', currentEmpresaId, empresaActiva.nombre);
+    currentEmpresaId = empresaActivaId;
+    console.log('📍 Empresa activa:', currentEmpresaId);
 
     // Cargar módulos permitidos desde la API
     await cargarModulosPermitidos();

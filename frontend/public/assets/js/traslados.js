@@ -37,9 +37,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Wait for empresaActiva to be loaded by company-selector.js
     setTimeout(async () => {
-        const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
-        if (empresaActiva && empresaActiva.id) {
-            currentEmpresaId = empresaActiva.id;
+        const empresaActivaId = localStorage.getItem('empresaActiva');
+        if (empresaActivaId) {
+            currentEmpresaId = empresaActivaId;
             await loadBodegas();
             await loadTraslados();
         }
@@ -48,8 +48,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Listen for empresa change event from company-selector.js
 window.addEventListener('empresaCambiada', async (event) => {
-    console.log('🔄 Empresa cambiada en Traslados:', event.detail.empresa);
-    currentEmpresaId = event.detail.empresa.id;
+    console.log('🔄 Empresa cambiada en Traslados:', event.detail.empresaId);
+    currentEmpresaId = event.detail.empresaId;
     await loadBodegas();
     await loadTraslados();
 });

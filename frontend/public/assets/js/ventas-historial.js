@@ -58,11 +58,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         await cargarEmpresas(usuario.id);
 
         // Obtener empresa activa (después de cargar empresas)
-        currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
-        if (!currentEmpresa) {
+        const empresaActivaId = localStorage.getItem('empresaActiva');
+        if (!empresaActivaId) {
             mostrarAlerta('Por favor selecciona una empresa desde el dashboard', 'warning');
             setTimeout(() => window.location.href = 'dashboard.html', 2000);
             return;
+        }
+        
+        // Si currentEmpresa no se estableció por cargarEmpresas, cargar desde API
+        if (!currentEmpresa || !currentEmpresa.id) {
+            await cargarDatosEmpresa(empresaActivaId);
         }
 
         // Cargar ventas
@@ -165,15 +170,21 @@ async function cargarEmpresas(usuarioId) {
             });
             
             // Seleccionar la primera empresa o la guardada
-            const empresaGuardada = localStorage.getItem('empresaActiva');
-            if (empresaGuardada) {
-                const empresaObj = JSON.parse(empresaGuardada);
-                companySelector.value = empresaObj.id;
-                currentEmpresa = empresaObj;
+            const empresaGuardadaId = localStorage.getItem('empresaActiva');
+            if (empresaGuardadaId) {
+                const empresaExiste = data.data.find(emp => emp.id == empresaGuardadaId);
+                if (empresaExiste) {
+                    companySelector.value = empresaGuardadaId;
+                    currentEmpresa = empresaExiste;
+                } else {
+                    companySelector.value = data.data[0].id;
+                    currentEmpresa = data.data[0];
+                    localStorage.setItem('empresaActiva', data.data[0].id.toString());
+                }
             } else {
                 companySelector.value = data.data[0].id;
                 currentEmpresa = data.data[0];
-                localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                localStorage.setItem('empresaActiva', data.data[0].id.toString());
             }
             
             // Event listener para cambio de empresa
@@ -181,7 +192,7 @@ async function cargarEmpresas(usuarioId) {
                 const empresaId = parseInt(e.target.value);
                 const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
                 if (empresaSeleccionada) {
-                    localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
+                    localStorage.setItem('empresaActiva', empresaId.toString());
                     currentEmpresa = empresaSeleccionada;
                     cargarVentas();
                 }
@@ -194,6 +205,34 @@ async function cargarEmpresas(usuarioId) {
     } catch (error) {
         console.error('Error al cargar empresas:', error);
         companySelector.innerHTML = '<option value="">Error al cargar empresas</option>';
+    }
+}
+
+// ============================================
+// CARGAR DATOS COMPLETOS DE EMPRESA
+// ============================================
+
+async function cargarDatosEmpresa(empresaId) {
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            currentEmpresa = data.data;
+            console.log('✅ Datos completos de empresa cargados:', currentEmpresa.nombre);
+        } else {
+            console.error('❌ Error al obtener datos de empresa:', data.message);
+        }
+    } catch (error) {
+        console.error('❌ Error al cargar datos de empresa:', error);
     }
 }
 

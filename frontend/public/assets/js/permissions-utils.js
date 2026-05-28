@@ -13,15 +13,15 @@
 async function cargarPermisosDetallados() {
   try {
     const token = localStorage.getItem('token');
-    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || '{}');
+    const empresaActivaId = localStorage.getItem('empresaActiva');
     
     if (!token) {
       console.warn('⚠️ No hay token - No se pueden cargar permisos');
       return null;
     }
     
-    const url = empresaActiva.id 
-      ? `${API_URL}/auth/permisos?empresa_id=${empresaActiva.id}`
+    const url = empresaActivaId 
+      ? `${API_URL}/auth/permisos?empresa_id=${empresaActivaId}`
       : `${API_URL}/auth/permisos`;
     
     const response = await fetch(url, {

@@ -48,15 +48,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         await cargarEmpresas(usuario.id);
 
-        currentEmpresa = JSON.parse(localStorage.getItem('empresaActiva'));
+        const empresaActivaId = localStorage.getItem('empresaActiva');
         
-        console.log('📍 Estado de empresaActiva:', currentEmpresa);
-        
-        if (!currentEmpresa || !currentEmpresa.id) {
+        if (!empresaActivaId) {
             console.error('❌ No hay empresa activa configurada');
             mostrarAlerta('No tienes empresas asignadas. Contacta al administrador.', 'warning');
             setTimeout(() => window.location.href = 'dashboard.html', 2000);
             return;
+        }
+        
+        // Si currentEmpresa no se estableció por cargarEmpresas,cargar desde API
+        if (!currentEmpresa || !currentEmpresa.id) {
+            await cargarDatosEmpresa(empresaActivaId);
         }
         
         console.log(`✅ Empresa activa: ${currentEmpresa.nombre} (ID: ${currentEmpresa.id})`);
@@ -118,8 +121,8 @@ async function cargarEmpresas(usuarioId) {
                 if (companyText) companyText.style.display = 'block';
                 if (companyNameText) companyNameText.textContent = data.data[0].nombre;
                 
-                // Establecer empresa activa
-                localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                // Establecer empresa activa (solo ID en localStorage)
+                localStorage.setItem('empresaActiva', data.data[0].id.toString());
                 currentEmpresa = data.data[0];
             } else {
                 // Admin Empresa con múltiples empresas: mostrar selector
@@ -134,30 +137,30 @@ async function cargarEmpresas(usuarioId) {
                     companySelector.appendChild(option);
                 });
                 
-                const empresaGuardada = localStorage.getItem('empresaActiva');
-                if (empresaGuardada) {
-                    const empresaObj = JSON.parse(empresaGuardada);
+                const empresaGuardadaId = localStorage.getItem('empresaActiva');
+                if (empresaGuardadaId) {
                     // Verificar que la empresa guardada existe en la lista
-                    const empresaExiste = data.data.find(emp => emp.id == empresaObj.id);
+                    const empresaExiste = data.data.find(emp => emp.id == empresaGuardadaId);
                     if (empresaExiste) {
-                        companySelector.value = empresaObj.id;
+                        companySelector.value = empresaGuardadaId;
+                        currentEmpresa = empresaExiste;
                     } else {
                         // Si no existe, usar la primera empresa
                         companySelector.value = data.data[0].id;
-                        localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                        localStorage.setItem('empresaActiva', data.data[0].id.toString());
                         currentEmpresa = data.data[0];
                     }
                 } else {
                     // No hay empresa guardada, usar la primera
                     companySelector.value = data.data[0].id;
-                    localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
+                    localStorage.setItem('empresaActiva', data.data[0].id.toString());
                     currentEmpresa = data.data[0];
                 }
                 
                 companySelector.addEventListener('change', async (e) => {
                     const empresaId = e.target.value;
                     const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
-                    localStorage.setItem('empresaActiva', JSON.stringify(empresaSeleccionada));
+                    localStorage.setItem('empresaActiva', empresaId);
                     currentEmpresa = empresaSeleccionada;
                     await Promise.all([cargarResumen(), cargarCompras()]);
                 });
@@ -165,6 +168,34 @@ async function cargarEmpresas(usuarioId) {
         }
     } catch (error) {
         console.error('Error al cargar empresas:', error);
+    }
+}
+
+// ============================================
+// CARGAR DATOS COMPLETOS DE EMPRESA
+// ============================================
+
+async function cargarDatosEmpresa(empresaId) {
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            currentEmpresa = data.data;
+            console.log('✅ Datos completos de empresa cargados:', currentEmpresa.nombre);
+        } else {
+            console.error('❌ Error al obtener datos de empresa:', data.message);
+        }
+    } catch (error) {
+        console.error('❌ Error al cargar datos de empresa:', error);
     }
 }
 

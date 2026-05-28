@@ -28,9 +28,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Wait for empresaActiva to be loaded by company-selector.js
     // Then load bodegas
     setTimeout(() => {
-        const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
-        if (empresaActiva && empresaActiva.id) {
-            currentEmpresaId = empresaActiva.id;
+        const empresaActivaId = localStorage.getItem('empresaActiva');
+        if (empresaActivaId) {
+            currentEmpresaId = empresaActivaId;
             loadBodegas();
             loadResponsables();
         }
@@ -39,8 +39,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Listen for empresa change event from company-selector.js
 window.addEventListener('empresaCambiada', (event) => {
-    console.log('🔄 Empresa cambiada en Bodegas:', event.detail.empresa);
-    currentEmpresaId = event.detail.empresa.id;
+    console.log('🔄 Empresa cambiada en Bodegas:', event.detail.empresaId);
+    currentEmpresaId = event.detail.empresaId;
     loadBodegas();
     loadResponsables();
 });
