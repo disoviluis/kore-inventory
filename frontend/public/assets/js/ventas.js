@@ -160,20 +160,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         console.log(`✅ Empresa activa: ${currentEmpresa.nombre} (ID: ${currentEmpresa.id})`);
-        console.log('currentEmpresa:', currentEmpresa);
 
-        // Cargar configuración de plantilla
-        await cargarConfiguracionPlantilla();
-
-        // SIEMPRE actualizar datos de empresa desde backend para asegurar datos completos
-        console.log('🔄 Actualizando datos de empresa desde backend...');
-        await actualizarDatosEmpresa(currentEmpresa.id);
-
-        // Cargar impuestos activos de la empresa
-        await cargarImpuestosActivos();
-        
-        // Cargar catálogo de productos
-        await cargarCatalogoProductos();
+        // Cargar datos iniciales de la empresa
+        await recargarDatosEmpresa();
 
         initEventListeners();
         deshabilitarSeccionProductos();
@@ -278,13 +267,17 @@ async function cargarEmpresas(usuarioId) {
                 }
                 
                 // Event listener para cambio de empresa
-                companySelector.addEventListener('change', (e) => {
+                companySelector.addEventListener('change', async (e) => {
                     const empresaId = e.target.value;
                     const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
                     localStorage.setItem('empresaActiva', empresaId);
                     currentEmpresa = empresaSeleccionada;
-                    // Limpiar y recargar cuando cambie empresa
-                    limpiarVenta();
+                    
+                    // Limpiar venta actual sin confirmación
+                    limpiarVentaSinConfirmar();
+                    
+                    // Recargar todos los datos de la nueva empresa
+                    await recargarDatosEmpresa();
                 });
             }
             
@@ -326,6 +319,34 @@ async function actualizarDatosEmpresa(empresaId) {
         
     } catch (error) {
         console.error('❌ Error al actualizar datos de empresa:', error);
+    }
+}
+
+/**
+ * Recarga todos los datos dependientes de la empresa activa
+ */
+async function recargarDatosEmpresa() {
+    if (!currentEmpresa || !currentEmpresa.id) {
+        console.warn('⚠️ No hay empresa activa para recargar datos');
+        return;
+    }
+    
+    try {
+        // Actualizar UI con el nombre de la empresa
+        const companyNameText = document.getElementById('companyNameText');
+        if (companyNameText) {
+            companyNameText.textContent = currentEmpresa.nombre;
+        }
+        
+        // Recargar todos los datos dependientes de la empresa
+        await cargarConfiguracionPlantilla();
+        await cargarImpuestosActivos();
+        await cargarCatalogoProductos();
+        
+        console.log('✅ Datos de empresa recargados correctamente');
+    } catch (error) {
+        console.error('❌ Error al recargar datos de empresa:', error);
+        mostrarAlerta('Error al cargar datos de la empresa', 'danger');
     }
 }
 
