@@ -2295,12 +2295,11 @@ async function guardarPlan() {
 
 async function cargarImpuestos() {
   try {
-    const empresaActiva = localStorage.getItem('empresaActiva');
-    const empresaId = empresaActiva ? JSON.parse(empresaActiva).id : null;
+    const empresaId = localStorage.getItem('empresaActiva');
     
     if (!empresaId) {
       mostrarError('No hay empresa seleccionada');
-      console.error('No hay empresaId para cargar impuestos. empresaActiva:', empresaActiva);
+      console.error('No hay empresaId para cargar impuestos. empresaActiva:', empresaId);
       return;
     }
 
@@ -2672,12 +2671,12 @@ let permisosSeleccionados = []; // IDs de permisos seleccionados
  */
 async function cargarRoles() {
   try {
-    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    const empresaActivaId = localStorage.getItem('empresaActiva');
     const mostrarSistema = document.getElementById('mostrarRolesSistema')?.checked || false;
     
     let url = `${API_URL}/roles`;
-    if (empresaActiva) {
-      url += `?empresa_id=${empresaActiva.id}`;
+    if (empresaActivaId) {
+      url += `?empresa_id=${empresaActivaId}`;
     }
     
     console.log('🔄 Cargando roles desde:', url);
@@ -3045,7 +3044,7 @@ document.getElementById('rolForm')?.addEventListener('submit', async (e) => {
   const nombre = document.getElementById('rolNombre').value.trim();
   const descripcion = document.getElementById('rolDescripcion').value.trim();
   const activo = document.getElementById('rolActivo').value === '1';
-  const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+  const empresaActivaId = localStorage.getItem('empresaActiva');
   
   if (!nombre) {
     mostrarError('El nombre del rol es obligatorio');
@@ -3053,9 +3052,9 @@ document.getElementById('rolForm')?.addEventListener('submit', async (e) => {
   }
 
   // Validar que el usuario tenga una empresa activa seleccionada
-  if (!empresaActiva || !empresaActiva.id) {
+  if (!empresaActivaId) {
     mostrarError('Debes seleccionar una empresa para crear roles. Por favor, selecciona una empresa del menú superior.');
-    console.error('❌ No hay empresa activa:', empresaActiva);
+    console.error('❌ No hay empresa activa:', empresaActivaId);
     return;
   }
   
@@ -3065,13 +3064,13 @@ document.getElementById('rolForm')?.addEventListener('submit', async (e) => {
     }
   }
 
-  console.log('📋 Creando rol para empresa:', empresaActiva);
+  console.log('📋 Creando rol para empresa:', empresaActivaId);
   
   const datosRol = {
     nombre,
     descripcion: descripcion || null,
     activo,
-    empresa_id: empresaActiva.id,
+    empresa_id: empresaActivaId,
     permisos_ids: permisosSeleccionados
   };
   
@@ -3264,8 +3263,8 @@ async function cargarUsuariosEmpresa() {
   console.log('🔍 Iniciando carga de usuarios de empresa...');
   
   try {
-    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
-    console.log('📦 Empresa activa (localStorage):', empresaActiva);
+    const empresaActivaId = localStorage.getItem('empresaActiva');
+    console.log('📦 Empresa activa (localStorage):', empresaActivaId);
     
     // Verificar que el dropdown también tenga la misma empresa seleccionada
     const companySelector = document.getElementById('companySelector');
@@ -3278,7 +3277,7 @@ async function cargarUsuariosEmpresa() {
     
     const tbody = document.getElementById('usuariosEmpresaTableBody');
     
-    if (!empresaActiva || !empresaActiva.id) {
+    if (!empresaActivaId) {
       console.warn('⚠️ No hay empresa activa seleccionada');
       tbody.innerHTML = `
         <tr>
@@ -3292,7 +3291,7 @@ async function cargarUsuariosEmpresa() {
       return;
     }
     
-    const url = `${API_URL}/usuarios?empresa_id=${empresaActiva.id}`;
+    const url = `${API_URL}/usuarios?empresa_id=${empresaActivaId}`;
     console.log('🌐 Llamando a API:', url);
     
     const response = await fetch(url, {
@@ -3403,13 +3402,13 @@ async function cargarUsuariosEmpresa() {
  */
 async function cargarRolesParaUsuario() {
   try {
-    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    const empresaActivaId = localStorage.getItem('empresaActiva');
     const usuarioActual = JSON.parse(localStorage.getItem('usuario') || '{}');
     
     console.log('🔐 Cargando roles para asignación...');
     console.log('👤 Usuario actual:', usuarioActual.tipo_usuario);
     
-    const response = await fetch(`${API_URL}/roles?empresa_id=${empresaActiva.id}`, {
+    const response = await fetch(`${API_URL}/roles?empresa_id=${empresaActivaId}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -3524,13 +3523,13 @@ async function abrirModalUsuarioEmpresa(usuarioId = null) {
   // Si es edición, cargar datos del usuario
   if (usuarioId) {
     try {
-      const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
-      if (!empresaActiva || !empresaActiva.id) {
+      const empresaActivaId = localStorage.getItem('empresaActiva');
+      if (!empresaActivaId) {
         mostrarError('No hay empresa seleccionada');
         return;
       }
 
-      const response = await fetch(`${API_URL}/usuarios/${usuarioId}?empresa_id=${empresaActiva.id}`, {
+      const response = await fetch(`${API_URL}/usuarios/${usuarioId}?empresa_id=${empresaActivaId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -3608,9 +3607,9 @@ document.getElementById('usuarioEmpresaForm')?.addEventListener('submit', async 
     }
   }
   
-  const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+  const empresaActivaId = localStorage.getItem('empresaActiva');
   
-  if (!empresaActiva || !empresaActiva.id) {
+  if (!empresaActivaId) {
     mostrarError('No hay empresa activa seleccionada. Por favor, selecciona una empresa del menú superior.');
     return;
   }
@@ -3621,7 +3620,7 @@ document.getElementById('usuarioEmpresaForm')?.addEventListener('submit', async 
     email,
     telefono: telefono || null,
     activo,
-    empresa_id: empresaActiva.id,
+    empresa_id: empresaActivaId,
     roles_ids: rolesSeleccionados
   };
   
@@ -3785,14 +3784,14 @@ async function desactivarUsuarioEmpresa(usuarioId, nombre, activo) {
   }
   
   try {
-    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
+    const empresaActivaId = localStorage.getItem('empresaActiva');
     
-    if (!empresaActiva || !empresaActiva.id) {
+    if (!empresaActivaId) {
       mostrarError('No hay empresa activa seleccionada');
       return;
     }
     
-    const response = await fetch(`${API_URL}/usuarios/${usuarioId}?empresa_id=${empresaActiva.id}`, {
+    const response = await fetch(`${API_URL}/usuarios/${usuarioId}?empresa_id=${empresaActivaId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
