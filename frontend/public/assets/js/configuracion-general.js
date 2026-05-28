@@ -108,15 +108,14 @@ async function loadCompanies() {
             });
 
             // Seleccionar empresa guardada o primera
-            const empresaGuardada = localStorage.getItem('empresaActiva');
-            if (empresaGuardada) {
-                const empresaObj = JSON.parse(empresaGuardada);
-                selector.value = empresaObj.id;
-                currentEmpresa = empresaObj;
+            const empresaGuardadaId = localStorage.getItem('empresaActiva');
+            if (empresaGuardadaId && data.data.find(e => e.id == empresaGuardadaId)) {
+                selector.value = empresaGuardadaId;
+                currentEmpresa = empresaGuardadaId;
             } else {
                 selector.value = data.data[0].id;
-                currentEmpresa = data.data[0];
-                localStorage.setItem('empresaActiva', JSON.stringify(currentEmpresa));
+                currentEmpresa = data.data[0].id;
+                localStorage.setItem('empresaActiva', currentEmpresa);
             }
             
             // Cargar categorías
@@ -139,7 +138,7 @@ async function loadCategorias() {
     
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/categorias?empresaId=${currentEmpresa.id}`, {
+        const response = await fetch(`${API_URL}/categorias?empresaId=${currentEmpresa}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -280,7 +279,7 @@ async function guardarCategoria(event) {
     }
 
     const categoriaData = {
-        empresa_id: currentEmpresa.id,
+        empresa_id: currentEmpresa,
         nombre,
         descripcion,
         icono,
@@ -462,8 +461,8 @@ function initEventListeners() {
             const data = await response.json();
             
             if (data.success && data.data) {
-                currentEmpresa = data.data.find(emp => emp.id == empresaId);
-                localStorage.setItem('empresaActiva', JSON.stringify(currentEmpresa));
+                currentEmpresa = empresaId;
+                localStorage.setItem('empresaActiva', empresaId);
                 loadCategorias();
             }
         } catch (error) {
@@ -1107,13 +1106,13 @@ function generarPreviewTirilla(plantillaId, colorPrimario) {
 // Función para guardar configuración de plantilla
 async function guardarConfiguracionPlantilla() {
     try {
-        if (!currentEmpresa || !currentEmpresa.id) {
+        if (!currentEmpresa) {
             showNotification('No hay empresa seleccionada', 'warning');
             return;
         }
 
         const config = {
-            empresa_id: currentEmpresa.id,
+            empresa_id: currentEmpresa,
             plantilla_id: plantillaSeleccionada,
             color_primario: document.getElementById('plantillaColorPrimario').value,
             color_secundario: document.getElementById('plantillaColorSecundario').value,
@@ -1130,7 +1129,7 @@ async function guardarConfiguracionPlantilla() {
         
         // Por ahora guardar en la tabla configuracion_factura existente
         // TODO: Cuando se cree la tabla plantillas_factura, actualizar este endpoint
-        const response = await fetch(`${API_URL}/facturacion/configuracion/${currentEmpresa.id}`, {
+        const response = await fetch(`${API_URL}/facturacion/configuracion/${currentEmpresa}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1156,10 +1155,10 @@ async function guardarConfiguracionPlantilla() {
 // Función para cargar configuración existente de plantilla
 async function cargarConfiguracionPlantilla() {
     try {
-        if (!currentEmpresa || !currentEmpresa.id) return;
+        if (!currentEmpresa) return;
 
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/facturacion/configuracion/${currentEmpresa.id}`, {
+        const response = await fetch(`${API_URL}/facturacion/configuracion/${currentEmpresa}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
