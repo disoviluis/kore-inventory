@@ -529,8 +529,8 @@ function initEventListeners() {
 // ============================================================================
 
 async function cargarDatosEmpresa() {
-    const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva') || 'null');
-    if (!empresaActiva || !empresaActiva.id) {
+    const empresaActivaId = localStorage.getItem('empresaActiva');
+    if (!empresaActivaId) {
         console.error('No hay empresa activa seleccionada');
         showNotification('No hay empresa seleccionada', 'warning');
         return;
@@ -538,7 +538,7 @@ async function cargarDatosEmpresa() {
 
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/empresas/${empresaActiva.id}`, {
+        const response = await fetch(`${API_URL}/empresas/${empresaActivaId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -663,11 +663,6 @@ async function guardarDatosEmpresa() {
         if (!response.ok || !data.success) {
             throw new Error(data.message || 'Error al guardar empresa');
         }
-
-        // Actualizar localStorage con TODOS los datos actualizados de la empresa
-        const empresaActiva = JSON.parse(localStorage.getItem('empresaActiva'));
-        Object.assign(empresaActiva, datosEmpresa);
-        localStorage.setItem('empresaActiva', JSON.stringify(empresaActiva));
 
         // Actualizar selector de empresa en el sidebar
         const companySelector = document.getElementById('companySelector');
