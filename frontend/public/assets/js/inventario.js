@@ -237,6 +237,7 @@ async function cargarEmpresas(usuarioId) {
                         cargarProductosParaAjuste()
                     ]);
                 });
+            }
             
         } else {
             companySelector.innerHTML = '<option value="">Sin empresas asignadas</option>';
