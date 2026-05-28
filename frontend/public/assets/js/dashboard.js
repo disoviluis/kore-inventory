@@ -4198,6 +4198,9 @@ async function cargarModulosAccionesGlobal() {
     
     console.log('✅ Módulos y acciones cargados:', modulosAccionesDataGlobal);
     
+    // Renderizar la matriz de permisos
+    renderizarMatrizPermisosGlobales();
+    
   } catch (error) {
     console.error('Error:', error);
     container.innerHTML = `
@@ -4215,7 +4218,7 @@ async function cargarModulosAccionesGlobal() {
 function renderizarMatrizPermisosGlobales() {
   const container = document.getElementById('permisosGlobalesContainer');
   
-  if (!modulosAccionesDataGlobal || modulosAccionesDataGlobal.length === 0) {
+  if (!modulosAccionesDataGlobal) {
     container.innerHTML = `
       <div class="alert alert-warning">
         <i class="bi bi-exclamation-triangle me-2"></i>
@@ -4225,58 +4228,90 @@ function renderizarMatrizPermisosGlobales() {
     return;
   }
   
-  // Agrupar por categoría
+  const { modulos, acciones, permisos } = modulosAccionesDataGlobal;
+  
+  if (!modulos || modulos.length === 0) {
+    container.innerHTML = `
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        No se encontraron módulos disponibles
+      </div>
+    `;
+    return;
+  }
+  
+  // Agrupar módulos por categoría
   const categorias = {};
-  modulosAccionesDataGlobal.forEach(modulo => {
-    const cat = modulo.categoria || 'General';
+  modulos.forEach(modulo => {
+    const cat = modulo.categoria || 'Sin Categoría';
     if (!categorias[cat]) categorias[cat] = [];
     categorias[cat].push(modulo);
   });
   
+  // Crear mapa de permisos por modulo_id y accion_id
+  const permisoMap = {};
+  permisos.forEach(p => {
+    const key = `${p.modulo_id}_${p.accion_id}`;
+    permisoMap[key] = p.id;
+  });
+  
   let html = '';
   
-  Object.keys(categorias).forEach(categoria => {
+  Object.entries(categorias).forEach(([categoria, mods]) => {
     html += `
-      <div class="mb-4">
-        <h6 class="text-uppercase text-muted small mb-3">
-          <i class="bi bi-folder2 me-2"></i>${categoria}
-        </h6>
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered">
-            <thead class="table-light">
-              <tr>
-                <th style="width: 200px;">Módulo</th>
-                ${categorias[categoria][0].acciones.map(acc => 
-                  `<th class="text-center" style="width: 80px;">
-                    <small>${acc.nombre_accion}</small>
-                  </th>`
-                ).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${categorias[categoria].map(modulo => `
+      <div class="card mb-3">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 text-uppercase">
+            <i class="bi bi-folder me-2"></i>${categoria}
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light">
                 <tr>
-                  <td>
-                    <i class="bi ${modulo.icono || 'bi-circle'} me-2"></i>
-                    <strong>${modulo.nombre_modulo}</strong>
-                  </td>
-                  ${modulo.acciones.map(accion => {
-                    const permisoId = accion.permiso_id;
-                    const isChecked = permisosGlobalesSeleccionados.includes(permisoId);
-                    return `
-                      <td class="text-center">
-                        <input type="checkbox" 
-                               class="form-check-input permiso-checkbox-global" 
-                               data-permiso-id="${permisoId}"
-                               ${isChecked ? 'checked' : ''}
-                               onchange="togglePermisoGlobal(${permisoId})">
-                      </td>
-                    `;
-                  }).join('')}
+                  <th style="width: 250px;">
+                    <i class="bi bi-puzzle me-2"></i>Módulo
+                  </th>
+                  ${acciones.map(acc => `
+                    <th class="text-center" style="width: 100px;">
+                      <small>${acc.nombre_mostrar}</small>
+                    </th>
+                  `).join('')}
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${mods.map(modulo => `
+                  <tr>
+                    <td>
+                      <i class="bi ${modulo.icono || 'bi-circle'} me-2"></i>
+                      <strong>${modulo.nombre_mostrar}</strong>
+                      ${modulo.descripcion ? `<br><small class="text-muted">${modulo.descripcion}</small>` : ''}
+                    </td>
+                    ${acciones.map(accion => {
+                      const key = `${modulo.id}_${accion.id}`;
+                      const permisoId = permisoMap[key];
+                      
+                      if (!permisoId) {
+                        return `<td class="text-center bg-light"><small class="text-muted">-</small></td>`;
+                      }
+                      
+                      const isChecked = permisosGlobalesSeleccionados.includes(permisoId);
+                      return `
+                        <td class="text-center">
+                          <input type="checkbox" 
+                                 class="form-check-input permiso-checkbox-global" 
+                                 data-permiso-id="${permisoId}"
+                                 ${isChecked ? 'checked' : ''}
+                                 onchange="togglePermisoGlobal(${permisoId})">
+                        </td>
+                      `;
+                    }).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     `;
