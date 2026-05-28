@@ -65,16 +65,27 @@ async function loadUserData() {
         }
 
         // Cargar información del usuario en la UI
-        document.getElementById('userName').textContent = usuario.nombre;
-        document.getElementById('userRole').textContent = usuario.rol?.nombre || 'Usuario';
+        const nombreCompleto = `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim();
+        document.getElementById('userName').textContent = nombreCompleto || 'Usuario';
+        document.getElementById('userRole').textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
         
         // Mostrar sección plataforma si es super_admin
-        if (usuario.rol?.nombre === 'super_admin') {
+        if (usuario.tipo_usuario === 'super_admin') {
             document.getElementById('plataformaSection').style.display = 'block';
         }
     } catch (error) {
         console.error('Error cargando usuario:', error);
     }
+}
+
+function getTipoUsuarioTexto(tipo) {
+    const tipos = {
+        'super_admin': 'Super Administrador',
+        'admin_empresa': 'Administrador',
+        'usuario': 'Usuario',
+        'soporte': 'Soporte'
+    };
+    return tipos[tipo] || tipo;
 }
 
 async function loadCompanies() {

@@ -53,8 +53,19 @@ function verificarAutenticacion() {
 async function cargarDatosUsuario() {
     const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
     
-    document.getElementById('userName').textContent = usuario.nombre || 'Usuario';
+    const nombreCompleto = `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim();
+    document.getElementById('userName').textContent = nombreCompleto || 'Usuario';
     document.getElementById('userRole').textContent = 'Cargando empresa...';
+}
+
+function getTipoUsuarioTexto(tipo) {
+    const tipos = {
+        'super_admin': 'Super Administrador',
+        'admin_empresa': 'Administrador',
+        'usuario': 'Usuario',
+        'soporte': 'Soporte'
+    };
+    return tipos[tipo] || tipo;
 }
 
 function logout() {

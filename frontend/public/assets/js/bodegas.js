@@ -52,9 +52,20 @@ window.addEventListener('empresaCambiada', (event) => {
 async function loadUserInfo() {
     const usuario = JSON.parse(localStorage.getItem('usuario'));
     if (usuario) {
-        document.getElementById('userName').textContent = usuario.nombre;
-        document.getElementById('userRole').textContent = usuario.tipo_usuario.replace('_', ' ').toUpperCase();
+        const nombreCompleto = `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim();
+        document.getElementById('userName').textContent = nombreCompleto || 'Usuario';
+        document.getElementById('userRole').textContent = getTipoUsuarioTexto(usuario.tipo_usuario);
     }
+}
+
+function getTipoUsuarioTexto(tipo) {
+    const tipos = {
+        'super_admin': 'Super Administrador',
+        'admin_empresa': 'Administrador',
+        'usuario': 'Usuario',
+        'soporte': 'Soporte'
+    };
+    return tipos[tipo] || tipo;
 }
 
 async function loadBodegas() {

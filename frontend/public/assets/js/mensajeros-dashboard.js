@@ -161,10 +161,22 @@ function detectarTipoVista() {
 
 function loadUserInfo() {
     if (currentUsuario) {
-        document.getElementById('userName').textContent = currentUsuario.nombre;
-        const roleText = currentUsuario.tipo_usuario.replace('_', ' ').toUpperCase();
+        const nombreCompleto = `${currentUsuario.nombre || ''} ${currentUsuario.apellido || ''}`.trim();
+        document.getElementById('userName').textContent = nombreCompleto || 'Usuario';
+        const roleText = getTipoUsuarioTexto(currentUsuario.tipo_usuario);
         document.getElementById('userRole').textContent = roleText;
     }
+}
+
+function getTipoUsuarioTexto(tipo) {
+    const tipos = {
+        'super_admin': 'Super Administrador',
+        'admin_empresa': 'Administrador',
+        'usuario': 'Usuario',
+        'mensajero': 'Mensajero',
+        'soporte': 'Soporte'
+    };
+    return tipos[tipo] || tipo;
 }
 
 // ==========================================
