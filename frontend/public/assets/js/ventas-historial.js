@@ -144,6 +144,7 @@ function setupEventListeners() {
 async function cargarEmpresas(usuarioId) {
     const token = localStorage.getItem('token');
     const companySelector = document.getElementById('companySelector');
+    const empresaActivaText = document.getElementById('empresaActiva');
     
     if (!companySelector) return;
     
@@ -187,6 +188,11 @@ async function cargarEmpresas(usuarioId) {
                 localStorage.setItem('empresaActiva', data.data[0].id.toString());
             }
             
+            // Actualizar texto de empresa activa
+            if (empresaActivaText && currentEmpresa) {
+                empresaActivaText.textContent = currentEmpresa.nombre;
+            }
+            
             // Event listener para cambio de empresa
             companySelector.addEventListener('change', (e) => {
                 const empresaId = parseInt(e.target.value);
@@ -194,6 +200,12 @@ async function cargarEmpresas(usuarioId) {
                 if (empresaSeleccionada) {
                     localStorage.setItem('empresaActiva', empresaId.toString());
                     currentEmpresa = empresaSeleccionada;
+                    
+                    // Actualizar texto de empresa activa
+                    if (empresaActivaText) {
+                        empresaActivaText.textContent = empresaSeleccionada.nombre;
+                    }
+                    
                     cargarVentas();
                 }
             });
