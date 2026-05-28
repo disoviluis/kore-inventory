@@ -4255,6 +4255,13 @@ function renderizarMatrizPermisosGlobales() {
     permisoMap[key] = p.id;
   });
   
+  // Identificar qué acciones SÍ tienen permisos definidos (para filtrar columnas vacías)
+  const accionesConPermisos = new Set();
+  permisos.forEach(p => accionesConPermisos.add(p.accion_id));
+  
+  // Filtrar solo acciones que tienen al menos un permiso definido
+  const accionesFiltradas = acciones.filter(acc => accionesConPermisos.has(acc.id));
+  
   let html = '';
   
   Object.entries(categorias).forEach(([categoria, mods]) => {
@@ -4273,7 +4280,7 @@ function renderizarMatrizPermisosGlobales() {
                   <th style="width: 250px;">
                     <i class="bi bi-puzzle me-2"></i>Módulo
                   </th>
-                  ${acciones.map(acc => `
+                  ${accionesFiltradas.map(acc => `
                     <th class="text-center" style="width: 100px;">
                       <small>${acc.nombre_mostrar}</small>
                     </th>
@@ -4288,7 +4295,7 @@ function renderizarMatrizPermisosGlobales() {
                       <strong>${modulo.nombre_mostrar}</strong>
                       ${modulo.descripcion ? `<br><small class="text-muted">${modulo.descripcion}</small>` : ''}
                     </td>
-                    ${acciones.map(accion => {
+                    ${accionesFiltradas.map(accion => {
                       const key = `${modulo.id}_${accion.id}`;
                       const permisoId = permisoMap[key];
                       
