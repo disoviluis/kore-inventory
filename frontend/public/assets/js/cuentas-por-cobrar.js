@@ -5,7 +5,7 @@
  * =================================
  */
 
-const API_URL = 'http://18.191.181.99:3000/api';
+// API_URL ya está definido en dashboard.js
 let token = localStorage.getItem('token');
 let empresaActiva = null;
 let cuentasPorCobrar = [];
