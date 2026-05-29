@@ -4153,6 +4153,9 @@ async function abrirModalRolGlobal(rolId = null) {
       const data = await response.json();
       const rol = data.data;
       
+      console.log('🔍 DEBUG - Rol cargado:', rol);
+      console.log('🔍 DEBUG - Permisos del rol:', rol.permisos);
+      
       // Llenar formulario
       document.getElementById('rolGlobalNombre').value = rol.nombre;
       document.getElementById('rolGlobalDescripcion').value = rol.descripcion || '';
@@ -4161,6 +4164,9 @@ async function abrirModalRolGlobal(rolId = null) {
       
       // Marcar permisos asignados
       permisosGlobalesSeleccionados = rol.permisos.map(p => p.permiso_id);
+      
+      console.log('🔍 DEBUG - permisosGlobalesSeleccionados:', permisosGlobalesSeleccionados);
+      console.log('🔍 DEBUG - Cantidad de permisos:', permisosGlobalesSeleccionados.length);
       
       // Renderizar matriz con permisos marcados
       renderizarMatrizPermisosGlobales();
@@ -4267,6 +4273,9 @@ function renderizarMatrizPermisosGlobales() {
     permisoMap[key] = p.id;
   });
   
+  console.log('🔍 DEBUG renderizarMatrizPermisosGlobales - permisoMap:', permisoMap);
+  console.log('🔍 DEBUG renderizarMatrizPermisosGlobales - permisosGlobalesSeleccionados:', permisosGlobalesSeleccionados);
+  
   // Identificar qué acciones SÍ tienen permisos definidos (para filtrar columnas vacías)
   const accionesConPermisos = new Set();
   permisos.forEach(p => accionesConPermisos.add(p.accion_id));
@@ -4326,6 +4335,12 @@ function renderizarMatrizPermisosGlobales() {
                       }
                       
                       const isChecked = permisosGlobalesSeleccionados.includes(permisoId);
+                      
+                      // DEBUG: Log para el primer permiso encontrado
+                      if (permisosGlobalesSeleccionados.length > 0 && permisoId === 135) {
+                        console.log('🔍 DEBUG Checkbox - permisoId:', permisoId, 'isChecked:', isChecked, 'array:', permisosGlobalesSeleccionados);
+                      }
+                      
                       return `
                         <td class="text-center" style="padding: 0.5rem 0.25rem;">
                           <div class="form-check d-flex justify-content-center align-items-center m-0">
