@@ -292,6 +292,24 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
     // Hashear contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Asignar nivel de privilegio automáticamente según tipo_usuario
+    let nivelPrivilegio = 50; // Default para 'usuario'
+    switch (tipo_usuario) {
+      case 'super_admin':
+        nivelPrivilegio = 100;
+        break;
+      case 'admin_empresa':
+        nivelPrivilegio = 95;
+        break;
+      case 'soporte':
+        nivelPrivilegio = 80;
+        break;
+      case 'usuario':
+      default:
+        nivelPrivilegio = 50;
+        break;
+    }
+
     // Crear usuario
     const [result] = await connection.execute<ResultSetHeader>(
       `INSERT INTO usuarios (
@@ -301,11 +319,12 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
         password,
         telefono,
         tipo_usuario,
+        nivel_privilegio,
         activo,
         email_verificado,
         created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-      [nombre, apellido || null, email, hashedPassword, telefono || null, tipo_usuario, activo ? 1 : 0, usuario.id]
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+      [nombre, apellido || null, email, hashedPassword, telefono || null, tipo_usuario, nivelPrivilegio, activo ? 1 : 0, usuario.id]
     );
 
     const usuarioId = result.insertId;
