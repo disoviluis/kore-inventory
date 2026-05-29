@@ -4216,8 +4216,8 @@ async function cargarModulosAccionesGlobal() {
     
     console.log('✅ Módulos y acciones cargados:', modulosAccionesDataGlobal);
     
-    // Renderizar la matriz de permisos
-    renderizarMatrizPermisosGlobales();
+    // NO renderizar aquí - se renderizará después de cargar los permisos del rol
+    // renderizarMatrizPermisosGlobales();  <-- REMOVIDO
     
   } catch (error) {
     console.error('Error:', error);
