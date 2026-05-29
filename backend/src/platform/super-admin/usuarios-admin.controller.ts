@@ -195,7 +195,8 @@ export const createUsuario = async (req: Request, res: Response) => {
       apellido,
       email,
       password,
-      tipo_usuario = 'usuario',
+      rol_id, // Nuevo: ID del rol global
+      tipo_usuario = 'usuario', // Mantener por compatibilidad
       activo = true,
       email_verificado = false,
       empresas_ids = [], // Array de IDs de empresas
@@ -212,34 +213,62 @@ export const createUsuario = async (req: Request, res: Response) => {
       throw new Error('El email ya está registrado');
     }
 
+    // Si se proporciona rol_id, validar que sea un rol global válido
+    let nivelPrivilegio = 50; // Default para usuarios regulares
+    let finalTipoUsuario = tipo_usuario;
+    
+    if (rol_id) {
+      const [roles] = await connection.query<RowDataPacket[]>(
+        'SELECT id, nombre, nivel FROM roles WHERE id = ? AND empresa_id IS NULL AND activo = 1',
+        [rol_id]
+      );
+
+      if (roles.length === 0) {
+        throw new Error('El rol especificado no existe o no es un rol global válido');
+      }
+
+      // Usar nivel del rol para determinar nivel_privilegio
+      nivelPrivilegio = roles[0].nivel;
+      
+      // Determinar tipo_usuario basado en nivel del rol
+      if (nivelPrivilegio >= 100) {
+        finalTipoUsuario = 'super_admin';
+      } else if (nivelPrivilegio >= 80) {
+        finalTipoUsuario = 'admin_empresa';
+      } else if (nivelPrivilegio >= 50) {
+        finalTipoUsuario = 'soporte';
+      } else {
+        finalTipoUsuario = 'usuario';
+      }
+    } else {
+      // Si no se proporciona rol_id, usar lógica anterior
+      switch (tipo_usuario) {
+        case 'super_admin':
+          nivelPrivilegio = 100;
+          break;
+        case 'admin_empresa':
+          nivelPrivilegio = 95;
+          break;
+        case 'soporte':
+          nivelPrivilegio = 80;
+          break;
+        case 'usuario':
+        default:
+          nivelPrivilegio = 50;
+          break;
+      }
+    }
+
     // Hashear password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Asignar nivel de privilegio automáticamente según tipo_usuario
-    let nivelPrivilegio = 50; // Default para 'usuario'
-    switch (tipo_usuario) {
-      case 'super_admin':
-        nivelPrivilegio = 100;
-        break;
-      case 'admin_empresa':
-        nivelPrivilegio = 95;
-        break;
-      case 'soporte':
-        nivelPrivilegio = 80;
-        break;
-      case 'usuario':
-      default:
-        nivelPrivilegio = 50;
-        break;
-    }
 
     // Crear usuario
     const [result] = await connection.query<ResultSetHeader>(`
       INSERT INTO usuarios (
         nombre, apellido, email, password, tipo_usuario, 
-        nivel_privilegio, activo, email_verificado
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [nombre, apellido, email, hashedPassword, tipo_usuario, nivelPrivilegio, activo ? 1 : 0, email_verificado ? 1 : 0]);
+        rol_id, nivel_privilegio, activo, email_verificado
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [nombre, apellido, email, hashedPassword, finalTipoUsuario, rol_id || null, nivelPrivilegio, activo ? 1 : 0, email_verificado ? 1 : 0]);
 
     const usuarioId = result.insertId;
 
@@ -307,6 +336,7 @@ export const updateUsuario = async (req: Request, res: Response) => {
       nombre,
       apellido,
       email,
+      rol_id, // Nuevo: ID del rol global
       tipo_usuario,
       activo,
       email_verificado
@@ -337,6 +367,36 @@ export const updateUsuario = async (req: Request, res: Response) => {
       }
     }
 
+    // Si se proporciona rol_id, validar que sea un rol global válido
+    let nivelPrivilegio = usuarios[0].nivel_privilegio; // Mantener el actual
+    let finalTipoUsuario = tipo_usuario || usuarios[0].tipo_usuario;
+    let finalRolId = rol_id !== undefined ? rol_id : usuarios[0].rol_id;
+    
+    if (rol_id !== undefined && rol_id !== null) {
+      const [roles] = await pool.query<RowDataPacket[]>(
+        'SELECT id, nombre, nivel FROM roles WHERE id = ? AND empresa_id IS NULL AND activo = 1',
+        [rol_id]
+      );
+
+      if (roles.length === 0) {
+        throw new Error('El rol especificado no existe o no es un rol global válido');
+      }
+
+      // Usar nivel del rol para determinar nivel_privilegio
+      nivelPrivilegio = roles[0].nivel;
+      
+      // Determinar tipo_usuario basado en nivel del rol
+      if (nivelPrivilegio >= 100) {
+        finalTipoUsuario = 'super_admin';
+      } else if (nivelPrivilegio >= 80) {
+        finalTipoUsuario = 'admin_empresa';
+      } else if (nivelPrivilegio >= 50) {
+        finalTipoUsuario = 'soporte';
+      } else {
+        finalTipoUsuario = 'usuario';
+      }
+    }
+
     // Actualizar usuario
     await pool.query(`
       UPDATE usuarios SET
@@ -344,11 +404,13 @@ export const updateUsuario = async (req: Request, res: Response) => {
         apellido = ?,
         email = ?,
         tipo_usuario = ?,
+        rol_id = ?,
+        nivel_privilegio = ?,
         activo = ?,
         email_verificado = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [nombre, apellido, email, tipo_usuario, activo ? 1 : 0, email_verificado ? 1 : 0, id]);
+    `, [nombre, apellido, email, finalTipoUsuario, finalRolId, nivelPrivilegio, activo ? 1 : 0, email_verificado ? 1 : 0, id]);
 
     // Auditoría
     await pool.query(`

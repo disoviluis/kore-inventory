@@ -1956,6 +1956,9 @@ function abrirModalUsuario(usuarioId = null) {
   const title = document.getElementById('usuarioModalTitle');
   const passwordRequired = document.querySelectorAll('#passwordRequired, #passwordConfirmRequired');
   
+  // Cargar roles globales primero
+  cargarRolesGlobalesEnSelect();
+  
   if (usuarioId) {
     title.textContent = 'Editar Usuario';
     // En modo edición, la contraseña es opcional
@@ -1976,6 +1979,39 @@ function abrirModalUsuario(usuarioId = null) {
   }
   
   modal.show();
+}
+
+/**
+ * Cargar roles globales en el select del modal de usuario
+ */
+async function cargarRolesGlobalesEnSelect() {
+  try {
+    const response = await fetch(`${API_URL}/super-admin/roles-globales`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    
+    if (!response.ok) throw new Error('Error al cargar roles globales');
+    const data = await response.json();
+    
+    const select = document.getElementById('usuarioRolGlobal');
+    const rolesActivos = data.data.filter(r => r.activo);
+    
+    // Limpiar select excepto la opción por defecto
+    select.innerHTML = '<option value="">Selecciona un rol...</option>';
+    
+    // Agregar roles ordenados por nivel descendente
+    rolesActivos
+      .sort((a, b) => b.nivel - a.nivel)
+      .forEach(rol => {
+        const badgeClass = rol.nivel >= 95 ? 'danger' : rol.nivel >= 90 ? 'warning' : 'info';
+        select.innerHTML += `<option value="${rol.id}" data-nivel="${rol.nivel}">
+          ${rol.nombre} (Nivel ${rol.nivel})
+        </option>`;
+      });
+      
+  } catch (error) {
+    console.error('Error al cargar roles globales:', error);
+  }
 }
 
 async function cargarEmpresasCheckboxes(empresasAsignadas = []) {
@@ -2036,7 +2072,12 @@ async function cargarDatosUsuarioAdmin(id) {
     document.getElementById('usuarioApellido').value = usuario.apellido || '';
     document.getElementById('usuarioEmail').value = usuario.email;
     document.getElementById('usuarioTelefono').value = usuario.telefono || '';
-    document.getElementById('usuarioTipo').value = usuario.tipo_usuario;
+    
+    // Usar rol_id en lugar de tipo_usuario
+    if (usuario.rol_id) {
+      document.getElementById('usuarioRolGlobal').value = usuario.rol_id;
+    }
+    
     document.getElementById('usuarioActivo').value = usuario.activo ? '1' : '0';
     
     // Cargar checkboxes con empresas asignadas
@@ -2076,12 +2117,19 @@ async function guardarUsuario() {
   const checkboxes = document.querySelectorAll('#empresasCheckboxContainer input[type="checkbox"]:checked');
   const empresasSeleccionadas = Array.from(checkboxes).map(cb => parseInt(cb.value));
   
+  // Obtener rol global seleccionado
+  const rolGlobalId = parseInt(document.getElementById('usuarioRolGlobal').value);
+  if (!rolGlobalId) {
+    mostrarError('Debes seleccionar un rol global');
+    return;
+  }
+  
   const usuario = {
     nombre: document.getElementById('usuarioNombre').value,
     apellido: document.getElementById('usuarioApellido').value,
     email: document.getElementById('usuarioEmail').value,
     telefono: document.getElementById('usuarioTelefono').value,
-    tipo_usuario: document.getElementById('usuarioTipo').value,
+    rol_id: rolGlobalId,  // ✓ Enviar rol_id en lugar de tipo_usuario
     activo: parseInt(document.getElementById('usuarioActivo').value)
   };
   
