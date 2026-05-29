@@ -3876,6 +3876,18 @@ async function verificarConfiguracionFacturacion() {
       }
     });
     
+    // Si es 404, significa que no hay configuración creada aún
+    if (response.status === 404) {
+      mostrarAlertaConfiguracion({
+        color_primario: false,
+        color_secundario: false,
+        fuente: false,
+        cuentas_bancarias: false,
+        mensaje_agradecimiento: false
+      });
+      return;
+    }
+    
     const result = await response.json();
     
     if (!result.success || !result.data) {
