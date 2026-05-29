@@ -2898,13 +2898,13 @@ function renderizarMatrizPermisos() {
           </h6>
         </div>
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-sm table-hover mb-0">
-              <thead class="table-light">
+          <div class="table-responsive" style="max-height: 500px; overflow-x: auto; position: relative;">
+            <table class="table table-sm table-hover mb-0" style="min-width: 1200px;">
+              <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
                 <tr>
-                  <th style="width: 200px;">Módulo</th>
+                  <th class="sticky-col" style="width: 200px; position: sticky; left: 0; z-index: 11; background: #f8f9fa; box-shadow: 2px 0 5px rgba(0,0,0,0.1);">Módulo</th>
                   ${acciones.map(a => `
-                    <th class="text-center" style="width: 80px;" title="${a.descripcion}">
+                    <th class="text-center" style="width: 80px; white-space: nowrap;" title="${a.descripcion}">
                       ${a.nombre_mostrar}
                     </th>
                   `).join('')}
@@ -2922,7 +2922,7 @@ function renderizarMatrizPermisos() {
     mods.forEach(modulo => {
       html += `
         <tr data-modulo-id="${modulo.id}">
-          <td>
+          <td class="sticky-col" style="position: sticky; left: 0; background: white; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.05);">
             <i class="bi ${modulo.icono} me-2 text-primary"></i>
             <strong>${modulo.nombre_mostrar}</strong>
             ${modulo.nivel === 'platform' ? '<span class="badge bg-warning ms-2">Plataforma</span>' : ''}
@@ -4273,15 +4273,15 @@ function renderizarMatrizPermisosGlobales() {
           </h6>
         </div>
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-sm table-hover mb-0">
-              <thead class="table-light">
+          <div class="table-responsive" style="max-height: 500px; overflow-x: auto; position: relative;">
+            <table class="table table-sm table-hover mb-0" style="min-width: 1200px;">
+              <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
                 <tr>
-                  <th style="width: 250px;">
+                  <th class="sticky-col" style="width: 250px; position: sticky; left: 0; z-index: 11; background: #f8f9fa; box-shadow: 2px 0 5px rgba(0,0,0,0.1);">
                     <i class="bi bi-puzzle me-2"></i>Módulo
                   </th>
                   ${accionesFiltradas.map(acc => `
-                    <th class="text-center" style="width: 100px;">
+                    <th class="text-center" style="width: 100px; white-space: nowrap;">
                       <small>${acc.nombre_mostrar}</small>
                     </th>
                   `).join('')}
@@ -4290,7 +4290,7 @@ function renderizarMatrizPermisosGlobales() {
               <tbody>
                 ${mods.map(modulo => `
                   <tr>
-                    <td>
+                    <td class="sticky-col" style="position: sticky; left: 0; background: white; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.05);">
                       <i class="bi ${modulo.icono || 'bi-circle'} me-2"></i>
                       <strong>${modulo.nombre_mostrar}</strong>
                       ${modulo.descripcion ? `<br><small class="text-muted">${modulo.descripcion}</small>` : ''}
