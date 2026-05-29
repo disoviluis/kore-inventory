@@ -239,6 +239,8 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       impuesto,
       total,
       metodo_pago,
+      forma_pago, // 'contado' o 'credito'
+      fecha_vencimiento, // Solo si es crédito
       pagos,
       notas,
       vendedor_id,
@@ -357,15 +359,18 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
     // Calcular total de retenciones
     const totalRetenciones = retenciones.retencionIVA + retenciones.retencionFuente + retenciones.retencionICA;
 
+    // Determinar estado de la venta
+    const estadoVenta = (forma_pago === 'credito') ? 'pendiente' : 'pagada';
+
     // Insertar venta
     const resultVenta = await query(
       `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, fecha_venta,
         subtotal, descuento, impuesto, total, 
         retenciones,
-        estado, metodo_pago, notas, vendedor_id,
+        estado, metodo_pago, forma_pago, fecha_vencimiento, notas, vendedor_id,
         cufe, qr_code
-      ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'pagada', ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         numeroFactura,
@@ -375,7 +380,10 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         impuesto || 0,
         totalFinal,
         totalRetenciones,
+        estadoVenta,
         metodo_pago || 'efectivo',
+        forma_pago || 'contado',
+        forma_pago === 'credito' ? fecha_vencimiento : null,
         notas || null,
         vendedor_id || null,
         cufe,
@@ -463,6 +471,47 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         );
       }
       logger.info(`${pagos.length} métodos de pago registrados para venta ${ventaId}`);
+    }
+
+    // Crear Cuenta por Cobrar si es venta a crédito
+    if (forma_pago === 'credito') {
+      // Calcular días de vencimiento
+      const fechaActual = new Date();
+      const fechaVenc = new Date(fecha_vencimiento);
+      const diasVencimiento = Math.floor((fechaVenc.getTime() - fechaActual.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Determinar rango de vencimiento
+      let rangoVencimiento = 'al_dia';
+      if (diasVencimiento < 0) {
+        const diasNegativo = Math.abs(diasVencimiento);
+        if (diasNegativo <= 30) rangoVencimiento = '1-30';
+        else if (diasNegativo <= 60) rangoVencimiento = '31-60';
+        else if (diasNegativo <= 90) rangoVencimiento = '61-90';
+        else rangoVencimiento = 'mas_90';
+      }
+
+      // Determinar estado de la CxC
+      const estadoCxC = diasVencimiento < 0 ? 'vencida' : 'vigente';
+
+      await query(
+        `INSERT INTO cuentas_por_cobrar (
+          empresa_id, venta_id, cliente_id, fecha_emision, fecha_vencimiento,
+          valor_original, saldo_pendiente, estado, dias_vencimiento, rango_vencimiento
+        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)`,
+        [
+          empresa_id,
+          ventaId,
+          cliente_id,
+          fecha_vencimiento,
+          totalFinal,
+          totalFinal,
+          estadoCxC,
+          diasVencimiento,
+          rangoVencimiento
+        ]
+      );
+
+      logger.info(`Cuenta por cobrar creada para venta ${numeroFactura} - Vence: ${fecha_vencimiento}`);
     }
 
     logger.info(`Venta creada: ${numeroFactura} (ID: ${ventaId})`);
