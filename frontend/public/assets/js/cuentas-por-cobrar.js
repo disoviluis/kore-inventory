@@ -5,9 +5,10 @@
  * =================================
  */
 
-// API_URL ya está definido en dashboard.js
+const API_URL = 'http://18.191.181.99:3000/api';
 let token = localStorage.getItem('token');
-let empresaActiva = null;
+let usuario = null;
+let currentEmpresa = null;
 let cuentasPorCobrar = [];
 let clientes = [];
 let agingChartInstance = null;
@@ -19,49 +20,197 @@ let agingChartInstance = null;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Inicializando módulo de Cuentas por Cobrar...');
     
-    // Verificar autenticación
-    if (!token) {
-        window.location.href = 'login.html';
-        return;
+    try {
+        // Verificar autenticación
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        // Cargar usuario
+        usuario = JSON.parse(localStorage.getItem('usuario'));
+        
+        if (!usuario) {
+            const response = await fetch(`${API_URL}/auth/verify`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('usuario');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const data = await response.json();
+            usuario = data.data;
+            localStorage.setItem('usuario', JSON.stringify(usuario));
+        }
+
+        // Cargar información del usuario en la UI
+        cargarInfoUsuario(usuario);
+        
+        // Cargar empresas del usuario
+        await cargarEmpresas(usuario.id);
+
+        // Obtener empresa activa
+        const empresaActivaId = localStorage.getItem('empresaActiva');
+        
+        if (!empresaActivaId) {
+            console.error('❌ No hay empresa activa configurada');
+            mostrarError('No tienes empresas asignadas. Contacta al administrador.');
+            setTimeout(() => window.location.href = 'dashboard.html', 2000);
+            return;
+        }
+        
+        // Si currentEmpresa no se estableció, cargar desde API
+        if (!currentEmpresa || !currentEmpresa.id) {
+            await cargarDatosEmpresa(empresaActivaId);
+        }
+        
+        console.log(`✅ Empresa activa: ${currentEmpresa.nombre} (ID: ${currentEmpresa.id})`);
+
+        // Cargar datos iniciales
+        await Promise.all([
+            cargarResumenCartera(),
+            cargarCuentasPorCobrar(),
+            cargarClientes()
+        ]);
+
+        // Configurar event listeners
+        configurarEventListeners();
+
+    } catch (error) {
+        console.error('Error de inicialización:', error);
+        mostrarError('Error al inicializar el módulo');
     }
-
-    // Esperar a que dashboard.js cargue la empresa activa
-    await esperarEmpresaActiva();
-    
-    // Cargar datos iniciales
-    await Promise.all([
-        cargarResumenCartera(),
-        cargarCuentasPorCobrar(),
-        cargarClientes()
-    ]);
-
-    // Configurar event listeners
-    configurarEventListeners();
 });
 
 /**
- * Esperar a que dashboard.js establezca la empresa activa
+ * Cargar información del usuario
  */
-function esperarEmpresaActiva() {
-    return new Promise((resolve) => {
-        const checkInterval = setInterval(() => {
-            const empresaIdElement = document.getElementById('companySelector');
-            if (empresaIdElement && empresaIdElement.value) {
-                empresaActiva = parseInt(empresaIdElement.value);
-                clearInterval(checkInterval);
-                resolve();
-            }
-        }, 100);
+function cargarInfoUsuario(usuario) {
+    const userName = document.getElementById('userName');
+    const userRole = document.getElementById('userRole');
+    
+    if (userName) {
+        const nombre = usuario.nombre || '';
+        const apellido = usuario.apellido || '';
+        userName.textContent = `${nombre} ${apellido}`.trim() || 'Usuario';
+    }
+    
+    if (userRole) {
+        const tipos = {
+            'super_admin': 'Super Admin',
+            'admin_empresa': 'Administrador',
+            'usuario': 'Usuario', 
+            'soporte': 'Soporte'
+        };
+        userRole.textContent = tipos[usuario.tipo_usuario] || usuario.tipo_usuario;
+    }
+}
 
-        // Timeout de 10 segundos
-        setTimeout(() => {
-            clearInterval(checkInterval);
-            if (!empresaActiva) {
-                mostrarError('No se pudo cargar la empresa activa');
+/**
+ * Cargar empresas del usuario
+ */
+async function cargarEmpresas(usuarioId) {
+    const companySelector = document.getElementById('companySelector');
+    const companyText = document.getElementById('companyText');
+    const companyNameText = document.getElementById('companyNameText');
+    
+    if (!companySelector) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/empresas/usuario/${usuarioId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.data.length > 0) {
+            const esUsuarioRegular = usuario.tipo_usuario === 'usuario';
+            const tieneSoloUnaEmpresa = data.data.length === 1;
+            
+            if (esUsuarioRegular || tieneSoloUnaEmpresa) {
+                companySelector.style.display = 'none';
+                if (companyText) companyText.style.display = 'block';
+                if (companyNameText) companyNameText.textContent = data.data[0].nombre;
+                
+                localStorage.setItem('empresaActiva', data.data[0].id.toString());
+                currentEmpresa = data.data[0];
+            } else {
+                companySelector.style.display = 'block';
+                if (companyText) companyText.style.display = 'none';
+                
+                companySelector.innerHTML = '';
+                
+                data.data.forEach(empresa => {
+                    const option = document.createElement('option');
+                    option.value = empresa.id;
+                    option.textContent = empresa.nombre;
+                    companySelector.appendChild(option);
+                });
+                
+                const empresaGuardadaId = localStorage.getItem('empresaActiva');
+                if (empresaGuardadaId) {
+                    const empresaExiste = data.data.find(emp => emp.id == empresaGuardadaId);
+                    if (empresaExiste) {
+                        companySelector.value = empresaGuardadaId;
+                        currentEmpresa = empresaExiste;
+                    } else {
+                        companySelector.value = data.data[0].id;
+                        localStorage.setItem('empresaActiva', data.data[0].id.toString());
+                        currentEmpresa = data.data[0];
+                    }
+                } else {
+                    companySelector.value = data.data[0].id;
+                    localStorage.setItem('empresaActiva', data.data[0].id.toString());
+                    currentEmpresa = data.data[0];
+                }
+                
+                companySelector.addEventListener('change', (e) => {
+                    const empresaId = e.target.value;
+                    const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
+                    localStorage.setItem('empresaActiva', empresaId);
+                    currentEmpresa = empresaSeleccionada;
+                    // Recargar datos
+                    cargarResumenCartera();
+                    cargarCuentasPorCobrar();
+                    cargarClientes();
+                });
             }
-            resolve();
-        }, 10000);
-    });
+        } else {
+            companySelector.innerHTML = '<option value="">Sin empresas asignadas</option>';
+        }
+    } catch (error) {
+        console.error('Error al cargar empresas:', error);
+        companySelector.innerHTML = '<option value="">Error al cargar empresas</option>';
+    }
+}
+
+/**
+ * Cargar datos completos de empresa
+ */
+async function cargarDatosEmpresa(empresaId) {
+    try {
+        const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            currentEmpresa = data.data;
+            console.log('✅ Datos completos de empresa cargados:', currentEmpresa.nombre);
+            
+            const companyNameText = document.getElementById('companyNameText');
+            if (companyNameText) {
+                companyNameText.textContent = currentEmpresa.nombre;
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error al cargar datos de empresa:', error);
+    }
 }
 
 // ===============================================
@@ -73,7 +222,7 @@ function esperarEmpresaActiva() {
  */
 async function cargarResumenCartera() {
     try {
-        const response = await fetch(`${API_URL}/finanzas/cuentas-por-cobrar/dashboard/resumen?empresaId=${empresaActiva}`, {
+        const response = await fetch(`${API_URL}/finanzas/cuentas-por-cobrar/dashboard/resumen?empresaId=${currentEmpresa.id}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -112,7 +261,7 @@ async function cargarResumenCartera() {
 async function cargarCuentasPorCobrar() {
     try {
         // Construir URL con filtros
-        let url = `${API_URL}/finanzas/cuentas-por-cobrar?empresaId=${empresaActiva}`;
+        let url = `${API_URL}/finanzas/cuentas-por-cobrar?empresaId=${currentEmpresa.id}`;
 
         const estado = document.getElementById('filterEstado').value;
         const clienteId = document.getElementById('filterCliente').value;
@@ -150,7 +299,7 @@ async function cargarCuentasPorCobrar() {
  */
 async function cargarClientes() {
     try {
-        const response = await fetch(`${API_URL}/clientes?empresaId=${empresaActiva}`, {
+        const response = await fetch(`${API_URL}/clientes?empresaId=${currentEmpresa.id}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -483,7 +632,7 @@ async function aplicarPago(cxcId) {
  */
 async function cargarFacturasPendientesCliente(clienteId) {
     try {
-        const response = await fetch(`${API_URL}/finanzas/cuentas-por-cobrar/cliente/${clienteId}?empresaId=${empresaActiva}`, {
+        const response = await fetch(`${API_URL}/finanzas/cuentas-por-cobrar/cliente/${clienteId}?empresaId=${currentEmpresa.id}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -617,7 +766,7 @@ async function guardarRecibo() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                empresaId: empresaActiva,
+                empresaId: currentEmpresa.id,
                 clienteId: parseInt(clienteId),
                 metodo_pago: metodoPago,
                 referencia: referencia || null,
