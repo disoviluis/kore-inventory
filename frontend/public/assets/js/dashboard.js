@@ -4278,51 +4278,65 @@ function renderizarMatrizPermisosGlobales() {
   
   Object.entries(categorias).forEach(([categoria, mods]) => {
     html += `
-      <div class="card mb-3">
-        <div class="card-header bg-light">
-          <h6 class="mb-0 text-uppercase">
-            <i class="bi bi-folder me-2"></i>${categoria}
-          </h6>
+      <div class="card mb-2 shadow-sm">
+        <div class="card-header bg-light py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 text-uppercase fw-bold">
+              <i class="bi bi-folder me-2 text-primary"></i>${categoria}
+            </h6>
+            <small class="text-muted">${mods.length} módulo(s)</small>
+          </div>
         </div>
         <div class="card-body p-0">
-          <div class="table-responsive" style="max-height: 500px; overflow-x: auto; position: relative;">
-            <table class="table table-sm table-hover mb-0" style="min-width: 1200px;">
+          <div class="table-responsive" style="max-height: 350px; overflow-y: auto; overflow-x: auto; position: relative;">
+            <table class="table table-sm table-hover mb-0" style="min-width: 100%; font-size: 0.875rem;">
               <thead class="table-light" style="position: sticky; top: 0; z-index: 10;">
                 <tr>
-                  <th class="sticky-col" style="width: 250px; position: sticky; left: 0; z-index: 11; background: #f8f9fa; box-shadow: 2px 0 5px rgba(0,0,0,0.1);">
+                  <th class="sticky-col" style="width: 280px; position: sticky; left: 0; z-index: 11; background: #f8f9fa; box-shadow: 2px 0 5px rgba(0,0,0,0.1);">
                     <i class="bi bi-puzzle me-2"></i>Módulo
                   </th>
                   ${accionesFiltradas.map(acc => `
-                    <th class="text-center" style="width: 100px; white-space: nowrap;">
-                      <small>${acc.nombre_mostrar}</small>
+                    <th class="text-center align-middle" style="min-width: 85px; white-space: nowrap; padding: 0.5rem 0.25rem;">
+                      <div class="d-flex flex-column align-items-center">
+                        <i class="bi ${acc.icono || 'bi-circle'} mb-1"></i>
+                        <small class="fw-semibold">${acc.nombre_mostrar}</small>
+                      </div>
                     </th>
                   `).join('')}
                 </tr>
               </thead>
               <tbody>
                 ${mods.map(modulo => `
-                  <tr>
-                    <td class="sticky-col" style="position: sticky; left: 0; background: white; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.05);">
-                      <i class="bi ${modulo.icono || 'bi-circle'} me-2"></i>
-                      <strong>${modulo.nombre_mostrar}</strong>
-                      ${modulo.descripcion ? `<br><small class="text-muted">${modulo.descripcion}</small>` : ''}
+                  <tr class="align-middle">
+                    <td class="sticky-col" style="position: sticky; left: 0; background: white; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.05); padding: 0.5rem;">
+                      <div class="d-flex align-items-start">
+                        <i class="bi ${modulo.icono || 'bi-circle'} me-2 mt-1 text-primary"></i>
+                        <div class="flex-grow-1">
+                          <strong class="d-block">${modulo.nombre_mostrar}</strong>
+                          ${modulo.descripcion ? `<small class="text-muted d-block" style="font-size: 0.75rem;">${modulo.descripcion}</small>` : ''}
+                        </div>
+                      </div>
                     </td>
                     ${accionesFiltradas.map(accion => {
                       const key = `${modulo.id}_${accion.id}`;
                       const permisoId = permisoMap[key];
                       
                       if (!permisoId) {
-                        return `<td class="text-center bg-light"><small class="text-muted">-</small></td>`;
+                        return `<td class="text-center bg-light" style="padding: 0.5rem 0.25rem;"><small class="text-muted">-</small></td>`;
                       }
                       
                       const isChecked = permisosGlobalesSeleccionados.includes(permisoId);
                       return `
-                        <td class="text-center">
-                          <input type="checkbox" 
-                                 class="form-check-input permiso-checkbox-global" 
-                                 data-permiso-id="${permisoId}"
-                                 ${isChecked ? 'checked' : ''}
-                                 onchange="togglePermisoGlobal(${permisoId})">
+                        <td class="text-center" style="padding: 0.5rem 0.25rem;">
+                          <div class="form-check d-flex justify-content-center align-items-center m-0">
+                            <input type="checkbox" 
+                                   class="form-check-input permiso-checkbox-global" 
+                                   data-permiso-id="${permisoId}"
+                                   ${isChecked ? 'checked' : ''}
+                                   style="cursor: pointer; width: 1.25em; height: 1.25em;"
+                                   onchange="togglePermisoGlobal(${permisoId})"
+                                   title="${modulo.nombre_mostrar} - ${accion.nombre_mostrar}">
+                          </div>
                         </td>
                       `;
                     }).join('')}
@@ -4337,6 +4351,9 @@ function renderizarMatrizPermisosGlobales() {
   });
   
   container.innerHTML = html;
+  
+  // Actualizar contador de permisos al renderizar
+  actualizarContadorPermisosGlobales();
 }
 
 /**
@@ -4349,7 +4366,34 @@ function togglePermisoGlobal(permisoId) {
   } else {
     permisosGlobalesSeleccionados.push(permisoId);
   }
+  actualizarContadorPermisosGlobales();
   console.log('Permisos globales seleccionados:', permisosGlobalesSeleccionados);
+}
+
+/**
+ * Actualizar contador de permisos seleccionados
+ */
+function actualizarContadorPermisosGlobales() {
+  const countElement = document.getElementById('permisosSeleccionadosCount');
+  if (countElement) {
+    countElement.textContent = permisosGlobalesSeleccionados.length;
+    
+    // Cambiar color según cantidad
+    const contadorElement = document.getElementById('contadorPermisos');
+    if (contadorElement) {
+      if (permisosGlobalesSeleccionados.length === 0) {
+        contadorElement.innerHTML = `
+          <i class="bi bi-exclamation-circle text-warning me-1"></i>
+          <span id="permisosSeleccionadosCount">0</span> permisos seleccionados
+        `;
+      } else {
+        contadorElement.innerHTML = `
+          <i class="bi bi-check-circle-fill text-success me-1"></i>
+          <span id="permisosSeleccionadosCount">${permisosGlobalesSeleccionados.length}</span> permisos seleccionados
+        `;
+      }
+    }
+  }
 }
 
 /**
@@ -4367,6 +4411,7 @@ function seleccionarTodosPermisosGlobales(seleccionar) {
     }
   });
   
+  actualizarContadorPermisosGlobales();
   console.log('Permisos globales:', seleccionar ? 'Todos seleccionados' : 'Todos deseleccionados');
 }
 

@@ -13,6 +13,86 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/dashboard.css">
+    
+    <style>
+        /* Mejoras para Modal de Roles Globales */
+        #rolGlobalModal .form-label-sm {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        #rolGlobalModal .sticky-col {
+            min-width: 280px;
+            max-width: 280px;
+        }
+        
+        #rolGlobalModal .table-responsive::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        #rolGlobalModal .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        #rolGlobalModal .table-responsive::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        #rolGlobalModal .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        #rolGlobalModal .permiso-checkbox-global {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        #rolGlobalModal .permiso-checkbox-global:hover {
+            transform: scale(1.1);
+        }
+        
+        #rolGlobalModal .card {
+            transition: box-shadow 0.2s ease;
+        }
+        
+        #rolGlobalModal .card:hover {
+            box-shadow: 0 0.125rem 0.5rem rgba(0,0,0,0.1) !important;
+        }
+        
+        #permisosGlobalesContainer::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        #permisosGlobalesContainer::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 5px;
+        }
+        
+        #permisosGlobalesContainer::-webkit-scrollbar-thumb {
+            background: #0d6efd;
+            border-radius: 5px;
+        }
+        
+        #permisosGlobalesContainer::-webkit-scrollbar-thumb:hover {
+            background: #0b5ed7;
+        }
+        
+        /* Responsividad adicional */
+        @media (max-width: 768px) {
+            #rolGlobalModal .modal-dialog {
+                margin: 0;
+                max-width: 100vw !important;
+            }
+            
+            #rolGlobalModal .sticky-col {
+                min-width: 200px;
+                max-width: 200px;
+            }
+        }
+    </style>
 </head>
 <body>
 
@@ -2384,94 +2464,117 @@
 
     <!-- Modal Rol Global (Super Admin) -->
     <div class="modal fade" id="rolGlobalModal" tabindex="-1">
-        <div class="modal-dialog modal-fullscreen-xl-down modal-dialog-scrollable" style="max-width: 95vw;">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
+        <div class="modal-dialog modal-fullscreen-lg-down modal-dialog-scrollable" style="max-width: 98vw; max-height: 95vh;">
+            <div class="modal-content" style="height: 95vh;">
+                <div class="modal-header bg-primary text-white flex-shrink-0">
                     <h5 class="modal-title" id="rolGlobalModalTitle">
                         <i class="bi bi-shield-fill-check me-2"></i>Crear Rol Global
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="overflow-y: auto; flex: 1;">
                     <form id="rolGlobalForm">
                         <input type="hidden" id="rolGlobalId">
                         
-                        <div class="row g-3">
-                            <!-- Información Básica -->
+                        <div class="row g-2">
+                            <!-- Información Básica (compacta) -->
                             <div class="col-12">
-                                <h6 class="border-bottom pb-2">
-                                    <i class="bi bi-info-circle me-2 text-primary"></i>Información Básica
-                                </h6>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label">Nombre del Rol <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="rolGlobalNombre" required 
-                                       placeholder="Ej: Gerente de Ventas, Contador, Supervisor">
-                                <small class="text-muted">Nombre descriptivo del rol global</small>
-                            </div>
+                                <div class="card bg-light">
+                                    <div class="card-body py-2">
+                                        <h6 class="mb-2">
+                                            <i class="bi bi-info-circle me-2 text-primary"></i>Información Básica
+                                        </h6>
+                                        
+                                        <div class="row g-2">
+                                            <div class="col-md-5">
+                                                <label class="form-label form-label-sm mb-1">Nombre del Rol <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control form-control-sm" id="rolGlobalNombre" required 
+                                                       placeholder="Ej: Gerente de Ventas, Contador, Supervisor">
+                                            </div>
 
-                            <div class="col-md-3">
-                                <label class="form-label">Nivel de Privilegio <span class="text-danger">*</span></label>
-                                <select class="form-select" id="rolGlobalNivel" required>
-                                    <option value="">Selecciona un nivel...</option>
-                                    <option value="99">Nivel 99 - Muy Alto</option>
-                                    <option value="95">Nivel 95 - Alto</option>
-                                    <option value="90">Nivel 90 - Alto Medio</option>
-                                    <option value="85">Nivel 85 - Medio Alto</option>
-                                    <option value="80">Nivel 80 - Medio</option>
-                                </select>
-                                <small class="text-muted">Solo puedes crear roles con nivel inferior al tuyo</small>
-                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label form-label-sm mb-1">Nivel de Privilegio <span class="text-danger">*</span></label>
+                                                <select class="form-select form-select-sm" id="rolGlobalNivel" required>
+                                                    <option value="">Selecciona...</option>
+                                                    <option value="99">Nivel 99 - Muy Alto</option>
+                                                    <option value="95">Nivel 95 - Alto</option>
+                                                    <option value="90">Nivel 90 - Alto Medio</option>
+                                                    <option value="85">Nivel 85 - Medio Alto</option>
+                                                    <option value="80">Nivel 80 - Medio</option>
+                                                </select>
+                                            </div>
 
-                            <div class="col-md-3">
-                                <label class="form-label">Estado <span class="text-danger">*</span></label>
-                                <select class="form-select" id="rolGlobalActivo" required>
-                                    <option value="1">Activo</option>
-                                    <option value="0">Inactivo</option>
-                                </select>
-                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label form-label-sm mb-1">Estado <span class="text-danger">*</span></label>
+                                                <select class="form-select form-select-sm" id="rolGlobalActivo" required>
+                                                    <option value="1">Activo</option>
+                                                    <option value="0">Inactivo</option>
+                                                </select>
+                                            </div>
 
-                            <div class="col-12">
-                                <label class="form-label">Descripción</label>
-                                <textarea class="form-control" id="rolGlobalDescripcion" rows="2" 
-                                          placeholder="Describe las responsabilidades y alcance de este rol global"></textarea>
-                            </div>
+                                            <div class="col-md-2 d-flex align-items-end">
+                                                <button type="button" class="btn btn-sm btn-outline-info w-100" 
+                                                        data-bs-toggle="collapse" data-bs-target="#alertJerarquia">
+                                                    <i class="bi bi-info-circle me-1"></i>Ayuda
+                                                </button>
+                                            </div>
 
-                            <!-- Alert Jerarquía -->
-                            <div class="col-12">
-                                <div class="alert alert-warning">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    <strong>Importante sobre Jerarquía:</strong>
-                                    <ul class="mb-0 mt-2 small">
-                                        <li>Los roles globales tienen niveles entre <strong>80 y 99</strong></li>
-                                        <li>Solo el <strong>Super Admin (nivel 100)</strong> puede gestionar roles globales</li>
-                                        <li>Los roles de empresa tienen niveles entre <strong>10 y 79</strong></li>
-                                        <li>Un usuario solo puede gestionar roles con <strong>nivel inferior</strong> al suyo</li>
-                                    </ul>
+                                            <div class="col-12">
+                                                <label class="form-label form-label-sm mb-1">Descripción</label>
+                                                <textarea class="form-control form-control-sm" id="rolGlobalDescripcion" rows="2" 
+                                                          placeholder="Describe las responsabilidades y alcance de este rol global"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Permisos -->
-                            <div class="col-12 mt-4">
-                                <h6 class="border-bottom pb-2">
-                                    <i class="bi bi-shield-check me-2 text-primary"></i>Permisos
-                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" 
-                                            onclick="seleccionarTodosPermisosGlobales(true)">
-                                        <i class="bi bi-check-all"></i> Seleccionar Todos
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" 
-                                            onclick="seleccionarTodosPermisosGlobales(false)">
-                                        <i class="bi bi-x"></i> Limpiar
-                                    </button>
-                                </h6>
-                                <p class="text-muted small mb-3">
+                            <!-- Alert Jerarquía (colapsable) -->
+                            <div class="col-12">
+                                <div class="collapse" id="alertJerarquia">
+                                    <div class="alert alert-info alert-sm mb-2">
+                                        <strong><i class="bi bi-exclamation-triangle me-2"></i>Importante sobre Jerarquía:</strong>
+                                        <ul class="mb-0 mt-1 small">
+                                            <li>Roles globales: niveles <strong>80-99</strong></li>
+                                            <li>Solo <strong>Super Admin (nivel 100)</strong> gestiona roles globales</li>
+                                            <li>Roles de empresa: niveles <strong>10-79</strong></li>
+                                            <li>Solo puedes gestionar roles con <strong>nivel inferior</strong> al tuyo</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Permisos (con más espacio) -->
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                                    <div>
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-shield-check me-2 text-primary"></i>Matriz de Permisos
+                                        </h6>
+                                        <small class="text-muted" id="contadorPermisos">
+                                            <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                            <span id="permisosSeleccionadosCount">0</span> permisos seleccionados
+                                        </small>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary" 
+                                                onclick="seleccionarTodosPermisosGlobales(true)">
+                                            <i class="bi bi-check-all"></i> Todos
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" 
+                                                onclick="seleccionarTodosPermisosGlobales(false)">
+                                            <i class="bi bi-x"></i> Limpiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-2" style="font-size: 0.8rem;">
+                                    <i class="bi bi-info-circle me-1"></i>
                                     Define los permisos base que tendrá este rol. Las empresas heredarán estos permisos pero podrán personalizarlos.
                                 </p>
                             </div>
 
                             <div class="col-12">
-                                <div id="permisosGlobalesContainer">
+                                <div id="permisosGlobalesContainer" style="max-height: calc(95vh - 380px); overflow-y: auto;">
                                     <!-- Matriz de permisos cargada dinámicamente -->
                                     <div class="text-center py-4">
                                         <div class="spinner-border text-primary" role="status">
