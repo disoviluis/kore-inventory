@@ -472,11 +472,17 @@ export const updateRolGlobal = async (req: Request, res: Response): Promise<void
     }
 
     // Actualizar permisos si se proporcionaron
+    console.log('🔍 DEBUG updateRolGlobal - permisos_ids recibido:', permisos_ids);
+    console.log('🔍 DEBUG updateRolGlobal - Es array?:', Array.isArray(permisos_ids));
+    console.log('🔍 DEBUG updateRolGlobal - Longitud:', permisos_ids?.length);
+    
     if (permisos_ids !== undefined && Array.isArray(permisos_ids)) {
       await connection.execute(
         'DELETE FROM rol_permiso WHERE rol_id = ?',
         [id]
       );
+
+      console.log('🔍 DEBUG - Permisos eliminados para rol:', id);
 
       if (permisos_ids.length > 0) {
         const permisosValues = permisos_ids.map((permisoId: number) => [
@@ -485,11 +491,17 @@ export const updateRolGlobal = async (req: Request, res: Response): Promise<void
           usuario.id
         ]);
 
+        console.log('🔍 DEBUG - Insertando permisos:', permisosValues.length, 'registros');
+
         await connection.query(
           `INSERT INTO rol_permiso (rol_id, permiso_id, created_by) VALUES ?`,
           [permisosValues]
         );
+        
+        console.log('✅ DEBUG - Permisos insertados correctamente');
       }
+    } else {
+      console.log('⚠️ DEBUG - permisos_ids es undefined o no es array, NO se actualizan permisos');
     }
 
     // Si se actualizó el nivel, sincronizar usuarios con este rol
