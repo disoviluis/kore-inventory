@@ -539,10 +539,12 @@ export const createRol = async (req: Request, res: Response): Promise<void> => {
 
     // Validar que no exista un rol con el mismo nombre en la MISMA empresa
     // Solo comparamos dentro del scope de la empresa actual
+    // IMPORTANTE: Solo validar contra roles ACTIVOS (no eliminados con soft delete)
     const [existentes] = await connection.execute<RowDataPacket[]>(
       `SELECT id FROM roles 
        WHERE nombre = ? 
-       AND empresa_id <=> ?`,
+       AND empresa_id <=> ?
+       AND activo = 1`,
       [nombre.trim(), empresaIdFinal]
     );
 
@@ -756,11 +758,13 @@ export const updateRol = async (req: Request, res: Response): Promise<void> => {
 
       if (nombre && nombre.trim()) {
         // Validar que no exista otro rol con el mismo nombre en la misma empresa
+        // IMPORTANTE: Solo validar contra roles ACTIVOS (no eliminados con soft delete)
         const [existentes] = await connection.execute<RowDataPacket[]>(
           `SELECT id FROM roles 
            WHERE nombre = ? 
            AND empresa_id <=> ?
-           AND id != ?`,
+           AND id != ?
+           AND activo = 1`,
           [nombre.trim(), rol.empresa_id, id]
         );
 

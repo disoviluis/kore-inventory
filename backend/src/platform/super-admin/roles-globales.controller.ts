@@ -261,8 +261,9 @@ export const createRolGlobal = async (req: Request, res: Response): Promise<void
     }
 
     // Validar que no exista un rol global con el mismo nombre
+    // IMPORTANTE: Solo validar contra roles ACTIVOS (no eliminados con soft delete)
     const [existentes] = await connection.execute<RowDataPacket[]>(
-      `SELECT id FROM roles WHERE nombre = ? AND empresa_id IS NULL`,
+      `SELECT id FROM roles WHERE nombre = ? AND empresa_id IS NULL AND activo = 1`,
       [nombre.trim()]
     );
 
@@ -421,8 +422,9 @@ export const updateRolGlobal = async (req: Request, res: Response): Promise<void
 
     if (nombre && nombre.trim()) {
       // Validar que no exista otro rol global con el mismo nombre
+      // IMPORTANTE: Solo validar contra roles ACTIVOS (no eliminados con soft delete)
       const [existentes] = await connection.execute<RowDataPacket[]>(
-        `SELECT id FROM roles WHERE nombre = ? AND empresa_id IS NULL AND id != ?`,
+        `SELECT id FROM roles WHERE nombre = ? AND empresa_id IS NULL AND id != ? AND activo = 1`,
         [nombre.trim(), id]
       );
 
