@@ -4468,10 +4468,11 @@ async function guardarRolGlobal() {
       descripcion,
       nivel,
       activo,
-      permisos: permisosGlobalesSeleccionados
+      permisos_ids: permisosGlobalesSeleccionados  // ✓ Corregido: debe ser permisos_ids
     };
     
     console.log('📤 Guardando rol global:', payload);
+    console.log('📤 Cantidad de permisos a guardar:', permisosGlobalesSeleccionados.length);
     
     const response = await fetch(url, {
       method,
