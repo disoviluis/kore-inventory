@@ -53,7 +53,8 @@ async function validarJerarquiaRol(
   }
 
   // Regla 2: Los roles globales deben estar entre 80 y 99
-  if (nivelRol < 80 || nivelRol > 99) {
+  // EXCEPCIÓN: Al eliminar, permitir borrar roles mal configurados
+  if (operacion !== 'eliminar' && (nivelRol < 80 || nivelRol > 99)) {
     return {
       valid: false,
       message: 'Los roles globales deben tener un nivel entre 80 y 99'
