@@ -237,6 +237,23 @@ async function consultarRUESEmpresa() {
  */
 document.addEventListener('DOMContentLoaded', () => {
   verificarAutenticacion();
+  
+  // Event listener para botón de cerrar sesión
+  const btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', (e) => {
+      e.preventDefault();
+      cerrarSesion();
+    });
+  }
+
+  // Event listeners para todos los botones de logout
+  document.querySelectorAll('[data-logout]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      cerrarSesion();
+    });
+  });
 });
 
 /**
@@ -843,23 +860,6 @@ function cerrarSesion() {
   // Redirigir al login
   window.location.href = 'login.html';
 }
-
-// Event listener para botón de cerrar sesión
-const btnLogout = document.getElementById('btnLogout');
-if (btnLogout) {
-  btnLogout.addEventListener('click', (e) => {
-    e.preventDefault();
-    cerrarSesion();
-  });
-}
-
-// Event listeners para todos los botones de logout
-document.querySelectorAll('[data-logout]').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    cerrarSesion();
-  });
-});
 
 // ============================================
 // SIDEBAR TOGGLE (MOBILE)
