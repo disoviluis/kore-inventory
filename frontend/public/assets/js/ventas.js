@@ -3611,36 +3611,112 @@ function renderizarCuentasAbiertas() {
         return;
     }
     
-    container.innerHTML = cuentasAbiertas.map(cuenta => {
-        const cuenta_solicitada = cuenta.cuenta_solicitada ? '⏰' : '';
-        const esActiva = cuentaActual && cuentaActual.id === cuenta.id ? '⭐' : '';
-        
-        return `
-            <div class="list-group-item list-group-item-action" 
-                 style="cursor: pointer;"
-                 onclick="cargarCuentaAbierta(${cuenta.id})">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 fw-bold">
-                            ${esActiva} ${cuenta.numero_cuenta} ${cuenta_solicitada}
-                        </h6>
-                        <p class="mb-1 small text-muted">
-                            ${cuenta.mesa_numero || cuenta.cliente_nombre || 'Sin identificar'}
-                        </p>
-                        <small class="text-muted">
-                            ${cuenta.items_count} items • 
-                            $${formatearNumero(cuenta.total)}
-                        </small>
-                    </div>
-                    <div class="text-end">
-                        <small class="text-muted">
-                            ${new Date(cuenta.fecha_apertura).toLocaleTimeString('es-CO', {hour: '2-digit', minute: '2-digit'})}
-                        </small>
-                    </div>
-                </div>
+    // Agrupar cuentas por tipo
+    const cuentasPorTipo = {
+        mesa: cuentasAbiertas.filter(c => c.tipo_identificacion === 'mesa'),
+        cliente: cuentasAbiertas.filter(c => c.tipo_identificacion === 'cliente'),
+        tab_nombre: cuentasAbiertas.filter(c => c.tipo_identificacion === 'tab_nombre')
+    };
+    
+    let html = '';
+    
+    // Renderizar mesas
+    if (cuentasPorTipo.mesa.length > 0) {
+        html += `
+            <div class="px-3 py-2 bg-light border-bottom">
+                <small class="text-muted fw-bold">
+                    <i class="bi bi-table me-1"></i>MESAS (${cuentasPorTipo.mesa.length})
+                </small>
             </div>
         `;
-    }).join('');
+        html += cuentasPorTipo.mesa.map(cuenta => renderizarItemCuenta(cuenta, 'table', 'primary')).join('');
+    }
+    
+    // Renderizar clientes
+    if (cuentasPorTipo.cliente.length > 0) {
+        html += `
+            <div class="px-3 py-2 bg-light border-bottom">
+                <small class="text-muted fw-bold">
+                    <i class="bi bi-person-circle me-1"></i>CLIENTES (${cuentasPorTipo.cliente.length})
+                </small>
+            </div>
+        `;
+        html += cuentasPorTipo.cliente.map(cuenta => renderizarItemCuenta(cuenta, 'person-circle', 'success')).join('');
+    }
+    
+    // Renderizar tabs rápidos
+    if (cuentasPorTipo.tab_nombre.length > 0) {
+        html += `
+            <div class="px-3 py-2 bg-light border-bottom">
+                <small class="text-muted fw-bold">
+                    <i class="bi bi-tag me-1"></i>TABS RÁPIDOS (${cuentasPorTipo.tab_nombre.length})
+                </small>
+            </div>
+        `;
+        html += cuentasPorTipo.tab_nombre.map(cuenta => renderizarItemCuenta(cuenta, 'tag', 'warning')).join('');
+    }
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Renderizar un item de cuenta individual
+ */
+function renderizarItemCuenta(cuenta, icono, color) {
+    const cuenta_solicitada = cuenta.cuenta_solicitada ? '<span class="badge bg-warning text-dark ms-1" title="Cliente pidió la cuenta">⏰ Cuenta pedida</span>' : '';
+    const esActiva = cuentaActual && cuentaActual.id === cuenta.id;
+    const borderClass = esActiva ? 'border-success border-2' : '';
+    const bgClass = esActiva ? 'bg-light' : '';
+    
+    const nombreMostrar = cuenta.mesa_numero || cuenta.cliente_nombre || 'Sin identificar';
+    const tiempoTranscurrido = calcularTiempoTranscurrido(cuenta.fecha_apertura);
+    
+    return `
+        <div class="list-group-item list-group-item-action ${borderClass} ${bgClass}" 
+             style="cursor: pointer;"
+             onclick="cargarCuentaAbierta(${cuenta.id})">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="mb-1">
+                        <i class="bi bi-${icono} text-${color} me-1"></i>
+                        <span class="fw-bold">${cuenta.numero_cuenta}</span>
+                        ${esActiva ? '<span class="badge bg-success ms-1">Activa</span>' : ''}
+                        ${cuenta_solicitada}
+                    </div>
+                    <p class="mb-1 small">
+                        <strong>${nombreMostrar}</strong>
+                    </p>
+                    <div class="small text-muted">
+                        <i class="bi bi-basket me-1"></i>${cuenta.items_count} items • 
+                        <span class="fw-bold text-dark">$${formatearNumero(cuenta.total)}</span>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>${tiempoTranscurrido}
+                    </small>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Calcular tiempo transcurrido desde apertura
+ */
+function calcularTiempoTranscurrido(fechaApertura) {
+    const ahora = new Date();
+    const apertura = new Date(fechaApertura);
+    const diffMs = ahora - apertura;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 60) {
+        return `${diffMins} min`;
+    } else {
+        const horas = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        return `${horas}h ${mins}m`;
+    }
 }
 
 /**
@@ -3659,21 +3735,82 @@ function actualizarBadgeCuentasAbiertas() {
 }
 
 /**
- * Abrir una nueva cuenta
+ * Mostrar modal para abrir nueva cuenta
  */
-async function abrirNuevaCuenta() {
+function mostrarModalAbrirCuenta() {
     if (productosVenta.length === 0) {
         mostrarAlerta('Debes agregar al menos un producto para abrir una cuenta', 'warning');
         return;
     }
     
-    if (!confirm(
-        '¿Abrir cuenta con estos productos?\n\n' +
-        `${productosVenta.length} items\n` +
-        `Total: $${formatearNumero(totalVentaActual)}`
-    )) {
-        return;
+    // Actualizar resumen en el modal
+    document.getElementById('resumenCantidadProductos').textContent = productosVenta.length;
+    document.getElementById('resumenTotalCuenta').textContent = formatearNumero(totalVentaActual);
+    
+    // Actualizar info del cliente actual
+    const clienteBadge = document.getElementById('clienteActualBadge');
+    if (clienteSeleccionado) {
+        clienteBadge.textContent = clienteSeleccionado.nombre || clienteSeleccionado.razon_social;
+        clienteBadge.className = 'badge bg-success';
+    } else {
+        clienteBadge.textContent = 'Cliente General';
+        clienteBadge.className = 'badge bg-secondary';
     }
+    
+    // Limpiar campos
+    document.getElementById('inputMesaNumero').value = '';
+    document.getElementById('inputMesaCliente').value = '';
+    document.getElementById('inputTabNombre').value = '';
+    document.getElementById('inputNotasCuenta').value = document.getElementById('notasVenta').value;
+    
+    // Activar primer tab
+    const firstTab = new bootstrap.Tab(document.getElementById('tab-cliente'));
+    firstTab.show();
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAbrirCuenta'));
+    modal.show();
+}
+
+/**
+ * Confirmar y abrir cuenta desde modal
+ */
+async function confirmarAbrirCuenta() {
+    const activeTab = document.querySelector('#tiposCuentaTab .nav-link.active').id;
+    let tipo_identificacion, mesa_numero, cliente_id, cliente_nombre;
+    
+    // Determinar datos según el tab activo
+    if (activeTab === 'tab-cliente') {
+        tipo_identificacion = 'cliente';
+        mesa_numero = null;
+        cliente_id = clienteSeleccionado?.id || null;
+        cliente_nombre = clienteSeleccionado?.nombre || clienteSeleccionado?.razon_social || 'Cliente General';
+    } 
+    else if (activeTab === 'tab-mesa') {
+        const numeroMesa = document.getElementById('inputMesaNumero').value.trim();
+        if (!numeroMesa) {
+            mostrarAlerta('Debes ingresar el número de mesa', 'warning');
+            return;
+        }
+        tipo_identificacion = 'mesa';
+        mesa_numero = numeroMesa;
+        cliente_id = null;
+        const nombreCliente = document.getElementById('inputMesaCliente').value.trim();
+        cliente_nombre = nombreCliente || numeroMesa;
+    } 
+    else if (activeTab === 'tab-nombre') {
+        const nombreTab = document.getElementById('inputTabNombre').value.trim();
+        if (!nombreTab) {
+            mostrarAlerta('Debes ingresar un nombre para el tab', 'warning');
+            return;
+        }
+        tipo_identificacion = 'tab_nombre';
+        mesa_numero = null;
+        cliente_id = null;
+        cliente_nombre = nombreTab;
+    }
+    
+    const notas = document.getElementById('inputNotasCuenta').value.trim();
     
     try {
         const token = localStorage.getItem('token');
@@ -3687,10 +3824,11 @@ async function abrirNuevaCuenta() {
             },
             body: JSON.stringify({
                 empresa_id: currentEmpresa.id,
-                tipo_identificacion: clienteSeleccionado ? 'cliente' : 'tab_nombre',
-                cliente_id: clienteSeleccionado?.id || null,
-                cliente_nombre: clienteSeleccionado?.nombre || clienteSeleccionado?.razon_social || 'Cliente General',
-                notas: document.getElementById('notasVenta').value
+                tipo_identificacion,
+                mesa_numero,
+                cliente_id,
+                cliente_nombre,
+                notas
             })
         });
         
@@ -3727,11 +3865,15 @@ async function abrirNuevaCuenta() {
             }
         }
         
-        // 3. Mostrar confirmación
+        // 3. Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalAbrirCuenta'));
+        modal.hide();
+        
+        // 4. Mostrar confirmación
         mostrarAlerta(`✅ Cuenta ${cuentaData.numero_cuenta} abierta exitosamente`, 'success');
         reproducirSonido('success');
         
-        // 4. Limpiar y recargar
+        // 5. Limpiar y recargar
         limpiarVentaSinConfirmar();
         await cargarCuentasAbiertas();
         
@@ -4087,7 +4229,8 @@ setTimeout(() => {
 
 // Event listeners para cuentas abiertas
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btnAbrirCuenta')?.addEventListener('click', abrirNuevaCuenta);
+    document.getElementById('btnAbrirCuenta')?.addEventListener('click', mostrarModalAbrirCuenta);
+    document.getElementById('btnConfirmarAbrirCuenta')?.addEventListener('click', confirmarAbrirCuenta);
     document.getElementById('btnVerTotal')?.addEventListener('click', verTotalCuenta);
     document.getElementById('btnCerrarCuenta')?.addEventListener('click', cerrarCuentaYCobrar);
     document.getElementById('btnCancelarCuenta')?.addEventListener('click', cancelarCuenta);
