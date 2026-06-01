@@ -82,6 +82,6 @@ router.use('/facturacion', facturacionRoutes); // Middlewares aplicados dentro d
 router.use('/bodegas', authMiddleware, verificarEmpresaActiva, bodegasRoutes);
 router.use('/traslados', authMiddleware, verificarEmpresaActiva, trasladosRoutes);
 router.use('/finanzas', authMiddleware, verificarEmpresaActiva, finanzasRoutes);
-router.use('/cuentas-abiertas', authMiddleware, verificarEmpresaActiva, cuentasAbiertasRoutes);
+router.use('/cuentas-abiertas', cuentasAbiertasRoutes); // Middlewares aplicados dentro del módulo
 
 export default router;

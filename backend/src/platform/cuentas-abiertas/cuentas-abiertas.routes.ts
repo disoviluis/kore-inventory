@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import { authMiddleware } from '../../core/middleware/auth.middleware';
+import { verificarEmpresaActiva } from '../../core/middleware/licencia.middleware';
 import {
   abrirCuenta,
   listarCuentasAbiertas,
@@ -28,7 +29,7 @@ router.use(authMiddleware);
  * @desc    Abrir una nueva cuenta
  * @access  Private
  */
-router.post('/', abrirCuenta);
+router.post('/', verificarEmpresaActiva, abrirCuenta);
 
 /**
  * @route   GET /api/cuentas-abiertas/empresas/:empresaId
@@ -49,14 +50,14 @@ router.get('/:id/detalle', obtenerDetalleCuenta);
  * @desc    Agregar item a cuenta abierta
  * @access  Private
  */
-router.post('/:id/items', agregarItemCuenta);
+router.post('/:id/items', verificarEmpresaActiva, agregarItemCuenta);
 
 /**
  * @route   DELETE /api/cuentas-abiertas/:id/items/:itemId
  * @desc    Eliminar item de cuenta abierta
  * @access  Private
  */
-router.delete('/:id/items/:itemId', eliminarItemCuenta);
+router.delete('/:id/items/:itemId', verificarEmpresaActiva, eliminarItemCuenta);
 
 /**
  * @route   POST /api/cuentas-abiertas/:id/solicitar-cuenta
@@ -70,13 +71,13 @@ router.post('/:id/solicitar-cuenta', solicitarCuenta);
  * @desc    Cerrar cuenta y convertir en venta
  * @access  Private
  */
-router.post('/:id/cerrar', cerrarCuenta);
+router.post('/:id/cerrar', verificarEmpresaActiva, cerrarCuenta);
 
 /**
  * @route   DELETE /api/cuentas-abiertas/:id
  * @desc    Cancelar cuenta (reversar inventario)
  * @access  Private
  */
-router.delete('/:id', cancelarCuenta);
+router.delete('/:id', verificarEmpresaActiva, cancelarCuenta);
 
 export default router;
