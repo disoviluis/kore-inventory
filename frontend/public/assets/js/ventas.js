@@ -27,6 +27,9 @@ let modoRapido = false; // Modo rápido activado
 let turnoActivo = null; // Turno de caja actual
 let ultimasVentas = []; // Últimas ventas del día
 let configuracionPlantilla = null; // Configuración de plantilla de factura
+let cuentasAbiertas = []; // Lista de cuentas abiertas
+let cuentaActual = null; // Cuenta abierta cargada actualmente
+let modoEdicionCuenta = false; // true si estamos editando una cuenta abierta
 
 console.log('🚀 Ventas.js cargado - Versión 2.0.0 - POS Profesional');
 
@@ -3555,3 +3558,537 @@ setTimeout(() => {
     // Actualizar cada 30 segundos
     setInterval(cargarUltimasVentas, 30000);
 }, 2000);
+
+// ============================================
+// CUENTAS ABIERTAS
+// ============================================
+
+/**
+ * Cargar cuentas  abiertas de la empresa
+ */
+async function cargarCuentasAbiertas() {
+    if (!currentEmpresa || !currentEmpresa.id) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/cuentas-abiertas/${currentEmpresa.id}?estado=abierta`, 
+            {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+        
+        if (response.status === 401) {
+            handleUnauthorized();
+            return;
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            cuentasAbiertas = data.data || [];
+            renderizarCuentasAbiertas();
+            actualizarBadgeCuentasAbiertas();
+        }
+    } catch (error) {
+        console.error('Error cargando cuentas abiertas:', error);
+    }
+}
+
+/**
+ * Renderizar lista de cuentas abiertas
+ */
+function renderizarCuentasAbiertas() {
+    const container = document.getElementById('listaCuentasAbiertas');
+    if (!container) return;
+    
+    if (cuentasAbiertas.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-receipt-cutoff display-4"></i>
+                <p class="mt-2">No hay cuentas abiertas</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = cuentasAbiertas.map(cuenta => {
+        const cuenta_solicitada = cuenta.cuenta_solicitada ? '⏰' : '';
+        const esActiva = cuentaActual && cuentaActual.id === cuenta.id ? '⭐' : '';
+        
+        return `
+            <div class="list-group-item list-group-item-action" 
+                 style="cursor: pointer;"
+                 onclick="cargarCuentaAbierta(${cuenta.id})">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1 fw-bold">
+                            ${esActiva} ${cuenta.numero_cuenta} ${cuenta_solicitada}
+                        </h6>
+                        <p class="mb-1 small text-muted">
+                            ${cuenta.mesa_numero || cuenta.cliente_nombre || 'Sin identificar'}
+                        </p>
+                        <small class="text-muted">
+                            ${cuenta.items_count} items • 
+                            $${formatearNumero(cuenta.total)}
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">
+                            ${new Date(cuenta.fecha_apertura).toLocaleTimeString('es-CO', {hour: '2-digit', minute: '2-digit'})}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Actualizar badge de cuentas abiertas
+ */
+function actualizarBadgeCuentasAbiertas() {
+    const badge = document.getElementById('badgeCuentasAbiertas');
+    if (!badge) return;
+    
+    if (cuentasAbiertas.length > 0) {
+        badge.textContent = cuentasAbiertas.length;
+        badge.classList.remove('d-none');
+    } else {
+        badge.classList.add('d-none');
+    }
+}
+
+/**
+ * Abrir una nueva cuenta
+ */
+async function abrirNuevaCuenta() {
+    if (productosVenta.length === 0) {
+        mostrarAlerta('Debes agregar al menos un producto para abrir una cuenta', 'warning');
+        return;
+    }
+    
+    if (!confirm(
+        '¿Abrir cuenta con estos productos?\n\n' +
+        `${productosVenta.length} items\n` +
+        `Total: $${formatearNumero(totalVentaActual)}`
+    )) {
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        
+        // 1. Crear cuenta abierta
+        const cuentaResponse = await fetch(`${API_URL}/cuentas-abiertas`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                empresa_id: currentEmpresa.id,
+                tipo_identificacion: clienteSeleccionado ? 'cliente' : 'tab_nombre',
+                cliente_id: clienteSeleccionado?.id || null,
+                cliente_nombre: clienteSeleccionado?.nombre || clienteSeleccionado?.razon_social || 'Cliente General',
+                notas: document.getElementById('notasVenta').value
+            })
+        });
+        
+        if (cuentaResponse.status === 401) {
+            handleUnauthorized();
+            return;
+        }
+        
+        const cuentaData = await cuentaResponse.json();
+        if (!cuentaData.success) {
+            throw new Error(cuentaData.message);
+        }
+        
+        const cuentaId = cuentaData.cuenta_id;
+        
+        // 2. Agregar items a la cuenta
+        for (const producto of productosVenta) {
+            const itemResponse = await fetch(`${API_URL}/cuentas-abiertas/${cuentaId}/items`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    producto_id: producto.producto_id,
+                    cantidad: producto.cantidad,
+                    precio_unitario: producto.precio_unitario,
+                    notas: producto.notas || null
+                })
+            });
+            
+            if (!itemResponse.ok) {
+                console.error('Error agregando item:', await itemResponse.text());
+            }
+        }
+        
+        // 3. Mostrar confirmación
+        mostrarAlerta(`✅ Cuenta ${cuentaData.numero_cuenta} abierta exitosamente`, 'success');
+        reproducirSonido('success');
+        
+        // 4. Limpiar y recargar
+        limpiarVentaSinConfirmar();
+        await cargarCuentasAbiertas();
+        
+    } catch (error) {
+        console.error('Error abriendo cuenta:', error);
+        mostrarAlerta('Error al abrir cuenta: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Cargar una cuenta abierta para editarla
+ */
+async function cargarCuentaAbierta(cuentaId) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/cuentas-abiertas/${cuentaId}/detalle`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+        
+        if (response.status === 401) {
+            handleUnauthorized();
+            return;
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        // Cargar datos de la cuenta
+        cuentaActual = data.data.cuenta;
+        modoEdicionCuenta = true;
+        
+        // Cargar cliente si existe
+        if (cuentaActual.cliente_id) {
+            clienteSeleccionado = {
+                id: cuentaActual.cliente_id,
+                nombre: cuentaActual.cliente_nombre,
+                numero_documento: cuentaActual.cliente_documento || '',
+                email: cuentaActual.cliente_email || '',
+                telefono: cuentaActual.cliente_telefono || ''
+            };
+            mostrarClienteSeleccionado();
+        }
+        
+        // Cargar productos
+        productosVenta = data.data.items.map(item => ({
+            id: item.id,
+            producto_id: item.producto_id,
+            nombre: item.producto_nombre,
+            sku: item.producto_sku,
+            cantidad: item.cantidad,
+            precio_unitario: item.precio_unitario,
+            subtotal: item.subtotal,
+            iva_porcentaje: item.iva_porcentaje,
+            iva_valor: item.iva_valor,
+            impoconsumo_porcentaje: item.impoconsumo_porcentaje || 0,
+            impoconsumo_valor: item.impoconsumo_valor || 0,
+            total: item.total
+        }));
+        
+        // Renderizar y mostrar botones apropiados
+        renderizarProductos();
+        calcularTotales();
+        mostrarModoEdicionCuenta();
+        
+        // Cerrar offcanvas
+        const offcanvas = bootstrap.Offcanvas.getInstance(
+            document.getElementById('cuentasAbiertasPanel')
+        );
+        if (offcanvas) {
+            offcanvas.hide();
+        }
+        
+    } catch (error) {
+        console.error('Error cargando cuenta:', error);
+        mostrarAlerta('Error al cargar cuenta: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Mostrar modo edición de cuenta
+ */
+function mostrarModoEdicionCuenta() {
+    // Ocultar botones normales
+    const botonesNormales = document.getElementById('botonesVentaNormal');
+    if (botonesNormales) {
+        botonesNormales.classList.add('d-none');
+    }
+    
+    // Mostrar botones de edición
+    const botonesEdicion = document.getElementById('botonesEdicionCuenta');
+    if (botonesEdicion) {
+        botonesEdicion.classList.remove('d-none');
+    }
+    
+    // Mostrar banner de edición
+    const banner = document.getElementById('bannerEdicionCuenta');
+    if (banner) {
+        banner.className = 'alert alert-warning mb-0';
+        banner.innerHTML = `
+            <div class="container-fluid d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-receipt-cutoff me-2"></i>
+                    <strong>Editando:</strong> ${cuentaActual.numero_cuenta} - 
+                    ${cuentaActual.cliente_nombre}
+                </div>
+                <button class="btn btn-sm btn-outline-dark" onclick="cancelarEdicionCuenta()">
+                    <i class="bi bi-x"></i> Cancelar
+                </button>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Cancelar edición de cuenta
+ */
+function cancelarEdicionCuenta() {
+    cuentaActual = null;
+    modoEdicionCuenta = false;
+    limpiarVentaSinConfirmar();
+    
+    // Ocultar banner
+    const banner = document.getElementById('bannerEdicionCuenta');
+    if (banner) {
+        banner.className = 'd-none';
+        banner.innerHTML = '';
+    }
+    
+    // Mostrar botones normales
+    const botonesNormales = document.getElementById('botonesVentaNormal');
+    if (botonesNormales) {
+        botonesNormales.classList.remove('d-none');
+    }
+    
+    // Ocultar botones de edición
+    const botonesEdicion = document.getElementById('botonesEdicionCuenta');
+    if (botonesEdicion) {
+        botonesEdicion.classList.add('d-none');
+    }
+}
+
+/**
+ * Ver total de cuenta (sin cerrar)
+ */
+async function verTotalCuenta() {
+    if (!cuentaActual) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        
+        // Marcar que el cliente pidió la cuenta
+        await fetch(
+            `${API_URL}/cuentas-abiertas/${cuentaActual.id}/solicitar-cuenta`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            }
+        );
+        
+        // Mostrar modal con resumen detallado
+        const modalHtml = `
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>La cuenta sigue abierta.</strong> 
+                Puedes seguir agregando productos si el cliente lo desea.
+            </div>
+            
+            <h4>Cuenta: ${cuentaActual.numero_cuenta}</h4>
+            <h5>Cliente: ${cuentaActual.cliente_nombre}</h5>
+            
+            <table class="table table-sm mt-3">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${productosVenta.map(p => `
+                        <tr>
+                            <td>${p.nombre}</td>
+                            <td>${p.cantidad}</td>
+                            <td>$${formatearNumero(p.precio_unitario)}</td>
+                            <td>$${formatearNumero(p.total)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr class="table-active">
+                        <th colspan="3">TOTAL A PAGAR:</th>
+                        <th class="text-primary fs-4">$${formatearNumero(totalVentaActual)}</th>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <div class="d-grid gap-2 mt-3">
+                <button class="btn btn-success btn-lg" onclick="cerrarCuentaYCobrar(); bootstrap.Modal.getInstance(document.getElementById('modalVerTotal')).hide();">
+                    <i class="bi bi-cash-stack me-2"></i>Cliente Acepta - Procesar Pago
+                </button>
+                <button class="btn btn-outline-primary" data-bs-dismiss="modal">
+                    <i class="bi bi-plus-circle me-2"></i>Cliente Quiere Más - Seguir Agregando
+                </button>
+            </div>
+        `;
+        
+        // Mostrar en modal
+        document.getElementById('modalVerTotalContent').innerHTML = modalHtml;
+        const modal = new bootstrap.Modal(document.getElementById('modalVerTotal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error al ver total:', error);
+    }
+}
+
+/**
+ * Cerrar cuenta y convertir en venta
+ */
+async function cerrarCuentaYCobrar() {
+    if (!cuentaActual) return;
+    
+    // Validar que haya productos
+    if (productosVenta.length === 0) {
+        mostrarAlerta('No hay productos en la cuenta', 'warning');
+        return;
+    }
+    
+    const totalAPagar = totalVentaActual;
+    
+    const montoRecibido = prompt(`Total a pagar: $${formatearNumero(totalAPagar)}\n\nIngrese el monto recibido:`, totalAPagar);
+    
+    if (montoRecibido === null) return; // Canceló
+    
+    const monto = parseFloat(montoRecibido);
+    
+    if (isNaN(monto) || monto < totalAPagar) {
+        mostrarAlerta('El monto recibido debe ser mayor o igual al total', 'warning');
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/cuentas-abiertas/${cuentaActual.id}/cerrar`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    metodo_pago: 'efectivo',
+                    monto_recibido: monto,
+                    notas: document.getElementById('notasVenta')?.value || null
+                })
+            }
+        );
+        
+        if (response.status === 401) {
+            handleUnauthorized();
+            return;
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        const cambio = monto - totalAPagar;
+        
+        mostrarAlerta(
+            `✅ Cuenta cerrada. Factura: ${data.numero_factura}\nCambio: $${formatearNumero(cambio)}`,
+            'success'
+        );
+        reproducirSonido('success');
+        
+        // Limpiar y recargar
+        cancelarEdicionCuenta();
+        await cargarCuentasAbiertas();
+        
+    } catch (error) {
+        console.error('Error cerrando cuenta:', error);
+        mostrarAlerta('Error al cerrar cuenta: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Cancelar cuenta (reversar inventario)
+ */
+async function cancelarCuenta() {
+    if (!cuentaActual) return;
+    
+    const motivo = prompt('¿Por qué desea cancelar esta cuenta?', 'Cliente se retiró sin pagar');
+    
+    if (!motivo) return;
+    
+    if (!confirm(`¿Está seguro de cancelar la cuenta ${cuentaActual.numero_cuenta}?\n\nEsta acción reversará el inventario.`)) {
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/cuentas-abiertas/${cuentaActual.id}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ motivo })
+            }
+        );
+        
+        if (response.status === 401) {
+            handleUnauthorized();
+            return;
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        mostrarAlerta(`✅ Cuenta cancelada. Inventario reversado.`, 'success');
+        
+        // Limpiar y recargar
+        cancelarEdicionCuenta();
+        await cargarCuentasAbiertas();
+        
+    } catch (error) {
+        console.error('Error cancelando cuenta:', error);
+        mostrarAlerta('Error al cancelar cuenta: ' + error.message, 'error');
+    }
+}
+
+// Cargar cuentas abiertas al iniciar
+setTimeout(() => {
+    cargarCuentasAbiertas();
+    // Actualizar cada 30 segundos
+    setInterval(cargarCuentasAbiertas, 30000);
+}, 2000);
+
+// Event listeners para cuentas abiertas
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btnAbrirCuenta')?.addEventListener('click', abrirNuevaCuenta);
+    document.getElementById('btnVerTotal')?.addEventListener('click', verTotalCuenta);
+    document.getElementById('btnCerrarCuenta')?.addEventListener('click', cerrarCuentaYCobrar);
+    document.getElementById('btnCancelarCuenta')?.addEventListener('click', cancelarCuenta);
+});

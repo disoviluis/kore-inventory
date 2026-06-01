@@ -25,6 +25,7 @@ import facturacionRoutes from './platform/facturacion/facturacion.routes';
 import bodegasRoutes from './platform/bodegas/bodegas.routes';
 import trasladosRoutes from './platform/traslados/traslados.routes';
 import finanzasRoutes from './platform/finanzas/finanzas.routes';
+import cuentasAbiertasRoutes from './platform/cuentas-abiertas/cuentas-abiertas.routes';
 import { verificarEmpresaActiva } from './core/middleware/licencia.middleware';
 import { authMiddleware } from './core/middleware/auth.middleware';
 
@@ -81,5 +82,6 @@ router.use('/facturacion', facturacionRoutes); // Middlewares aplicados dentro d
 router.use('/bodegas', authMiddleware, verificarEmpresaActiva, bodegasRoutes);
 router.use('/traslados', authMiddleware, verificarEmpresaActiva, trasladosRoutes);
 router.use('/finanzas', authMiddleware, verificarEmpresaActiva, finanzasRoutes);
+router.use('/cuentas-abiertas', authMiddleware, verificarEmpresaActiva, cuentasAbiertasRoutes);
 
 export default router;

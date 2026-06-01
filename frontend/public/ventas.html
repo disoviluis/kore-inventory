@@ -516,6 +516,12 @@
                         <i class="bi bi-receipt me-1"></i>Últimas Ventas
                     </button>
                     
+                    <!-- Cuentas Abiertas -->
+                    <button class="btn btn-outline-warning btn-sm" data-bs-toggle="offcanvas" data-bs-target="#cuentasAbiertasPanel" id="btnCuentasAbiertas">
+                        <i class="bi bi-receipt-cutoff me-1"></i>Cuentas Abiertas
+                        <span class="badge bg-warning text-dark d-none" id="badgeCuentasAbiertas">0</span>
+                    </button>
+                    
                     <!-- Turno de Caja -->
                     <button class="btn btn-outline-success btn-sm" id="btnTurnoCaja">
                         <i class="bi bi-cash-stack me-1"></i>Turno
@@ -527,6 +533,9 @@
                 </div>
             </div>
         </nav>
+
+        <!-- Banner de Edición de Cuenta (se muestra cuando se está editando una cuenta) -->
+        <div id="bannerEdicionCuenta" class="d-none"></div>
 
         <!-- Page Content -->
         <div class="page-content">
@@ -816,10 +825,30 @@
                                 </div>
 
                                 <div class="d-grid gap-2">
-                                    <button class="btn btn-primary btn-lg" id="btnGuardarVenta" disabled>
-                                        <i class="bi bi-check-circle me-2"></i>Guardar Venta
-                                    </button>
-                                    <button class="btn btn-outline-secondary" id="btnLimpiarVenta">
+                                    <!-- Botones para venta normal -->
+                                    <div id="botonesVentaNormal">
+                                        <button class="btn btn-success btn-lg" id="btnGuardarVenta" disabled>
+                                            <i class="bi bi-check-circle me-2"></i>Cobrar y Guardar Venta
+                                        </button>
+                                        <button class="btn btn-warning btn-lg mt-2" id="btnAbrirCuenta" disabled>
+                                            <i class="bi bi-receipt-cutoff me-2"></i>Abrir Cuenta
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Botones para edición de cuenta -->
+                                    <div id="botonesEdicionCuenta" class="d-none">
+                                        <button class="btn btn-info btn-lg" id="btnVerTotal">
+                                            <i class="bi bi-calculator me-2"></i>Ver Total
+                                        </button>
+                                        <button class="btn btn-primary btn-lg mt-2" id="btnCerrarCuenta">
+                                            <i class="bi bi-cash-stack me-2"></i>Cerrar Cuenta y Cobrar
+                                        </button>
+                                        <button class="btn btn-outline-danger mt-2" id="btnCancelarCuenta">
+                                            <i class="bi bi-x-circle me-2"></i>Cancelar Cuenta
+                                        </button>
+                                    </div>
+                                    
+                                    <button class="btn btn-outline-secondary mt-2" id="btnLimpiarVenta">
                                         <i class="bi bi-trash me-2"></i>Limpiar Todo
                                     </button>
                                 </div>
@@ -972,6 +1001,42 @@
             <div id="listaUltimasVentas" class="list-group list-group-flush">
                 <div class="text-center text-muted py-5">
                     <i class="bi bi-receipt display-4"></i>
+                    <p class="mt-2">Cargando ventas...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Lateral: Cuentas Abiertas -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="cuentasAbiertasPanel">
+        <div class="offcanvas-header bg-warning text-dark">
+            <h5 class="offcanvas-title"><i class="bi bi-receipt-cutoff me-2"></i>Cuentas Abiertas</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div id="listaCuentasAbiertas" class="list-group list-group-flush">
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-receipt-cutoff display-4"></i>
+                    <p class="mt-2">Cargando cuentas...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Ver Total de Cuenta -->
+    <div class="modal fade" id="modalVerTotal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="bi bi-calculator me-2"></i>Resumen de Cuenta</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalVerTotalContent">
+                    <!-- Contenido generado dinámicamente por JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
                     <p class="mt-2">Cargando ventas...</p>
                 </div>
             </div>
