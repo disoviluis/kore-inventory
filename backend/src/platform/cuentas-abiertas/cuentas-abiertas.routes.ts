@@ -31,11 +31,11 @@ router.use(authMiddleware);
 router.post('/', abrirCuenta);
 
 /**
- * @route   GET /api/cuentas-abiertas/:empresaId
+ * @route   GET /api/cuentas-abiertas/empresas/:empresaId
  * @desc    Listar cuentas abiertas de una empresa
  * @access  Private
  */
-router.get('/:empresaId', listarCuentasAbiertas);
+router.get('/empresas/:empresaId', listarCuentasAbiertas);
 
 /**
  * @route   GET /api/cuentas-abiertas/:id/detalle

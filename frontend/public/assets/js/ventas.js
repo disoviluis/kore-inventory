@@ -69,6 +69,23 @@ async function cargarConfiguracionPlantilla() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
+        // Si el endpoint no existe (404), usar configuración por defecto
+        if (response.status === 404) {
+            console.log('ℹ️ Endpoint de configuración de plantilla no disponible, usando valores por defecto');
+            configuracionPlantilla = {
+                plantilla_id: 1,
+                color_primario: currentEmpresa.color_primario || '#1E40AF',
+                color_secundario: '#6c757d',
+                fuente: 'Arial',
+                mostrar_logo: true,
+                mostrar_qr: true,
+                mostrar_cufe: true,
+                mostrar_badges: true,
+                logo_posicion: 'center'
+            };
+            return;
+        }
+        
         const data = await response.json();
         console.log('📥 Respuesta del servidor:', data);
         if (data.success && data.data) {
@@ -3572,7 +3589,7 @@ async function cargarCuentasAbiertas() {
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(
-            `${API_URL}/cuentas-abiertas/${currentEmpresa.id}?estado=abierta`, 
+            `${API_URL}/cuentas-abiertas/empresas/${currentEmpresa.id}?estado=abierta`, 
             {
                 headers: { 'Authorization': `Bearer ${token}` }
             }
