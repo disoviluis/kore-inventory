@@ -212,6 +212,63 @@ export const createEmpresaTrial = async (req: Request, res: Response) => {
       plan_id = 1  // Plan Básico por defecto
     } = req.body;
 
+    // Validar campos requeridos
+    const camposRequeridos: { campo: string; valor: any; nombre: string }[] = [
+      { campo: 'nombre', valor: nombre, nombre: 'Nombre de la Empresa' },
+      { campo: 'email', valor: email, nombre: 'Email Principal' },
+      { campo: 'tipo_contribuyente', valor: tipo_contribuyente, nombre: 'Tipo de Contribuyente' },
+      { campo: 'regimen_tributario', valor: regimen_tributario, nombre: 'Régimen Tributario' }
+    ];
+
+    const camposFaltantes = camposRequeridos
+      .filter(c => !c.valor || (typeof c.valor === 'string' && c.valor.trim() === ''))
+      .map(c => c.nombre);
+
+    if (camposFaltantes.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Campos requeridos faltantes: ${camposFaltantes.join(', ')}`,
+        camposFaltantes
+      });
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El formato del email no es válido'
+      });
+    }
+
+    // Validar que el email no esté registrado
+    const [emailExists] = await connection.query<RowDataPacket[]>(
+      'SELECT id FROM empresas WHERE email = ?',
+      [email]
+    );
+
+    if (emailExists.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'El email ya está registrado en otra empresa'
+      });
+    }
+
+    // Validar que el NIT no esté registrado (si se proporcionó)
+    if (nit) {
+      const [nitExists] = await connection.query<RowDataPacket[]>(
+        'SELECT id FROM empresas WHERE nit = ?',
+        [nit]
+      );
+
+      if (nitExists.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'El NIT ya está registrado en otra empresa'
+        });
+      }
+    }
+
     // Obtener días de trial desde configuración (default: 30)
     const [config] = await connection.query<RowDataPacket[]>(
       "SELECT valor FROM sistema_configuracion WHERE clave = 'dias_trial_default' LIMIT 1"
@@ -225,7 +282,10 @@ export const createEmpresaTrial = async (req: Request, res: Response) => {
     );
 
     if (planes.length === 0) {
-      throw new Error('Plan no válido');
+      return res.status(400).json({
+        success: false,
+        message: 'Plan no válido o inactivo'
+      });
     }
 
     const plan = planes[0];
@@ -344,7 +404,7 @@ export const createEmpresaTrial = async (req: Request, res: Response) => {
 
     logger.info(`Empresa trial creada exitosamente: ${nombre} (ID: ${empresaId}) - ${diasTrial} días`);
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Empresa creada exitosamente con período de prueba gratuito',
       data: {
@@ -359,7 +419,7 @@ export const createEmpresaTrial = async (req: Request, res: Response) => {
   } catch (error: any) {
     await connection.rollback();
     logger.error('Error al crear empresa trial:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Error al crear empresa',
       error: error.message

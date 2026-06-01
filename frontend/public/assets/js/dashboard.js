@@ -1124,6 +1124,50 @@ document.addEventListener('DOMContentLoaded', () => {
 async function guardarEmpresa() {
   const id = document.getElementById('empresaId').value;
   
+  // Validar campos requeridos
+  const camposRequeridos = [
+    { id: 'empresaNombre', nombre: 'Nombre de la Empresa' },
+    { id: 'empresaTipoDocumento', nombre: 'Tipo de Documento' },
+    { id: 'empresaNit', nombre: 'Número de Documento' },
+    { id: 'empresaEmail', nombre: 'Email Principal' },
+    { id: 'empresaPlan', nombre: 'Plan' },
+    { id: 'empresaEstado', nombre: 'Estado' },
+    { id: 'empresaTipoContribuyente', nombre: 'Tipo de Contribuyente' },
+    { id: 'empresaRegimenTributario', nombre: 'Régimen Tributario' }
+  ];
+  
+  const camposFaltantes = [];
+  for (const campo of camposRequeridos) {
+    const valor = document.getElementById(campo.id)?.value?.trim();
+    if (!valor) {
+      camposFaltantes.push(campo.nombre);
+      // Marcar el campo como inválido visualmente
+      const elemento = document.getElementById(campo.id);
+      if (elemento) {
+        elemento.classList.add('is-invalid');
+      }
+    } else {
+      // Remover marca de inválido si está lleno
+      const elemento = document.getElementById(campo.id);
+      if (elemento) {
+        elemento.classList.remove('is-invalid');
+      }
+    }
+  }
+  
+  // Validar email
+  const email = document.getElementById('empresaEmail').value.trim();
+  if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    camposFaltantes.push('Email Principal (formato inválido)');
+    document.getElementById('empresaEmail').classList.add('is-invalid');
+  }
+  
+  if (camposFaltantes.length > 0) {
+    const mensaje = `Por favor complete los siguientes campos obligatorios:\n\n• ${camposFaltantes.join('\n• ')}`;
+    mostrarError(mensaje);
+    return;
+  }
+  
   // Construir NIT completo con DV si aplica
   const tipoDoc = document.getElementById('empresaTipoDocumento').value;
   const numeroDoc = document.getElementById('empresaNit').value;
@@ -1131,27 +1175,27 @@ async function guardarEmpresa() {
   const nitCompleto = (tipoDoc === 'NIT' && dv) ? `${numeroDoc}-${dv}` : numeroDoc;
   
   const empresa = {
-    nombre: document.getElementById('empresaNombre').value,
-    razon_social: document.getElementById('empresaRazonSocial').value,
+    nombre: document.getElementById('empresaNombre').value.trim(),
+    razon_social: document.getElementById('empresaRazonSocial').value.trim() || null,
     tipo_documento: tipoDoc,
     nit: nitCompleto,
     digito_verificacion: tipoDoc === 'NIT' ? dv : null,
-    email: document.getElementById('empresaEmail').value,
-    telefono: document.getElementById('empresaTelefono').value,
+    email: document.getElementById('empresaEmail').value.trim(),
+    telefono: document.getElementById('empresaTelefono').value.trim() || null,
     tipo_contribuyente: document.getElementById('empresaTipoContribuyente').value,
-    direccion: document.getElementById('empresaDireccion').value,
-    ciudad: document.getElementById('empresaCiudad').value,
-    pais: document.getElementById('empresaPais').value,
+    direccion: document.getElementById('empresaDireccion').value.trim() || null,
+    ciudad: document.getElementById('empresaCiudad').value.trim() || null,
+    pais: document.getElementById('empresaPais').value.trim() || 'Colombia',
     plan_id: parseInt(document.getElementById('empresaPlan').value),
     estado: document.getElementById('empresaEstado').value,
     regimen_tributario: document.getElementById('empresaRegimenTributario').value,
     // Campos RUES
-    representante_legal: document.getElementById('empresaRepresentanteLegal').value || null,
+    representante_legal: document.getElementById('empresaRepresentanteLegal').value.trim() || null,
     tipo_sociedad: document.getElementById('empresaTipoSociedad').value || null,
-    matricula_mercantil: document.getElementById('empresaMatriculaMercantil').value || null,
-    camara_comercio: document.getElementById('empresaCamaraComercio').value || null,
+    matricula_mercantil: document.getElementById('empresaMatriculaMercantil').value.trim() || null,
+    camara_comercio: document.getElementById('empresaCamaraComercio').value.trim() || null,
     fecha_matricula: document.getElementById('empresaFechaMatricula').value || null,
-    actividad_economica: document.getElementById('empresaActividadEconomica').value || null
+    actividad_economica: document.getElementById('empresaActividadEconomica').value.trim() || null
   };
   
   try {

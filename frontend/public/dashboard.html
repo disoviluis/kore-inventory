@@ -1625,6 +1625,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">Nombre de la Empresa <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="empresaNombre" required>
+                                <div class="invalid-feedback">Por favor ingrese el nombre de la empresa.</div>
                             </div>
 
                             <div class="col-md-6">
@@ -1644,6 +1645,7 @@
                             <div class="col-md-6" id="empresaNumeroDocumentoContainer">
                                 <label class="form-label">Número Documento <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="empresaNit" required placeholder="Ej: 900123456">
+                                <div class="invalid-feedback">Por favor ingrese el número de documento.</div>
                             </div>
                             <div class="col-md-2" id="empresaDigitoVerificacionContainer">
                                 <label class="form-label">
@@ -1666,6 +1668,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">Email Principal <span class="text-danger">*</span></label>
                                 <input type="email" class="form-control" id="empresaEmail" required>
+                                <div class="invalid-feedback">Por favor ingrese un email válido.</div>
                             </div>
 
                             <div class="col-md-6">
@@ -1674,11 +1677,13 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Tipo de Contribuyente</label>
-                                <select class="form-select" id="empresaTipoContribuyente">
+                                <label class="form-label">Tipo de Contribuyente <span class="text-danger">*</span></label>
+                                <select class="form-select" id="empresaTipoContribuyente" required>
+                                    <option value="">Seleccione...</option>
                                     <option value="persona_juridica">Persona Jurídica</option>
                                     <option value="persona_natural">Persona Natural</option>
                                 </select>
+                                <div class="invalid-feedback">Por favor seleccione el tipo de contribuyente.</div>
                             </div>
 
                             <div class="col-12">
@@ -1782,12 +1787,14 @@
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">Régimen Tributario</label>
-                                <select class="form-select" id="empresaRegimenTributario">
+                                <label class="form-label">Régimen Tributario <span class="text-danger">*</span></label>
+                                <select class="form-select" id="empresaRegimenTributario" required>
+                                    <option value="">Seleccione...</option>
                                     <option value="simplificado">Simplificado</option>
                                     <option value="común">Común</option>
                                     <option value="especial">Especial</option>
                                 </select>
+                                <div class="invalid-feedback">Por favor seleccione el régimen tributario.</div>
                             </div>
 
                             <div class="col-md-4">
