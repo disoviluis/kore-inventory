@@ -1048,6 +1048,39 @@
                 </div>
                 <div class="modal-body">
                     <!-- Tabs para elegir tipo de cuenta -->
+                    <style>
+                        /* Estilos para tabs del modal de cuentas abiertas */
+                        #tiposCuentaTab .nav-link {
+                            background-color: #f8f9fa;
+                            color: #495057;
+                            border: 2px solid #dee2e6;
+                            margin: 0 4px;
+                            transition: all 0.3s ease;
+                        }
+                        
+                        #tiposCuentaTab .nav-link:hover {
+                            background-color: #e9ecef;
+                            color: #212529;
+                            border-color: #adb5bd;
+                            transform: translateY(-2px);
+                        }
+                        
+                        #tiposCuentaTab .nav-link.active {
+                            background-color: #0d6efd;
+                            color: white;
+                            border-color: #0d6efd;
+                            font-weight: 600;
+                        }
+                        
+                        #tiposCuentaTab .nav-link i {
+                            opacity: 0.7;
+                        }
+                        
+                        #tiposCuentaTab .nav-link.active i {
+                            opacity: 1;
+                        }
+                    </style>
+                    
                     <ul class="nav nav-pills nav-fill mb-3" id="tiposCuentaTab" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="tab-cliente" data-bs-toggle="pill" data-bs-target="#panel-cliente" type="button" role="tab">
