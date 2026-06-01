@@ -1275,19 +1275,27 @@ function actualizarEstadoPago() {
         alertaPendiente.style.display = 'none';
     }
     
-    // Habilitar/deshabilitar botón de guardar
+    // Habilitar/deshabilitar botones de acción
     const btnGuardar = document.getElementById('btnGuardarVenta');
+    const btnAbrirCuenta = document.getElementById('btnAbrirCuenta');
     const pagoCompleto = pendiente <= 0.01; // Permitir si está pagado o sobrepagado
     const tieneCliente = !!clienteSeleccionado;
     const tieneProductos = productosVenta.length > 0;
     
-    console.log('Condiciones para habilitar botón:');
+    console.log('Condiciones para habilitar botones:');
     console.log('  - pagoCompleto:', pagoCompleto, '(pendiente <= 0.01)');
     console.log('  - tieneCliente:', tieneCliente);
     console.log('  - tieneProductos:', tieneProductos);
     console.log('  - btnGuardar.disabled será:', !tieneCliente || !tieneProductos || !pagoCompleto);
+    console.log('  - btnAbrirCuenta.disabled será:', !tieneProductos);
     
+    // Guardar Venta requiere: cliente, productos y pago completo
     btnGuardar.disabled = !tieneCliente || !tieneProductos || !pagoCompleto;
+    
+    // Abrir Cuenta solo requiere: productos (el cliente es opcional)
+    if (btnAbrirCuenta) {
+        btnAbrirCuenta.disabled = !tieneProductos;
+    }
 }
 
 // ============================================
@@ -3265,13 +3273,20 @@ function actualizarEstadoPago() {
         alertaPendiente.style.display = 'none';
     }
     
-    // Habilitar/deshabilitar botón de guardar
+    // Habilitar/deshabilitar botones de acción
     const btnGuardar = document.getElementById('btnGuardarVenta');
+    const btnAbrirCuenta = document.getElementById('btnAbrirCuenta');
     const pagoCompleto = Math.abs(pendiente) < 0.01 || totalPagado >= totalVentaActual;
     const tieneCliente = !!clienteSeleccionado;
     const tieneProductos = productosVenta.length > 0;
     
+    // Guardar Venta requiere: cliente, productos y pago completo
     btnGuardar.disabled = !tieneCliente || !tieneProductos || !pagoCompleto;
+    
+    // Abrir Cuenta solo requiere: productos (el cliente es opcional)
+    if (btnAbrirCuenta) {
+        btnAbrirCuenta.disabled = !tieneProductos;
+    }
 }
 
 // ============================================
