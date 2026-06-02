@@ -691,8 +691,8 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
       } else {
         // Crear cliente genérico
         const nuevoClienteResult = await query(
-          `INSERT INTO clientes (empresa_id, nombre, tipo_identificacion, numero_identificacion, telefono, email, direccion, activo)
-           VALUES (?, 'Mostrador', 'NIT', '222222222', '', '', 'Punto de Venta', 1)`,
+          `INSERT INTO clientes (empresa_id, nombre, tipo_documento, numero_documento, telefono, direccion, estado)
+           VALUES (?, 'Mostrador', 'NIT', '222222222', '', 'Punto de Venta', 'activo')`,
           [cuenta.empresa_id]
         );
         clienteIdFinal = nuevoClienteResult.insertId;
