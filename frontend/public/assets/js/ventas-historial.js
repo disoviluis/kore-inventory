@@ -387,14 +387,28 @@ function renderVentas() {
             minute: '2-digit'
         });
 
+        // Determinar nombre del cliente
+        let nombreCliente = venta.cliente_nombre || venta.razon_social || 'N/A';
+        let detalleCliente = '';
+        
+        // Si el cliente es Mostrador y hay observaciones, extraer el nombre original
+        if (venta.cliente_nombre === 'Mostrador' && venta.observaciones) {
+            // Extraer el nombre descriptivo de las observaciones (ej: "edgar (CTA-000014)" -> "edgar")
+            const match = venta.observaciones.match(/^(.+?)\s*\(/);
+            if (match) {
+                detalleCliente = match[1]; // "edgar", "Mesa 5", etc.
+            }
+        }
+
         return `
             <tr>
                 <td>${index + 1}</td>
                 <td><strong>${venta.numero_factura}</strong></td>
                 <td>${fechaFormateada}</td>
                 <td>
-                    ${venta.cliente_nombre}<br>
-                    <small class="text-muted">${venta.cliente_documento}</small>
+                    ${nombreCliente}<br>
+                    ${detalleCliente ? `<small class="text-primary">${detalleCliente}</small><br>` : ''}
+                    <small class="text-muted">${venta.numero_documento || 'N/A'}</small>
                 </td>
                 <td><strong>$${formatearNumero(venta.total)}</strong></td>
                 <td><span class="badge bg-secondary">${venta.metodo_pago}</span></td>
