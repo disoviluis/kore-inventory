@@ -3944,7 +3944,11 @@ async function confirmarAbrirCuenta() {
         const cuentaId = cuentaData.cuenta_id;
         
         // 2. Agregar items a la cuenta
-        for (const producto of productosVenta) {
+        console.log(`Agregando ${productosVenta.length} productos a la cuenta ${cuentaId}`);
+        for (let i = 0; i < productosVenta.length; i++) {
+            const producto = productosVenta[i];
+            console.log(`Agregando producto ${i + 1}/${productosVenta.length}:`, producto);
+            
             const itemResponse = await fetch(`${API_URL}/cuentas-abiertas/${cuentaId}/items`, {
                 method: 'POST',
                 headers: {
@@ -3952,6 +3956,7 @@ async function confirmarAbrirCuenta() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
+                    empresa_id: currentEmpresa.id,
                     producto_id: producto.id || producto.producto_id,
                     cantidad: producto.cantidad,
                     precio_unitario: producto.precio_unitario,
@@ -3960,9 +3965,15 @@ async function confirmarAbrirCuenta() {
             });
             
             if (!itemResponse.ok) {
-                console.error('Error agregando item:', await itemResponse.text());
+                const errorText = await itemResponse.text();
+                console.error(`Error agregando item ${i + 1}:`, errorText);
+                throw new Error(`Error agregando producto ${producto.nombre || producto.id}: ${errorText}`);
             }
+            
+            console.log(`Producto ${i + 1} agregado exitosamente`);
         }
+        
+        console.log('Todos los productos agregados correctamente');
         
         // 3. Cerrar modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('modalAbrirCuenta'));
