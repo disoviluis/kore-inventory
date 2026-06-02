@@ -680,20 +680,18 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
     const ventaResult = await query(
       `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, vendedor_id,
-        subtotal, total_impuestos, total, metodo_pago,
-        monto_recibido, cambio, observaciones, fecha_venta, estado
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'completada')`,
+        subtotal, impuesto, total, metodo_pago,
+        observaciones, estado, forma_pago
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pagada', 'contado')`,
       [
         cuenta.empresa_id,
         numero_factura,
         cuenta.cliente_id,
         usuarioId,
         cuenta.subtotal,
-        cuenta.total_impuestos,
+        cuenta.total_impuestos, // En cuentas_abiertas es total_impuestos, en ventas es impuesto
         cuenta.total,
         metodoPagoResumen,
-        totalPagado,
-        cambio,
         notas || `Cuenta abierta cerrada: ${cuenta.numero_cuenta}`
       ]
     );
@@ -704,20 +702,14 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
     for (const item of items) {
       await query(
         `INSERT INTO venta_detalle (
-          venta_id, producto_id, cantidad, precio_unitario, subtotal,
-          iva_porcentaje, iva_valor, impoconsumo_porcentaje, impoconsumo_valor, total
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          venta_id, producto_id, cantidad, precio_unitario, subtotal
+        ) VALUES (?, ?, ?, ?, ?)`,
         [
           ventaId,
           item.producto_id,
           item.cantidad,
           item.precio_unitario,
-          item.subtotal,
-          item.iva_porcentaje,
-          item.iva_valor,
-          item.impoconsumo_porcentaje,
-          item.impoconsumo_valor,
-          item.total
+          item.total // El total del item es el subtotal en venta_detalle
         ]
       );
     }
