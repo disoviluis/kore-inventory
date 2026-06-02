@@ -4277,8 +4277,8 @@ async function verTotalCuenta() {
             </table>
             
             <div class="d-grid gap-2 mt-3">
-                <button class="btn btn-success btn-lg" onclick="cerrarCuentaYCobrar(); bootstrap.Modal.getInstance(document.getElementById('modalVerTotal')).hide();">
-                    <i class="bi bi-cash-stack me-2"></i>Cliente Acepta - Procesar Pago
+                <button class="btn btn-success btn-lg" onclick="irAFormularioPago();">
+                    <i class="bi bi-arrow-right-circle me-2"></i>Continuar al Pago
                 </button>
                 <button class="btn btn-outline-primary" data-bs-dismiss="modal">
                     <i class="bi bi-plus-circle me-2"></i>Cliente Quiere Más - Seguir Agregando
@@ -4294,6 +4294,41 @@ async function verTotalCuenta() {
     } catch (error) {
         console.error('Error al ver total:', error);
     }
+}
+
+/**
+ * Cerrar modal y llevar al usuario al formulario de pagos
+ */
+function irAFormularioPago() {
+    // Cerrar el modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalVerTotal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    // Esperar a que el modal se cierre completamente
+    setTimeout(() => {
+        // Hacer scroll al formulario de pagos (está en el div formaPago)
+        const formaPagoDiv = document.getElementById('formaPago');
+        if (formaPagoDiv) {
+            formaPagoDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Agregar efecto visual temporal
+            formaPagoDiv.classList.add('border-success', 'border-3', 'border');
+            setTimeout(() => {
+                formaPagoDiv.classList.remove('border-success', 'border-3', 'border');
+            }, 2000);
+        }
+        
+        // Hacer focus en el campo de monto después del scroll
+        setTimeout(() => {
+            const inputMonto = document.getElementById('montoPago');
+            if (inputMonto) {
+                inputMonto.focus();
+                inputMonto.select(); // Seleccionar el texto si hay alguno
+            }
+        }, 500);
+    }, 300);
 }
 
 /**
