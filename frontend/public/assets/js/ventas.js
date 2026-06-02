@@ -3775,6 +3775,12 @@ function mostrarModalAbrirCuenta() {
         return;
     }
     
+    if (!currentEmpresa || !currentEmpresa.id) {
+        mostrarAlerta('Error: No se ha cargado la información de la empresa. Por favor, recarga la página.', 'error');
+        console.error('currentEmpresa no está definida:', currentEmpresa);
+        return;
+    }
+    
     // Actualizar resumen en el modal
     document.getElementById('resumenCantidadProductos').textContent = productosVenta.length;
     document.getElementById('resumenTotalCuenta').textContent = formatearNumero(totalVentaActual);
@@ -3844,8 +3850,29 @@ async function confirmarAbrirCuenta() {
     
     const notas = document.getElementById('inputNotasCuenta').value.trim();
     
+    // Validar datos antes de enviar
+    if (!currentEmpresa || !currentEmpresa.id) {
+        mostrarAlerta('Error: No se ha cargado la información de la empresa', 'error');
+        console.error('currentEmpresa:', currentEmpresa);
+        return;
+    }
+    
+    if (!cliente_nombre) {
+        mostrarAlerta('Error: No se pudo determinar el nombre del cliente/mesa/tab', 'error');
+        return;
+    }
+    
     try {
         const token = localStorage.getItem('token');
+        
+        console.log('Datos a enviar:', {
+            empresa_id: currentEmpresa.id,
+            tipo_identificacion,
+            mesa_numero,
+            cliente_id,
+            cliente_nombre,
+            notas
+        });
         
         // 1. Crear cuenta abierta
         const cuentaResponse = await fetch(`${API_URL}/cuentas-abiertas`, {
@@ -3885,7 +3912,7 @@ async function confirmarAbrirCuenta() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    producto_id: producto.producto_id,
+                    producto_id: producto.id || producto.producto_id,
                     cantidad: producto.cantidad,
                     precio_unitario: producto.precio_unitario,
                     notas: producto.notas || null
