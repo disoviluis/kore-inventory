@@ -716,12 +716,18 @@ function mostrarOpcionesProductos(productos) {
 }
 
 function agregarProducto(producto) {
+    console.log('=== agregarProducto ===');
+    console.log('modoEdicionCuenta:', modoEdicionCuenta);
+    console.log('cuentaActual:', cuentaActual);
+    
     // Si estamos editando una cuenta abierta, guardar directamente en backend
     if (modoEdicionCuenta && cuentaActual) {
+        console.log('Modo edición detectado, guardando en backend...');
         agregarItemACuentaAbierta(producto);
         return;
     }
 
+    console.log('Modo venta normal, agregando localmente...');
     // Modo normal de venta (sin cuenta abierta)
     // Verificar si ya está en la lista
     const index = productosVenta.findIndex(p => p.id === producto.id);
@@ -4243,11 +4249,32 @@ async function verTotalCuenta() {
  * Agregar item a cuenta abierta en el backend
  */
 async function agregarItemACuentaAbierta(producto) {
-    if (!cuentaActual || !cuentaActual.id) return;
+    console.log('=== agregarItemACuentaAbierta ===');
+    console.log('cuentaActual:', cuentaActual);
+    console.log('producto:', producto);
+    
+    if (!cuentaActual || !cuentaActual.id) {
+        console.error('No hay cuenta actual o no tiene ID');
+        return;
+    }
     
     try {
         const token = localStorage.getItem('token');
-        const precioUnitario = parseFloat(producto.precio_venta || producto.precio_minorista);
+        const precioUnitario = parseFloat(producto.precio_minorista || producto.precio_venta || 0);
+        
+        if (!precioUnitario || precioUnitario <= 0) {
+            throw new Error('Precio unitario inválido');
+        }
+        
+        const payload = {
+            producto_id: producto.id,
+            cantidad: 1,
+            precio_unitario: precioUnitario,
+            iva_porcentaje: producto.aplica_iva ? (producto.porcentaje_iva || 19) : 0,
+            impoconsumo_porcentaje: producto.impoconsumo_porcentaje || 0
+        };
+        
+        console.log('Enviando al backend:', payload);
         
         const response = await fetch(
             `${API_URL}/cuentas-abiertas/${cuentaActual.id}/items`,
@@ -4257,15 +4284,11 @@ async function agregarItemACuentaAbierta(producto) {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    producto_id: producto.id,
-                    cantidad: 1,
-                    precio_unitario: precioUnitario,
-                    iva_porcentaje: producto.aplica_iva ? (producto.porcentaje_iva || 19) : 0,
-                    impoconsumo_porcentaje: producto.impoconsumo_porcentaje || 0
-                })
+                body: JSON.stringify(payload)
             }
         );
+        
+        console.log('Respuesta del backend:', response.status);
         
         if (response.status === 401) {
             handleUnauthorized();
@@ -4273,6 +4296,8 @@ async function agregarItemACuentaAbierta(producto) {
         }
         
         const data = await response.json();
+        console.log('Data del backend:', data);
+        
         if (!data.success) {
             throw new Error(data.message);
         }
