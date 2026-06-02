@@ -388,7 +388,7 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
 
     // Calcular totales
     const subtotal = precio_unitario * cantidad;
-    const iva_porcentaje = producto.aplica_iva ? producto.porcentaje_iva : 0;
+    const iva_porcentaje = producto.aplica_iva ? (producto.porcentaje_iva || 19) : 0;
     const iva_valor = (subtotal * iva_porcentaje) / 100;
     const impoconsumo_porcentaje = 0; // Por ahora no se maneja impoconsumo
     const impoconsumo_valor = 0;
