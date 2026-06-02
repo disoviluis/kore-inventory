@@ -413,13 +413,13 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
       [cantidad, producto_id]
     );
 
-    // Registrar movimiento de inventario (comentado - tabla no existe aún)
-    // await query(
-    //   `INSERT INTO inventario (
-    //     empresa_id, producto_id, tipo_movimiento, cantidad, observacion, usuario_id
-    //   ) VALUES (?, ?, 'salida', ?, ?, ?)`,
-    //   [cuentaResult[0].empresa_id, producto_id, cantidad, `Agregado a cuenta abierta #${id}`, usuarioId]
-    // );
+    // Registrar movimiento de inventario
+    await query(
+      `INSERT INTO inventario_movimientos (
+        empresa_id, producto_id, tipo_movimiento, cantidad, observacion, usuario_id
+      ) VALUES (?, ?, 'salida', ?, ?, ?)`,
+      [cuentaResult[0].empresa_id, producto_id, cantidad, `Agregado a cuenta abierta #${id}`, usuarioId]
+    );
 
     // Recalcular totales de la cuenta
     await recalcularTotalesCuenta(parseInt(id));
@@ -503,7 +503,7 @@ export const eliminarItemCuenta = async (req: Request, res: Response): Promise<R
 
     // Registrar movimiento de inventario
     await query(
-      `INSERT INTO inventario (
+      `INSERT INTO inventario_movimientos (
         empresa_id, producto_id, tipo_movimiento, cantidad, observacion, usuario_id
       ) VALUES (?, ?, 'entrada', ?, ?, ?)`,
       [item.empresa_id, item.producto_id, item.cantidad, `Eliminado de cuenta abierta #${id}`, usuarioId]
@@ -764,7 +764,7 @@ export const cancelarCuenta = async (req: Request, res: Response): Promise<Respo
 
       // Registrar movimiento
       await query(
-        `INSERT INTO inventario (
+        `INSERT INTO inventario_movimientos (
           empresa_id, producto_id, tipo_movimiento, cantidad, observacion, usuario_id
         ) VALUES (?, ?, 'entrada', ?, ?, ?)`,
         [cuenta.empresa_id, item.producto_id, item.cantidad, `Cancelación de cuenta ${cuenta.numero_cuenta}: ${motivo}`, usuarioId]
