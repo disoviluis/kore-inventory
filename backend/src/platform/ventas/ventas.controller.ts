@@ -133,7 +133,7 @@ export const getVentas = async (req: Request, res: Response): Promise<Response> 
     let sqlQuery = `
       SELECT 
         v.id, v.numero_factura, v.fecha_venta, v.subtotal, v.descuento,
-        v.impuesto, v.total, v.estado, v.metodo_pago,
+        v.impuesto, v.total, v.estado, v.metodo_pago, v.observaciones,
         c.nombre as cliente_nombre, c.apellido as cliente_apellido,
         c.razon_social, c.numero_documento,
         u.nombre as vendedor_nombre, u.apellido as vendedor_apellido

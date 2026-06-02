@@ -700,6 +700,19 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
       }
     }
 
+    // Preparar nombre descriptivo para la venta
+    let nombreDescriptivo = '';
+    if (cuenta.tipo_identificacion === 'mesa') {
+      nombreDescriptivo = `Mesa ${cuenta.mesa_numero}`;
+    } else if (cuenta.tipo_identificacion === 'tab_nombre') {
+      nombreDescriptivo = cuenta.cliente_nombre;
+    } else if (cuenta.cliente_nombre) {
+      nombreDescriptivo = cuenta.cliente_nombre;
+    }
+    
+    const observacionesVenta = notas || 
+      `${nombreDescriptivo} (${cuenta.numero_cuenta})`;
+
     // Crear venta
     const ventaResult = await query(
       `INSERT INTO ventas (
@@ -716,7 +729,7 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
         cuenta.total_impuestos, // En cuentas_abiertas es total_impuestos, en ventas es impuesto
         cuenta.total,
         metodoPagoResumen,
-        notas || `Cuenta abierta cerrada: ${cuenta.numero_cuenta}`
+        observacionesVenta
       ]
     );
 

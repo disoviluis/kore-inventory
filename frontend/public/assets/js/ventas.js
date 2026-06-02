@@ -3422,13 +3422,26 @@ function renderizarUltimasVentas() {
         return;
     }
     
-    container.innerHTML = ultimasVentas.slice(0, 10).map(venta => `
+    container.innerHTML = ultimasVentas.slice(0, 10).map(venta => {
+        // Si el cliente es Mostrador y hay observaciones, mostrar el nombre original
+        let nombreCliente = venta.cliente_nombre || venta.razon_social;
+        let detalleCliente = '';
+        
+        if (venta.cliente_nombre === 'Mostrador' && venta.observaciones) {
+            // Extraer el nombre descriptivo de las observaciones (ej: "edgar (CTA-000014)" -> "edgar")
+            const match = venta.observaciones.match(/^(.+?)\s*\(/);
+            if (match) {
+                detalleCliente = match[1]; // "edgar", "Mesa 5", etc.
+            }
+        }
+        
+        return `
         <div class="list-group-item">
             <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                     <h6 class="mb-1">${venta.numero_factura}</h6>
                     <p class="mb-1 small text-muted">
-                        ${venta.cliente_nombre || venta.razon_social}
+                        ${nombreCliente}${detalleCliente ? `<br><small>${detalleCliente}</small>` : ''}
                     </p>
                     <small class="text-muted">${new Date(venta.fecha_venta).toLocaleTimeString('es-CO')}</small>
                 </div>
@@ -3440,7 +3453,8 @@ function renderizarUltimasVentas() {
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 /**
