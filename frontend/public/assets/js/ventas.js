@@ -3061,6 +3061,11 @@ function renderizarCatalogoGrid(productos, container) {
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <strong class="text-success" style="font-size: 1.1rem;">$${formatearNumero(p.precio_minorista)}</strong>
+                        <button class="btn btn-sm btn-success" 
+                                onclick="event.stopPropagation(); agregarProductoDesdeCatalogo(${p.id});"
+                                title="Agregar producto">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -3104,8 +3109,15 @@ function renderizarCatalogoList(productos, container) {
                         <div class="text-center me-3">
                             <span class="badge ${stockClass}">${stockText}</span>
                         </div>
-                        <div class="text-end">
+                        <div class="text-end me-2">
                             <strong class="text-success" style="font-size: 1.2rem;">$${formatearNumero(p.precio_minorista)}</strong>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-success" 
+                                    onclick="event.stopPropagation(); agregarProductoDesdeCatalogo(${p.id});"
+                                    title="Agregar producto">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
                         </div>
                     </div>
                 `;
