@@ -4175,6 +4175,28 @@ async function verTotalCuenta() {
     try {
         const token = localStorage.getItem('token');
         
+        // Recargar datos actualizados de la cuenta desde el backend
+        const response = await fetch(
+            `${API_URL}/cuentas-abiertas/${cuentaActual.id}/detalle`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+        
+        if (response.status === 401) {
+            handleUnauthorized();
+            return;
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        // Actualizar datos de la cuenta
+        const cuentaData = data.data.cuenta;
+        const items = data.data.items || [];
+        
         // Marcar que el cliente pidió la cuenta
         await fetch(
             `${API_URL}/cuentas-abiertas/${cuentaActual.id}/solicitar-cuenta`,
@@ -4187,6 +4209,9 @@ async function verTotalCuenta() {
             }
         );
         
+        // Calcular total desde los datos del backend
+        const totalCuenta = items.reduce((sum, item) => sum + parseFloat(item.total || 0), 0);
+        
         // Mostrar modal con resumen detallado
         const modalHtml = `
             <div class="alert alert-info">
@@ -4195,8 +4220,8 @@ async function verTotalCuenta() {
                 Puedes seguir agregando productos si el cliente lo desea.
             </div>
             
-            <h4>Cuenta: ${cuentaActual.numero_cuenta}</h4>
-            <h5>Cliente: ${cuentaActual.cliente_nombre}</h5>
+            <h4>Cuenta: ${cuentaData.numero_cuenta}</h4>
+            <h5>Cliente: ${cuentaData.cliente_nombre}</h5>
             
             <table class="table table-sm mt-3">
                 <thead>
@@ -4208,19 +4233,19 @@ async function verTotalCuenta() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${productosVenta.map(p => `
+                    ${items.map(item => `
                         <tr>
-                            <td>${p.nombre}</td>
-                            <td>${p.cantidad}</td>
-                            <td>$${formatearNumero(p.precio_unitario)}</td>
-                            <td>$${formatearNumero(p.total)}</td>
+                            <td>${item.producto_nombre}</td>
+                            <td>${item.cantidad}</td>
+                            <td>$${formatearNumero(item.precio_unitario)}</td>
+                            <td>$${formatearNumero(item.total)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
                 <tfoot>
                     <tr class="table-active">
                         <th colspan="3">TOTAL A PAGAR:</th>
-                        <th class="text-primary fs-4">$${formatearNumero(totalVentaActual)}</th>
+                        <th class="text-primary fs-4">$${formatearNumero(totalCuenta)}</th>
                     </tr>
                 </tfoot>
             </table>
