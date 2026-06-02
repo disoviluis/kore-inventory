@@ -4045,8 +4045,12 @@ async function cargarCuentaAbierta(cuentaId) {
             cantidad: item.cantidad,
             precio_unitario: item.precio_unitario,
             subtotal: item.subtotal,
+            aplica_iva: item.aplica_iva || false,
+            porcentaje_iva: item.porcentaje_iva || 0,
             iva_porcentaje: item.iva_porcentaje,
             iva_valor: item.iva_valor,
+            aplica_impoconsumo: item.aplica_impoconsumo || false,
+            porcentaje_impoconsumo: item.porcentaje_impoconsumo || 0,
             impoconsumo_porcentaje: item.impoconsumo_porcentaje || 0,
             impoconsumo_valor: item.impoconsumo_valor || 0,
             total: item.total

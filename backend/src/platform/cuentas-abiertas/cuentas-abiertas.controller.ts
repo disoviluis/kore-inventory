@@ -261,12 +261,19 @@ export const obtenerDetalleCuenta = async (req: Request, res: Response): Promise
 
     const cuenta = cuentaResult[0];
 
-    // Obtener items de la cuenta
+    // Obtener items de la cuenta con datos del producto
     const items = await query(
       `SELECT 
         cad.*,
+        p.nombre as producto_nombre,
+        p.sku as producto_sku,
+        p.aplica_iva,
+        p.porcentaje_iva,
+        p.aplica_impoconsumo,
+        p.porcentaje_impoconsumo,
         u.nombre as usuario_nombre
       FROM cuenta_abierta_detalle cad
+      LEFT JOIN productos p ON cad.producto_id = p.id
       LEFT JOIN usuarios u ON cad.usuario_id = u.id
       WHERE cad.cuenta_abierta_id = ?
       ORDER BY cad.fecha_agregado ASC`,
