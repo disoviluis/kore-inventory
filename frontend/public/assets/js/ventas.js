@@ -4435,7 +4435,7 @@ async function cancelarCuenta() {
                 },
                 body: JSON.stringify({ 
                     motivo,
-                    empresa_id: empresaActual 
+                    empresa_id: currentEmpresa.id
                 })
             }
         );
