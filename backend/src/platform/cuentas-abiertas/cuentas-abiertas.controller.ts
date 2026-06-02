@@ -717,9 +717,9 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
     const ventaResult = await query(
       `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, vendedor_id,
-        subtotal, impuesto, total, metodo_pago,
+        fecha_venta, subtotal, impuesto, total, metodo_pago,
         observaciones, estado, forma_pago
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pagada', 'contado')`,
+      ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'pagada', 'contado')`,
       [
         cuenta.empresa_id,
         numero_factura,
