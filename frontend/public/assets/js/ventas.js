@@ -4433,7 +4433,10 @@ async function cancelarCuenta() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ motivo })
+                body: JSON.stringify({ 
+                    motivo,
+                    empresa_id: empresaActual 
+                })
             }
         );
         
