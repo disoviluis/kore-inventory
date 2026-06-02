@@ -405,6 +405,10 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
       ]
     );
 
+    // Obtener stock actual antes de descontar
+    const stockAnterior = producto.stock_actual;
+    const stockNuevo = stockAnterior - cantidad;
+
     // Descontar del inventario
     await query(
       `UPDATE productos 
@@ -416,9 +420,9 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     // Registrar movimiento de inventario
     await query(
       `INSERT INTO inventario_movimientos (
-        empresa_id, producto_id, tipo_movimiento, cantidad, observacion, usuario_id
-      ) VALUES (?, ?, 'salida', ?, ?, ?)`,
-      [cuentaResult[0].empresa_id, producto_id, cantidad, `Agregado a cuenta abierta #${id}`, usuarioId]
+        producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, usuario_id
+      ) VALUES (?, 'salida', ?, ?, ?, ?, ?)`,
+      [producto_id, cantidad, stockAnterior, stockNuevo, `Agregado a cuenta abierta #${id}`, usuarioId]
     );
 
     // Recalcular totales de la cuenta
@@ -493,6 +497,14 @@ export const eliminarItemCuenta = async (req: Request, res: Response): Promise<R
       [itemId]
     );
 
+    // Obtener stock actual antes de reversar
+    const productoResult = await query(
+      `SELECT stock_actual FROM productos WHERE id = ?`,
+      [item.producto_id]
+    );
+    const stockAnterior = productoResult[0]?.stock_actual || 0;
+    const stockNuevo = stockAnterior + item.cantidad;
+
     // Reversar inventario
     await query(
       `UPDATE productos 
@@ -504,9 +516,9 @@ export const eliminarItemCuenta = async (req: Request, res: Response): Promise<R
     // Registrar movimiento de inventario
     await query(
       `INSERT INTO inventario_movimientos (
-        empresa_id, producto_id, tipo_movimiento, cantidad, observacion, usuario_id
-      ) VALUES (?, ?, 'entrada', ?, ?, ?)`,
-      [item.empresa_id, item.producto_id, item.cantidad, `Eliminado de cuenta abierta #${id}`, usuarioId]
+        producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, usuario_id
+      ) VALUES (?, 'entrada', ?, ?, ?, ?, ?)`,
+      [item.producto_id, item.cantidad, stockAnterior, stockNuevo, `Eliminado de cuenta abierta #${id}`, usuarioId]
     );
 
     // Recalcular totales de la cuenta
@@ -755,6 +767,14 @@ export const cancelarCuenta = async (req: Request, res: Response): Promise<Respo
 
     // Reversar inventario
     for (const item of items) {
+      // Obtener stock actual antes de reversar
+      const productoResult = await query(
+        `SELECT stock_actual FROM productos WHERE id = ?`,
+        [item.producto_id]
+      );
+      const stockAnterior = productoResult[0]?.stock_actual || 0;
+      const stockNuevo = stockAnterior + item.cantidad;
+
       await query(
         `UPDATE productos 
          SET stock_actual = stock_actual + ?
@@ -765,9 +785,9 @@ export const cancelarCuenta = async (req: Request, res: Response): Promise<Respo
       // Registrar movimiento
       await query(
         `INSERT INTO inventario_movimientos (
-          empresa_id, producto_id, tipo_movimiento, cantidad, observacion, usuario_id
-        ) VALUES (?, ?, 'entrada', ?, ?, ?)`,
-        [cuenta.empresa_id, item.producto_id, item.cantidad, `Cancelación de cuenta ${cuenta.numero_cuenta}: ${motivo}`, usuarioId]
+          producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, usuario_id
+        ) VALUES (?, 'entrada', ?, ?, ?, ?, ?)`,
+        [item.producto_id, item.cantidad, stockAnterior, stockNuevo, `Cancelación de cuenta ${cuenta.numero_cuenta}: ${motivo}`, usuarioId]
       );
     }
 
