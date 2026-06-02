@@ -676,6 +676,30 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
     const contador = contadorResult[0].contador;
     const numero_factura = `FACT-${String(contador).padStart(6, '0')}`;
 
+    // Manejar cliente_id NULL (para tabs rápidos sin cliente registrado)
+    let clienteIdFinal = cuenta.cliente_id;
+    
+    if (!clienteIdFinal) {
+      // Buscar o crear cliente genérico "Mostrador"
+      const clienteGenericoResult = await query(
+        `SELECT id FROM clientes WHERE empresa_id = ? AND nombre = 'Mostrador' LIMIT 1`,
+        [cuenta.empresa_id]
+      );
+      
+      if (clienteGenericoResult.length > 0) {
+        clienteIdFinal = clienteGenericoResult[0].id;
+      } else {
+        // Crear cliente genérico
+        const nuevoClienteResult = await query(
+          `INSERT INTO clientes (empresa_id, nombre, tipo_identificacion, numero_identificacion, telefono, email, direccion, activo)
+           VALUES (?, 'Mostrador', 'NIT', '222222222', '', '', 'Punto de Venta', 1)`,
+          [cuenta.empresa_id]
+        );
+        clienteIdFinal = nuevoClienteResult.insertId;
+        logger.info(`Cliente genérico 'Mostrador' creado para empresa ${cuenta.empresa_id}`);
+      }
+    }
+
     // Crear venta
     const ventaResult = await query(
       `INSERT INTO ventas (
@@ -686,7 +710,7 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
       [
         cuenta.empresa_id,
         numero_factura,
-        cuenta.cliente_id,
+        clienteIdFinal, // Usar cliente genérico si es NULL
         usuarioId,
         cuenta.subtotal,
         cuenta.total_impuestos, // En cuentas_abiertas es total_impuestos, en ventas es impuesto
