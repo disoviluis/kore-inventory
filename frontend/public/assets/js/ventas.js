@@ -1068,7 +1068,7 @@ function eliminarProducto(index) {
 // ============================================
 
 function calcularTotales() {
-    const subtotal = productosVenta.reduce((sum, p) => sum + p.subtotal, 0);
+    const subtotal = productosVenta.reduce((sum, p) => sum + (parseFloat(p.subtotal) || 0), 0);
     const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
     const baseImponible = subtotal - descuento;
     
@@ -1076,8 +1076,8 @@ function calcularTotales() {
     let impuesto = 0;
     productosVenta.forEach(p => {
         if (p.aplica_iva) {
-            const porcentaje = (p.porcentaje_iva || 19) / 100;
-            const subtotalProducto = p.subtotal * (descuento > 0 ? (1 - descuento / subtotal) : 1);
+            const porcentaje = (parseFloat(p.porcentaje_iva) || 19) / 100;
+            const subtotalProducto = (parseFloat(p.subtotal) || 0) * (descuento > 0 ? (1 - descuento / subtotal) : 1);
             impuesto += subtotalProducto * porcentaje;
         }
     });
@@ -4042,16 +4042,16 @@ async function cargarCuentaAbierta(cuentaId) {
             producto_id: item.producto_id,
             nombre: item.producto_nombre,
             sku: item.producto_sku,
-            cantidad: item.cantidad,
-            precio_unitario: item.precio_unitario,
-            subtotal: item.subtotal,
+            cantidad: parseFloat(item.cantidad) || 0,
+            precio_unitario: parseFloat(item.precio_unitario) || 0,
+            subtotal: parseFloat(item.subtotal) || 0,
             aplica_iva: item.aplica_iva || false,
-            porcentaje_iva: item.porcentaje_iva || 0,
-            iva_porcentaje: item.iva_porcentaje,
-            iva_valor: item.iva_valor,
-            impoconsumo_porcentaje: item.impoconsumo_porcentaje || 0,
-            impoconsumo_valor: item.impoconsumo_valor || 0,
-            total: item.total
+            porcentaje_iva: parseFloat(item.porcentaje_iva) || 0,
+            iva_porcentaje: parseFloat(item.iva_porcentaje) || 0,
+            iva_valor: parseFloat(item.iva_valor) || 0,
+            impoconsumo_porcentaje: parseFloat(item.impoconsumo_porcentaje) || 0,
+            impoconsumo_valor: parseFloat(item.impoconsumo_valor) || 0,
+            total: parseFloat(item.total) || 0
         }));
         
         // Renderizar y mostrar botones apropiados
