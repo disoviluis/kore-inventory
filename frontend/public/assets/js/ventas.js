@@ -4400,6 +4400,7 @@ async function cerrarCuentaYCobrar() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
+                    empresa_id: currentEmpresa.id,
                     metodo_pago: 'efectivo',
                     monto_recibido: monto,
                     notas: document.getElementById('notasVenta')?.value || null
