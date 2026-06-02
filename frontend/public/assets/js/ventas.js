@@ -3814,7 +3814,13 @@ function mostrarModalAbrirCuenta() {
  * Confirmar y abrir cuenta desde modal
  */
 async function confirmarAbrirCuenta() {
+    console.log('=== confirmarAbrirCuenta INICIADO ===');
+    console.log('currentEmpresa:', currentEmpresa);
+    console.log('productosVenta:', productosVenta);
+    
     const activeTab = document.querySelector('#tiposCuentaTab .nav-link.active').id;
+    console.log('Tab activo:', activeTab);
+    
     let tipo_identificacion, mesa_numero, cliente_id, cliente_nombre;
     
     // Determinar datos según el tab activo
@@ -3823,9 +3829,11 @@ async function confirmarAbrirCuenta() {
         mesa_numero = null;
         cliente_id = clienteSeleccionado?.id || null;
         cliente_nombre = clienteSeleccionado?.nombre || clienteSeleccionado?.razon_social || 'Cliente General';
+        console.log('Modo CLIENTE - cliente_nombre:', cliente_nombre);
     } 
     else if (activeTab === 'tab-mesa') {
         const numeroMesa = document.getElementById('inputMesaNumero').value.trim();
+        console.log('Modo MESA - numeroMesa:', numeroMesa);
         if (!numeroMesa) {
             mostrarAlerta('Debes ingresar el número de mesa', 'warning');
             return;
@@ -3835,9 +3843,11 @@ async function confirmarAbrirCuenta() {
         cliente_id = null;
         const nombreCliente = document.getElementById('inputMesaCliente').value.trim();
         cliente_nombre = nombreCliente || numeroMesa;
+        console.log('Modo MESA - cliente_nombre:', cliente_nombre);
     } 
     else if (activeTab === 'tab-nombre') {
         const nombreTab = document.getElementById('inputTabNombre').value.trim();
+        console.log('Modo TAB - nombreTab:', nombreTab);
         if (!nombreTab) {
             mostrarAlerta('Debes ingresar un nombre para el tab', 'warning');
             return;
@@ -3846,6 +3856,7 @@ async function confirmarAbrirCuenta() {
         mesa_numero = null;
         cliente_id = null;
         cliente_nombre = nombreTab;
+        console.log('Modo TAB - cliente_nombre:', cliente_nombre);
     }
     
     const notas = document.getElementById('inputNotasCuenta').value.trim();
@@ -3897,7 +3908,11 @@ async function confirmarAbrirCuenta() {
         }
         
         const cuentaData = await cuentaResponse.json();
+        console.log('Respuesta del servidor:', cuentaData);
+        console.log('Status HTTP:', cuentaResponse.status);
+        
         if (!cuentaData.success) {
+            console.error('ERROR del backend:', cuentaData.message);
             throw new Error(cuentaData.message);
         }
         

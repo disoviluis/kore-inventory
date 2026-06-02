@@ -72,13 +72,33 @@ export const abrirCuenta = async (req: Request, res: Response): Promise<Response
 
     const usuarioId = (req as any).user?.userId;
 
-    // Validaciones
-    if (!empresa_id || !cliente_nombre || !usuarioId) {
+    // Validaciones con logs detallados
+    logger.info(`abrirCuenta - Datos recibidos: empresa_id=${empresa_id}, cliente_nombre=${cliente_nombre}, usuarioId=${usuarioId}`);
+    
+    if (!empresa_id) {
       return errorResponse(
         res,
-        'Campos requeridos: empresa_id, cliente_nombre',
+        'empresa_id es requerido',
         null,
         CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+    
+    if (!cliente_nombre) {
+      return errorResponse(
+        res,
+        'cliente_nombre es requerido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+    
+    if (!usuarioId) {
+      return errorResponse(
+        res,
+        'Usuario no autenticado correctamente',
+        null,
+        CONSTANTS.HTTP_STATUS.UNAUTHORIZED
       );
     }
 
