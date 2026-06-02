@@ -269,8 +269,6 @@ export const obtenerDetalleCuenta = async (req: Request, res: Response): Promise
         p.sku as producto_sku,
         p.aplica_iva,
         p.porcentaje_iva,
-        p.aplica_impoconsumo,
-        p.porcentaje_impoconsumo,
         u.nombre as usuario_nombre
       FROM cuenta_abierta_detalle cad
       LEFT JOIN productos p ON cad.producto_id = p.id
