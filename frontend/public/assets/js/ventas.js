@@ -4267,6 +4267,7 @@ async function agregarItemACuentaAbierta(producto) {
         }
         
         const payload = {
+            empresa_id: currentEmpresa.id,
             producto_id: producto.id,
             cantidad: 1,
             precio_unitario: precioUnitario,
