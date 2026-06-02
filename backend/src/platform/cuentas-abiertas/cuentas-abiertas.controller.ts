@@ -354,7 +354,7 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     const productoResult = await query(
       `SELECT 
         id, nombre, sku, stock_actual, aplica_iva, porcentaje_iva,
-        aplica_impoconsumo, porcentaje_impoconsumo, permite_venta_sin_stock
+        permite_venta_sin_stock
       FROM productos
       WHERE id = ? AND estado = 'activo'`,
       [producto_id]
@@ -385,8 +385,8 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     const subtotal = precio_unitario * cantidad;
     const iva_porcentaje = producto.aplica_iva ? producto.porcentaje_iva : 0;
     const iva_valor = (subtotal * iva_porcentaje) / 100;
-    const impoconsumo_porcentaje = producto.aplica_impoconsumo ? producto.porcentaje_impoconsumo : 0;
-    const impoconsumo_valor = (subtotal * impoconsumo_porcentaje) / 100;
+    const impoconsumo_porcentaje = 0; // Por ahora no se maneja impoconsumo
+    const impoconsumo_valor = 0;
     const total = subtotal + iva_valor + impoconsumo_valor;
 
     // Insertar item
