@@ -4064,6 +4064,31 @@ function mostrarModoEdicionCuenta() {
             </div>
         `;
     }
+
+    // Ocultar búsqueda de cliente y mostrar cliente de la cuenta
+    const busquedaCliente = document.getElementById('busquedaCliente');
+    if (busquedaCliente) {
+        busquedaCliente.style.display = 'none';
+    }
+
+    const clienteSeleccionado = document.getElementById('clienteSeleccionado');
+    if (clienteSeleccionado) {
+        clienteSeleccionado.style.display = 'block';
+        
+        // Mostrar información del cliente de la cuenta
+        document.getElementById('clienteNombreDisplay').textContent = cuentaActual.cliente_nombre;
+        document.getElementById('clienteDocumentoDisplay').textContent = 
+            `${cuentaActual.tipo_identificacion || 'N/A'}`;
+        document.getElementById('clienteEmailDisplay').textContent = '-';
+        document.getElementById('clienteTelefonoDisplay').textContent = '-';
+        document.getElementById('clienteDireccionDisplay').textContent = '-';
+        
+        // Ocultar botón "Cambiar" porque no se puede cambiar el cliente de una cuenta abierta
+        const btnCambiarCliente = document.getElementById('btnCambiarCliente');
+        if (btnCambiarCliente) {
+            btnCambiarCliente.style.display = 'none';
+        }
+    }
 }
 
 /**
@@ -4091,6 +4116,24 @@ function cancelarEdicionCuenta() {
     const botonesEdicion = document.getElementById('botonesEdicionCuenta');
     if (botonesEdicion) {
         botonesEdicion.classList.add('d-none');
+    }
+
+    // Restaurar búsqueda de cliente
+    const busquedaCliente = document.getElementById('busquedaCliente');
+    if (busquedaCliente) {
+        busquedaCliente.style.display = 'block';
+    }
+
+    // Ocultar cliente seleccionado
+    const clienteSeleccionado = document.getElementById('clienteSeleccionado');
+    if (clienteSeleccionado) {
+        clienteSeleccionado.style.display = 'none';
+    }
+
+    // Mostrar botón "Cambiar"
+    const btnCambiarCliente = document.getElementById('btnCambiarCliente');
+    if (btnCambiarCliente) {
+        btnCambiarCliente.style.display = 'block';
     }
 }
 
