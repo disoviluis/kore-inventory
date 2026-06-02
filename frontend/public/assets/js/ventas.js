@@ -716,6 +716,13 @@ function mostrarOpcionesProductos(productos) {
 }
 
 function agregarProducto(producto) {
+    // Si estamos editando una cuenta abierta, guardar directamente en backend
+    if (modoEdicionCuenta && cuentaActual) {
+        agregarItemACuentaAbierta(producto);
+        return;
+    }
+
+    // Modo normal de venta (sin cuenta abierta)
     // Verificar si ya está en la lista
     const index = productosVenta.findIndex(p => p.id === producto.id);
     
@@ -4229,6 +4236,54 @@ async function verTotalCuenta() {
         
     } catch (error) {
         console.error('Error al ver total:', error);
+    }
+}
+
+/**
+ * Agregar item a cuenta abierta en el backend
+ */
+async function agregarItemACuentaAbierta(producto) {
+    if (!cuentaActual || !cuentaActual.id) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const precioUnitario = parseFloat(producto.precio_venta || producto.precio_minorista);
+        
+        const response = await fetch(
+            `${API_URL}/cuentas-abiertas/${cuentaActual.id}/items`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    producto_id: producto.id,
+                    cantidad: 1,
+                    precio_unitario: precioUnitario,
+                    iva_porcentaje: producto.aplica_iva ? (producto.porcentaje_iva || 19) : 0,
+                    impoconsumo_porcentaje: producto.impoconsumo_porcentaje || 0
+                })
+            }
+        );
+        
+        if (response.status === 401) {
+            handleUnauthorized();
+            return;
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        // Recargar la cuenta actualizada
+        await cargarCuentaAbierta(cuentaActual.id);
+        mostrarAlerta('Producto agregado a la cuenta', 'success');
+        
+    } catch (error) {
+        console.error('Error al agregar item:', error);
+        mostrarAlerta('Error al agregar producto: ' + error.message, 'error');
     }
 }
 
