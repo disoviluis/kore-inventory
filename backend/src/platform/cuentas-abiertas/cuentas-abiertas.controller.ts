@@ -592,11 +592,22 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
   try {
     const { id } = req.params;
     const {
-      metodo_pago = 'efectivo',
-      monto_recibido,
+      empresa_id, // Requerido
+      metodo_pago = 'efectivo', // Para compatibilidad con versión anterior
+      monto_recibido, // Para compatibilidad con versión anterior
       notas = null,
-      pagos = [] // Para pagos múltiples
+      pagos = [] // Array de pagos múltiples
     } = req.body;
+
+    // Validar empresa_id
+    if (!empresa_id) {
+      return errorResponse(
+        res,
+        'empresa_id requerido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
 
     const usuarioId = (req as any).user?.id;
 
@@ -641,6 +652,22 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
       );
     }
 
+    // Calcular total de pagos
+    let totalPagado = 0;
+    let metodoPagoResumen = metodo_pago;
+    
+    if (pagos && Array.isArray(pagos) && pagos.length > 0) {
+      totalPagado = pagos.reduce((sum, p) => sum + parseFloat(p.monto || 0), 0);
+      metodoPagoResumen = pagos.length === 1 ? pagos[0].metodo_pago : 'Múltiple';
+    } else if (monto_recibido) {
+      // Compatibilidad con versión anterior (sin array de pagos)
+      totalPagado = parseFloat(monto_recibido);
+    } else {
+      totalPagado = cuenta.total;
+    }
+
+    const cambio = totalPagado - cuenta.total;
+
     // Generar número de factura
     const contadorResult = await query(
       `SELECT COUNT(*) + 1 as contador FROM ventas WHERE empresa_id = ?`,
@@ -664,9 +691,9 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
         cuenta.subtotal,
         cuenta.total_impuestos,
         cuenta.total,
-        metodo_pago,
-        monto_recibido || cuenta.total,
-        (monto_recibido || cuenta.total) - cuenta.total,
+        metodoPagoResumen,
+        totalPagado,
+        cambio,
         notas || `Cuenta abierta cerrada: ${cuenta.numero_cuenta}`
       ]
     );
@@ -695,6 +722,26 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
       );
     }
 
+    // Insertar pagos múltiples
+    if (pagos && Array.isArray(pagos) && pagos.length > 0) {
+      for (const pago of pagos) {
+        await query(
+          `INSERT INTO venta_pagos (
+            venta_id, metodo_pago, monto, referencia, banco, notas
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            ventaId,
+            pago.metodo_pago,
+            pago.monto,
+            pago.referencia || null,
+            pago.banco || null,
+            pago.notas || null
+          ]
+        );
+      }
+      logger.info(`${pagos.length} métodos de pago registrados para venta ${numero_factura}`);
+    }
+
     // Cerrar cuenta
     await query(
       `UPDATE cuentas_abiertas
@@ -712,7 +759,7 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
         venta_id: ventaId,
         numero_factura,
         total: cuenta.total,
-        cambio: (monto_recibido || cuenta.total) - cuenta.total
+        cambio
       },
       CONSTANTS.HTTP_STATUS.OK
     );

@@ -4376,21 +4376,29 @@ async function cerrarCuentaYCobrar() {
         return;
     }
     
+    // Validar que haya pagos agregados
+    if (pagosPendientes.length === 0) {
+        mostrarAlerta('Agrega al menos un pago antes de cerrar la cuenta', 'warning');
+        return;
+    }
+    
     const totalAPagar = totalVentaActual;
+    const totalPagado = calcularTotalPagado();
     
-    const montoRecibido = prompt(`Total a pagar: $${formatearNumero(totalAPagar)}\n\nIngrese el monto recibido:`, totalAPagar);
-    
-    if (montoRecibido === null) return; // Canceló
-    
-    const monto = parseFloat(montoRecibido);
-    
-    if (isNaN(monto) || monto < totalAPagar) {
-        mostrarAlerta('El monto recibido debe ser mayor o igual al total', 'warning');
+    // Validar que el total pagado sea suficiente
+    if (totalPagado < totalAPagar) {
+        const faltante = totalAPagar - totalPagado;
+        mostrarAlerta(
+            `Falta por pagar: $${formatearNumero(faltante)}\n\nAgrega más pagos para completar el total`,
+            'warning'
+        );
         return;
     }
     
     try {
         const token = localStorage.getItem('token');
+        const cambio = totalPagado - totalAPagar;
+        
         const response = await fetch(
             `${API_URL}/cuentas-abiertas/${cuentaActual.id}/cerrar`,
             {
@@ -4401,8 +4409,7 @@ async function cerrarCuentaYCobrar() {
                 },
                 body: JSON.stringify({
                     empresa_id: currentEmpresa.id,
-                    metodo_pago: 'efectivo',
-                    monto_recibido: monto,
+                    pagos: pagosPendientes,
                     notas: document.getElementById('notasVenta')?.value || null
                 })
             }
@@ -4418,10 +4425,8 @@ async function cerrarCuentaYCobrar() {
             throw new Error(data.message);
         }
         
-        const cambio = monto - totalAPagar;
-        
         mostrarAlerta(
-            `✅ Cuenta cerrada. Factura: ${data.numero_factura}\nCambio: $${formatearNumero(cambio)}`,
+            `✅ Cuenta cerrada exitosamente\n\nTotal: $${formatearNumero(totalAPagar)}\nPagado: $${formatearNumero(totalPagado)}\nCambio: $${formatearNumero(cambio)}`,
             'success'
         );
         reproducirSonido('success');
