@@ -3941,7 +3941,11 @@ async function confirmarAbrirCuenta() {
             throw new Error(cuentaData.message);
         }
         
-        const cuentaId = cuentaData.cuenta_id;
+        // Los datos están dentro de cuentaData.data
+        const cuentaId = cuentaData.data.cuenta_id;
+        const numeroCuenta = cuentaData.data.numero_cuenta;
+        
+        console.log('Cuenta creada:', numeroCuenta, 'ID:', cuentaId);
         
         // 2. Agregar items a la cuenta
         console.log(`Agregando ${productosVenta.length} productos a la cuenta ${cuentaId}`);
@@ -3980,7 +3984,7 @@ async function confirmarAbrirCuenta() {
         modal.hide();
         
         // 4. Mostrar confirmación
-        mostrarAlerta(`✅ Cuenta ${cuentaData.numero_cuenta} abierta exitosamente`, 'success');
+        mostrarAlerta(`✅ Cuenta ${numeroCuenta} abierta exitosamente`, 'success');
         reproducirSonido('success');
         
         // 5. Cargar la cuenta recién creada en modo edición
