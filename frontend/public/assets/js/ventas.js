@@ -3972,8 +3972,8 @@ async function confirmarAbrirCuenta() {
         mostrarAlerta(`✅ Cuenta ${cuentaData.numero_cuenta} abierta exitosamente`, 'success');
         reproducirSonido('success');
         
-        // 5. Limpiar y recargar
-        limpiarVentaSinConfirmar();
+        // 5. Cargar la cuenta recién creada en modo edición
+        await cargarCuentaAbierta(cuentaId);
         await cargarCuentasAbiertas();
         
     } catch (error) {
