@@ -70,7 +70,7 @@ export const abrirCuenta = async (req: Request, res: Response): Promise<Response
       notas = null
     } = req.body;
 
-    const usuarioId = (req as any).user?.userId;
+    const usuarioId = (req as any).user?.id;
 
     // Validaciones con logs detallados
     logger.info(`abrirCuenta - Datos recibidos: empresa_id=${empresa_id}, cliente_nombre=${cliente_nombre}, usuarioId=${usuarioId}`);
@@ -314,7 +314,7 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
       notas = null
     } = req.body;
 
-    const usuarioId = (req as any).user?.userId;
+    const usuarioId = (req as any).user?.id;
 
     // Validaciones
     if (!id || !producto_id || !precio_unitario) {
@@ -456,7 +456,7 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
 export const eliminarItemCuenta = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id, itemId } = req.params;
-    const usuarioId = (req as any).user?.userId;
+    const usuarioId = (req as any).user?.id;
 
     // Obtener información del item antes de eliminarlo
     const itemResult = await query(
@@ -581,7 +581,7 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
       pagos = [] // Para pagos múltiples
     } = req.body;
 
-    const usuarioId = (req as any).user?.userId;
+    const usuarioId = (req as any).user?.id;
 
     // Obtener datos de la cuenta
     const cuentaResult = await query(
@@ -719,7 +719,7 @@ export const cancelarCuenta = async (req: Request, res: Response): Promise<Respo
   try {
     const { id } = req.params;
     const { motivo = 'Cancelada por usuario' } = req.body;
-    const usuarioId = (req as any).user?.userId;
+    const usuarioId = (req as any).user?.id;
 
     //Obtener cuenta
     const cuentaResult = await query(
