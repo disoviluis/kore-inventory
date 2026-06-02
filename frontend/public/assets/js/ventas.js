@@ -4016,6 +4016,7 @@ async function cargarCuentaAbierta(cuentaId) {
         renderizarProductos();
         calcularTotales();
         mostrarModoEdicionCuenta();
+        habilitarSeccionProductos(); // Habilitar agregar productos en modo edición
         
         // Cerrar offcanvas
         const offcanvas = bootstrap.Offcanvas.getInstance(
@@ -4135,6 +4136,9 @@ function cancelarEdicionCuenta() {
     if (btnCambiarCliente) {
         btnCambiarCliente.style.display = 'block';
     }
+
+    // Deshabilitar sección de productos (no hay cliente seleccionado)
+    deshabilitarSeccionProductos();
 }
 
 /**
