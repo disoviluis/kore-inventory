@@ -413,13 +413,13 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
       [cantidad, producto_id]
     );
 
-    // Registrar movimiento de inventario
-    await query(
-      `INSERT INTO inventario (
-        empresa_id, producto_id, tipo_movimiento, cantidad, observacion, usuario_id
-      ) VALUES (?, ?, 'salida', ?, ?, ?)`,
-      [cuentaResult[0].empresa_id, producto_id, cantidad, `Agregado a cuenta abierta #${id}`, usuarioId]
-    );
+    // Registrar movimiento de inventario (comentado - tabla no existe aún)
+    // await query(
+    //   `INSERT INTO inventario (
+    //     empresa_id, producto_id, tipo_movimiento, cantidad, observacion, usuario_id
+    //   ) VALUES (?, ?, 'salida', ?, ?, ?)`,
+    //   [cuentaResult[0].empresa_id, producto_id, cantidad, `Agregado a cuenta abierta #${id}`, usuarioId]
+    // );
 
     // Recalcular totales de la cuenta
     await recalcularTotalesCuenta(parseInt(id));
