@@ -4229,6 +4229,13 @@ async function verTotalCuenta() {
         // Calcular total desde los datos del backend
         const totalCuenta = items.reduce((sum, item) => sum + parseFloat(item.total || 0), 0);
         
+        // Función para formatear fecha/hora
+        const formatearHora = (timestamp) => {
+            if (!timestamp) return '-';
+            const fecha = new Date(timestamp);
+            return fecha.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+        };
+        
         // Mostrar modal con resumen detallado
         const modalHtml = `
             <div class="alert alert-info">
@@ -4243,6 +4250,7 @@ async function verTotalCuenta() {
             <table class="table table-sm mt-3">
                 <thead>
                     <tr>
+                        <th>Hora</th>
                         <th>Producto</th>
                         <th>Cant.</th>
                         <th>Precio</th>
@@ -4252,6 +4260,7 @@ async function verTotalCuenta() {
                 <tbody>
                     ${items.map(item => `
                         <tr>
+                            <td class="text-muted small">${formatearHora(item.fecha_agregado)}</td>
                             <td>${item.producto_nombre}</td>
                             <td>${item.cantidad}</td>
                             <td>$${formatearNumero(item.precio_unitario)}</td>
@@ -4261,7 +4270,7 @@ async function verTotalCuenta() {
                 </tbody>
                 <tfoot>
                     <tr class="table-active">
-                        <th colspan="3">TOTAL A PAGAR:</th>
+                        <th colspan="4">TOTAL A PAGAR:</th>
                         <th class="text-primary fs-4">$${formatearNumero(totalCuenta)}</th>
                     </tr>
                 </tfoot>
