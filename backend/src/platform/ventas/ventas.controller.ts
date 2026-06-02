@@ -146,12 +146,12 @@ export const getVentas = async (req: Request, res: Response): Promise<Response> 
     const params: any[] = [empresaId];
 
     if (fecha_desde) {
-      sqlQuery += ' AND v.fecha_venta >= ?';
+      sqlQuery += ' AND DATE(v.fecha_venta) >= ?';
       params.push(fecha_desde);
     }
 
     if (fecha_hasta) {
-      sqlQuery += ' AND v.fecha_venta <= ?';
+      sqlQuery += ' AND DATE(v.fecha_venta) <= ?';
       params.push(fecha_hasta);
     }
 

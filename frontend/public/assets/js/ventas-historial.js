@@ -390,6 +390,7 @@ function renderVentas() {
         // Determinar nombre del cliente
         let nombreCliente = venta.cliente_nombre || venta.razon_social || 'N/A';
         let detalleCliente = '';
+        let mostrarDocumento = true;
         
         // Si el cliente es Mostrador y hay observaciones, extraer el nombre original
         if (venta.cliente_nombre === 'Mostrador' && venta.observaciones) {
@@ -398,6 +399,8 @@ function renderVentas() {
             if (match) {
                 detalleCliente = match[1]; // "edgar", "Mesa 5", etc.
             }
+            // No mostrar el documento del Mostrador (222222222)
+            mostrarDocumento = false;
         }
 
         return `
@@ -408,7 +411,7 @@ function renderVentas() {
                 <td>
                     ${nombreCliente}<br>
                     ${detalleCliente ? `<small class="text-primary">${detalleCliente}</small><br>` : ''}
-                    <small class="text-muted">${venta.numero_documento || 'N/A'}</small>
+                    ${mostrarDocumento ? `<small class="text-muted">${venta.numero_documento || 'N/A'}</small>` : ''}
                 </td>
                 <td><strong>$${formatearNumero(venta.total)}</strong></td>
                 <td><span class="badge bg-secondary">${venta.metodo_pago}</span></td>
