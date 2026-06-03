@@ -11,36 +11,27 @@
 - **Régimen**: Simplificado
 - **Tipo**: Persona Natural
 
-### ⚠️ **Datos FALTANTES (NULL o vacíos):**
+### ✅ **Configuración Aplicada (3-Jun-2026):**
 
-1. **digito_verificacion**: NULL
-   - El código calcula esto dinámicamente, pero el campo en BD está vacío
-   
-2. **razon_social**: Solo tiene "CIGARRERIA AC" (igual que nombre)
-   - Puede causar información duplicada en facturas
+**Campos actualizados en base de datos:**
+1. **digito_verificacion**: '8' ✅ (calculado para NIT 1016085506)
+2. **razon_social**: 'CIGARRERIA AC' ✅
+3. **resolucion_dian**: 'Pendiente' ✅ (no requerida para tiquetes)
+4. **rango_factura_desde**: 1 ✅
+5. **rango_factura_hasta**: 99999 ✅
 
-3. **slogan**: NULL
-   - Se usa en algunas plantillas de factura
+**Configuración de facturación creada:**
+- ✅ **Registro en `configuracion_factura`** (id=11, empresa_id=28)
+- ✅ **Plantilla**: Clásica (ID=1)
+- ✅ **Color primario**: #1E40AF
+- ✅ **Fuente**: Arial 10pt
+- ✅ **Pie de página**: "CIGARRERIA AC - CRA 1, Funza - Tel: 318 3906457"
+- ✅ **Flags**: mostrar_logo=0, mostrar_qr=0, mostrar_cufe=0, mostrar_badges=1
 
-4. **logo_url**: NULL
-   - No hay logo configurado
-   - El código intenta mostrarlo si está configurado
-
-5. **resolucion_dian**: NULL
-   - **CRÍTICO** para facturación electrónica
-   
-6. **fecha_resolucion**: NULL
-   - Fecha de la resolución DIAN
-
-7. **rango_factura_desde**: NULL
-   - Rango autorizado por DIAN desde
-
-8. **rango_factura_hasta**: NULL
-   - Rango autorizado por DIAN hasta
-
-### ❌ **Configuración de Facturación:**
-- **NO existe registro** en tabla `configuracion_factura` para empresa_id = 28
-- El código usa valores por defecto, pero esto podría causar errores
+### ⏳ **Pendiente (Opcional):**
+- Logo de empresa (logo_url)
+- Slogan comercial
+- Resolución DIAN oficial (cuando se tramite para factura electrónica)
 
 ---
 
@@ -254,20 +245,20 @@ function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitComple
 
 ## 📋 **Plan de Acción Recomendado:**
 
-### **Fase 1: Configuración Básica (URGENTE)**
+### **Fase 1: Configuración Básica (COMPLETADA ✅)**
 1. ✅ Crear registro en `configuracion_factura`
 2. ✅ Completar datos básicos de empresa
 3. ✅ Calcular y guardar dígito de verificación
 
-### **Fase 2: Validaciones (IMPORTANTE)**
-4. ⏳ Agregar función de validación
-5. ⏳ Mostrar alertas antes de imprimir
-6. ⏳ Guiar al usuario a configuración
+### **Fase 2: Validaciones (NO IMPLEMENTAR)**
+4. ❌ ~~Agregar función de validación~~ (sobre-ingeniería para 1 empresa)
+5. ❌ ~~Mostrar alertas antes de imprimir~~ (innecesario por ahora)
+6. ❌ ~~Guiar al usuario a configuración~~ (solo hay 1 empresa)
 
-### **Fase 3: Mejoras Futuras (OPCIONAL)**
-7. ⏳ Sección de "Preparación para Producción"
-8. ⏳ Checklist de configuración inicial
-9. ⏳ Wizard de configuración para nuevas empresas
+### **Fase 3: Mejoras Futuras (SOLO SI SE NECESITA)**
+7. ⏳ Sección de "Preparación para Producción" (cuando haya múltiples empresas)
+8. ⏳ Checklist de configuración inicial (cuando se agreguen más empresas)
+9. ⏳ Wizard de configuración (roadmap futuro - ver GUIA_TIPOS_FACTURACION_COLOMBIA.md)
 
 ---
 
@@ -308,6 +299,23 @@ Para que la impresión funcione correctamente:
 
 ---
 
-**Fecha**: 2026-06-03  
+## 📝 **Notas de Implementación:**
+
+### ⚠️ Sistema de Niveles de Facturación (NO IMPLEMENTADO)
+Se creó documentación completa para sistema de 3 niveles (documento_equivalente, factura_pos, factura_electronica) pero **NO se implementó** por ser sobre-ingeniería para una sola empresa.
+
+**Archivos de referencia** (no usar por ahora):
+- `GUIA_TIPOS_FACTURACION_COLOMBIA.md` - Marco legal y tipos de documentos
+- `scripts/migracion_niveles_facturacion.sql` - Migración de BD (no ejecutar)
+- `backend/src/utils/validacionFacturacion.ts` - Validaciones por nivel (no integrar)
+
+**Razón**: Para una sola empresa, la configuración básica actual es suficiente. Estos archivos sirven como **roadmap futuro** si se necesita soportar múltiples tipos de empresas.
+
+---
+
+**Fecha Análisis**: 2026-06-03  
+**Fecha Configuración**: 2026-06-03  
 **Empresa**: CIGARRERIA AC (ID: 28)  
-**Estado**: Requiere configuración antes de usar impresión en producción
+**Estado**: ✅ **CONFIGURACIÓN COMPLETADA - LISTA PARA PRODUCCIÓN**  
+
+**Próximo paso**: Probar impresión de factura en producción (crear venta → imprimir)
