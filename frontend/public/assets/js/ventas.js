@@ -4047,7 +4047,8 @@ async function cargarCuentaAbierta(cuentaId) {
                 email: cuentaActual.cliente_email || '',
                 telefono: cuentaActual.cliente_telefono || ''
             };
-            mostrarClienteSeleccionado();
+            // Cliente ya cargado - Se mostrará en el resumen de la cuenta
+            console.log('Cliente cargado:', clienteSeleccionado);
         }
         
         // Cargar productos
