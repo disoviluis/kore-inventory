@@ -366,7 +366,7 @@
 }
 
 /* ==============================================
-   6. NAVBAR MÓVIL - Responsive y Limpio
+   6. NAVBAR MÓVIL - Fix de Solapamiento
    ============================================== */
 
 @media (max-width: 991px) {
@@ -416,10 +416,17 @@
         display: none !important;
     }
     
-    /* SEPARACIÓN: Espacio entre navbar y contenido */
+    /* FIX CRÍTICO: Separación real entre navbar sticky y contenido */
+    .page-content {
+        padding-top: 20px !important;
+        margin-top: 0 !important;
+    }
+    
+    /* Navbar con altura automática para wrap de botones */
     .navbar {
+        min-height: 60px !important;
+        height: auto !important;
         padding-bottom: 12px !important;
-        margin-bottom: 16px !important;
     }
 }
 
