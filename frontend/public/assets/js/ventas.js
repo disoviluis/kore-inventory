@@ -4601,13 +4601,20 @@ async function cargarEmpresasParaMobile() {
     
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/empresas/usuario`, {
+        if (!currentUsuario || !currentUsuario.id) {
+            console.error('❌ No hay usuario cargado');
+            lista.innerHTML = '<div class="text-center p-4 text-danger">Error: Usuario no identificado</div>';
+            return;
+        }
+        
+        const response = await fetch(`${API_URL}/empresas/usuario/${currentUsuario.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (!response.ok) throw new Error('Error al cargar empresas');
         
-        const empresas = await response.json();
+        const data = await response.json();
+        const empresas = data.success ? data.data : [];
         
         if (empresas.length === 0) {
             lista.innerHTML = '<div class="text-center p-4 text-muted">No hay empresas disponibles</div>';
