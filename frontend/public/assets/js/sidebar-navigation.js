@@ -29,6 +29,9 @@ const MODULE_MAP = {
   'traslados.html': 'traslados',
   'mensajeros-dashboard.html': 'mensajeros',
   
+  // FINANZAS
+  'cuentas-por-cobrar.html': 'finanzas',
+  
   // ADMINISTRACIÓN (módulos del dashboard)
   'usuarios': 'usuarios',
   'roles': 'roles',
