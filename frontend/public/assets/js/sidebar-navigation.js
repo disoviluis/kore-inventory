@@ -16,8 +16,8 @@ const SIDEBAR_API_URL = typeof API_URL !== 'undefined' ? API_URL : 'http://18.19
  */
 const MODULE_MAP = {
   // OPERACIONES
-  'ventas.html': 'ventas',
-  'ventas-historial.html': 'ventas',
+  'ventas.html': 'pos',  // CORREGIDO: ventas.html es el POS, no gestión de ventas
+  'ventas-historial.html': 'ventas',  // El historial sí es gestión de ventas
   'clientes.html': 'clientes',
   'inventario.html': 'inventario',
   'productos.html': 'productos',
