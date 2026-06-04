@@ -12,7 +12,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/dashboard.css">
     <!-- Responsive Mobile CSS -->
-    <link rel="stylesheet" href="assets/css/responsive-mobile.css?v=1.0">
+    <link rel="stylesheet" href="assets/css/responsive-mobile.css?v=1.1">
     <style>
         .cliente-card {
             border-left: 4px solid #1E40AF;
@@ -496,7 +496,7 @@
                 </button>
 
                 <!-- Selector Empresa Móvil -->
-                <button class="btn-empresa-mobile" id="btnEmpresaMobile" onclick="abrirSelectorEmpresaMobile()" style="display: none;">
+                <button class="btn-empresa-mobile" id="btnEmpresaMobile" onclick="abrirSelectorEmpresaMobile()">
                     <i class="bi bi-building"></i>
                     <span class="empresa-nombre" id="empresaNombreMobile">Cargando...</span>
                     <i class="bi bi-chevron-down"></i>
@@ -547,7 +547,7 @@
         <div id="bannerEdicionCuenta" class="d-none"></div>
 
         <!-- Botón Carrito Flotante Móvil -->
-        <button class="btn-carrito-flotante" id="btnCarritoFlotante" onclick="abrirCarritoMobile()" style="display: none;">
+        <button class="btn-carrito-flotante" id="btnCarritoFlotante" onclick="abrirCarritoMobile()">
             <i class="bi bi-cart3"></i>
             <span class="badge" id="badgeCarritoFlotante">0</span>
             <span class="total" id="totalCarritoFlotante">$0</span>
