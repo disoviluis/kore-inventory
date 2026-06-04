@@ -366,7 +366,7 @@
 }
 
 /* ==============================================
-   6. NAVBAR MÓVIL - Fix de Solapamiento
+   6. NAVBAR MÓVIL - 2 Filas de 2 Botones
    ============================================== */
 
 @media (max-width: 991px) {
@@ -375,40 +375,52 @@
         display: none !important;
     }
     
-    /* Permitir que los botones hagan WRAP si no caben */
+    /* Layout: 2 botones por fila */
     .navbar-nav {
+        display: flex !important;
         flex-wrap: wrap !important;
-        gap: 8px !important;
-        justify-content: flex-end !important;
+        gap: 10px !important;
+        justify-content: center !important;
+        width: 100% !important;
+        padding: 0 !important;
     }
     
-    /* Botones del navbar: solo iconos, sin texto */
+    /* Cada botón ocupa ~48% del ancho = 2 por fila */
     .navbar-nav .btn-sm {
-        padding: 10px !important;
-        font-size: 18px !important; /* Icono más grande */
-        min-width: 42px !important;
-        min-height: 42px !important;
+        flex: 0 0 calc(50% - 5px) !important; /* 50% menos la mitad del gap */
+        max-width: calc(50% - 5px) !important;
+        padding: 12px 8px !important;
+        font-size: 14px !important;
+        min-height: 48px !important;
         border-width: 2px !important;
         position: relative;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
     }
     
-    /* Ocultar TEXTO de los botones, dejar solo iconos */
+    /* Mostrar TEXTO en los botones para que sea más claro */
     .navbar-nav .btn-sm i {
-        margin-right: 0 !important;
+        margin-right: 6px !important;
+        font-size: 18px !important;
     }
     
     .navbar-nav .btn-sm span:not(.badge) {
-        display: none !important;
+        display: inline !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
     }
     
     /* Badge posicionado correctamente */
     .navbar-nav .badge {
         position: absolute !important;
-        top: -6px !important;
-        right: -6px !important;
-        font-size: 10px !important;
-        padding: 2px 5px !important;
-        min-width: 18px !important;
+        top: -8px !important;
+        right: -8px !important;
+        font-size: 11px !important;
+        padding: 3px 6px !important;
+        min-width: 20px !important;
+        z-index: 1 !important;
     }
     
     /* Form switch oculto en móvil */
@@ -422,11 +434,25 @@
         margin-top: 0 !important;
     }
     
-    /* Navbar con altura automática para wrap de botones */
+    /* Navbar con altura automática para 2 filas de botones */
     .navbar {
         min-height: 60px !important;
         height: auto !important;
+        padding-top: 12px !important;
         padding-bottom: 12px !important;
+    }
+    
+    /* Container del navbar centrado */
+    .navbar .container-fluid {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+    }
+    
+    /* Toggle sidebar a la izquierda */
+    .btn-toggle-sidebar {
+        position: absolute !important;
+        left: 16px !important;
+        top: 16px !important;
     }
 }
 
