@@ -356,19 +356,7 @@ async function cargarEmpresas(usuarioId) {
     if (data.success && data.data.length > 0) {
       // Determinar si mostrar selector o texto según tipo de usuario y cantidad de empresas
       const esUsuarioRegular = usuario.tipo_usuario === 'usuario';
-      const esSuperAdmin = usuario.tipo_usuario === 'super_admin';
       const tieneSoloUnaEmpresa = data.data.length === 1;
-      
-      // Super Admin no usa selector de empresa en navbar (trabaja desde módulos PLATAFORMA)
-      if (esSuperAdmin) {
-        const companySelectorContainer = document.querySelector('.company-selector');
-        if (companySelectorContainer) {
-          companySelectorContainer.style.display = 'none';
-        }
-        // Establecer primera empresa por defecto para módulos que la necesiten
-        localStorage.setItem('empresaActiva', JSON.stringify(data.data[0]));
-        return;
-      }
       
       if (esUsuarioRegular || tieneSoloUnaEmpresa) {
         // Usuario Regular o Admin con 1 sola empresa: mostrar solo texto
