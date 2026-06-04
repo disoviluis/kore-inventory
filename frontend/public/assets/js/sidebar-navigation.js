@@ -135,14 +135,22 @@ async function filtrarSidebarPorPermisos() {
   // Cargar módulos permitidos
   const modulosPermitidos = await getModulosPermitidos();
   
-  if (!modulosPermitidos) {
-    console.warn('⚠️ No se pudieron cargar los módulos permitidos');
+  if (!modulosPermitidos || modulosPermitidos.length === 0) {
+    console.warn('⚠️ No se pudieron cargar los módulos permitidos o usuario sin permisos');
     
-    // FALLBACK: Mostrar sidebar de todos modos para evitar quedar invisible
+    // SEGURIDAD: Si no hay permisos, ocultar TODO excepto Dashboard
+    const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
+    navItems.forEach(item => {
+      const link = item.querySelector('a.nav-link');
+      if (link && !link.classList.contains('nav-section') && link.getAttribute('href') !== 'dashboard.html') {
+        item.style.display = 'none';
+      }
+    });
+    
     const sidebarNav = document.querySelector('.sidebar-nav');
     if (sidebarNav) {
       sidebarNav.classList.add('permissions-loaded');
-      console.log('⚠️ Sidebar mostrado sin filtrar (fallback por error)');
+      console.log('⚠️ Usuario sin permisos - Solo Dashboard visible');
     }
     
     return;
