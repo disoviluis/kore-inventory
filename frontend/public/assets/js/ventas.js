@@ -4550,6 +4550,220 @@ setTimeout(() => {
     setInterval(cargarCuentasAbiertas, 30000);
 }, 2000);
 
+// ============================================
+// FUNCIONES MÓVILES - RESPONSIVE UI
+// ============================================
+
+/**
+ * Actualizar selector de empresa móvil
+ */
+function actualizarSelectorEmpresaMobile() {
+    const btnMobile = document.getElementById('btnEmpresaMobile');
+    const nombreMobile = document.getElementById('empresaNombreMobile');
+    
+    if (currentEmpresa && btnMobile && nombreMobile) {
+        nombreMobile.textContent = currentEmpresa.nombre || 'Sin empresa';
+        btnMobile.style.display = ''; // Mostrar  en móvil
+    }
+}
+
+/**
+ * Abrir modal selector de empresa móvil
+ */
+function abrirSelectorEmpresaMobile() {
+    const modal = document.getElementById('modalEmpresaMobile');
+    const lista = document.getElementById('listaEmpresasMobile');
+    
+    if (!modal || !lista) return;
+    
+    modal.classList.add('active');
+    
+    // Cargar empresas
+    cargarEmpresasParaMobile();
+}
+
+/**
+ * Cerrar modal selector de empresa móvil
+ */
+function cerrarSelectorEmpresaMobile() {
+    const modal = document.getElementById('modalEmpresaMobile');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+/**
+ * Cargar empresas en modal móvil
+ */
+async function cargarEmpresasParaMobile() {
+    const lista = document.getElementById('listaEmpresasMobile');
+    if (!lista) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/empresas/usuario`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar empresas');
+        
+        const empresas = await response.json();
+        
+        if (empresas.length === 0) {
+            lista.innerHTML = '<div class="text-center p-4 text-muted">No hay empresas disponibles</div>';
+            return;
+        }
+        
+        lista.innerHTML = empresas.map(emp => `
+            <div class="empresa-item ${emp.id === currentEmpresa?.id ? 'selected' : ''}" 
+                 onclick="seleccionarEmpresaMobile(${emp.id})">
+                <div class="empresa-info">
+                    <h6>${emp.nombre}</h6>
+                    <small>NIT: ${emp.nit || 'N/A'}</small>
+                </div>
+                ${emp.id === currentEmpresa?.id ? '<i class="bi bi-check-circle text-success" style="font-size: 24px;"></i>' : ''}
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error cargando empresas móvil:', error);
+        lista.innerHTML = '<div class="text-center p-4 text-danger">Error al cargar empresas</div>';
+    }
+}
+
+/**
+ * Seleccionar empresa desde móvil
+ */
+async function seleccionarEmpresaMobile(empresaId) {
+    try {
+        const selector = document.getElementById('companySelector');
+        if (selector) {
+            selector.value = empresaId;
+            // Disparar evento change
+            const event = new Event('change');
+            selector.dispatchEvent(event);
+        }
+        
+        cerrarSelectorEmpresaMobile();
+        
+        // Actualizar UI móvil
+        setTimeout(actualizarSelectorEmpresaMobile, 500);
+        
+    } catch (error) {
+        console.error('Error seleccionando empresa:', error);
+        mostrarAlerta('Error al cambiar empresa', 'error');
+    }
+}
+
+/**
+ * Actualizar badge carrito flotante
+ */
+function actualizarCarritoFlotante() {
+    const btn = document.getElementById('btnCarritoFlotante');
+    const badge = document.getElementById('badgeCarritoFlotante');
+    const total = document.getElementById('totalCarritoFlotante');
+    
+    if (!btn || !badge || !total) return;
+    
+    const cantidadProductos = productosVenta.reduce((sum, p) => sum + p.cantidad, 0);
+    const totalVenta = calcularTotal();
+    
+    badge.textContent = cantidadProductos;
+    total.textContent = `$${totalVenta.toLocaleString('es-CO')}`;
+    
+    // Mostrar/ocultar botón
+    if (cantidadProductos > 0) {
+        btn.style.display = 'flex';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+/**
+ * Abrir vista carrito móvil
+ */
+function abrirCarritoMobile() {
+    const vista = document.getElementById('vistaCarritoMobile');
+    const body = document.getElementById('bodyCarritoMobile');
+    const footer = document.getElementById('totalCarritoMobileFooter');
+    
+    if (!vista || !body) return;
+    
+    // Copiar contenido del carrito desktop
+    const carritoDesktop = document.querySelector('.col-lg-4 .card-body');
+    if (carritoDesktop) {
+        body.innerHTML = carritoDesktop.innerHTML;
+    }
+    
+    // Actualizar total en footer
+    const totalVenta = calcularTotal();
+    if (footer) {
+        footer.textContent = `$${totalVenta.toLocaleString('es-CO')}`;
+    }
+    
+    vista.classList.add('active');
+}
+
+/**
+ * Cerrar vista carrito móvil
+ */
+function cerrarCarritoMobile() {
+    const vista = document.getElementById('vistaCarritoMobile');
+    if (vista) {
+        vista.classList.remove('active');
+    }
+}
+
+/**
+ * Ir a pago desde vista móvil
+ */
+function irAPagoMobile() {
+    cerrarCarritoMobile();
+    // Scroll al formulario de pago
+    const formularioPago = document.getElementById('paymentsSection');
+    if (formularioPago) {
+        formularioPago.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+/**
+ * Detectar si está en móvil
+ */
+function esDispositivoMovil() {
+    return window.innerWidth <= 991;
+}
+
+/**
+ * Inicializar funciones móviles
+ */
+function inicializarFuncionesMobile() {
+    // Actualizar selector empresa móvil
+    actualizarSelectorEmpresaMobile();
+    
+    // Event listener para resize
+    window.addEventListener('resize', () => {
+        if (esDispositivoMovil()) {
+            actualizarSelectorEmpresaMobile();
+        }
+    });
+    
+    // Cerrar modales al hacer clic en overlay
+    document.getElementById('modalEmpresaMobile')?.addEventListener('click', (e) => {
+        if (e.target.id === 'modalEmpresaMobile') {
+            cerrarSelectorEmpresaMobile();
+        }
+    });
+}
+
+// Extender la función actualizarResumen para actualizar carrito flotante
+const actualizarResumenOriginal = window.actualizarResumen;
+window.actualizarResumen = function() {
+    if (typeof actualizarResumenOriginal === 'function') {
+        actualizarResumenOriginal();
+    }
+    actualizarCarritoFlotante();
+};
+
 // Event listeners para cuentas abiertas
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnAbrirCuenta')?.addEventListener('click', mostrarModalAbrirCuenta);
@@ -4557,4 +4771,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnVerTotal')?.addEventListener('click', verTotalCuenta);
     document.getElementById('btnCerrarCuenta')?.addEventListener('click', cerrarCuentaYCobrar);
     document.getElementById('btnCancelarCuenta')?.addEventListener('click', cancelarCuenta);
+    
+    // Inicializar funciones móviles
+    setTimeout(inicializarFuncionesMobile, 1000);
 });

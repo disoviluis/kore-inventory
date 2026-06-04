@@ -1,0 +1,683 @@
+/**
+ * RESPONSIVE ENHANCEMENTS - Kore Inventory POS
+ * Mejoras de UI móvil sin modificar funcionalidad desktop
+ * Fecha: 4 de Junio 2026
+ * Versión: 1.0 - Quick Wins
+ */
+
+/* ==============================================
+   1. SELECTOR DE EMPRESA MÓVIL
+   ============================================== */
+
+/* Botón selector empresa en navbar móvil */
+.btn-empresa-mobile {
+    display: none; /* Oculto en desktop */
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #495057;
+    text-align: left;
+    min-height: 44px; /* Touch-friendly */
+}
+
+@media (max-width: 991px) {
+    .btn-empresa-mobile {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .btn-empresa-mobile .empresa-nombre {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Modal selector empresa full-screen móvil */
+.modal-empresa-selector {
+    display: none;
+}
+
+.modal-empresa-selector.active {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+}
+
+@media (max-width: 768px) {
+    .modal-empresa-selector .modal-content {
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        margin: 0;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .modal-empresa-selector .modal-header {
+        border-bottom: 2px solid #1E40AF;
+        padding: 16px 20px;
+        flex-shrink: 0;
+    }
+    
+    .modal-empresa-selector .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0;
+    }
+    
+    .empresa-item {
+        padding: 16px 20px;
+        min-height: 80px; /* Touch-friendly */
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .empresa-item:active {
+        background-color: #f0f0f0;
+    }
+    
+    .empresa-item.selected {
+        background-color: #e3f2fd;
+        border-left: 4px solid #1E40AF;
+    }
+    
+    .empresa-info h6 {
+        margin: 0 0 4px 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+    
+    .empresa-info small {
+        color: #666;
+        font-size: 13px;
+    }
+}
+
+/* ==============================================
+   2. BOTÓN CARRITO FLOTANTE MÓVIL
+   ============================================== */
+
+.btn-carrito-flotante {
+    display: none; /* Oculto en desktop */
+}
+
+@media (max-width: 991px) {
+    .btn-carrito-flotante {
+        display: flex;
+        position: fixed;
+        bottom: 80px; /* Espacio para bottom nav si lo hay */
+        right: 20px;
+        background: #1E40AF;
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 12px 20px;
+        box-shadow: 0 4px 12px rgba(30, 64, 175, 0.4);
+        z-index: 1000;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        min-height: 56px;
+        min-width: 56px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-carrito-flotante:active {
+        transform: scale(0.95);
+    }
+    
+    .btn-carrito-flotante .badge {
+        background: #ef4444;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        border: 2px solid white;
+    }
+    
+    .btn-carrito-flotante .total {
+        font-size: 14px;
+        font-weight: 700;
+    }
+    
+    /* Ocultar columna lateral del carrito en móvil */
+    .col-lg-4 {
+        display: none;
+    }
+    
+    /* Vista carrito full-screen */
+    .vista-carrito-mobile {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: white;
+        z-index: 9999;
+        flex-direction: column;
+    }
+    
+    .vista-carrito-mobile.active {
+        display: flex;
+    }
+    
+    .vista-carrito-mobile .header-carrito {
+        background: #1E40AF;
+        color: white;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+    
+    .vista-carrito-mobile .header-carrito .btn-back {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        padding: 0;
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .vista-carrito-mobile .body-carrito {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+    }
+    
+    .vista-carrito-mobile .footer-carrito {
+        border-top: 2px solid #dee2e6;
+        padding: 16px 20px;
+        background: white;
+        flex-shrink: 0;
+    }
+}
+
+/* ==============================================
+   3. GRID PRODUCTOS RESPONSIVE
+   ============================================== */
+
+@media (max-width: 576px) {
+    /* Cambiar a lista vertical en móvil */
+    #gridProductos {
+        display: flex !important;
+        flex-direction: column;
+        gap: 8px !important;
+    }
+    
+    .producto-card {
+        display: flex !important;
+        flex-direction: row;
+        align-items: center;
+        padding: 12px;
+        min-height: 80px;
+        gap: 12px;
+    }
+    
+    .producto-card-img,
+    .producto-card-img-placeholder {
+        width: 60px !important;
+        height: 60px !important;
+        flex-shrink: 0;
+        border-radius: 8px;
+    }
+    
+    .producto-card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .producto-card-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1.3;
+    }
+    
+    .producto-card-precio {
+        font-size: 16px;
+        font-weight: bold;
+        color: #1E40AF;
+        margin: 0;
+    }
+    
+    .producto-card-stock {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .btn-agregar-producto {
+        min-width: 44px !important;
+        min-height: 44px !important;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        padding: 0;
+    }
+}
+
+/* Tablets */
+@media (min-width: 577px) and (max-width: 768px) {
+    #gridProductos .col-md-3,
+    #gridProductos .col-lg-3 {
+        width: 50% !important; /* 2 columnas en tablet */
+    }
+}
+
+/* ==============================================
+   4. FORMULARIO CLIENTE RESPONSIVE
+   ============================================== */
+
+@media (max-width: 768px) {
+    /* Stack vertical en móvil */
+    .row.g-3 .col-md-4,
+    .row.g-3 .col-md-5,
+    .row.g-3 .col-md-2,
+    .row.g-3 .col-md-6 {
+        width: 100% !important;
+    }
+    
+    /* Botones touch-friendly */
+    .row.g-3 button,
+    .row.g-3 .btn {
+        min-height: 48px;
+        font-size: 16px;
+    }
+    
+    /* Input groups más grandes */
+    .input-group input,
+    .input-group select,
+    .input-group button {
+        min-height: 48px;
+    }
+}
+
+/* ==============================================
+   5. BOTONES TOUCH-FRIENDLY
+   ============================================== */
+
+@media (max-width: 768px) {
+    /* Todos los botones mínimo 44x44px */
+    .btn-sm {
+        min-height: 44px !important;
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+    }
+    
+    .btn {
+        min-height: 48px;
+        font-size: 16px;
+    }
+    
+    /* Botones de cantidad más grandes */
+    .btn-cantidad {
+        width: 44px !important;
+        height: 44px !important;
+        font-size: 18px;
+    }
+    
+    .input-cantidad {
+        min-height: 44px;
+        font-size: 16px;
+    }
+    
+    /* Botones de acción en lista de productos */
+    .producto-item button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* ==============================================
+   6. NAVBAR MÓVIL
+   ============================================== */
+
+@media (max-width: 991px) {
+    /* Simplificar navbar en móvil */
+    .navbar .breadcrumb {
+        display: none !important;
+    }
+    
+    /* Compactar botones navbar */
+    .navbar-nav .btn-sm {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    .navbar-nav .btn-sm i {
+        margin-right: 0 !important;
+    }
+    
+    .navbar-nav .btn-sm span:not(.badge) {
+        display: none; /* Ocultar texto, solo iconos */
+    }
+    
+    .navbar-nav {
+        gap: 4px !important;
+    }
+    
+    /* Form switch más pequeño */
+    .form-check {
+        display: none; /* Ocultar modo rápido en móvil */
+    }
+}
+
+/* ==============================================
+   7. MODALES RESPONSIVE
+   ============================================== */
+
+@media (max-width: 768px) {
+    /* Modales full-screen en móvil */
+    .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+        height: 100vh;
+    }
+    
+    .modal-content {
+        height: 100%;
+        border-radius: 0;
+    }
+    
+    /* Offcanvas más ancho en móvil */
+    .offcanvas {
+        width: 100% !important;
+        max-width: none !important;
+    }
+}
+
+/* ==============================================
+   8. TABLA RESPONSIVE
+   ============================================== */
+
+@media (max-width: 768px) {
+    /* Convertir tablas a cards */
+    .table-responsive {
+        border: 0;
+    }
+    
+    .table thead {
+        display: none; /* Ocultar headers en móvil */
+    }
+    
+    .table tbody tr {
+        display: block;
+        margin-bottom: 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 12px;
+    }
+    
+    .table tbody td {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .table tbody td:last-child {
+        border-bottom: none;
+    }
+    
+    .table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        margin-right: 12px;
+    }
+}
+
+/* ==============================================
+   9. FILTROS Y CATEGORÍAS RESPONSIVE
+   ============================================== */
+
+@media (max-width: 768px) {
+    /* Scroll horizontal para categorías */
+    #categoriasFiltros {
+        overflow-x: auto;
+        flex-wrap: nowrap !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 8px;
+    }
+    
+    #categoriasFiltros::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    #categoriasFiltros::-webkit-scrollbar-thumb {
+        background: #1E40AF;
+        border-radius: 4px;
+    }
+    
+    #categoriasFiltros .btn {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+}
+
+/* ==============================================
+   10. CARDS Y PANEL RESPONSIVE
+   ============================================== */
+
+@media (max-width: 991px) {
+    /* Cards más compactas */
+    .card {
+        margin-bottom: 16px;
+    }
+    
+    .card-header {
+        padding: 12px 16px;
+    }
+    
+    .card-body {
+        padding: 16px;
+    }
+    
+    /* Sticky top más cercano */
+    .sticky-top {
+        top: 10px !important;
+        position: relative !important; /* No sticky en móvil */
+    }
+}
+
+/* ==============================================
+   11. SPACING Y PADDING MÓVIL
+   ============================================== */
+
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    
+    .row.g-4 {
+        gap: 16px !important;
+    }
+    
+    /* Reducir márgenes */
+    .mb-4 {
+        margin-bottom: 1rem !important;
+    }
+    
+    .mb-3 {
+        margin-bottom: 0.75rem !important;
+    }
+}
+
+/* ==============================================
+   12. TEXTO LEGIBLE EN MÓVIL
+   ============================================== */
+
+@media (max-width: 768px) {
+    /* Aumentar tamaño mínimo de texto */
+    body {
+        font-size: 16px;
+    }
+    
+    .small, small {
+        font-size: 14px !important;
+    }
+    
+    h6 {
+        font-size: 16px;
+    }
+    
+    h5 {
+        font-size: 18px;
+    }
+    
+    /* Inputs más legibles */
+    input,
+    select,
+    textarea {
+        font-size: 16px !important; /* Evita zoom en iOS */
+    }
+}
+
+/* ==============================================
+   13. ANIMACIONES SUAVES
+   ============================================== */
+
+.vista-carrito-mobile,
+.modal-empresa-selector {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==============================================
+   14. SIDEBAR MÓVIL (ya implementado)
+   ============================================== */
+
+@media (max-width: 991px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .sidebar-overlay {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+    
+    .sidebar-overlay.active {
+        opacity: 1;
+        pointer-events: all;
+    }
+}
+
+/* ==============================================
+   15. UTILIDADES ADICIONALES
+   ============================================== */
+
+/* Ocultar en móvil */
+@media (max-width: 768px) {
+    .d-mobile-none {
+        display: none !important;
+    }
+}
+
+/* Mostrar solo en móvil */
+.d-mobile-block {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .d-mobile-block {
+        display: block !important;
+    }
+}
+
+.d-mobile-flex {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .d-mobile-flex {
+        display: flex !important;
+    }
+}
+
+/* Padding mobile-friendly */
+@media (max-width: 768px) {
+    .p-mobile-2 {
+        padding: 0.5rem !important;
+    }
+    
+    .px-mobile-2 {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    .py-mobile-2 {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+}
+
+/* ==============================================
+   16. LOADING Y ESTADOS
+   ============================================== */
+
+@media (max-width: 768px) {
+    .spinner-border {
+        width: 2rem;
+        height: 2rem;
+    }
+    
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+}
+
+/* Fin de estilos responsive */
