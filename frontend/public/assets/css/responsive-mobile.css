@@ -11,7 +11,7 @@
 
 /* Botón selector empresa en navbar móvil */
 .btn-empresa-mobile {
-    display: none; /* Oculto en desktop */
+    display: none !important; /* Oculto siempre - usar sidebar para cambiar empresa */
     background: white;
     border: 1px solid #dee2e6;
     border-radius: 8px;
@@ -22,6 +22,7 @@
     min-height: 44px; /* Touch-friendly */
 }
 
+/* DESACTIVADO: Selector de empresa en móvil
 @media (max-width: 991px) {
     .btn-empresa-mobile {
         display: flex;
@@ -39,6 +40,7 @@
         white-space: nowrap;
     }
 }
+*/
 
 /* Modal selector empresa full-screen móvil */
 .modal-empresa-selector {
