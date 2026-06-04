@@ -366,7 +366,7 @@
 }
 
 /* ==============================================
-   6. NAVBAR MÓVIL
+   6. NAVBAR MÓVIL - Botones Unificados
    ============================================== */
 
 @media (max-width: 991px) {
@@ -375,12 +375,24 @@
         display: none !important;
     }
     
-    /* Compactar botones navbar */
-    .navbar-nav .btn-sm {
-        padding: 8px 12px;
-        font-size: 13px;
+    /* UNIFICACIÓN: Todos los botones del navbar con mismo tamaño */
+    .navbar-nav .btn,
+    .navbar-nav .btn-sm,
+    .navbar-nav .btn-outline-primary,
+    .navbar-nav .btn-outline-warning,
+    .navbar-nav .btn-outline-success,
+    .navbar-nav .btn-outline-danger {
+        min-width: 44px !important; /* Touch-friendly */
+        min-height: 44px !important;
+        padding: 10px 12px !important;
+        font-size: 16px !important; /* Iconos más grandes */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-width: 2px !important; /* Border más visible */
     }
     
+    /* Ocultar texto de botones, solo iconos */
     .navbar-nav .btn-sm i {
         margin-right: 0 !important;
     }
@@ -389,13 +401,36 @@
         display: none; /* Ocultar texto, solo iconos */
     }
     
+    /* Badges más pequeños y posicionados correctamente */
+    .navbar-nav .badge {
+        position: absolute !important;
+        top: -5px !important;
+        right: -5px !important;
+        min-width: 20px !important;
+        height: 20px !important;
+        font-size: 11px !important;
+        padding: 2px 5px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Espaciado uniforme entre botones */
     .navbar-nav {
-        gap: 4px !important;
+        gap: 8px !important;
     }
     
     /* Form switch más pequeño */
     .form-check {
         display: none; /* Ocultar modo rápido en móvil */
+    }
+    
+    /* IMPORTANTE: Espacio entre navbar y contenido */
+    .navbar + div,
+    .navbar + .container,
+    .navbar + .container-fluid,
+    main .navbar + * {
+        margin-top: 16px !important;
     }
 }
 
