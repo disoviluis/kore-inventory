@@ -232,12 +232,16 @@ function ocultarSeccionesVacias() {
     if (!collapse || !parentLink) return;
     
     // Contar nav-items visibles usando getComputedStyle para verificar display
+    // IMPORTANTE: Ignorar items disabled (con badge "Próximamente")
     const allItems = collapse.querySelectorAll('.nav-item');
     let itemsVisibles = 0;
     
     allItems.forEach(item => {
       const computedStyle = window.getComputedStyle(item);
-      if (computedStyle.display !== 'none') {
+      const link = item.querySelector('a.nav-link');
+      
+      // Contar solo si: está visible Y no está disabled
+      if (computedStyle.display !== 'none' && link && !link.classList.contains('disabled')) {
         itemsVisibles++;
       }
     });
