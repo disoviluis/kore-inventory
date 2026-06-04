@@ -231,13 +231,22 @@ function ocultarSeccionesVacias() {
     
     if (!collapse || !parentLink) return;
     
-    // Contar nav-items visibles (excluir disabled)
-    const itemsVisibles = collapse.querySelectorAll('.nav-item:not([style*="display: none"]) .nav-link:not(.disabled)');
+    // Contar nav-items visibles usando getComputedStyle para verificar display
+    const allItems = collapse.querySelectorAll('.nav-item');
+    let itemsVisibles = 0;
     
-    if (itemsVisibles.length === 0) {
+    allItems.forEach(item => {
+      const computedStyle = window.getComputedStyle(item);
+      if (computedStyle.display !== 'none') {
+        itemsVisibles++;
+      }
+    });
+    
+    if (itemsVisibles === 0) {
       console.log(`🚫 Ocultando sección vacía: ${seccion.id}`);
       parentLink.closest('.nav-item').style.display = 'none';
     } else {
+      console.log(`✅ Mostrando sección con ${itemsVisibles} items: ${seccion.id}`);
       parentLink.closest('.nav-item').style.display = 'block';
     }
   });
