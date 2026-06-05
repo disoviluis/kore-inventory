@@ -12,7 +12,7 @@
 /* Asegurar que el botón hamburguesa siempre esté visible y clickeable */
 .btn-toggle-sidebar {
     position: relative !important;
-    z-index: 10 !important; /* Por encima de otros elementos del navbar */
+    z-index: 1050 !important; /* Por encima del navbar (z-index: 1030) */
 }
 
 /* ==============================================
@@ -464,7 +464,7 @@
         position: absolute !important;
         left: 16px !important;
         top: 16px !important;
-        z-index: 10 !important; /* Por encima de los botones del navbar */
+        z-index: 1050 !important; /* Por encima del navbar (z-index: 1030) */
         background: white !important;
         border: 1px solid #dee2e6 !important;
         border-radius: 8px !important;
@@ -474,6 +474,8 @@
         align-items: center !important;
         justify-content: center !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        pointer-events: auto !important; /* Asegurar que sea clickeable */
+        cursor: pointer !important;
     }
     
     .btn-toggle-sidebar:hover {
