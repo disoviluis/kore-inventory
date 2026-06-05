@@ -1142,6 +1142,9 @@ function calcularTotales() {
 
     // Actualizar estado de pagos
     actualizarEstadoPago();
+    
+    // Actualizar carrito flotante móvil
+    actualizarCarritoFlotante();
 }
 
 // ============================================
@@ -4669,15 +4672,14 @@ async function seleccionarEmpresaMobile(empresaId) {
 function actualizarCarritoFlotante() {
     const btn = document.getElementById('btnCarritoFlotante');
     const badge = document.getElementById('badgeCarritoFlotante');
-    const total = document.getElementById('totalCarritoFlotante');
+    const totalEl = document.getElementById('totalCarritoFlotante');
     
-    if (!btn || !badge || !total) return;
+    if (!btn || !badge || !totalEl) return;
     
     const cantidadProductos = productosVenta.reduce((sum, p) => sum + p.cantidad, 0);
-    const totalVenta = calcularTotal();
     
     badge.textContent = cantidadProductos;
-    total.textContent = `$${totalVenta.toLocaleString('es-CO')}`;
+    totalEl.textContent = `$${formatearNumero(totalVentaActual)}`;
     
     // Mostrar/ocultar botón
     if (cantidadProductos > 0) {
@@ -4693,23 +4695,25 @@ function actualizarCarritoFlotante() {
 function abrirCarritoMobile() {
     const vista = document.getElementById('vistaCarritoMobile');
     const body = document.getElementById('bodyCarritoMobile');
-    const footer = document.getElementById('totalCarritoMobileFooter');
+    const footerTotal = document.getElementById('totalCarritoMobileFooter');
     
     if (!vista || !body) return;
     
-    // Copiar contenido del carrito desktop
+    // Copiar contenido del resumen de venta desktop
     const carritoDesktop = document.querySelector('.col-lg-4 .card-body');
     if (carritoDesktop) {
-        body.innerHTML = carritoDesktop.innerHTML;
+        body.innerHTML = carritoDesktop.cloneNode(true).innerHTML;
     }
     
     // Actualizar total en footer
-    const totalVenta = calcularTotal();
-    if (footer) {
-        footer.textContent = `$${totalVenta.toLocaleString('es-CO')}`;
+    if (footerTotal) {
+        footerTotal.textContent = `$${formatearNumero(totalVentaActual)}`;
     }
     
     vista.classList.add('active');
+    
+    // Deshabilitar scroll del body
+    document.body.style.overflow = 'hidden';
 }
 
 /**
@@ -4720,17 +4724,20 @@ function cerrarCarritoMobile() {
     if (vista) {
         vista.classList.remove('active');
     }
+    
+    // Rehabilitar scroll del body
+    document.body.style.overflow = '';
 }
 
 /**
  * Ir a pago desde vista móvil
  */
 function irAPagoMobile() {
-    cerrarCarritoMobile();
-    // Scroll al formulario de pago
-    const formularioPago = document.getElementById('paymentsSection');
-    if (formularioPago) {
-        formularioPago.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Mantenerse en el carrito móvil ya que tiene toda la info de pago
+    // El usuario ya puede ver y usar las formas de pago dentro del carrito móvil
+    const formaPago = document.querySelector('#vistaCarritoMobile #formaPago');
+    if (formaPago) {
+        formaPago.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
