@@ -6,6 +6,16 @@
  */
 
 /* ==============================================
+   0. BOTÓN TOGGLE SIDEBAR - GLOBAL
+   ============================================== */
+
+/* Asegurar que el botón hamburguesa siempre esté visible y clickeable */
+.btn-toggle-sidebar {
+    position: relative !important;
+    z-index: 10 !important; /* Por encima de otros elementos del navbar */
+}
+
+/* ==============================================
    1. SELECTOR DE EMPRESA MÓVIL
    ============================================== */
 
@@ -383,6 +393,7 @@
         justify-content: center !important;
         width: 100% !important;
         padding: 0 !important;
+        margin-left: 60px !important; /* Espacio para el botón hamburguesa */
     }
     
     /* Cada botón ocupa ~48% del ancho = 2 por fila */
@@ -448,11 +459,26 @@
         justify-content: center !important;
     }
     
-    /* Toggle sidebar a la izquierda */
+    /* Toggle sidebar a la izquierda - SIEMPRE VISIBLE */
     .btn-toggle-sidebar {
         position: absolute !important;
         left: 16px !important;
         top: 16px !important;
+        z-index: 10 !important; /* Por encima de los botones del navbar */
+        background: white !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 8px !important;
+        width: 44px !important;
+        height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    
+    .btn-toggle-sidebar:hover {
+        background: #f8f9fa !important;
+        border-color: var(--primary-color) !important;
     }
 }
 
