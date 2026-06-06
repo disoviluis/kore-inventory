@@ -13,6 +13,7 @@ import {
   listarCuentasAbiertas,
   obtenerDetalleCuenta,
   agregarItemCuenta,
+  actualizarItemCuenta,
   eliminarItemCuenta,
   solicitarCuenta,
   cerrarCuenta,
@@ -51,6 +52,13 @@ router.get('/:id/detalle', obtenerDetalleCuenta);
  * @access  Private
  */
 router.post('/:id/items', verificarEmpresaActiva, agregarItemCuenta);
+
+/**
+ * @route   PUT /api/cuentas-abiertas/:id/items/:itemId
+ * @desc    Actualizar cantidad o precio de item en cuenta abierta
+ * @access  Private
+ */
+router.put('/:id/items/:itemId', verificarEmpresaActiva, actualizarItemCuenta);
 
 /**
  * @route   DELETE /api/cuentas-abiertas/:id/items/:itemId

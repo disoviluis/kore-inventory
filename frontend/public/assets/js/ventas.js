@@ -961,6 +961,11 @@ function cambiarCantidad(index, delta) {
 
     renderizarProductos();
     calcularTotales();
+    
+    // Si estamos editando una cuenta abierta, actualizar en el backend
+    if (modoEdicionCuenta && cuentaActual) {
+        actualizarItemEnBackend(index);
+    }
 }
 
 function actualizarCantidad(index, valor) {
@@ -985,6 +990,11 @@ function actualizarCantidad(index, valor) {
 
     renderizarProductos();
     calcularTotales();
+    
+    // Si estamos editando una cuenta abierta, actualizar en el backend
+    if (modoEdicionCuenta && cuentaActual) {
+        actualizarItemEnBackend(index);
+    }
 }
 
 function actualizarPrecio(index, valor) {
@@ -1026,6 +1036,11 @@ function actualizarPrecio(index, valor) {
 
     renderizarProductos();
     calcularTotales();
+    
+    // Si estamos editando una cuenta abierta, actualizar en el backend
+    if (modoEdicionCuenta && cuentaActual) {
+        actualizarItemEnBackend(index);
+    }
 }
 
 // Función para cambiar el tipo de precio seleccionado
@@ -4438,6 +4453,71 @@ async function agregarItemACuentaAbierta(producto) {
     } catch (error) {
         console.error('❌ Error al agregar item:', error);
         mostrarAlerta('Error al agregar producto: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Actualizar item existente en cuenta abierta (cantidad o precio)
+ */
+async function actualizarItemEnBackend(index) {
+    const producto = productosVenta[index];
+    
+    if (!cuentaActual || !cuentaActual.id) {
+        console.error('No hay cuenta actual para actualizar');
+        return;
+    }
+    
+    if (!producto.id) {
+        console.error('El producto no tiene ID de item en la cuenta');
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        
+        const payload = {
+            cantidad: producto.cantidad,
+            precio_unitario: parseFloat(producto.precio_unitario)
+        };
+        
+        console.log(`📤 Actualizando item ${producto.id} en cuenta ${cuentaActual.id}:`, payload);
+        
+        const response = await fetch(
+            `${API_URL}/cuentas-abiertas/${cuentaActual.id}/items/${producto.id}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            }
+        );
+        
+        console.log('📥 Respuesta del backend:', response.status);
+        
+        if (response.status === 401) {
+            handleUnauthorized();
+            return;
+        }
+        
+        const data = await response.json();
+        console.log('📊 Data del backend:', data);
+        
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+        
+        console.log('✅ Item actualizado en el backend');
+        
+        // Recalcular totales localmente (sin recargar para mejor UX)
+        calcularTotales();
+        
+    } catch (error) {
+        console.error('❌ Error al actualizar item:', error);
+        mostrarAlerta('Error al actualizar: ' + error.message, 'error');
+        // Recargar la cuenta para que se vea el estado real del backend
+        await cargarCuentaAbierta(cuentaActual.id);
     }
 }
 

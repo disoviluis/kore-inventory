@@ -459,6 +459,159 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
 };
 
 /**
+ * Actualizar item de cuenta abierta (cantidad o precio)
+ * PUT /api/cuentas-abiertas/:id/items/:itemId
+ */
+export const actualizarItemCuenta = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id, itemId } = req.params;
+    const { cantidad, precio_unitario } = req.body;
+    const usuarioId = (req as any).user?.id;
+
+    // Al menos uno debe estar presente
+    if (!cantidad && !precio_unitario) {
+      return errorResponse(
+        res,
+        'Debe proporcionar al menos cantidad o precio_unitario',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    // Obtener información del item actual
+    const itemResult = await query(
+      `SELECT cad.*, ca.empresa_id, ca.estado, p.nombre as producto_nombre
+       FROM cuenta_abierta_detalle cad
+       INNER JOIN cuentas_abiertas ca ON cad.cuenta_abierta_id = ca.id
+       INNER JOIN productos p ON cad.producto_id = p.id
+       WHERE cad.id = ? AND cad.cuenta_abierta_id = ?`,
+      [itemId, id]
+    );
+
+    if (itemResult.length === 0) {
+      return errorResponse(
+        res,
+        'Item no encontrado',
+        null,
+        CONSTANTS.HTTP_STATUS.NOT_FOUND
+      );
+    }
+
+    const item = itemResult[0];
+
+    if (item.estado !== 'abierta') {
+      return errorResponse(
+        res,
+        'No se puede actualizar un item de una cuenta cerrada',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const cantidadAnterior = item.cantidad;
+    const precioAnterior = item.precio_unitario;
+    const nuevaCantidad = cantidad !== undefined ? parseFloat(cantidad) : cantidadAnterior;
+    const nuevoPrecio = precio_unitario !== undefined ? parseFloat(precio_unitario) : precioAnterior;
+
+    if (nuevaCantidad <= 0) {
+      return errorResponse(
+        res,
+        'La cantidad debe ser mayor a 0',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    // Calcular nuevos totales
+    const subtotal = nuevaCantidad * nuevoPrecio;
+    const ivaValor = item.iva_porcentaje ? (subtotal * item.iva_porcentaje / 100) : 0;
+    const impoconsumoValor = item.impoconsumo_porcentaje ? (subtotal * item.impoconsumo_porcentaje / 100) : 0;
+    const total = subtotal + ivaValor + impoconsumoValor;
+
+    // Actualizar el item
+    await query(
+      `UPDATE cuenta_abierta_detalle 
+       SET cantidad = ?, 
+           precio_unitario = ?,
+           subtotal = ?,
+           iva_valor = ?,
+           impoconsumo_valor = ?,
+           total = ?
+       WHERE id = ?`,
+      [nuevaCantidad, nuevoPrecio, subtotal, ivaValor, impoconsumoValor, total, itemId]
+    );
+
+    // Ajustar inventario si cambió la cantidad
+    if (cantidad !== undefined && nuevaCantidad !== cantidadAnterior) {
+      const diferencia = nuevaCantidad - cantidadAnterior;
+      
+      // Obtener stock actual
+      const productoResult = await query(
+        `SELECT stock_actual FROM productos WHERE id = ?`,
+        [item.producto_id]
+      );
+      const stockAnterior = productoResult[0]?.stock_actual || 0;
+      const stockNuevo = stockAnterior - diferencia; // Si aumentó cantidad, reduce stock
+
+      // Actualizar stock
+      await query(
+        `UPDATE productos 
+         SET stock_actual = stock_actual - ?
+         WHERE id = ?`,
+        [diferencia, item.producto_id]
+      );
+
+      // Registrar movimiento de inventario
+      const tipoMovimiento = diferencia > 0 ? 'salida' : 'entrada';
+      const cantidadMovimiento = Math.abs(diferencia);
+      await query(
+        `INSERT INTO inventario_movimientos (
+          producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, usuario_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          item.producto_id, 
+          tipoMovimiento, 
+          cantidadMovimiento, 
+          stockAnterior, 
+          stockNuevo, 
+          `Actualización cantidad en cuenta abierta #${id}`, 
+          usuarioId
+        ]
+      );
+    }
+
+    // Recalcular totales de la cuenta
+    await recalcularTotalesCuenta(parseInt(id));
+
+    logger.info(`Item ${itemId} actualizado en cuenta ${id}: ${item.producto_nombre} - cantidad: ${cantidadAnterior} → ${nuevaCantidad}`);
+
+    return successResponse(
+      res,
+      'Item actualizado exitosamente',
+      {
+        item_id: itemId,
+        producto_nombre: item.producto_nombre,
+        cantidad_anterior: cantidadAnterior,
+        cantidad_nueva: nuevaCantidad,
+        precio_anterior: precioAnterior,
+        precio_nuevo: nuevoPrecio,
+        total_nuevo: total
+      },
+      CONSTANTS.HTTP_STATUS.OK
+    );
+
+  } catch (error) {
+    logger.error('Error al actualizar item de cuenta:', error);
+    return errorResponse(
+      res,
+      'Error al actualizar item de cuenta',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+/**
  * Eliminar item de cuenta abierta
  * DELETE /api/cuentas-abiertas/:id/items/:itemId
  */
