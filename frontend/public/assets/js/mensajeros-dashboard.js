@@ -5,7 +5,7 @@
 
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3000/api'
-    : 'http://18.191.181.99:3000/api';
+    : 'https://kinventoryservices.com/api';
 
 let currentEmpresaId = null;
 let currentEmpresa = null;
