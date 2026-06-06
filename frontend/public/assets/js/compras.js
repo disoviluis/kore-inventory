@@ -3,7 +3,7 @@
  * JavaScript para módulo de compras
  */
 
-const API_URL = 'http://18.191.181.99:3000/api';
+const API_URL = 'https://kinventoryservices.com/api';
 let currentEmpresa = null;
 let currentUsuario = null;
 let compras = [];

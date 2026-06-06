@@ -6,7 +6,7 @@
  * =================================
  */
 
-const API_URL = 'http://18.191.181.99:3000/api';
+const API_URL = 'https://kinventoryservices.com/api';
 let currentEmpresa = null;
 let currentUsuario = null;
 let proveedoresData = [];
@@ -596,6 +596,21 @@ function obtenerDatosSimuladosRUES(nit) {
             departamento: 'Valle del Cauca',
             telefono: '6026001234',
             email: 'ventas@xyzltda.com'
+        },
+        '860005224': {
+            razon_social: 'EMPRESA CONSULTADA',
+            nombre_comercial: 'Proveedor 860005224',
+            representante_legal: 'Representante Legal',
+            tipo_sociedad: 'SAS',
+            matricula_mercantil: '',
+            camara_comercio: 'Bogotá',
+            fecha_matricula: '',
+            actividad_economica: '',
+            direccion: '',
+            ciudad: 'Bogotá',
+            departamento: 'Cundinamarca',
+            telefono: '',
+            email: ''
         }
     };
     
