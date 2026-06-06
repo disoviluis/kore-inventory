@@ -3166,16 +3166,26 @@ function seleccionarProductoCatalogo(productoId) {
  * Agregar producto desde catálogo
  */
 function agregarProductoDesdeCatalogo(productoId) {
+    console.log('🔵 agregarProductoDesdeCatalogo llamado con ID:', productoId);
+    console.log('Stack trace:', new Error().stack);
     const producto = todosCatalogo.find(p => p.id === productoId);
     if (producto) {
+        console.log('✅ Producto encontrado:', producto.nombre);
         agregarProducto(producto);
+    } else {
+        console.error('❌ Producto no encontrado con ID:', productoId);
     }
 }
 
+// Variable global para evitar duplicar el listener
+let listenerTecladoAgregado = false;
+
 /**
- * Agregar listener para tecla Enter en catálogo
+ * Agregar listener para tecla Enter en catálogo (solo una vez)
  */
 function agregarListenerTeclado() {
+    if (listenerTecladoAgregado) return; // Ya existe, no agregar de nuevo
+    
     document.addEventListener('keydown', function(e) {
         // Ignorar si el Enter se presiona dentro de un input, textarea o select
         const elementoActivo = document.activeElement;
@@ -3185,6 +3195,8 @@ function agregarListenerTeclado() {
             agregarProductoDesdeCatalogo(productoSeleccionadoCatalogo);
         }
     });
+    
+    listenerTecladoAgregado = true; // Marcar como agregado
 }
 // ============================================
 // CLIENTE PÚBLICO GENERAL
@@ -4018,6 +4030,8 @@ async function confirmarAbrirCuenta() {
  * Cargar una cuenta abierta para editarla
  */
 async function cargarCuentaAbierta(cuentaId) {
+    console.log('🔄 === cargarCuentaAbierta ===');
+    console.log('cuentaId:', cuentaId);
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(
@@ -4033,9 +4047,12 @@ async function cargarCuentaAbierta(cuentaId) {
         }
         
         const data = await response.json();
+        console.log('📥 Datos recibidos del backend:', data);
         if (!data.success) {
             throw new Error(data.message);
         }
+        
+        console.log('📊 Items recibidos:', data.data.items);
         
         // Cargar datos de la cuenta
         cuentaActual = data.data.cuenta;
@@ -4054,7 +4071,7 @@ async function cargarCuentaAbierta(cuentaId) {
             console.log('Cliente cargado:', clienteSeleccionado);
         }
         
-        // Cargar productos
+        // Cargar productos con todos los campos necesarios
         productosVenta = data.data.items.map(item => ({
             id: item.id,
             producto_id: item.producto_id,
@@ -4062,7 +4079,9 @@ async function cargarCuentaAbierta(cuentaId) {
             sku: item.producto_sku,
             cantidad: parseFloat(item.cantidad) || 0,
             precio_unitario: parseFloat(item.precio_unitario) || 0,
+            precio_minorista: parseFloat(item.precio_unitario) || 0,
             subtotal: parseFloat(item.subtotal) || 0,
+            stock_disponible: 999, // En modo edición no validamos stock
             aplica_iva: item.aplica_iva || false,
             porcentaje_iva: parseFloat(item.porcentaje_iva) || 0,
             iva_porcentaje: parseFloat(item.iva_porcentaje) || 0,
@@ -4072,7 +4091,10 @@ async function cargarCuentaAbierta(cuentaId) {
             total: parseFloat(item.total) || 0
         }));
         
+        console.log('✅ productosVenta cargados desde backend:', productosVenta);
+        
         // Renderizar y mostrar botones apropiados
+        console.log('🎨 Renderizando productos...');
         renderizarProductos();
         calcularTotales();
         mostrarModoEdicionCuenta();
@@ -4356,6 +4378,7 @@ async function agregarItemACuentaAbierta(producto) {
     console.log('=== agregarItemACuentaAbierta ===');
     console.log('cuentaActual:', cuentaActual);
     console.log('producto:', producto);
+    console.log('Stack trace:', new Error().stack);
     
     if (!cuentaActual || !cuentaActual.id) {
         console.error('No hay cuenta actual o no tiene ID');
@@ -4379,7 +4402,7 @@ async function agregarItemACuentaAbierta(producto) {
             impoconsumo_porcentaje: producto.impoconsumo_porcentaje || 0
         };
         
-        console.log('Enviando al backend:', payload);
+        console.log('📤 Enviando al backend:', payload);
         
         const response = await fetch(
             `${API_URL}/cuentas-abiertas/${cuentaActual.id}/items`,
@@ -4393,7 +4416,7 @@ async function agregarItemACuentaAbierta(producto) {
             }
         );
         
-        console.log('Respuesta del backend:', response.status);
+        console.log('📥 Respuesta del backend:', response.status);
         
         if (response.status === 401) {
             handleUnauthorized();
@@ -4401,18 +4424,19 @@ async function agregarItemACuentaAbierta(producto) {
         }
         
         const data = await response.json();
-        console.log('Data del backend:', data);
+        console.log('📊 Data del backend:', data);
         
         if (!data.success) {
             throw new Error(data.message);
         }
         
         // Recargar la cuenta actualizada
+        console.log('🔄 Recargando cuenta actualizada...');
         await cargarCuentaAbierta(cuentaActual.id);
         mostrarAlerta('Producto agregado a la cuenta', 'success');
         
     } catch (error) {
-        console.error('Error al agregar item:', error);
+        console.error('❌ Error al agregar item:', error);
         mostrarAlerta('Error al agregar producto: ' + error.message, 'error');
     }
 }
