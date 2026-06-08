@@ -336,20 +336,35 @@ function nuevoTraslado() {
 
 async function onBodegaOrigenChange() {
     const bodegaId = document.getElementById('bodegaOrigen').value;
-    
+    const searchInput = document.getElementById('searchProducto');
+    const btnVerTodos = document.getElementById('btnBuscarProducto');
+    const hint = document.getElementById('hintBodegaOrigen');
+    const dropdown = document.getElementById('dropdownProductos');
+
+    // Limpiar búsqueda y dropdown
+    searchInput.value = '';
+    dropdown.style.display = 'none';
+
     if (!bodegaId) {
-        document.getElementById('searchProducto').disabled = true;
-        document.getElementById('btnBuscarProducto').disabled = true;
+        searchInput.disabled = true;
+        btnVerTodos.disabled = true;
         productosDisponibles = [];
+        if (hint) hint.innerHTML = '<i class="bi bi-info-circle me-1"></i>Primero selecciona la bodega origen para ver productos disponibles';
         return;
     }
 
-    // Habilitar búsqueda
-    document.getElementById('searchProducto').disabled = false;
-    document.getElementById('btnBuscarProducto').disabled = false;
+    searchInput.disabled = false;
+    btnVerTodos.disabled = false;
+    if (hint) hint.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Cargando productos de la bodega...';
 
-    // Cargar productos de esa bodega
     await loadProductosBodega(bodegaId);
+
+    if (hint) {
+        const total = productosDisponibles.length;
+        hint.innerHTML = total > 0
+            ? `<i class="bi bi-check-circle text-success me-1"></i>${total} productos con stock disponible. Escribe para buscar.`
+            : '<i class="bi bi-exclamation-triangle text-warning me-1"></i>Esta bodega no tiene productos con stock disponible';
+    }
 }
 
 async function loadProductosBodega(bodegaId) {
@@ -369,6 +384,78 @@ async function loadProductosBodega(bodegaId) {
         }
     } catch (error) {
         console.error('Error loading productos:', error);
+    }
+}
+
+// ==========================================
+// BÚSQUEDA EN TIEMPO REAL (DROPDOWN)
+// ==========================================
+
+function onSearchProductoInput() {
+    const term = document.getElementById('searchProducto').value.trim().toLowerCase();
+    const dropdown = document.getElementById('dropdownProductos');
+
+    if (!term || productosDisponibles.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+    }
+
+    const filtrados = productosDisponibles.filter(p =>
+        (p.nombre && p.nombre.toLowerCase().includes(term)) ||
+        (p.sku && p.sku.toLowerCase().includes(term)) ||
+        (p.codigo && p.codigo.toLowerCase().includes(term)) ||
+        (p.producto_codigo && p.producto_codigo.toLowerCase().includes(term))
+    );
+
+    if (filtrados.length === 0) {
+        dropdown.innerHTML = `
+            <div class="px-3 py-2 text-muted small">
+                <i class="bi bi-search me-1"></i>Sin resultados para "${term}"
+            </div>`;
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    dropdown.innerHTML = filtrados.map(p => {
+        const yaAgregado = productosSeleccionados.find(ps => ps.producto_id === p.producto_id);
+        const nombre = p.nombre || 'Sin nombre';
+        const codigo = p.sku || p.codigo || p.producto_codigo || '';
+        return `
+            <div class="dropdown-item-producto px-3 py-2 border-bottom ${ yaAgregado ? 'bg-light' : '' }" 
+                 style="cursor:${yaAgregado ? 'default' : 'pointer'};"
+                 ${!yaAgregado ? `onclick="seleccionarProductoDropdown(${p.producto_id}, '${nombre.replace(/'/g, "\\'")}'  , ${p.stock_disponible})"` : ''}>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${nombre}</strong>
+                        ${codigo ? `<br><small class="text-muted">SKU: ${codigo}</small>` : ''}
+                    </div>
+                    <div class="text-end ms-3">
+                        ${yaAgregado
+                            ? '<span class="badge bg-secondary">Agregado</span>'
+                            : `<span class="badge bg-success">${p.stock_disponible} disp.</span>`
+                        }
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+
+    dropdown.style.display = 'block';
+}
+
+function seleccionarProductoDropdown(productoId, productoNombre, stockDisponible) {
+    // Cerrar dropdown y limpiar input
+    document.getElementById('dropdownProductos').style.display = 'none';
+    document.getElementById('searchProducto').value = '';
+
+    // Reusar la función ya existente
+    agregarProducto(productoId, productoNombre, stockDisponible);
+}
+
+function cerrarDropdownProductos(e) {
+    const dropdown = document.getElementById('dropdownProductos');
+    const searchInput = document.getElementById('searchProducto');
+    if (dropdown && !dropdown.contains(e.target) && e.target !== searchInput) {
+        dropdown.style.display = 'none';
     }
 }
 
@@ -938,8 +1025,21 @@ function initializeEventListeners() {
     // Bodega origen change
     document.getElementById('bodegaOrigen').addEventListener('change', onBodegaOrigenChange);
 
-    // Buscar productos
+    // Búsqueda en tiempo real al escribir
+    document.getElementById('searchProducto').addEventListener('input', onSearchProductoInput);
+
+    // Tecla ESC cierra el dropdown
+    document.getElementById('searchProducto').addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.getElementById('dropdownProductos').style.display = 'none';
+        }
+    });
+
+    // Botón "Ver todos" abre el modal con todos los productos
     document.getElementById('btnBuscarProducto').addEventListener('click', abrirModalProductos);
+
+    // Cerrar dropdown al hacer click fuera
+    document.addEventListener('click', cerrarDropdownProductos);
     
     // Search en modal productos
     const searchProductoModal = document.getElementById('searchProductoModal');
