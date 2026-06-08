@@ -472,10 +472,10 @@ async function viewStock(bodegaId, bodegaNombre) {
             } else {
                 tbody.innerHTML = result.data.map(item => `
                     <tr>
-                        <td><span class="badge bg-secondary">${item.producto_codigo}</span></td>
+                        <td><span class="badge bg-secondary">${item.sku || '-'}</span></td>
                         <td>
                             <strong>${item.producto_nombre}</strong>
-                            ${item.producto_referencia ? `<br><small class="text-muted">Ref: ${item.producto_referencia}</small>` : ''}
+                            ${item.codigo_barras ? `<br><small class="text-muted">Cód. barras: ${item.codigo_barras}</small>` : ''}
                         </td>
                         <td class="text-center">
                             <span class="badge bg-primary">${item.stock_actual}</span>
