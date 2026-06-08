@@ -401,10 +401,9 @@ function onSearchProductoInput() {
     }
 
     const filtrados = productosDisponibles.filter(p =>
-        (p.nombre && p.nombre.toLowerCase().includes(term)) ||
+        (p.producto_nombre && p.producto_nombre.toLowerCase().includes(term)) ||
         (p.sku && p.sku.toLowerCase().includes(term)) ||
-        (p.codigo && p.codigo.toLowerCase().includes(term)) ||
-        (p.producto_codigo && p.producto_codigo.toLowerCase().includes(term))
+        (p.codigo_barras && p.codigo_barras.toLowerCase().includes(term))
     );
 
     if (filtrados.length === 0) {
@@ -418,8 +417,8 @@ function onSearchProductoInput() {
 
     dropdown.innerHTML = filtrados.map(p => {
         const yaAgregado = productosSeleccionados.find(ps => ps.producto_id === p.producto_id);
-        const nombre = p.nombre || 'Sin nombre';
-        const codigo = p.sku || p.codigo || p.producto_codigo || '';
+        const nombre = p.producto_nombre || 'Sin nombre';
+        const codigo = p.sku || p.codigo_barras || '';
         return `
             <div class="dropdown-item-producto px-3 py-2 border-bottom ${ yaAgregado ? 'bg-light' : '' }" 
                  style="cursor:${yaAgregado ? 'default' : 'pointer'};"
@@ -485,8 +484,9 @@ function renderListaProductos() {
     
     if (searchTerm) {
         productos = productos.filter(p => 
-            p.nombre.toLowerCase().includes(searchTerm) ||
-            p.codigo?.toLowerCase().includes(searchTerm)
+            (p.producto_nombre && p.producto_nombre.toLowerCase().includes(searchTerm)) ||
+            (p.sku && p.sku.toLowerCase().includes(searchTerm)) ||
+            (p.codigo_barras && p.codigo_barras.toLowerCase().includes(searchTerm))
         );
     }
 
@@ -508,8 +508,8 @@ function renderListaProductos() {
                 <div class="card-body py-2">
                     <div class="row align-items-center">
                         <div class="col-md-6">
-                            <strong>${p.nombre}</strong><br>
-                            <small class="text-muted">Código: ${p.codigo || 'N/A'}</small>
+                            <strong>${p.producto_nombre}</strong><br>
+                            <small class="text-muted">SKU: ${p.sku || 'N/A'}</small>
                         </div>
                         <div class="col-md-3 text-center">
                             <small class="text-muted">Disponible</small><br>
@@ -518,7 +518,7 @@ function renderListaProductos() {
                         <div class="col-md-3 text-end">
                             ${yaAgregado 
                                 ? `<span class="badge bg-secondary">Agregado</span>`
-                                : `<button class="btn btn-sm btn-primary" onclick="agregarProducto(${p.producto_id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.stock_disponible})">
+                                : `<button class="btn btn-sm btn-primary" onclick="agregarProducto(${p.producto_id}, '${p.producto_nombre.replace(/'/g, "\\'")}', ${p.stock_disponible})">
                                     <i class="bi bi-plus-circle"></i> Agregar
                                 </button>`
                             }
