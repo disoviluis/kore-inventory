@@ -370,7 +370,7 @@ async function onBodegaOrigenChange() {
 async function loadProductosBodega(bodegaId) {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/bodegas/${bodegaId}/stock`, {
+        const response = await fetch(`${API_URL}/bodegas/${bodegaId}/stock?empresa_id=${currentEmpresaId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
