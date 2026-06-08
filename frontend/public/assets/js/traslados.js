@@ -133,13 +133,20 @@ async function loadTraslados() {
 function populateBodegasSelects() {
     const selectOrigen = document.getElementById('bodegaOrigen');
     const selectDestino = document.getElementById('bodegaDestino');
-    
-    const options = allBodegas.map(b => 
+
+    // Solo mostrar bodegas activas para traslados
+    const bodegasActivas = allBodegas.filter(b => b.estado === 'activa');
+
+    const options = bodegasActivas.map(b => 
         `<option value="${b.id}">${b.nombre} - ${b.tipo}</option>`
     ).join('');
-    
-    selectOrigen.innerHTML = '<option value="">Seleccionar bodega...</option>' + options;
-    selectDestino.innerHTML = '<option value="">Seleccionar bodega...</option>' + options;
+
+    const emptyMsg = bodegasActivas.length === 0 
+        ? '<option value="" disabled>No hay bodegas activas disponibles</option>'
+        : '';
+
+    selectOrigen.innerHTML = '<option value="">Seleccionar bodega...</option>' + emptyMsg + options;
+    selectDestino.innerHTML = '<option value="">Seleccionar bodega...</option>' + emptyMsg + options;
 }
 
 function populateBodegaFilter() {
