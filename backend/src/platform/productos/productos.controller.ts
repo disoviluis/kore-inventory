@@ -501,6 +501,23 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
       values
     );
 
+    // Si se actualizó stock_actual, sincronizar con bodega principal
+    if (stock_actual !== undefined) {
+      const bodegaPrincipal: any[] = await query(
+        'SELECT id FROM bodegas WHERE empresa_id = ? AND es_principal = TRUE AND estado = "activa" LIMIT 1',
+        [productoExiste[0].empresa_id]
+      );
+
+      if (bodegaPrincipal.length > 0) {
+        await query(
+          `INSERT INTO productos_bodegas (producto_id, bodega_id, stock_actual)
+           VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE stock_actual = ?`,
+          [id, bodegaPrincipal[0].id, stock_actual, stock_actual]
+        );
+      }
+    }
+
     logger.info(`Producto actualizado: ${id}`);
     
     return successResponse(
