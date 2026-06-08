@@ -714,7 +714,8 @@ async function guardarTraslado() {
         if (tipoFlujo === 'directo') {
             const confirmResp = await fetch(`${API_URL}/traslados/${trasladoId}/confirmar`, {
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ empresa_id: currentEmpresaId })
             });
             const confirmResult = await confirmResp.json();
             if (!confirmResult.success) throw new Error(confirmResult.message);
@@ -937,6 +938,17 @@ async function enviarTraslado(trasladoId) {
     }
 }
 
+async function editarTraslado(trasladoId) {
+    // Traslados en borrador no tienen edición compleja por ahora
+    // Se puede cancelar y crear uno nuevo
+    Swal.fire({
+        icon: 'info',
+        title: 'Editar traslado',
+        text: 'Para modificar un traslado en borrador, cancélalo y crea uno nuevo con los datos correctos.',
+        confirmButtonText: 'Entendido'
+    });
+}
+
 async function confirmarTrasladoDirecto(trasladoId) {
     const result = await Swal.fire({
         title: '¿Confirmar y ejecutar traslado?',
@@ -953,7 +965,8 @@ async function confirmarTrasladoDirecto(trasladoId) {
         const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/traslados/${trasladoId}/confirmar`, {
             method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empresa_id: currentEmpresaId })
         });
 
         const res = await response.json();
