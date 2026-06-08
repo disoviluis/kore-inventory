@@ -576,8 +576,10 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
             renderProductosSeleccionados();
             renderListaProductos(); // Actualizar lista
             
-            // Cerrar modal de productos
-            bootstrap.Modal.getInstance(document.getElementById('modalProductos')).hide();
+            // Cerrar modal de productos (solo si está abierto)
+            const modalProductosEl = document.getElementById('modalProductos');
+            const modalProductosInstance = modalProductosEl ? bootstrap.Modal.getInstance(modalProductosEl) : null;
+            if (modalProductosInstance) modalProductosInstance.hide();
         }
     });
 }
@@ -679,7 +681,7 @@ async function guardarTraslado() {
         destinatario_documento: document.getElementById('destinatarioDocumento').value || null,
         destinatario_telefono: document.getElementById('destinatarioTelefono').value || null,
         destinatario_cargo: document.getElementById('destinatarioCargo').value || null,
-        detalle: productosSeleccionados.map(p => ({
+        productos: productosSeleccionados.map(p => ({
             producto_id: p.producto_id,
             cantidad_solicitada: p.cantidad_solicitada
         }))
