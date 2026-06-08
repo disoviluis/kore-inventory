@@ -422,6 +422,108 @@ export const createTraslado = async (req: Request, res: Response) => {
 };
 
 /**
+ * PUT /api/traslados/:id/confirmar
+ * Flujo directo: confirma y ejecuta un traslado borrador en un solo paso
+ * Mueve el stock directamente de bodega origen a destino
+ */
+export const confirmarTraslado = async (req: Request, res: Response) => {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const { id } = req.params;
+    const usuario = (req as any).user;
+
+    // Obtener traslado
+    const [traslados] = await connection.query<RowDataPacket[]>(
+      'SELECT * FROM traslados WHERE id = ?',
+      [id]
+    );
+
+    if (traslados.length === 0) {
+      res.status(404).json({ success: false, message: 'Traslado no encontrado' });
+      return;
+    }
+
+    const traslado = traslados[0];
+
+    if (traslado.estado !== 'borrador') {
+      res.status(400).json({ success: false, message: 'Solo se pueden confirmar traslados en borrador' });
+      return;
+    }
+
+    // Obtener detalle
+    const [detalle] = await connection.query<RowDataPacket[]>(
+      'SELECT producto_id, cantidad_solicitada FROM traslados_detalle WHERE traslado_id = ?',
+      [id]
+    );
+
+    // Validar stock disponible y mover
+    for (const item of detalle) {
+      const [stock] = await connection.query<RowDataPacket[]>(
+        'SELECT stock_disponible FROM productos_bodegas WHERE producto_id = ? AND bodega_id = ?',
+        [item.producto_id, traslado.bodega_origen_id]
+      );
+
+      if (stock.length === 0 || stock[0].stock_disponible < item.cantidad_solicitada) {
+        throw new Error(`Stock insuficiente para producto ID ${item.producto_id}`);
+      }
+
+      // Descontar de origen
+      await connection.query(
+        'UPDATE productos_bodegas SET stock_actual = stock_actual - ? WHERE producto_id = ? AND bodega_id = ?',
+        [item.cantidad_solicitada, item.producto_id, traslado.bodega_origen_id]
+      );
+
+      // Agregar a destino (INSERT o UPDATE)
+      const [stockDestino] = await connection.query<RowDataPacket[]>(
+        'SELECT id FROM productos_bodegas WHERE producto_id = ? AND bodega_id = ?',
+        [item.producto_id, traslado.bodega_destino_id]
+      );
+
+      if (stockDestino.length > 0) {
+        await connection.query(
+          'UPDATE productos_bodegas SET stock_actual = stock_actual + ? WHERE producto_id = ? AND bodega_id = ?',
+          [item.cantidad_solicitada, item.producto_id, traslado.bodega_destino_id]
+        );
+      } else {
+        await connection.query(
+          'INSERT INTO productos_bodegas (producto_id, bodega_id, stock_actual) VALUES (?, ?, ?)',
+          [item.producto_id, traslado.bodega_destino_id, item.cantidad_solicitada]
+        );
+      }
+
+      // Marcar cantidad aprobada y recibida en detalle
+      await connection.query(
+        'UPDATE traslados_detalle SET cantidad_aprobada = ?, cantidad_recibida = ? WHERE traslado_id = ? AND producto_id = ?',
+        [item.cantidad_solicitada, item.cantidad_solicitada, id, item.producto_id]
+      );
+    }
+
+    // Cambiar estado a recibido
+    await connection.query(
+      `UPDATE traslados SET estado = 'recibido', fecha_aprobacion = NOW(), fecha_envio = NOW(), fecha_recepcion = NOW(),
+       usuario_aprueba_id = ?, usuario_envia_id = ?, usuario_recibe_id = ? WHERE id = ?`,
+      [usuario.id, usuario.id, usuario.id, id]
+    );
+
+    await connection.commit();
+
+    logger.info(`Traslado confirmado directamente: ${traslado.numero_traslado}`);
+
+    res.json({ success: true, message: 'Traslado confirmado y ejecutado exitosamente' });
+
+  } catch (error: any) {
+    await connection.rollback();
+    logger.error('Error al confirmar traslado:', error);
+    res.status(500).json({ success: false, message: 'Error al confirmar traslado', error: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+/**
  * PUT /api/traslados/:id/aprobar
  * Aprueba un traslado pendiente
  */

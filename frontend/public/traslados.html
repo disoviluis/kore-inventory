@@ -522,6 +522,25 @@
                                     <i class="bi bi-info-circle me-2"></i>Información del Traslado
                                 </h6>
                             </div>
+
+                            <!-- Tipo de flujo -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Tipo de flujo</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="tipoFlujo" id="flujoDirecto" value="directo" checked>
+                                        <label class="form-check-label" for="flujoDirecto">
+                                            <strong>Directo</strong> <small class="text-muted">— se ejecuta inmediatamente</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="tipoFlujo" id="flujoCompleto" value="completo">
+                                        <label class="form-check-label" for="flujoCompleto">
+                                            <strong>Completo</strong> <small class="text-muted">— aprobación → envío → recepción</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                             
                             <div class="col-md-6">
                                 <label class="form-label">Bodega Origen <span class="text-danger">*</span></label>

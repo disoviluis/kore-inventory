@@ -275,6 +275,9 @@ function getAccionesBotones(traslado) {
             <button class="btn btn-outline-warning" onclick="editarTraslado(${traslado.id})" title="Editar">
                 <i class="bi bi-pencil"></i>
             </button>
+            <button class="btn btn-outline-success" onclick="confirmarTrasladoDirecto(${traslado.id})" title="Confirmar y ejecutar">
+                <i class="bi bi-lightning-fill"></i>
+            </button>
         `;
     }
 
@@ -672,6 +675,8 @@ async function guardarTraslado() {
         return;
     }
 
+    const tipoFlujo = document.querySelector('input[name="tipoFlujo"]:checked')?.value || 'directo';
+
     const traslado = {
         empresa_id: currentEmpresaId,
         bodega_origen_id: bodegaOrigenId,
@@ -700,26 +705,31 @@ async function guardarTraslado() {
 
         const result = await response.json();
 
-        if (result.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Traslado Creado',
-                text: `Número: ${result.data.numero_traslado}`,
-                timer: 2000
-            });
+        if (!result.success) throw new Error(result.message);
 
-            bootstrap.Modal.getInstance(document.getElementById('modalTraslado')).hide();
-            await loadTraslados();
+        const trasladoId = result.data.id;
+        const numeroTraslado = result.data.numero_traslado;
+
+        // Si es flujo directo, confirmar inmediatamente
+        if (tipoFlujo === 'directo') {
+            const confirmResp = await fetch(`${API_URL}/traslados/${trasladoId}/confirmar`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+            const confirmResult = await confirmResp.json();
+            if (!confirmResult.success) throw new Error(confirmResult.message);
+
+            Swal.fire({ icon: 'success', title: 'Traslado Ejecutado', text: `${numeroTraslado} completado. Stock actualizado.`, timer: 2500 });
         } else {
-            throw new Error(result.message);
+            Swal.fire({ icon: 'success', title: 'Traslado Creado', text: `Número: ${numeroTraslado}`, timer: 2000 });
         }
+
+        bootstrap.Modal.getInstance(document.getElementById('modalTraslado')).hide();
+        await loadTraslados();
+
     } catch (error) {
         console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudo crear el traslado: ' + error.message
-        });
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo procesar el traslado: ' + error.message });
     }
 }
 
@@ -924,6 +934,37 @@ async function enviarTraslado(trasladoId) {
         } catch (error) {
             Swal.fire('Error', error.message, 'error');
         }
+    }
+}
+
+async function confirmarTrasladoDirecto(trasladoId) {
+    const result = await Swal.fire({
+        title: '¿Confirmar y ejecutar traslado?',
+        text: 'El stock se moverá inmediatamente a la bodega destino.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, ejecutar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/traslados/${trasladoId}/confirmar`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+
+        const res = await response.json();
+        if (res.success) {
+            Swal.fire({ icon: 'success', title: 'Ejecutado', text: 'Stock actualizado exitosamente.', timer: 2000 });
+            await loadTraslados();
+        } else {
+            throw new Error(res.message);
+        }
+    } catch (error) {
+        Swal.fire('Error', error.message, 'error');
     }
 }
 
