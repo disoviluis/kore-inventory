@@ -2716,6 +2716,32 @@ let productoSinStockActual = null;
 let indexProductoSinStock = -1;
 
 /**
+ * Modal de stock insuficiente en bodega del cajero
+ */
+function mostrarModalStockInsuficienteBodega(producto, stockEnTienda, disponibilidadOtrasBodegas) {
+    document.getElementById('msgStockBodegaProducto').innerHTML =
+        `<strong>${producto.nombre}</strong> — Stock en esta tienda: <span class="text-danger fw-bold">${stockEnTienda}</span>`;
+
+    const filas = disponibilidadOtrasBodegas.length > 0
+        ? disponibilidadOtrasBodegas.map(b => `
+            <tr>
+                <td>${b.bodega_nombre}</td>
+                <td class="text-center"><span class="badge bg-${b.tipo}">${b.bodega_tipo}</span></td>
+                <td class="text-center fw-bold ${b.stock_disponible > 0 ? 'text-success' : 'text-muted'}">${b.stock_disponible}</td>
+            </tr>`).join('')
+        : '<tr><td colspan="3" class="text-center text-muted">No hay stock en ninguna bodega</td></tr>';
+
+    document.getElementById('tablaDisponibilidadBodegas').innerHTML = `
+        <p class="text-muted small mb-2">Disponibilidad en otras ubicaciones:</p>
+        <table class="table table-sm table-bordered mb-0">
+            <thead class="table-light"><tr><th>Bodega / Tienda</th><th class="text-center">Tipo</th><th class="text-center">Disponible</th></tr></thead>
+            <tbody>${filas}</tbody>
+        </table>`;
+
+    new bootstrap.Modal(document.getElementById('modalStockInsuficienteBodega')).show();
+}
+
+/**
  * Mostrar modal para confirmar venta sin stock
  */
 function mostrarModalVentaSinStock(producto, index) {
@@ -4442,6 +4468,11 @@ async function agregarItemACuentaAbierta(producto) {
         console.log('📊 Data del backend:', data);
         
         if (!data.success) {
+            // Stock insuficiente en la bodega del cajero
+            if (response.status === 400 && data.error && data.error.disponibilidad_otras_bodegas !== undefined) {
+                mostrarModalStockInsuficienteBodega(producto, data.error.stock_en_tienda, data.error.disponibilidad_otras_bodegas);
+                return;
+            }
             throw new Error(data.message);
         }
         

@@ -320,6 +320,7 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     } = req.body;
 
     const usuarioId = (req as any).user?.id;
+    const bodegaId = (req as any).user?.bodega_id || null;
 
     // Validaciones
     if (!id || !producto_id || !precio_unitario) {
@@ -376,12 +377,35 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
 
     const producto = productoResult[0];
 
-    // Verificar stock
-    if (!producto.permite_venta_sin_stock && producto.stock_actual < cantidad) {
+    // Verificar stock según si el cajero tiene bodega asignada o no
+    let stockDisponible = producto.stock_actual;
+
+    if (bodegaId) {
+      // Verificar stock en la bodega específica del cajero
+      const stockBodegaResult = await query(
+        `SELECT stock_disponible FROM productos_bodegas WHERE producto_id = ? AND bodega_id = ?`,
+        [producto_id, bodegaId]
+      );
+      stockDisponible = stockBodegaResult.length > 0 ? stockBodegaResult[0].stock_disponible : 0;
+    }
+
+    // Verificar stock insuficiente
+    if (!producto.permite_venta_sin_stock && stockDisponible < cantidad) {
+      // Obtener disponibilidad en otras bodegas de la empresa
+      const cuentaEmpresaId = cuentaResult[0].empresa_id;
+      const otrasBogegas = await query(
+        `SELECT b.nombre as bodega_nombre, b.tipo, pb.stock_disponible
+         FROM productos_bodegas pb
+         INNER JOIN bodegas b ON pb.bodega_id = b.id
+         WHERE pb.producto_id = ? AND b.empresa_id = ? AND pb.stock_disponible > 0
+         ORDER BY pb.stock_disponible DESC`,
+        [producto_id, cuentaEmpresaId]
+      );
+
       return errorResponse(
         res,
-        `Stock insuficiente. Disponible: ${producto.stock_actual}`,
-        null,
+        `Stock insuficiente en esta tienda. Disponible: ${stockDisponible}`,
+        { stock_en_tienda: stockDisponible, disponibilidad_otras_bodegas: otrasBogegas },
         CONSTANTS.HTTP_STATUS.BAD_REQUEST
       );
     }
@@ -414,13 +438,21 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     const stockAnterior = producto.stock_actual;
     const stockNuevo = stockAnterior - cantidad;
 
-    // Descontar del inventario
+    // Descontar del inventario global
     await query(
       `UPDATE productos 
        SET stock_actual = stock_actual - ?
        WHERE id = ?`,
       [cantidad, producto_id]
     );
+
+    // Descontar del inventario de la bodega del cajero (si tiene bodega asignada)
+    if (bodegaId) {
+      await query(
+        `UPDATE productos_bodegas SET stock_actual = stock_actual - ? WHERE producto_id = ? AND bodega_id = ?`,
+        [cantidad, producto_id, bodegaId]
+      );
+    }
 
     // Registrar movimiento de inventario
     await query(

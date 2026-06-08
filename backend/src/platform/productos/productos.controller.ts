@@ -18,6 +18,8 @@ import logger from '../../shared/logger';
 export const getProductos = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { empresaId } = req.query;
+    const usuario = (req as any).user;
+    const bodegaId = usuario?.bodega_id || null;
 
     if (!empresaId) {
       return errorResponse(
@@ -27,6 +29,19 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         CONSTANTS.HTTP_STATUS.BAD_REQUEST
       );
     }
+
+    // Si el usuario tiene bodega asignada, devolver stock de esa bodega
+    const stockField = bodegaId
+      ? `COALESCE(pb.stock_actual, 0) as stock_actual,
+         COALESCE(pb.stock_disponible, 0) as stock_disponible,
+         COALESCE(pb.stock_reservado, 0) as stock_reservado`
+      : `p.stock_actual,
+         p.stock_actual as stock_disponible,
+         0 as stock_reservado`;
+
+    const joinBodega = bodegaId
+      ? `LEFT JOIN productos_bodegas pb ON pb.producto_id = p.id AND pb.bodega_id = ${parseInt(bodegaId as string)}`
+      : '';
 
     const productos = await query(
       `SELECT 
@@ -50,7 +65,7 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         p.porcentaje_iva,
         p.tipo_impuesto,
         p.iva_incluido_en_precio,
-        p.stock_actual,
+        ${stockField},
         p.stock_minimo,
         p.stock_maximo,
         p.unidad_medida,
@@ -65,7 +80,6 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         p.created_at,
         p.updated_at,
         p.fecha_ultimo_cambio_precio,
-        -- Cálculo de márgenes
         ROUND(((p.precio_minorista - p.precio_compra) / p.precio_compra) * 100, 2) as margen_minorista,
         CASE 
           WHEN p.precio_mayorista IS NOT NULL AND p.precio_compra > 0 THEN
@@ -79,6 +93,7 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         END as margen_distribuidor
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
+      ${joinBodega}
       WHERE p.empresa_id = ?
       ORDER BY p.nombre ASC`,
       [empresaId]
@@ -530,6 +545,41 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
   } catch (error) {
     logger.error('Error al actualizar producto:', error);
     return errorResponse(res, 'Error al actualizar producto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+/**
+ * GET /api/productos/:id/disponibilidad?empresa_id=X
+ * Devuelve el stock del producto en cada bodega de la empresa
+ */
+export const getDisponibilidadProducto = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { empresa_id } = req.query;
+
+    if (!empresa_id) {
+      return errorResponse(res, 'empresa_id es requerido', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const disponibilidad = await query(
+      `SELECT 
+         b.id as bodega_id,
+         b.nombre as bodega_nombre,
+         b.tipo as bodega_tipo,
+         COALESCE(pb.stock_actual, 0) as stock_actual,
+         COALESCE(pb.stock_disponible, 0) as stock_disponible
+       FROM bodegas b
+       LEFT JOIN productos_bodegas pb ON pb.bodega_id = b.id AND pb.producto_id = ?
+       WHERE b.empresa_id = ? AND b.estado = 'activa'
+       ORDER BY pb.stock_disponible DESC, b.nombre ASC`,
+      [id, empresa_id]
+    );
+
+    return successResponse(res, 'Disponibilidad obtenida', disponibilidad, CONSTANTS.HTTP_STATUS.OK);
+
+  } catch (error) {
+    logger.error('Error al obtener disponibilidad:', error);
+    return errorResponse(res, 'Error al obtener disponibilidad', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
 

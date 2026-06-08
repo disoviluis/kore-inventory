@@ -86,6 +86,8 @@ export const getUsuariosEmpresa = async (req: Request, res: Response): Promise<v
         u.activo,
         u.email_verificado,
         u.ultimo_login,
+        u.bodega_id,
+        b.nombre as bodega_nombre,
         u.created_at,
         u.updated_at,
         GROUP_CONCAT(DISTINCT r.id) as roles_ids,
@@ -94,6 +96,7 @@ export const getUsuariosEmpresa = async (req: Request, res: Response): Promise<v
       INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
       LEFT JOIN usuario_rol ur ON u.id = ur.usuario_id AND ur.empresa_id = ?
       LEFT JOIN roles r ON ur.rol_id = r.id
+      LEFT JOIN bodegas b ON u.bodega_id = b.id
       WHERE ue.empresa_id = ?
         AND ue.activo = 1
         AND u.tipo_usuario != 'super_admin'
@@ -251,7 +254,8 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
       telefono,
       tipo_usuario = 'usuario',
       activo = true,
-      roles_ids = [] // Array de rol_ids a asignar
+      roles_ids = [],
+      bodega_id = null
     } = req.body;
 
     // Validaciones
@@ -322,9 +326,10 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
         nivel_privilegio,
         activo,
         email_verificado,
+        bodega_id,
         created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-      [nombre, apellido || null, email, hashedPassword, telefono || null, tipo_usuario, nivelPrivilegio, activo ? 1 : 0, usuario.id]
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      [nombre, apellido || null, email, hashedPassword, telefono || null, tipo_usuario, nivelPrivilegio, activo ? 1 : 0, bodega_id || null, usuario.id]
     );
 
     const usuarioId = result.insertId;
@@ -467,7 +472,8 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       activo,
       password,
       roles_ids,
-      empresa_id
+      empresa_id,
+      bodega_id
     } = req.body;
 
     // Validar que empresa_id es requerido para admin_empresa
@@ -556,6 +562,11 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       const hashedPassword = await bcrypt.hash(password, 10);
       updates.push('password = ?');
       params.push(hashedPassword);
+    }
+
+    if (bodega_id !== undefined) {
+      updates.push('bodega_id = ?');
+      params.push(bodega_id || null);
     }
 
     if (updates.length > 0) {
