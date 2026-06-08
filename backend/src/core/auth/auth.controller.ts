@@ -29,6 +29,7 @@ interface Usuario {
   activo: number;
   intentos_fallidos: number;
   bloqueado_hasta: Date | null;
+  bodega_id: number | null;
 }
 
 /**
