@@ -723,7 +723,16 @@ function agregarProducto(producto) {
     // Si estamos editando una cuenta abierta, guardar directamente en backend
     if (modoEdicionCuenta && cuentaActual) {
         console.log('Modo edición detectado, guardando en backend...');
-        agregarItemACuentaAbierta(producto);
+        // Buscar si el producto ya existe en la cuenta por producto_id
+        const existingIndex = productosVenta.findIndex(p => p.producto_id === producto.id);
+        if (existingIndex >= 0) {
+            // Ya existe: incrementar cantidad via endpoint PUT
+            console.log('Producto ya existe en cuenta, incrementando cantidad...');
+            cambiarCantidad(existingIndex, 1);
+        } else {
+            // Nuevo producto: agregar al backend via POST
+            agregarItemACuentaAbierta(producto);
+        }
         return;
     }
 
