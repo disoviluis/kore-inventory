@@ -952,6 +952,7 @@ function renderizarProductos() {
 
 async function cambiarCantidad(index, delta) {
     const producto = productosVenta[index];
+    const cantidadAnterior = producto.cantidad; // Guardar cantidad anterior
     const nuevaCantidad = producto.cantidad + delta;
 
     if (nuevaCantidad < 1) {
@@ -972,11 +973,11 @@ async function cambiarCantidad(index, delta) {
     
     // Si estamos editando una cuenta abierta, actualizar en el backend PRIMERO
     if (modoEdicionCuenta && cuentaActual) {
-        const resultado = await actualizarItemEnBackend(index);
+        const resultado = await actualizarItemEnBackend(index, cantidadAnterior);
         if (!resultado) {
             // Si falla, revertir el cambio
-            producto.cantidad -= delta;
-            producto.subtotal = producto.cantidad * precio;
+            producto.cantidad = cantidadAnterior;
+            producto.subtotal = cantidadAnterior * precio;
             mostrarAlerta('Error al actualizar cantidad en el servidor', 'error');
             renderizarProductos();
             return;
@@ -4825,13 +4826,24 @@ async function actualizarItemEnBackend(index, cantidadAnterior = null) {
         
         // Actualizar stock_original en el catálogo si cambió la cantidad
         if (cantidadAnterior !== null && cantidadAnterior !== producto.cantidad) {
-            const productoCatalogo = todosCatalogo.find(p => p.id === producto.producto_id);
+            const diferencia = producto.cantidad - cantidadAnterior;
+            console.log(`📊 Diferencia de cantidad: ${diferencia} (nueva: ${producto.cantidad}, anterior: ${cantidadAnterior})`);
+            
+            // Buscar producto en catálogo (puede estar en producto_id o en id)
+            const productoIdBuscar = producto.producto_id || producto.id;
+            const productoCatalogo = todosCatalogo.find(p => p.id === productoIdBuscar);
+            
             if (productoCatalogo) {
-                const diferencia = producto.cantidad - cantidadAnterior;
+                const stockAnterior = productoCatalogo.stock_original;
                 // Si aumentó cantidad, restar más stock; si disminuyó, devolver stock
                 productoCatalogo.stock_original = Math.max(0, productoCatalogo.stock_original - diferencia);
                 productoCatalogo.stock_actual = productoCatalogo.stock_original;
-                console.log(`📦 Stock actualizado en catálogo: ${productoCatalogo.nombre} → ${productoCatalogo.stock_original}`);
+                console.log(`📦 Stock actualizado en catálogo: ${productoCatalogo.nombre}`);
+                console.log(`   Stock anterior: ${stockAnterior} → Stock nuevo: ${productoCatalogo.stock_original}`);
+                console.log(`   Diferencia aplicada: -${diferencia}`);
+            } else {
+                console.warn(`⚠️ Producto no encontrado en catálogo con ID: ${productoIdBuscar}`);
+                console.warn('   Producto actual:', producto);
             }
         }
         
