@@ -133,13 +133,20 @@ async function loadTraslados() {
 function populateBodegasSelects() {
     const selectOrigen = document.getElementById('bodegaOrigen');
     const selectDestino = document.getElementById('bodegaDestino');
-    
-    const options = allBodegas.map(b => 
+
+    // Solo mostrar bodegas activas para traslados
+    const bodegasActivas = allBodegas.filter(b => b.estado === 'activa');
+
+    const options = bodegasActivas.map(b => 
         `<option value="${b.id}">${b.nombre} - ${b.tipo}</option>`
     ).join('');
-    
-    selectOrigen.innerHTML = '<option value="">Seleccionar bodega...</option>' + options;
-    selectDestino.innerHTML = '<option value="">Seleccionar bodega...</option>' + options;
+
+    const emptyMsg = bodegasActivas.length === 0 
+        ? '<option value="" disabled>No hay bodegas activas disponibles</option>'
+        : '';
+
+    selectOrigen.innerHTML = '<option value="">Seleccionar bodega...</option>' + emptyMsg + options;
+    selectDestino.innerHTML = '<option value="">Seleccionar bodega...</option>' + emptyMsg + options;
 }
 
 function populateBodegaFilter() {
@@ -268,6 +275,9 @@ function getAccionesBotones(traslado) {
             <button class="btn btn-outline-warning" onclick="editarTraslado(${traslado.id})" title="Editar">
                 <i class="bi bi-pencil"></i>
             </button>
+            <button class="btn btn-outline-success" onclick="confirmarTrasladoDirecto(${traslado.id})" title="Confirmar y ejecutar">
+                <i class="bi bi-lightning-fill"></i>
+            </button>
         `;
     }
 
@@ -329,26 +339,41 @@ function nuevoTraslado() {
 
 async function onBodegaOrigenChange() {
     const bodegaId = document.getElementById('bodegaOrigen').value;
-    
+    const searchInput = document.getElementById('searchProducto');
+    const btnVerTodos = document.getElementById('btnBuscarProducto');
+    const hint = document.getElementById('hintBodegaOrigen');
+    const dropdown = document.getElementById('dropdownProductos');
+
+    // Limpiar búsqueda y dropdown
+    searchInput.value = '';
+    dropdown.style.display = 'none';
+
     if (!bodegaId) {
-        document.getElementById('searchProducto').disabled = true;
-        document.getElementById('btnBuscarProducto').disabled = true;
+        searchInput.disabled = true;
+        btnVerTodos.disabled = true;
         productosDisponibles = [];
+        if (hint) hint.innerHTML = '<i class="bi bi-info-circle me-1"></i>Primero selecciona la bodega origen para ver productos disponibles';
         return;
     }
 
-    // Habilitar búsqueda
-    document.getElementById('searchProducto').disabled = false;
-    document.getElementById('btnBuscarProducto').disabled = false;
+    searchInput.disabled = false;
+    btnVerTodos.disabled = false;
+    if (hint) hint.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Cargando productos de la bodega...';
 
-    // Cargar productos de esa bodega
     await loadProductosBodega(bodegaId);
+
+    if (hint) {
+        const total = productosDisponibles.length;
+        hint.innerHTML = total > 0
+            ? `<i class="bi bi-check-circle text-success me-1"></i>${total} productos con stock disponible. Escribe para buscar.`
+            : '<i class="bi bi-exclamation-triangle text-warning me-1"></i>Esta bodega no tiene productos con stock disponible';
+    }
 }
 
 async function loadProductosBodega(bodegaId) {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/bodegas/${bodegaId}/stock`, {
+        const response = await fetch(`${API_URL}/bodegas/${bodegaId}/stock?empresa_id=${currentEmpresaId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -362,6 +387,77 @@ async function loadProductosBodega(bodegaId) {
         }
     } catch (error) {
         console.error('Error loading productos:', error);
+    }
+}
+
+// ==========================================
+// BÚSQUEDA EN TIEMPO REAL (DROPDOWN)
+// ==========================================
+
+function onSearchProductoInput() {
+    const term = document.getElementById('searchProducto').value.trim().toLowerCase();
+    const dropdown = document.getElementById('dropdownProductos');
+
+    if (!term || productosDisponibles.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+    }
+
+    const filtrados = productosDisponibles.filter(p =>
+        (p.producto_nombre && p.producto_nombre.toLowerCase().includes(term)) ||
+        (p.sku && p.sku.toLowerCase().includes(term)) ||
+        (p.codigo_barras && p.codigo_barras.toLowerCase().includes(term))
+    );
+
+    if (filtrados.length === 0) {
+        dropdown.innerHTML = `
+            <div class="px-3 py-2 text-muted small">
+                <i class="bi bi-search me-1"></i>Sin resultados para "${term}"
+            </div>`;
+        dropdown.style.display = 'block';
+        return;
+    }
+
+    dropdown.innerHTML = filtrados.map(p => {
+        const yaAgregado = productosSeleccionados.find(ps => ps.producto_id === p.producto_id);
+        const nombre = p.producto_nombre || 'Sin nombre';
+        const codigo = p.sku || p.codigo_barras || '';
+        return `
+            <div class="dropdown-item-producto px-3 py-2 border-bottom ${ yaAgregado ? 'bg-light' : '' }" 
+                 style="cursor:${yaAgregado ? 'default' : 'pointer'};"
+                 ${!yaAgregado ? `onclick="seleccionarProductoDropdown(${p.producto_id}, '${nombre.replace(/'/g, "\\'")}'  , ${p.stock_disponible})"` : ''}>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${nombre}</strong>
+                        ${codigo ? `<br><small class="text-muted">SKU: ${codigo}</small>` : ''}
+                    </div>
+                    <div class="text-end ms-3">
+                        ${yaAgregado
+                            ? '<span class="badge bg-secondary">Agregado</span>'
+                            : `<span class="badge bg-success">${p.stock_disponible} disp.</span>`
+                        }
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+
+    dropdown.style.display = 'block';
+}
+
+function seleccionarProductoDropdown(productoId, productoNombre, stockDisponible) {
+    // Cerrar dropdown y limpiar input
+    document.getElementById('dropdownProductos').style.display = 'none';
+    document.getElementById('searchProducto').value = '';
+
+    // Reusar la función ya existente
+    agregarProducto(productoId, productoNombre, stockDisponible);
+}
+
+function cerrarDropdownProductos(e) {
+    const dropdown = document.getElementById('dropdownProductos');
+    const searchInput = document.getElementById('searchProducto');
+    if (dropdown && !dropdown.contains(e.target) && e.target !== searchInput) {
+        dropdown.style.display = 'none';
     }
 }
 
@@ -391,8 +487,9 @@ function renderListaProductos() {
     
     if (searchTerm) {
         productos = productos.filter(p => 
-            p.nombre.toLowerCase().includes(searchTerm) ||
-            p.codigo?.toLowerCase().includes(searchTerm)
+            (p.producto_nombre && p.producto_nombre.toLowerCase().includes(searchTerm)) ||
+            (p.sku && p.sku.toLowerCase().includes(searchTerm)) ||
+            (p.codigo_barras && p.codigo_barras.toLowerCase().includes(searchTerm))
         );
     }
 
@@ -414,8 +511,8 @@ function renderListaProductos() {
                 <div class="card-body py-2">
                     <div class="row align-items-center">
                         <div class="col-md-6">
-                            <strong>${p.nombre}</strong><br>
-                            <small class="text-muted">Código: ${p.codigo || 'N/A'}</small>
+                            <strong>${p.producto_nombre}</strong><br>
+                            <small class="text-muted">SKU: ${p.sku || 'N/A'}</small>
                         </div>
                         <div class="col-md-3 text-center">
                             <small class="text-muted">Disponible</small><br>
@@ -424,7 +521,7 @@ function renderListaProductos() {
                         <div class="col-md-3 text-end">
                             ${yaAgregado 
                                 ? `<span class="badge bg-secondary">Agregado</span>`
-                                : `<button class="btn btn-sm btn-primary" onclick="agregarProducto(${p.producto_id}, '${p.nombre.replace(/'/g, "\\'")}', ${p.stock_disponible})">
+                                : `<button class="btn btn-sm btn-primary" onclick="agregarProducto(${p.producto_id}, '${p.producto_nombre.replace(/'/g, "\\'")}', ${p.stock_disponible})">
                                     <i class="bi bi-plus-circle"></i> Agregar
                                 </button>`
                             }
@@ -482,8 +579,10 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
             renderProductosSeleccionados();
             renderListaProductos(); // Actualizar lista
             
-            // Cerrar modal de productos
-            bootstrap.Modal.getInstance(document.getElementById('modalProductos')).hide();
+            // Cerrar modal de productos (solo si está abierto)
+            const modalProductosEl = document.getElementById('modalProductos');
+            const modalProductosInstance = modalProductosEl ? bootstrap.Modal.getInstance(modalProductosEl) : null;
+            if (modalProductosInstance) modalProductosInstance.hide();
         }
     });
 }
@@ -576,6 +675,8 @@ async function guardarTraslado() {
         return;
     }
 
+    const tipoFlujo = document.querySelector('input[name="tipoFlujo"]:checked')?.value || 'directo';
+
     const traslado = {
         empresa_id: currentEmpresaId,
         bodega_origen_id: bodegaOrigenId,
@@ -585,7 +686,7 @@ async function guardarTraslado() {
         destinatario_documento: document.getElementById('destinatarioDocumento').value || null,
         destinatario_telefono: document.getElementById('destinatarioTelefono').value || null,
         destinatario_cargo: document.getElementById('destinatarioCargo').value || null,
-        detalle: productosSeleccionados.map(p => ({
+        productos: productosSeleccionados.map(p => ({
             producto_id: p.producto_id,
             cantidad_solicitada: p.cantidad_solicitada
         }))
@@ -604,26 +705,32 @@ async function guardarTraslado() {
 
         const result = await response.json();
 
-        if (result.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Traslado Creado',
-                text: `Número: ${result.data.numero_traslado}`,
-                timer: 2000
-            });
+        if (!result.success) throw new Error(result.message);
 
-            bootstrap.Modal.getInstance(document.getElementById('modalTraslado')).hide();
-            await loadTraslados();
+        const trasladoId = result.data.id;
+        const numeroTraslado = result.data.numero_traslado;
+
+        // Si es flujo directo, confirmar inmediatamente
+        if (tipoFlujo === 'directo') {
+            const confirmResp = await fetch(`${API_URL}/traslados/${trasladoId}/confirmar`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ empresa_id: currentEmpresaId })
+            });
+            const confirmResult = await confirmResp.json();
+            if (!confirmResult.success) throw new Error(confirmResult.message);
+
+            Swal.fire({ icon: 'success', title: 'Traslado Ejecutado', text: `${numeroTraslado} completado. Stock actualizado.`, timer: 2500 });
         } else {
-            throw new Error(result.message);
+            Swal.fire({ icon: 'success', title: 'Traslado Creado', text: `Número: ${numeroTraslado}`, timer: 2000 });
         }
+
+        bootstrap.Modal.getInstance(document.getElementById('modalTraslado')).hide();
+        await loadTraslados();
+
     } catch (error) {
         console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudo crear el traslado: ' + error.message
-        });
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo procesar el traslado: ' + error.message });
     }
 }
 
@@ -831,6 +938,49 @@ async function enviarTraslado(trasladoId) {
     }
 }
 
+async function editarTraslado(trasladoId) {
+    // Traslados en borrador no tienen edición compleja por ahora
+    // Se puede cancelar y crear uno nuevo
+    Swal.fire({
+        icon: 'info',
+        title: 'Editar traslado',
+        text: 'Para modificar un traslado en borrador, cancélalo y crea uno nuevo con los datos correctos.',
+        confirmButtonText: 'Entendido'
+    });
+}
+
+async function confirmarTrasladoDirecto(trasladoId) {
+    const result = await Swal.fire({
+        title: '¿Confirmar y ejecutar traslado?',
+        text: 'El stock se moverá inmediatamente a la bodega destino.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, ejecutar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/traslados/${trasladoId}/confirmar`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ empresa_id: currentEmpresaId })
+        });
+
+        const res = await response.json();
+        if (res.success) {
+            Swal.fire({ icon: 'success', title: 'Ejecutado', text: 'Stock actualizado exitosamente.', timer: 2000 });
+            await loadTraslados();
+        } else {
+            throw new Error(res.message);
+        }
+    } catch (error) {
+        Swal.fire('Error', error.message, 'error');
+    }
+}
+
 async function cancelarTraslado(trasladoId) {
     const { value: motivo } = await Swal.fire({
         title: '¿Cancelar traslado?',
@@ -931,8 +1081,21 @@ function initializeEventListeners() {
     // Bodega origen change
     document.getElementById('bodegaOrigen').addEventListener('change', onBodegaOrigenChange);
 
-    // Buscar productos
+    // Búsqueda en tiempo real al escribir
+    document.getElementById('searchProducto').addEventListener('input', onSearchProductoInput);
+
+    // Tecla ESC cierra el dropdown
+    document.getElementById('searchProducto').addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.getElementById('dropdownProductos').style.display = 'none';
+        }
+    });
+
+    // Botón "Ver todos" abre el modal con todos los productos
     document.getElementById('btnBuscarProducto').addEventListener('click', abrirModalProductos);
+
+    // Cerrar dropdown al hacer click fuera
+    document.addEventListener('click', cerrarDropdownProductos);
     
     // Search en modal productos
     const searchProductoModal = document.getElementById('searchProductoModal');

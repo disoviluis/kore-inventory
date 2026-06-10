@@ -1093,13 +1093,14 @@ function exportarProductos() {
 
     try {
         // Preparar datos para exportar
+        // NOTA: Se incluye ID y SKU para poder actualizar productos al re-importar
         const datosExportar = productos.map(p => ({
             'ID': p.id,
+            'SKU': p.sku,
+            'Nombre': p.nombre,
             'Tipo': p.tipo,
             'Maneja Inventario': p.maneja_inventario ? 'Sí' : 'No',
-            'Nombre': p.nombre,
             'Descripción': p.descripcion || '',
-            'SKU': p.sku,
             'Código de Barras': p.codigo_barras || '',
             'Categoría': p.categoria_nombre || 'Sin categoría',
             'Precio Compra': p.precio_compra,
@@ -1349,13 +1350,23 @@ async function validarProductosImportados(datos) {
     const resultados = {
         validos: [],
         advertencias: [],
-        errores: []
+        errores: [],
+        actualizaciones: 0,
+        nuevos: 0
     };
 
     // Crear mapa de categorías por nombre
     const categoriasMap = {};
     categorias.forEach(cat => {
         categoriasMap[cat.nombre.toLowerCase().trim()] = cat.id;
+    });
+
+    // Crear mapa de productos existentes por SKU para detectar actualizaciones
+    const productosExistentesMap = {};
+    productos.forEach(prod => {
+        if (prod.sku) {
+            productosExistentesMap[prod.sku.toLowerCase().trim()] = prod;
+        }
     });
 
     // Validar cada producto
@@ -1404,10 +1415,16 @@ async function validarProductosImportados(datos) {
             }
         }
 
+        // Verificar si el producto ya existe (por SKU)
+        const skuBuscar = fila['SKU']?.toString().trim();
+        const productoExistente = skuBuscar ? productosExistentesMap[skuBuscar.toLowerCase()] : null;
+        const esActualizacion = productoExistente !== null;
+
         // Preparar objeto producto
         const producto = {
+            id: productoExistente?.id || null,  // Incluir ID si es actualización
             nombre: fila['Nombre']?.toString().trim(),
-            sku: fila['SKU']?.toString().trim(),
+            sku: skuBuscar,
             descripcion: fila['Descripción']?.toString().trim() || null,
             tipo: tipo,
             maneja_inventario: convertirBoolean(fila['Maneja Inventario'], true),
@@ -1431,8 +1448,17 @@ async function validarProductosImportados(datos) {
             permite_venta_sin_stock: convertirBoolean(fila['Permite Venta Sin Stock'], false),
             imagen_url: fila['Imagen URL']?.toString().trim() || null,
             estado: estado,
-            empresa_id: currentEmpresa.id
+            empresa_id: currentEmpresa.id,
+            _esActualizacion: esActualizacion  // Flag interno para saber si es actualización
         };
+
+        // Agregar advertencia si es actualización
+        if (esActualizacion) {
+            advertenciasFila.push(`Se actualizará el producto existente con SKU ${skuBuscar}`);
+            resultados.actualizaciones++;
+        } else {
+            resultados.nuevos++;
+        }
 
         // Clasificar resultado
         if (erroresFila.length > 0) {
@@ -1491,7 +1517,14 @@ function mostrarResultadosValidacion(resultados) {
     const btnConfirmar = document.getElementById('btnConfirmarImportacion');
     if (productosImportar.length > 0 && resultados.errores.length === 0) {
         btnConfirmar.disabled = false;
-        btnConfirmar.innerHTML = `<i class="bi bi-check-circle me-2"></i>Importar ${productosImportar.length} Productos`;
+        const mensaje = [];
+        if (resultados.actualizaciones > 0) {
+            mensaje.push(`${resultados.actualizaciones} actualizar`);
+        }
+        if (resultados.nuevos > 0) {
+            mensaje.push(`${resultados.nuevos} crear`);
+        }
+        btnConfirmar.innerHTML = `<i class="bi bi-check-circle me-2"></i>Importar (${mensaje.join(' + ')})`;
     } else {
         btnConfirmar.disabled = true;
         btnConfirmar.innerHTML = '<i class="bi bi-x-circle me-2"></i>Corrige los errores para importar';
@@ -1526,13 +1559,23 @@ async function confirmarImportacion() {
         // Importar productos uno por uno
         for (const item of productosImportar) {
             try {
-                const response = await fetch(`${API_URL}/productos`, {
-                    method: 'POST',
+                const esActualizacion = item.producto._esActualizacion;
+                const productoData = {...item.producto};
+                delete productoData._esActualizacion; // Remover flag interno
+
+                // Determinar método y URL según si es creación o actualización
+                const metodo = esActualizacion ? 'PUT' : 'POST';
+                const url = esActualizacion 
+                    ? `${API_URL}/productos/${productoData.id}` 
+                    : `${API_URL}/productos`;
+
+                const response = await fetch(url, {
+                    method: metodo,
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify(item.producto)
+                    body: JSON.stringify(productoData)
                 });
 
                 if (response.ok) {

@@ -29,6 +29,7 @@ interface Usuario {
   activo: number;
   intentos_fallidos: number;
   bloqueado_hasta: Date | null;
+  bodega_id: number | null;
 }
 
 /**
@@ -163,7 +164,8 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
         id: usuario.id,
         email: usuario.email,
         tipo_usuario: usuario.tipo_usuario,
-        empresa_id: usuario.empresa_id_default
+        empresa_id: usuario.empresa_id_default,
+        bodega_id: usuario.bodega_id || null
       },
       jwtSecret as jwt.Secret,
       { expiresIn: jwtExpiresIn } as jwt.SignOptions
@@ -176,7 +178,8 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
       apellido: usuario.apellido,
       email: usuario.email,
       tipo_usuario: usuario.tipo_usuario,
-      empresa_id_default: usuario.empresa_id_default
+      empresa_id_default: usuario.empresa_id_default,
+      bodega_id: usuario.bodega_id || null
     };
 
     logger.success(`Login exitoso: ${email} (${usuario.tipo_usuario})`);

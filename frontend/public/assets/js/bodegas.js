@@ -173,8 +173,8 @@ function renderBodegas(bodegas) {
                 ${bodega.permite_ventas ? '<i class="bi bi-check-circle-fill text-success" title="Permite ventas"></i>' : '-'}
             </td>
             <td class="text-center">
-                <span class="badge bg-${bodega.activa ? 'success' : 'secondary'}">
-                    ${bodega.activa ? 'Activa' : 'Inactiva'}
+                <span class="badge bg-${bodega.estado === 'activa' ? 'success' : bodega.estado === 'en_mantenimiento' ? 'warning' : 'secondary'}">
+                    ${bodega.estado === 'activa' ? 'Activa' : bodega.estado === 'en_mantenimiento' ? 'En mantenimiento' : 'Inactiva'}
                 </span>
             </td>
             <td class="text-center">
@@ -196,7 +196,7 @@ function renderBodegas(bodegas) {
 
 function updateStats(bodegas) {
     const total = bodegas.length;
-    const activas = bodegas.filter(b => b.activa).length;
+    const activas = bodegas.filter(b => b.estado === 'activa').length;
     const conVentas = bodegas.filter(b => b.permite_ventas).length;
     const principal = bodegas.find(b => b.es_principal);
 
@@ -252,8 +252,11 @@ function applyFilters() {
     }
 
     if (filterEstado !== '') {
-        const isActive = filterEstado === '1';
-        filtered = filtered.filter(b => b.activa === isActive);
+        if (filterEstado === '1') {
+            filtered = filtered.filter(b => b.estado === 'activa');
+        } else {
+            filtered = filtered.filter(b => b.estado !== 'activa');
+        }
     }
 
     renderBodegas(filtered);
@@ -301,7 +304,7 @@ async function editBodega(id) {
             document.getElementById('bodegaEmail').value = bodega.email || '';
             document.getElementById('bodegaResponsable').value = bodega.responsable_id || '';
             document.getElementById('bodegaDescripcion').value = bodega.descripcion || '';
-            document.getElementById('bodegaActiva').value = bodega.activa ? '1' : '0';
+            document.getElementById('bodegaActiva').value = bodega.estado === 'activa' ? '1' : '0';
             document.getElementById('bodegaPrincipal').checked = bodega.es_principal;
             document.getElementById('bodegaPermiteVentas').checked = bodega.permite_ventas;
 
@@ -334,7 +337,7 @@ async function saveBodega() {
             email: document.getElementById('bodegaEmail').value.trim() || null,
             responsable_id: document.getElementById('bodegaResponsable').value || null,
             descripcion: document.getElementById('bodegaDescripcion').value.trim() || null,
-            activa: document.getElementById('bodegaActiva').value === '1',
+            estado: document.getElementById('bodegaActiva').value === '1' ? 'activa' : 'inactiva',
             es_principal: document.getElementById('bodegaPrincipal').checked,
             permite_ventas: document.getElementById('bodegaPermiteVentas').checked
         };
@@ -469,10 +472,10 @@ async function viewStock(bodegaId, bodegaNombre) {
             } else {
                 tbody.innerHTML = result.data.map(item => `
                     <tr>
-                        <td><span class="badge bg-secondary">${item.producto_codigo}</span></td>
+                        <td><span class="badge bg-secondary">${item.sku || '-'}</span></td>
                         <td>
                             <strong>${item.producto_nombre}</strong>
-                            ${item.producto_referencia ? `<br><small class="text-muted">Ref: ${item.producto_referencia}</small>` : ''}
+                            ${item.codigo_barras ? `<br><small class="text-muted">Cód. barras: ${item.codigo_barras}</small>` : ''}
                         </td>
                         <td class="text-center">
                             <span class="badge bg-primary">${item.stock_actual}</span>

@@ -3569,6 +3569,32 @@ async function cargarRolesParaUsuario() {
 }
 
 /**
+ * Cargar bodegas disponibles en el selector del formulario de usuario
+ */
+async function cargarBodegasParaUsuario() {
+  try {
+    const empresaActivaId = localStorage.getItem('empresaActiva');
+    const select = document.getElementById('usuarioEmpresaBodegaId');
+    if (!select) return;
+
+    const response = await fetch(`${API_URL}/bodegas?empresa_id=${empresaActivaId}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    if (!response.ok) throw new Error('Error al cargar bodegas');
+
+    const data = await response.json();
+    const bodegas = data.data || [];
+
+    select.innerHTML = '<option value="">Sin bodega específica (ve toda la empresa)</option>' +
+      bodegas.map(b => `<option value="${b.id}">${b.nombre} (${b.tipo})</option>`).join('');
+
+  } catch (error) {
+    console.error('Error al cargar bodegas para usuario:', error);
+  }
+}
+
+/**
  * Abrir modal para crear/editar usuario
  */
 async function abrirModalUsuarioEmpresa(usuarioId = null) {
@@ -3599,6 +3625,9 @@ async function abrirModalUsuarioEmpresa(usuarioId = null) {
   
   // Cargar roles disponibles
   await cargarRolesParaUsuario();
+
+  // Cargar bodegas en el selector
+  await cargarBodegasParaUsuario();
   
   // Si es edición, cargar datos del usuario
   if (usuarioId) {
@@ -3626,6 +3655,9 @@ async function abrirModalUsuarioEmpresa(usuarioId = null) {
       document.getElementById('usuarioEmpresaEmail').value = usuario.email;
       document.getElementById('usuarioEmpresaTelefono').value = usuario.telefono || '';
       document.getElementById('usuarioEmpresaActivo').value = usuario.activo ? '1' : '0';
+      
+      // Cargar bodega asignada
+      document.getElementById('usuarioEmpresaBodegaId').value = usuario.bodega_id || '';
       
       // Marcar roles asignados
       if (usuario.roles && usuario.roles.length > 0) {
@@ -3659,6 +3691,7 @@ document.getElementById('usuarioEmpresaForm')?.addEventListener('submit', async 
   const password = document.getElementById('usuarioEmpresaPassword').value;
   const passwordConfirm = document.getElementById('usuarioEmpresaPasswordConfirm').value;
   const activo = document.getElementById('usuarioEmpresaActivo').value === '1';
+  const bodegaId = document.getElementById('usuarioEmpresaBodegaId').value || null;
   
   // Obtener roles seleccionados
   const rolesSeleccionados = Array.from(document.querySelectorAll('.rol-checkbox:checked'))
@@ -3701,7 +3734,8 @@ document.getElementById('usuarioEmpresaForm')?.addEventListener('submit', async 
     telefono: telefono || null,
     activo,
     empresa_id: empresaActivaId,
-    roles_ids: rolesSeleccionados
+    roles_ids: rolesSeleccionados,
+    bodega_id: bodegaId ? parseInt(bodegaId) : null
   };
   
   if (password && password.trim()) {

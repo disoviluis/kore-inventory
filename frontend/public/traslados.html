@@ -522,6 +522,25 @@
                                     <i class="bi bi-info-circle me-2"></i>Información del Traslado
                                 </h6>
                             </div>
+
+                            <!-- Tipo de flujo -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Tipo de flujo</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="tipoFlujo" id="flujoDirecto" value="directo" checked>
+                                        <label class="form-check-label" for="flujoDirecto">
+                                            <strong>Directo</strong> <small class="text-muted">— se ejecuta inmediatamente</small>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="tipoFlujo" id="flujoCompleto" value="completo">
+                                        <label class="form-check-label" for="flujoCompleto">
+                                            <strong>Completo</strong> <small class="text-muted">— aprobación → envío → recepción</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                             
                             <div class="col-md-6">
                                 <label class="form-label">Bodega Origen <span class="text-danger">*</span></label>
@@ -581,17 +600,24 @@
                             </div>
 
                             <div class="col-12">
-                                <div class="input-group mb-3">
-                                    <span class="input-group-text">
-                                        <i class="bi bi-search"></i>
-                                    </span>
-                                    <input type="text" class="form-control" id="searchProducto" 
-                                           placeholder="Buscar producto por nombre o código..." disabled>
-                                    <button class="btn btn-outline-secondary" type="button" id="btnBuscarProducto" disabled>
-                                        <i class="bi bi-plus-circle me-1"></i>Agregar
-                                    </button>
+                                <div class="position-relative mb-1">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="searchProducto" 
+                                               placeholder="Buscar producto por nombre o SKU..." disabled
+                                               autocomplete="off">
+                                        <button class="btn btn-outline-secondary" type="button" id="btnBuscarProducto" disabled>
+                                            <i class="bi bi-grid me-1"></i>Ver todos
+                                        </button>
+                                    </div>
+                                    <!-- Dropdown resultados en tiempo real -->
+                                    <div id="dropdownProductos" class="position-absolute w-100 bg-white border rounded shadow-sm z-3" 
+                                         style="display:none; top:100%; max-height:300px; overflow-y:auto; z-index:9999;">
+                                    </div>
                                 </div>
-                                <small class="text-muted">
+                                <small class="text-muted" id="hintBodegaOrigen">
                                     <i class="bi bi-info-circle me-1"></i>
                                     Primero selecciona la bodega origen para ver productos disponibles
                                 </small>

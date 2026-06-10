@@ -236,6 +236,12 @@ export const recibirCompra = async (req: Request, res: Response) => {
             [id]
         );
 
+        // Obtener bodega principal de la empresa
+        const [bodegaPrincipal]: any = await query(
+            'SELECT id FROM bodegas WHERE empresa_id = ? AND es_principal = TRUE AND estado = "activa" LIMIT 1',
+            [empresaId]
+        );
+
         // Actualizar inventario de cada producto
         for (const prod of productos as any[]) {
             // Obtener stock actual
@@ -247,11 +253,21 @@ export const recibirCompra = async (req: Request, res: Response) => {
             const stockAnterior = producto.stock_actual;
             const stockNuevo = stockAnterior + prod.cantidad;
 
-            // Actualizar stock
+            // Actualizar stock global
             await query(
                 'UPDATE productos SET stock_actual = ? WHERE id = ?',
                 [stockNuevo, prod.producto_id]
             );
+
+            // Actualizar stock en bodega principal
+            if (bodegaPrincipal) {
+                await query(
+                    `INSERT INTO productos_bodegas (producto_id, bodega_id, stock_actual)
+                     VALUES (?, ?, ?)
+                     ON DUPLICATE KEY UPDATE stock_actual = stock_actual + ?`,
+                    [prod.producto_id, bodegaPrincipal.id, prod.cantidad, prod.cantidad]
+                );
+            }
 
             // Registrar movimiento en inventario
             await query(

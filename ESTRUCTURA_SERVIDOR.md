@@ -3,7 +3,22 @@
 **Servidor:** AWS EC2 Ubuntu - ip-172-31-11-170  
 **IP Pública:** 18.191.181.99  
 **Usuario:** ubuntu  
-**SSH Key:** `C:\Users\luis.rodriguez\Downloads\korekey.pem`
+**SSH Key:** `C:\Users\luis.rodriguez\Downloads\korekey.pem`  
+**SSH Key (Casa):** `C:\Users\LUIS\Downloads\korekey.pem`
+
+---
+
+## 🔗 REPOSITORIO GITHUB
+
+**Repo:** https://github.com/disoviluis/kore-inventory  
+**Clone:** `git clone https://github.com/disoviluis/kore-inventory.git`  
+**Token:** ver LastPass / gestor de contraseñas (no guardar aquí)
+
+> Para clonar con token (cuando pida autenticación):
+> ```bash
+> git clone https://TOKEN@github.com/disoviluis/kore-inventory.git
+> ```
+> ⚠️ Reemplaza TOKEN por el Personal Access Token de GitHub (Settings → Developer Settings → Personal Access Tokens)
 
 ---
 
@@ -315,19 +330,19 @@ Abrir DevTools y probar todas las funcionalidades nuevas
 
 ### ⚡ **COMANDOS DE DEPLOY RÁPIDO (Una Sola Línea)**
 
-#### **Deploy Frontend:**
+#### **Deploy Frontend:** *(solo git pull, nginx lee directo del repo)*
 ```bash
-ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99 "cd /home/ubuntu/kore-inventory && git pull origin main && ls -lt frontend/public/assets/js/ | head -5"
+ssh -i C:\Users\LUIS\Downloads\korekey.pem ubuntu@18.191.181.99 "cd /home/ubuntu/kore-inventory && git pull origin main && echo OK"
 ```
 
 #### **Deploy Backend:**
 ```bash
-ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99 "cd /home/ubuntu/kore-inventory && git pull origin main && cd backend && npm run build && pm2 restart kore-backend && pm2 logs kore-backend --lines 20 --nostream"
+ssh -i C:\Users\LUIS\Downloads\korekey.pem ubuntu@18.191.181.99 "cd /home/ubuntu/kore-inventory && git pull origin main && cd backend && npm run build && pm2 restart kore-backend && pm2 logs kore-backend --lines 20 --nostream"
 ```
 
 #### **Deploy Completo (Front + Back):**
 ```bash
-ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99 "cd /home/ubuntu/kore-inventory && git pull origin main && cd backend && npm run build && pm2 restart kore-backend && pm2 logs kore-backend --lines 30 --nostream && pm2 status"
+ssh -i C:\Users\LUIS\Downloads\korekey.pem ubuntu@18.191.181.99 "cd /home/ubuntu/kore-inventory && git pull origin main && cd backend && npm run build && pm2 restart kore-backend && pm2 logs kore-backend --lines 30 --nostream && pm2 status"
 ```
 
 ---
@@ -445,20 +460,24 @@ pm2 restart kore-backend          # Reiniciar backend
 ### 2️⃣ Nginx (Servidor web Frontend)
 ```
 Configuración: /etc/nginx/sites-available/kore
-Root: /var/www/kore/kore-inventory
-Puerto: 80 (HTTP)
+Root: /home/ubuntu/kore-inventory/frontend/public  ← DIRECTO AL REPO GIT
+Puerto: 443 (HTTPS) / 80 redirige a 443
+Dominio: kinventoryservices.com
 ```
 
-**✅ Symlink activo:**
+**✅ Configuración activa (corregida Jun 8 2026):**
 ```
-/var/www/kore/kore-inventory → /home/ubuntu/kore-inventory/frontend/public
+nginx root → /home/ubuntu/kore-inventory/frontend/public
 ```
 
 **¿Qué significa esto?**  
-- Nginx sirve archivos desde `/var/www/kore/kore-inventory`
-- Pero en realidad lee desde `/home/ubuntu/kore-inventory/frontend/public` (via symlink)
-- Cualquier cambio en el repositorio git se refleja automáticamente en nginx
-- **NO SE COPIA NADA MANUALMENTE** - El symlink hace que ambas ubicaciones sean la misma
+- Nginx lee los archivos **directamente** del repositorio git
+- Cualquier `git pull` en el servidor = cambios visibles inmediatamente en el navegador
+- **NO SE COPIA NADA MANUALMENTE** - El repo git ES la fuente que sirve nginx
+- ~~Symlink /var/www/kore/kore-inventory~~ → ya no se usa
+- ~~/var/www/html~~  → ya no se usa (era la configuración incorrecta anterior)
+
+> ⚠️ **NO cambiar el root de nginx** - Está apuntando al lugar correcto
 
 ---
 
@@ -532,10 +551,10 @@ pm2 logs kore-backend --lines 20          # Verificar que inició bien
 
 **4. Si cambiaste FRONTEND (archivos .html, .js, .css):**
 ```bash
-# ✅ NO HACE FALTA NADA EN EL SERVIDOR
-# El symlink de nginx ya apunta al repositorio git actualizado
+# ✅ EL git pull del paso 2 ya es suficiente
+# Nginx lee directamente desde /home/ubuntu/kore-inventory/frontend/public
+# No hay copia, no hay symlink intermedio, el repo git ES lo que sirve nginx
 # Solo refresca el navegador: Ctrl + Shift + R (hard refresh)
-# Si es necesario: Ctrl + Shift + Delete para limpiar caché completa
 ```
 
 **5. Verificar que todo funciona:**
@@ -853,7 +872,7 @@ pm2 logs kore-backend --lines 50
 | Componente | Ubicación Real | Cómo se Actualiza | Reinicio Necesario |
 |------------|---------------|-------------------|-------------------|
 | **Repositorio Git** | `/home/ubuntu/kore-inventory` | `git pull origin main` | No |
-| **Frontend (HTML/JS/CSS)** | `/home/ubuntu/kore-inventory/frontend/public` | Automático después de git pull (via symlink) | No (solo Ctrl+Shift+R en navegador) |
+| **Frontend (HTML/JS/CSS)** | `/home/ubuntu/kore-inventory/frontend/public` | Automático con `git pull` (nginx apunta directo al repo) | No (solo Ctrl+Shift+R en navegador) |
 | **Backend (TypeScript)** | `/home/ubuntu/kore-inventory/backend/src` | `git pull` + `npm run build` + `pm2 restart` | Sí (PM2 restart) |
 | **Backend Compilado (JavaScript)** | `/home/ubuntu/kore-inventory/backend/dist` | `npm run build` | Sí (PM2 restart) |
 | **Nginx Config** | `/etc/nginx/sites-available/kore` | No tocar (ya configurado correctamente) | Solo si cambias config |
@@ -918,6 +937,10 @@ git pull origin main
 
 ### SSH
 ```bash
+# Desde PC casa:
+ssh -i C:\Users\LUIS\Downloads\korekey.pem ubuntu@18.191.181.99
+
+# Desde PC oficina:
 ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99
 ```
 

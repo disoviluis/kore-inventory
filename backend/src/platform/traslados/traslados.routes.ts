@@ -8,6 +8,7 @@ import {
   getTraslados,
   getTrasladoById,
   createTraslado,
+  confirmarTraslado,
   aprobarTraslado,
   enviarTraslado,
   iniciarEntrega,
@@ -52,6 +53,12 @@ router.get('/:id', getTrasladoById);
  * ⚠️ CRÍTICO: Requiere permiso CREATE - Mensajero NO debe tener este permiso
  */
 router.post('/', requirePermission('traslados', 'create'), createTraslado);
+
+/**
+ * PUT /api/traslados/:id/confirmar
+ * Flujo directo: confirma y ejecuta traslado en un solo paso (borrador → recibido)
+ */
+router.put('/:id/confirmar', confirmarTraslado);
 
 /**
  * PUT /api/traslados/:id/aprobar
