@@ -1012,7 +1012,7 @@ async function actualizarCantidad(index, valor) {
     
     // Si estamos editando una cuenta abierta, actualizar en el backend PRIMERO
     if (modoEdicionCuenta && cuentaActual) {
-        const resultado = await actualizarItemEnBackend(index);
+        const resultado = await actualizarItemEnBackend(index, cantidadAnterior);
         if (!resultado) {
             // Si falla, revertir el cambio
             producto.cantidad = cantidadAnterior;
@@ -1143,6 +1143,14 @@ async function eliminarProducto(index) {
             if (!data.success) {
                 mostrarAlerta('Error al eliminar: ' + data.message, 'error');
                 return;
+            }
+            
+            // Devolver stock al catálogo (backend ya sumó al inventario)
+            const productoCatalogo = todosCatalogo.find(p => p.id === producto.producto_id);
+            if (productoCatalogo) {
+                productoCatalogo.stock_original += producto.cantidad;
+                productoCatalogo.stock_actual = productoCatalogo.stock_original;
+                console.log(`📦 Stock devuelto al catálogo: ${productoCatalogo.nombre} → ${productoCatalogo.stock_original}`);
             }
         } catch (error) {
             console.error('Error al eliminar item del backend:', error);
@@ -3360,6 +3368,7 @@ function renderizarCatalogoList(productos, container) {
  */
 function actualizarStockEnCatalogo() {
     console.log('🔄 Actualizando stock en catálogo...');
+    console.log('   Modo edición cuenta:', modoEdicionCuenta);
     
     // Si no hay catálogo cargado, salir
     if (!todosCatalogo || todosCatalogo.length === 0) {
@@ -3367,6 +3376,15 @@ function actualizarStockEnCatalogo() {
         return;
     }
     
+    // Si estamos en modo edición de cuenta abierta, NO restar visualmente
+    // porque los productos ya están descontados en la BD
+    if (modoEdicionCuenta) {
+        console.log('ℹ️ Modo edición de cuenta: no se resta stock visualmente (ya está en BD)');
+        renderizarCatalogo();
+        return;
+    }
+    
+    // SOLO en venta directa: mostrar "stock virtual" restando productos pendientes
     // Restaurar stock original de todos los productos
     todosCatalogo.forEach(p => {
         if (p.stock_original !== undefined) {
@@ -3389,7 +3407,7 @@ function actualizarStockEnCatalogo() {
     
     // Re-renderizar el catálogo con el stock actualizado
     renderizarCatalogo();
-    console.log('✅ Stock actualizado en catálogo');
+    console.log('✅ Stock actualizado en catálogo (venta directa)');
 }
 
 /**
@@ -4343,11 +4361,15 @@ async function cargarCuentaAbierta(cuentaId) {
         
         console.log('✅ productosVenta cargados desde backend:', productosVenta);
         
+        // Recargar catálogo para tener stock actualizado de la BD
+        console.log('🔄 Recargando catálogo para obtener stock actualizado...');
+        await cargarCatalogo();
+        
         // Renderizar y mostrar botones apropiados
         console.log('🎨 Renderizando productos...');
         renderizarProductos();
         calcularTotales();
-        actualizarStockEnCatalogo(); // Actualizar stock visual con productos de la cuenta
+        actualizarStockEnCatalogo(); // Actualizar stock visual (en modo cuenta no resta nada)
         mostrarModoEdicionCuenta();
         habilitarSeccionProductos(); // Habilitar agregar productos en modo edición
         
@@ -4722,6 +4744,14 @@ async function agregarItemACuentaAbierta(producto) {
         };
         
         productosVenta.push(nuevoItem);
+        
+        // Actualizar stock_original en el catálogo (backend ya restó el stock)
+        const productoCatalogo = todosCatalogo.find(p => p.id === producto.id);
+        if (productoCatalogo) {
+            productoCatalogo.stock_original = Math.max(0, productoCatalogo.stock_original - 1);
+            productoCatalogo.stock_actual = productoCatalogo.stock_original;
+        }
+        
         renderizarProductos();
         calcularTotales();
         actualizarStockEnCatalogo(); // Actualizar stock visual después de agregar
@@ -4737,7 +4767,7 @@ async function agregarItemACuentaAbierta(producto) {
 /**
  * Actualizar item existente en cuenta abierta (cantidad o precio)
  */
-async function actualizarItemEnBackend(index) {
+async function actualizarItemEnBackend(index, cantidadAnterior = null) {
     const producto = productosVenta[index];
     
     if (!cuentaActual || !cuentaActual.id) {
@@ -4792,6 +4822,18 @@ async function actualizarItemEnBackend(index) {
         }
         
         console.log('✅ Item actualizado en el backend correctamente');
+        
+        // Actualizar stock_original en el catálogo si cambió la cantidad
+        if (cantidadAnterior !== null && cantidadAnterior !== producto.cantidad) {
+            const productoCatalogo = todosCatalogo.find(p => p.id === producto.producto_id);
+            if (productoCatalogo) {
+                const diferencia = producto.cantidad - cantidadAnterior;
+                // Si aumentó cantidad, restar más stock; si disminuyó, devolver stock
+                productoCatalogo.stock_original = Math.max(0, productoCatalogo.stock_original - diferencia);
+                productoCatalogo.stock_actual = productoCatalogo.stock_original;
+                console.log(`📦 Stock actualizado en catálogo: ${productoCatalogo.nombre} → ${productoCatalogo.stock_original}`);
+            }
+        }
         
         // Recalcular totales localmente (sin recargar para mejor UX)
         calcularTotales();
