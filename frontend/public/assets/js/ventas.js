@@ -1110,7 +1110,42 @@ function cambiarTipoPrecio(index, valor) {
     }
 }
 
-function eliminarProducto(index) {
+async function eliminarProducto(index) {
+    const producto = productosVenta[index];
+    
+    // Si estamos editando una cuenta abierta, eliminar del backend primero
+    if (modoEdicionCuenta && cuentaActual && producto.id) {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+                `${API_URL}/cuentas-abiertas/${cuentaActual.id}/items/${producto.id}`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+            
+            if (response.status === 401) {
+                handleUnauthorized();
+                return;
+            }
+            
+            const data = await response.json();
+            if (!data.success) {
+                mostrarAlerta('Error al eliminar: ' + data.message, 'error');
+                return;
+            }
+        } catch (error) {
+            console.error('Error al eliminar item del backend:', error);
+            mostrarAlerta('Error de conexión al eliminar producto', 'error');
+            return;
+        }
+    }
+    
+    // Eliminar del array local
     productosVenta.splice(index, 1);
     renderizarProductos();
     calcularTotales();
