@@ -883,8 +883,6 @@ function renderizarProductos() {
                                 <input type="number" class="form-control form-control-sm input-cantidad mx-1" 
                                        value="${p.cantidad}" min="1" max="${p.tipo_venta === 'contra_pedido' ? 9999 : p.stock_disponible}"
                                        onchange="actualizarCantidad(${index}, this.value)"
-                                       oninput="this.dataset.changed='true'"
-                                       onblur="if(this.dataset.changed==='true'){actualizarCantidad(${index}, this.value); this.dataset.changed='false';}"
                                        style="width: 60px; text-align: center;">
                                 <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, 1)">
                                     <i class="bi bi-plus"></i>
@@ -952,7 +950,7 @@ function renderizarProductos() {
     }
 }
 
-function cambiarCantidad(index, delta) {
+async function cambiarCantidad(index, delta) {
     const producto = productosVenta[index];
     const nuevaCantidad = producto.cantidad + delta;
 
@@ -970,18 +968,18 @@ function cambiarCantidad(index, delta) {
     producto.cantidad = nuevaCantidad;
     const precio = parseFloat(producto.precio_unitario);
     producto.subtotal = producto.cantidad * precio;
+    
+    // Si estamos editando una cuenta abierta, actualizar en el backend PRIMERO
+    if (modoEdicionCuenta && cuentaActual) {
+        await actualizarItemEnBackend(index);
+    }
 
     renderizarProductos();
     calcularTotales();
     actualizarStockEnCatalogo(); // Actualizar stock visual en catálogo
-    
-    // Si estamos editando una cuenta abierta, actualizar en el backend
-    if (modoEdicionCuenta && cuentaActual) {
-        actualizarItemEnBackend(index);
-    }
 }
 
-function actualizarCantidad(index, valor) {
+async function actualizarCantidad(index, valor) {
     const cantidad = parseInt(valor);
     if (isNaN(cantidad) || cantidad < 1) {
         renderizarProductos();
@@ -1000,15 +998,15 @@ function actualizarCantidad(index, valor) {
     producto.cantidad = cantidad;
     const precio = parseFloat(producto.precio_unitario);
     producto.subtotal = producto.cantidad * precio;
+    
+    // Si estamos editando una cuenta abierta, actualizar en el backend PRIMERO
+    if (modoEdicionCuenta && cuentaActual) {
+        await actualizarItemEnBackend(index);
+    }
 
     renderizarProductos();
     actualizarStockEnCatalogo(); // Actualizar stock visual en catálogo
     calcularTotales();
-    
-    // Si estamos editando una cuenta abierta, actualizar en el backend
-    if (modoEdicionCuenta && cuentaActual) {
-        actualizarItemEnBackend(index);
-    }
 }
 
 function actualizarPrecio(index, valor) {
@@ -1053,7 +1051,10 @@ function actualizarPrecio(index, valor) {
     
     // Si estamos editando una cuenta abierta, actualizar en el backend
     if (modoEdicionCuenta && cuentaActual) {
-        actualizarItemEnBackend(index);
+        // Llamar de forma asíncrona sin bloquear la UI
+        actualizarItemEnBackend(index).catch(err => {
+            console.error('Error actualizando precio en backend:', err);
+        });
     }
 }
 
@@ -1084,6 +1085,13 @@ function cambiarTipoPrecio(index, valor) {
     
     renderizarProductos();
     calcularTotales();
+    
+    // Si estamos editando una cuenta abierta, actualizar en el backend
+    if (modoEdicionCuenta && cuentaActual) {
+        actualizarItemEnBackend(index).catch(err => {
+            console.error('Error actualizando precio en backend:', err);
+        });
+    }
 }
 
 function eliminarProducto(index) {
@@ -4592,6 +4600,8 @@ async function actualizarItemEnBackend(index) {
     
     if (!producto.id) {
         console.error('El producto no tiene ID de item en la cuenta');
+        console.error('Producto sin ID:', producto);
+        mostrarAlerta('Error: El producto no está vinculado a la cuenta', 'error');
         return;
     }
     
@@ -4631,16 +4641,18 @@ async function actualizarItemEnBackend(index) {
             throw new Error(data.message);
         }
         
-        console.log('✅ Item actualizado en el backend');
+        console.log('✅ Item actualizado en el backend correctamente');
         
         // Recalcular totales localmente (sin recargar para mejor UX)
         calcularTotales();
         
+        return true; // Indicar éxito
+        
     } catch (error) {
         console.error('❌ Error al actualizar item:', error);
-        mostrarAlerta('Error al actualizar: ' + error.message, 'error');
-        // Recargar la cuenta para que se vea el estado real del backend
-        await cargarCuentaAbierta(cuentaActual.id);
+        mostrarAlerta('Error al actualizar cantidad: ' + error.message, 'error');
+        // NO recargar la cuenta automáticamente, dejar que el usuario vea el error
+        return false; // Indicar fallo
     }
 }
 
