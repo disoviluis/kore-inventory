@@ -970,7 +970,15 @@ async function cambiarCantidad(index, delta) {
     
     // Si estamos editando una cuenta abierta, actualizar en el backend PRIMERO
     if (modoEdicionCuenta && cuentaActual) {
-        await actualizarItemEnBackend(index);
+        const resultado = await actualizarItemEnBackend(index);
+        if (!resultado) {
+            // Si falla, revertir el cambio
+            producto.cantidad -= delta;
+            producto.subtotal = producto.cantidad * precio;
+            mostrarAlerta('Error al actualizar cantidad en el servidor', 'error');
+            renderizarProductos();
+            return;
+        }
     }
 
     renderizarProductos();
@@ -986,6 +994,7 @@ async function actualizarCantidad(index, valor) {
     }
 
     const producto = productosVenta[index];
+    const cantidadAnterior = producto.cantidad;
     
     // Permitir cantidades mayores al stock solo si es contra pedido
     if (producto.tipo_venta !== 'contra_pedido' && cantidad > producto.stock_disponible) {
@@ -1000,7 +1009,15 @@ async function actualizarCantidad(index, valor) {
     
     // Si estamos editando una cuenta abierta, actualizar en el backend PRIMERO
     if (modoEdicionCuenta && cuentaActual) {
-        await actualizarItemEnBackend(index);
+        const resultado = await actualizarItemEnBackend(index);
+        if (!resultado) {
+            // Si falla, revertir el cambio
+            producto.cantidad = cantidadAnterior;
+            producto.subtotal = cantidadAnterior * precio;
+            mostrarAlerta('Error al actualizar cantidad en el servidor', 'error');
+            renderizarProductos();
+            return;
+        }
     }
 
     renderizarProductos();
@@ -4669,7 +4686,9 @@ async function actualizarItemEnBackend(index) {
         console.log('📊 Data del backend:', data);
         
         if (!data.success) {
-            throw new Error(data.message);
+            console.error('❌ Error del backend:', data.message);
+            mostrarAlerta('Error al actualizar: ' + data.message, 'error');
+            return false; // Indicar falla
         }
         
         console.log('✅ Item actualizado en el backend correctamente');
@@ -4681,7 +4700,7 @@ async function actualizarItemEnBackend(index) {
         
     } catch (error) {
         console.error('❌ Error al actualizar item:', error);
-        mostrarAlerta('Error al actualizar cantidad: ' + error.message, 'error');
+        mostrarAlerta('Error de conexión al actualizar producto', 'error');
         // NO recargar la cuenta automáticamente, dejar que el usuario vea el error
         return false; // Indicar fallo
     }
