@@ -4597,7 +4597,7 @@ async function agregarItemACuentaAbierta(producto) {
         // En lugar de recargar toda la cuenta, agregar el item localmente
         console.log('✅ Producto agregado, actualizando localmente...');
         const nuevoItem = {
-            id: data.data.id, // ID del item en la cuenta
+            id: data.data.item_id, // ID del item en la cuenta (retornado por backend)
             producto_id: producto.id,
             nombre: producto.nombre,
             sku: producto.sku,
