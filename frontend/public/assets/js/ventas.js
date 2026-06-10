@@ -764,7 +764,8 @@ function agregarProducto(producto) {
                 mostrarModalVentaSinStock(producto, -1);
                 return;
             } else {
-                mostrarAlerta('Producto sin stock disponible. Contacte con administración para habilitar ventas sin stock.', 'warning');
+                // Mostrar modal con disponibilidad en otras bodegas
+                mostrarStockOtrasBodegas(producto, 0);
                 return;
             }
         }
@@ -960,7 +961,8 @@ async function cambiarCantidad(index, delta) {
 
     // Permitir cantidades mayores al stock solo si es contra pedido
     if (producto.tipo_venta !== 'contra_pedido' && nuevaCantidad > producto.stock_disponible) {
-        mostrarAlerta('No hay suficiente stock disponible', 'warning');
+        // Mostrar modal con disponibilidad en otras bodegas
+        await mostrarStockOtrasBodegas(producto, producto.stock_disponible || 0);
         return;
     }
 
@@ -998,7 +1000,8 @@ async function actualizarCantidad(index, valor) {
     
     // Permitir cantidades mayores al stock solo si es contra pedido
     if (producto.tipo_venta !== 'contra_pedido' && cantidad > producto.stock_disponible) {
-        mostrarAlerta('No hay suficiente stock disponible', 'warning');
+        // Mostrar modal con disponibilidad en otras bodegas
+        await mostrarStockOtrasBodegas(producto, producto.stock_disponible || 0);
         renderizarProductos();
         return;
     }
@@ -2793,25 +2796,83 @@ let indexProductoSinStock = -1;
 /**
  * Modal de stock insuficiente en bodega del cajero
  */
+async function consultarDisponibilidadOtrasBodegas(productoId) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/productos/${productoId}/disponibilidad-bodegas?empresa_id=${currentEmpresa.id}`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+        
+        if (response.status === 401) {
+            handleUnauthorized();
+            return [];
+        }
+        
+        const data = await response.json();
+        return data.success ? data.data : [];
+    } catch (error) {
+        console.error('Error consultando disponibilidad:', error);
+        return [];
+    }
+}
+
+/**
+ * Mostrar modal con disponibilidad en otras bodegas
+ */
+async function mostrarStockOtrasBodegas(producto, stockActual = 0) {
+    const disponibilidad = await consultarDisponibilidadOtrasBodegas(producto.id);
+    mostrarModalStockInsuficienteBodega(producto, stockActual, disponibilidad);
+}
+
+/**
+ * Modal de stock insuficiente en bodega del cajero
+ */
 function mostrarModalStockInsuficienteBodega(producto, stockEnTienda, disponibilidadOtrasBodegas) {
     document.getElementById('msgStockBodegaProducto').innerHTML =
-        `<strong>${producto.nombre}</strong> — Stock en esta tienda: <span class="text-danger fw-bold">${stockEnTienda}</span>`;
+        `<strong>${producto.nombre}</strong><br>
+        <small class="text-muted">Stock en esta ubicación: <span class="text-danger fw-bold">${stockEnTienda}</span></small><br>
+        <small class="text-warning">⚠ Producto sin stock disponible en esta tienda. Contacte con administración para habilitar ventas sin stock.</small>`;
 
-    const filas = disponibilidadOtrasBodegas.length > 0
-        ? disponibilidadOtrasBodegas.map(b => `
-            <tr>
-                <td>${b.bodega_nombre}</td>
-                <td class="text-center"><span class="badge bg-${b.tipo}">${b.bodega_tipo}</span></td>
-                <td class="text-center fw-bold ${b.stock_disponible > 0 ? 'text-success' : 'text-muted'}">${b.stock_disponible}</td>
-            </tr>`).join('')
-        : '<tr><td colspan="3" class="text-center text-muted">No hay stock en ninguna bodega</td></tr>';
+    const bodegasConStock = disponibilidadOtrasBodegas.filter(b => b.stock_disponible > 0);
+    
+    let contenido = '';
+    if (bodegasConStock.length > 0) {
+        contenido = `
+            <div class="alert alert-info small mb-2">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Buenas noticias:</strong> Este producto está disponible en otras ubicaciones. 
+                Si el cliente puede esperar, se puede solicitar traslado desde una bodega cercana.
+            </div>
+            <p class="text-muted small mb-2">Disponibilidad en otras ubicaciones:</p>
+            <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Bodega / Tienda</th>
+                        <th class="text-center">Tipo</th>
+                        <th class="text-center">Disponible</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${disponibilidadOtrasBodegas.map(b => `
+                        <tr class="${b.stock_disponible > 0 ? 'table-success' : ''}">
+                            <td>${b.bodega_nombre}</td>
+                            <td class="text-center"><span class="badge bg-secondary">${b.bodega_tipo}</span></td>
+                            <td class="text-center fw-bold ${b.stock_disponible > 0 ? 'text-success' : 'text-muted'}">${b.stock_disponible}</td>
+                        </tr>`).join('')}
+                </tbody>
+            </table>`;
+    } else {
+        contenido = `
+            <div class="alert alert-danger small mb-0">
+                <i class="bi bi-x-circle me-1"></i>
+                <strong>No hay stock disponible</strong> en ninguna bodega de la empresa en este momento.
+            </div>`;
+    }
 
-    document.getElementById('tablaDisponibilidadBodegas').innerHTML = `
-        <p class="text-muted small mb-2">Disponibilidad en otras ubicaciones:</p>
-        <table class="table table-sm table-bordered mb-0">
-            <thead class="table-light"><tr><th>Bodega / Tienda</th><th class="text-center">Tipo</th><th class="text-center">Disponible</th></tr></thead>
-            <tbody>${filas}</tbody>
-        </table>`;
+    document.getElementById('tablaDisponibilidadBodegas').innerHTML = contenido;
 
     new bootstrap.Modal(document.getElementById('modalStockInsuficienteBodega')).show();
 }

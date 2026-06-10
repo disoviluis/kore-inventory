@@ -623,3 +623,53 @@ export const deleteProducto = async (req: Request, res: Response): Promise<Respo
     return errorResponse(res, 'Error al eliminar producto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
+
+/**
+ * Obtener disponibilidad de un producto en todas las bodegas de la empresa
+ * GET /api/productos/:id/disponibilidad-bodegas?empresa_id=X
+ */
+export const getDisponibilidadBodegas = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { empresa_id } = req.query;
+
+    if (!id || !empresa_id) {
+      return errorResponse(
+        res,
+        'ID de producto y empresa_id son requeridos',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    // Consultar disponibilidad en todas las bodegas de la empresa
+    const disponibilidad = await query(
+      `SELECT 
+        b.id as bodega_id,
+        b.nombre as bodega_nombre,
+        b.tipo as bodega_tipo,
+        COALESCE(pb.stock_disponible, 0) as stock_disponible
+       FROM bodegas b
+       LEFT JOIN productos_bodegas pb ON pb.bodega_id = b.id AND pb.producto_id = ?
+       WHERE b.empresa_id = ? AND b.estado = 'activa'
+       ORDER BY pb.stock_disponible DESC, b.nombre ASC`,
+      [id, empresa_id]
+    );
+
+    return successResponse(
+      res,
+      'Disponibilidad obtenida exitosamente',
+      disponibilidad,
+      CONSTANTS.HTTP_STATUS.OK
+    );
+
+  } catch (error) {
+    logger.error('Error al obtener disponibilidad en bodegas:', error);
+    return errorResponse(
+      res,
+      'Error al obtener disponibilidad',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
+  }
+};

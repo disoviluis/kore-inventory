@@ -12,7 +12,8 @@ import {
   createProducto,
   updateProducto,
   deleteProducto,
-  getDisponibilidadProducto
+  getDisponibilidadProducto,
+  getDisponibilidadBodegas
 } from './productos.controller';
 import { authMiddleware } from '../../core/middleware/auth.middleware';
 
@@ -25,6 +26,7 @@ router.use(authMiddleware);
 router.get('/', getProductos);
 
 // GET /api/productos/:id - Obtener producto por ID
+router.get('/:id/disponibilidad-bodegas', getDisponibilidadBodegas);
 router.get('/:id/disponibilidad', getDisponibilidadProducto);
 router.get('/:id', getProductoById);
 
