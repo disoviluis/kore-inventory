@@ -802,6 +802,7 @@ function agregarProducto(producto) {
 
     renderizarProductos();
     calcularTotales();
+    actualizarStockEnCatalogo(); // Actualizar stock visual en catálogo
     reproducirSonido('add');
 }
 
@@ -882,6 +883,8 @@ function renderizarProductos() {
                                 <input type="number" class="form-control form-control-sm input-cantidad mx-1" 
                                        value="${p.cantidad}" min="1" max="${p.tipo_venta === 'contra_pedido' ? 9999 : p.stock_disponible}"
                                        onchange="actualizarCantidad(${index}, this.value)"
+                                       oninput="this.dataset.changed='true'"
+                                       onblur="if(this.dataset.changed==='true'){actualizarCantidad(${index}, this.value); this.dataset.changed='false';}"
                                        style="width: 60px; text-align: center;">
                                 <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, 1)">
                                     <i class="bi bi-plus"></i>
@@ -970,6 +973,7 @@ function cambiarCantidad(index, delta) {
 
     renderizarProductos();
     calcularTotales();
+    actualizarStockEnCatalogo(); // Actualizar stock visual en catálogo
     
     // Si estamos editando una cuenta abierta, actualizar en el backend
     if (modoEdicionCuenta && cuentaActual) {
@@ -998,6 +1002,7 @@ function actualizarCantidad(index, valor) {
     producto.subtotal = producto.cantidad * precio;
 
     renderizarProductos();
+    actualizarStockEnCatalogo(); // Actualizar stock visual en catálogo
     calcularTotales();
     
     // Si estamos editando una cuenta abierta, actualizar en el backend
@@ -1085,6 +1090,7 @@ function eliminarProducto(index) {
     productosVenta.splice(index, 1);
     renderizarProductos();
     calcularTotales();
+    actualizarStockEnCatalogo(); // Actualizar stock visual en catálogo
 }
 
 // ============================================
@@ -1556,6 +1562,7 @@ function limpiarVentaSinConfirmar() {
     renderizarProductos();
     renderizarPagos();
     calcularTotales();
+    actualizarStockEnCatalogo(); // Restaurar stock en catálogo
     deshabilitarSeccionProductos();
 }
 
@@ -2972,6 +2979,11 @@ async function cargarCatalogoProductos() {
         const data = await response.json();
         todosCatalogo = data.data || [];
         
+        // Guardar stock original para poder restaurarlo
+        todosCatalogo.forEach(p => {
+            p.stock_original = p.stock_actual;
+        });
+        
         // Extraer categorías únicas
         categoriasCatalogo = [...new Set(todosCatalogo.map(p => p.categoria_nombre).filter(Boolean))];
         
@@ -3167,6 +3179,51 @@ function renderizarCatalogoList(productos, container) {
     
     // Agregar listener para tecla Enter
     agregarListenerTeclado();
+}
+
+/**
+ * Actualizar el stock mostrado en el catálogo basado en los productos en venta actual
+ * Solo afecta la vista, no modifica los datos reales del backend
+ */
+function actualizarStockEnCatalogo() {
+    console.log('🔄 Actualizando stock en catálogo...');
+    
+    // Si no hay catálogo cargado, salir
+    if (!todosCatalogo || todosCatalogo.length === 0) {
+        console.log('⚠️ No hay catálogo para actualizar');
+        return;
+    }
+    
+    // NO actualizar en modo de edición de cuenta abierta
+    // porque el stock no se descuenta hasta cerrar la cuenta
+    if (modoEdicionCuenta && cuentaActual) {
+        console.log('⚠️ Modo edición de cuenta - no actualizar stock visual');
+        return;
+    }
+    
+    // Restaurar stock original de todos los productos
+    todosCatalogo.forEach(p => {
+        if (p.stock_original !== undefined) {
+            p.stock_actual = p.stock_original;
+        }
+    });
+    
+    // Restar del stock visual la cantidad en la venta actual
+    productosVenta.forEach(pv => {
+        // Buscar el producto en el catálogo (puede ser por id o producto_id)
+        const productoCatalogo = todosCatalogo.find(p => 
+            p.id === pv.id || p.id === pv.producto_id
+        );
+        
+        if (productoCatalogo && pv.tipo_venta !== 'contra_pedido') {
+            // Solo descontar si NO es contra pedido
+            productoCatalogo.stock_actual = Math.max(0, productoCatalogo.stock_actual - pv.cantidad);
+        }
+    });
+    
+    // Re-renderizar el catálogo con el stock actualizado
+    renderizarCatalogo();
+    console.log('✅ Stock actualizado en catálogo');
 }
 
 /**
@@ -4454,9 +4511,35 @@ async function agregarItemACuentaAbierta(producto) {
             throw new Error(data.message);
         }
         
-        // Recargar la cuenta actualizada
-        console.log('🔄 Recargando cuenta actualizada...');
-        await cargarCuentaAbierta(cuentaActual.id);
+        // En lugar de recargar toda la cuenta, agregar el item localmente
+        console.log('✅ Producto agregado, actualizando localmente...');
+        const nuevoItem = {
+            id: data.data.id, // ID del item en la cuenta
+            producto_id: producto.id,
+            nombre: producto.nombre,
+            sku: producto.sku,
+            cantidad: 1,
+            precio_unitario: precioUnitario,
+            precio_minorista: producto.precio_minorista || precioUnitario,
+            precio_mayorista: producto.precio_mayorista || null,
+            precio_distribuidor: producto.precio_distribuidor || null,
+            precio_minimo: producto.precio_minimo || null,
+            precio_maximo: producto.precio_maximo || null,
+            subtotal: precioUnitario,
+            stock_disponible: 999, // En modo edición no validamos stock
+            aplica_iva: producto.aplica_iva || false,
+            porcentaje_iva: producto.porcentaje_iva || 19,
+            iva_porcentaje: producto.porcentaje_iva || 19,
+            iva_valor: 0,
+            impoconsumo_porcentaje: producto.impoconsumo_porcentaje || 0,
+            impoconsumo_valor: 0,
+            total: precioUnitario
+        };
+        
+        productosVenta.push(nuevoItem);
+        renderizarProductos();
+        calcularTotales();
+        
         mostrarAlerta('Producto agregado a la cuenta', 'success');
         
     } catch (error) {
