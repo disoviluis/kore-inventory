@@ -4657,6 +4657,7 @@ async function actualizarItemEnBackend(index) {
         const token = localStorage.getItem('token');
         
         const payload = {
+            empresa_id: currentEmpresa.id,
             cantidad: producto.cantidad,
             precio_unitario: parseFloat(producto.precio_unitario)
         };
