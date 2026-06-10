@@ -449,8 +449,11 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     // Descontar del inventario de la bodega del cajero (si tiene bodega asignada)
     if (bodegaId) {
       await query(
-        `UPDATE productos_bodegas SET stock_actual = stock_actual - ? WHERE producto_id = ? AND bodega_id = ?`,
-        [cantidad, producto_id, bodegaId]
+        `UPDATE productos_bodegas 
+         SET stock_actual = stock_actual - ?,
+             stock_disponible = stock_disponible - ?
+         WHERE producto_id = ? AND bodega_id = ?`,
+        [cantidad, cantidad, producto_id, bodegaId]
       );
     }
 
@@ -585,13 +588,31 @@ export const actualizarItemCuenta = async (req: Request, res: Response): Promise
       const stockAnterior = productoResult[0]?.stock_actual || 0;
       const stockNuevo = stockAnterior - diferencia; // Si aumentó cantidad, reduce stock
 
-      // Actualizar stock
+      // Actualizar stock global
       await query(
         `UPDATE productos 
          SET stock_actual = stock_actual - ?
          WHERE id = ?`,
         [diferencia, item.producto_id]
       );
+
+      // Obtener bodega del usuario que agregó el item originalmente
+      const usuarioBodegaResult = await query(
+        `SELECT bodega_id FROM usuarios WHERE id = ?`,
+        [item.usuario_id]
+      );
+      const bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
+
+      // Actualizar stock en la bodega del cajero (si tenía bodega asignada)
+      if (bodegaId) {
+        await query(
+          `UPDATE productos_bodegas 
+           SET stock_actual = stock_actual - ?,
+               stock_disponible = stock_disponible - ?
+           WHERE producto_id = ? AND bodega_id = ?`,
+          [diferencia, diferencia, item.producto_id, bodegaId]
+        );
+      }
 
       // Registrar movimiento de inventario
       const tipoMovimiento = diferencia > 0 ? 'salida' : 'entrada';
@@ -695,13 +716,31 @@ export const eliminarItemCuenta = async (req: Request, res: Response): Promise<R
     const stockAnterior = productoResult[0]?.stock_actual || 0;
     const stockNuevo = stockAnterior + item.cantidad;
 
-    // Reversar inventario
+    // Reversar inventario global
     await query(
       `UPDATE productos 
        SET stock_actual = stock_actual + ?
        WHERE id = ?`,
       [item.cantidad, item.producto_id]
     );
+
+    // Obtener bodega del usuario que agregó el item
+    const usuarioBodegaResult = await query(
+      `SELECT bodega_id FROM usuarios WHERE id = ?`,
+      [item.usuario_id]
+    );
+    const bodegaIdItem = usuarioBodegaResult[0]?.bodega_id || null;
+
+    // Reversar stock en la bodega del cajero (si tenía bodega asignada)
+    if (bodegaIdItem) {
+      await query(
+        `UPDATE productos_bodegas 
+         SET stock_actual = stock_actual + ?,
+             stock_disponible = stock_disponible + ?
+         WHERE producto_id = ? AND bodega_id = ?`,
+        [item.cantidad, item.cantidad, item.producto_id, bodegaIdItem]
+      );
+    }
 
     // Registrar movimiento de inventario
     await query(
@@ -1041,12 +1080,31 @@ export const cancelarCuenta = async (req: Request, res: Response): Promise<Respo
       const stockAnterior = productoResult[0]?.stock_actual || 0;
       const stockNuevo = stockAnterior + item.cantidad;
 
+      // Reversar inventario global
       await query(
         `UPDATE productos 
          SET stock_actual = stock_actual + ?
          WHERE id = ?`,
         [item.cantidad, item.producto_id]
       );
+
+      // Obtener bodega del usuario que agregó el item
+      const usuarioBodegaResult = await query(
+        `SELECT bodega_id FROM usuarios WHERE id = ?`,
+        [item.usuario_id]
+      );
+      const bodegaIdItem = usuarioBodegaResult[0]?.bodega_id || null;
+
+      // Reversar stock en la bodega del cajero (si tenía bodega asignada)
+      if (bodegaIdItem) {
+        await query(
+          `UPDATE productos_bodegas 
+           SET stock_actual = stock_actual + ?,
+               stock_disponible = stock_disponible + ?
+           WHERE producto_id = ? AND bodega_id = ?`,
+          [item.cantidad, item.cantidad, item.producto_id, bodegaIdItem]
+        );
+      }
 
       // Registrar movimiento
       await query(

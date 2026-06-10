@@ -720,24 +720,19 @@ function agregarProducto(producto) {
     console.log('modoEdicionCuenta:', modoEdicionCuenta);
     console.log('cuentaActual:', cuentaActual);
     
-    // Si estamos editando una cuenta abierta, guardar directamente en backend
+    // Si estamos editando una cuenta abierta, SIEMPRE agregar nueva línea
+    // Esto permite trazabilidad temporal de cada pedido (importante para restaurantes)
     if (modoEdicionCuenta && cuentaActual) {
-        console.log('Modo edición detectado, guardando en backend...');
-        // Buscar si el producto ya existe en la cuenta por producto_id
-        const existingIndex = productosVenta.findIndex(p => p.producto_id === producto.id);
-        if (existingIndex >= 0) {
-            // Ya existe: incrementar cantidad via endpoint PUT
-            console.log('Producto ya existe en cuenta, incrementando cantidad...');
-            cambiarCantidad(existingIndex, 1);
-        } else {
-            // Nuevo producto: agregar al backend via POST
-            agregarItemACuentaAbierta(producto);
-        }
+        console.log('Modo edición de cuenta: agregando nuevo item con timestamp único');
+        // SIEMPRE agregar nueva línea (no incrementar existente)
+        // Esto permite ver cuándo se pidió cada producto
+        agregarItemACuentaAbierta(producto);
         return;
     }
 
     console.log('Modo venta normal, agregando localmente...');
     // Modo normal de venta (sin cuenta abierta)
+    // En ventas directas SÍ agrupamos productos iguales
     // Verificar si ya está en la lista
     const index = productosVenta.findIndex(p => p.id === producto.id);
     
@@ -864,13 +859,17 @@ function renderizarProductos() {
             }
             opcionesPrecios += `<option value="manual">✏️ Manual</option>`;
             
+            // Mostrar hora de pedido solo en modo edición de cuenta
+            const infoHoraPedido = (modoEdicionCuenta && p.fecha_agregado) ?
+                `<br><small class="text-primary"><i class="bi bi-clock-history"></i> Pedido: ${formatearFechaHora(p.fecha_agregado)}</small>` : '';
+            
             html += `
             <div class="producto-item mb-3 p-3 border rounded ${p.tipo_venta === 'contra_pedido' ? 'border-warning' : ''} ${clasePrecio}">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <strong>${p.nombre}</strong>${badgeContraPedido}
                         ${p.aplica_iva ? '<span class="badge bg-info ms-2"><i class="bi bi-percent"></i> IVA ' + p.porcentaje_iva + '%</span>' : '<span class="badge bg-secondary ms-2">Sin IVA</span>'}<br>
-                        <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_disponible}</small>${infoEntrega}
+                        <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_disponible}</small>${infoHoraPedido}${infoEntrega}
                     </div>
                     <div class="d-flex align-items-start gap-2">
                         <!-- Cantidad -->
@@ -2869,6 +2868,30 @@ function formatearFecha(fecha) {
     return date.toLocaleDateString('es-ES', opciones);
 }
 
+/**
+ * Formatear fecha y hora para mostrar en cuentas abiertas
+ */
+function formatearFechaHora(fechaHora) {
+    const date = new Date(fechaHora);
+    const hoy = new Date();
+    const esHoy = date.toDateString() === hoy.toDateString();
+    
+    const hora = date.toLocaleTimeString('es-ES', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    if (esHoy) {
+        return `Hoy ${hora}`;
+    } else {
+        const fecha = date.toLocaleDateString('es-ES', { 
+            day: '2-digit', 
+            month: '2-digit' 
+        });
+        return `${fecha} ${hora}`;
+    }
+}
+
 // ============================================
 // FUNCIONES PARA IMPUESTOS ADICIONALES
 // ============================================
@@ -4203,7 +4226,10 @@ async function cargarCuentaAbierta(cuentaId) {
             iva_valor: parseFloat(item.iva_valor) || 0,
             impoconsumo_porcentaje: parseFloat(item.impoconsumo_porcentaje) || 0,
             impoconsumo_valor: parseFloat(item.impoconsumo_valor) || 0,
-            total: parseFloat(item.total) || 0
+            total: parseFloat(item.total) || 0,
+            fecha_agregado: item.fecha_agregado || null,
+            usuario_nombre: item.usuario_nombre || null,
+            notas: item.notas || null
         }));
         
         console.log('✅ productosVenta cargados desde backend:', productosVenta);
@@ -4572,7 +4598,10 @@ async function agregarItemACuentaAbierta(producto) {
             iva_valor: 0,
             impoconsumo_porcentaje: producto.impoconsumo_porcentaje || 0,
             impoconsumo_valor: 0,
-            total: precioUnitario
+            total: precioUnitario,
+            fecha_agregado: data.data.fecha_agregado || new Date().toISOString(), // Timestamp del backend o actual
+            usuario_nombre: data.data.usuario_nombre || null,
+            notas: null
         };
         
         productosVenta.push(nuevoItem);
