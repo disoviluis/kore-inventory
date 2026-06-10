@@ -450,10 +450,9 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     if (bodegaId) {
       await query(
         `UPDATE productos_bodegas 
-         SET stock_actual = stock_actual - ?,
-             stock_disponible = stock_disponible - ?
+         SET stock_actual = stock_actual - ?
          WHERE producto_id = ? AND bodega_id = ?`,
-        [cantidad, cantidad, producto_id, bodegaId]
+        [cantidad, producto_id, bodegaId]
       );
     }
 
@@ -607,10 +606,9 @@ export const actualizarItemCuenta = async (req: Request, res: Response): Promise
       if (bodegaId) {
         await query(
           `UPDATE productos_bodegas 
-           SET stock_actual = stock_actual - ?,
-               stock_disponible = stock_disponible - ?
+           SET stock_actual = stock_actual - ?
            WHERE producto_id = ? AND bodega_id = ?`,
-          [diferencia, diferencia, item.producto_id, bodegaId]
+          [diferencia, item.producto_id, bodegaId]
         );
       }
 
@@ -735,10 +733,9 @@ export const eliminarItemCuenta = async (req: Request, res: Response): Promise<R
     if (bodegaIdItem) {
       await query(
         `UPDATE productos_bodegas 
-         SET stock_actual = stock_actual + ?,
-             stock_disponible = stock_disponible + ?
+         SET stock_actual = stock_actual + ?
          WHERE producto_id = ? AND bodega_id = ?`,
-        [item.cantidad, item.cantidad, item.producto_id, bodegaIdItem]
+        [item.cantidad, item.producto_id, bodegaIdItem]
       );
     }
 
@@ -1099,10 +1096,9 @@ export const cancelarCuenta = async (req: Request, res: Response): Promise<Respo
       if (bodegaIdItem) {
         await query(
           `UPDATE productos_bodegas 
-           SET stock_actual = stock_actual + ?,
-               stock_disponible = stock_disponible + ?
+           SET stock_actual = stock_actual + ?
            WHERE producto_id = ? AND bodega_id = ?`,
-          [item.cantidad, item.cantidad, item.producto_id, bodegaIdItem]
+          [item.cantidad, item.producto_id, bodegaIdItem]
         );
       }
 
