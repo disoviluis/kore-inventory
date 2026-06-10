@@ -3251,13 +3251,6 @@ function actualizarStockEnCatalogo() {
         return;
     }
     
-    // NO actualizar en modo de edición de cuenta abierta
-    // porque el stock no se descuenta hasta cerrar la cuenta
-    if (modoEdicionCuenta && cuentaActual) {
-        console.log('⚠️ Modo edición de cuenta - no actualizar stock visual');
-        return;
-    }
-    
     // Restaurar stock original de todos los productos
     todosCatalogo.forEach(p => {
         if (p.stock_original !== undefined) {
@@ -4238,6 +4231,7 @@ async function cargarCuentaAbierta(cuentaId) {
         console.log('🎨 Renderizando productos...');
         renderizarProductos();
         calcularTotales();
+        actualizarStockEnCatalogo(); // Actualizar stock visual con productos de la cuenta
         mostrarModoEdicionCuenta();
         habilitarSeccionProductos(); // Habilitar agregar productos en modo edición
         
@@ -4371,6 +4365,15 @@ async function verTotalCuenta() {
     if (!cuentaActual) return;
     
     try {
+        // Mostrar indicador de carga en el modal
+        const modalContent = document.getElementById('modalVerTotalContent');
+        modalContent.innerHTML = '<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Cargando...</span></div><p class="mt-2">Actualizando totales...</p></div>';
+        const modal = new bootstrap.Modal(document.getElementById('modalVerTotal'));
+        modal.show();
+        
+        // Esperar un momento para que termine cualquier actualización pendiente
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         const token = localStorage.getItem('token');
         
         // Recargar datos actualizados de la cuenta desde el backend
@@ -4468,9 +4471,7 @@ async function verTotalCuenta() {
         `;
         
         // Mostrar en modal
-        document.getElementById('modalVerTotalContent').innerHTML = modalHtml;
-        const modal = new bootstrap.Modal(document.getElementById('modalVerTotal'));
-        modal.show();
+        modalContent.innerHTML = modalHtml;
         
     } catch (error) {
         console.error('Error al ver total:', error);
@@ -4607,6 +4608,7 @@ async function agregarItemACuentaAbierta(producto) {
         productosVenta.push(nuevoItem);
         renderizarProductos();
         calcularTotales();
+        actualizarStockEnCatalogo(); // Actualizar stock visual después de agregar
         
         mostrarAlerta('Producto agregado a la cuenta', 'success');
         
