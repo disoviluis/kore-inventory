@@ -4363,7 +4363,7 @@ async function cargarCuentaAbierta(cuentaId) {
         
         // Recargar catálogo para tener stock actualizado de la BD
         console.log('🔄 Recargando catálogo para obtener stock actualizado...');
-        await cargarCatalogo();
+        await cargarCatalogoProductos();
         
         // Renderizar y mostrar botones apropiados
         console.log('🎨 Renderizando productos...');
@@ -4967,6 +4967,9 @@ async function cancelarCuenta() {
         }
         
         mostrarAlerta(`✅ Cuenta cancelada. Inventario reversado.`, 'success');
+        
+        // Recargar catálogo para obtener stock actualizado de la BD
+        await cargarCatalogoProductos();
         
         // Limpiar y recargar
         cancelarEdicionCuenta();
