@@ -1,0 +1,32 @@
+# robots.txt para KInventory Services
+User-agent: *
+Allow: /
+
+# Bloquear páginas privadas del sistema
+Disallow: /dashboard.html
+Disallow: /super-admin.html
+Disallow: /inventario.html
+Disallow: /productos.html
+Disallow: /clientes.html
+Disallow: /proveedores.html
+Disallow: /ventas.html
+Disallow: /ventas-historial.html
+Disallow: /compras.html
+Disallow: /bodegas.html
+Disallow: /traslados.html
+Disallow: /cuentas-por-cobrar.html
+Disallow: /configuracion-general.html
+Disallow: /configuracion-facturacion.html
+Disallow: /mensajeros-dashboard.html
+Disallow: /mensajero-mobile.html
+Disallow: /test-plataforma.html
+Disallow: /licencia-vencida.html
+
+# Permitir páginas públicas
+Allow: /index.html
+Allow: /login.html
+Allow: /assets/
+
+# Sitemap
+Sitemap: https://kinventoryservices.com/sitemap.xml
+Sitemap: https://www.kinventoryservices.com/sitemap.xml
