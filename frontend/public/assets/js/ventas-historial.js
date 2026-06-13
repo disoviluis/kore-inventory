@@ -413,7 +413,7 @@ function renderVentas() {
                     ${detalleCliente ? `<small class="text-primary">${detalleCliente}</small><br>` : ''}
                     ${mostrarDocumento ? `<small class="text-muted">${venta.numero_documento || 'N/A'}</small>` : ''}
                 </td>
-                <td><strong>$${formatearNumero(venta.total)}</strong></td>
+                <td><strong>$${formatearNumero((parseFloat(venta.subtotal) || 0) - (parseFloat(venta.descuento) || 0) + (parseFloat(venta.impuesto) || 0) + (parseFloat(venta.impuestos_adicionales) || 0))}</strong></td>
                 <td><span class="badge bg-secondary">${venta.metodo_pago}</span></td>
                 <td>${estadoBadge}</td>
                 <td>
@@ -551,9 +551,25 @@ function mostrarDetalleVenta(venta, detalle) {
                         <td colspan="4" class="text-end"><strong>IVA (19%):</strong></td>
                         <td class="text-end">$${formatearNumero(venta.impuesto)}</td>
                     </tr>
+                    ${venta.impuestos_adicionales > 0 ? `
+                    <tr>
+                        <td colspan="4" class="text-end"><strong>Impuestos Adicionales:</strong></td>
+                        <td class="text-end">$${formatearNumero(venta.impuestos_adicionales)}</td>
+                    </tr>
+                    ` : ''}
+                    ${venta.propina_valor > 0 ? `
+                    <tr style="border-top: 2px solid #ddd;">
+                        <td colspan="4" class="text-end">Total Factura:</td>
+                        <td class="text-end">$${formatearNumero((parseFloat(venta.subtotal) - parseFloat(venta.descuento || 0) + parseFloat(venta.impuesto) + parseFloat(venta.impuestos_adicionales || 0)))}</td>
+                    </tr>
+                    <tr style="color: #28a745;">
+                        <td colspan="4" class="text-end"><strong>🎉 Propina ${venta.propina_porcentaje}%:</strong></td>
+                        <td class="text-end">$${formatearNumero(venta.propina_valor)}</td>
+                    </tr>
+                    ` : ''}
                     <tr class="table-primary">
                         <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
-                        <td class="text-end"><strong>$${formatearNumero(venta.total)}</strong></td>
+                        <td class="text-end"><strong>$${formatearNumero((parseFloat(venta.subtotal) || 0) - (parseFloat(venta.descuento) || 0) + (parseFloat(venta.impuesto) || 0) + (parseFloat(venta.impuestos_adicionales) || 0) + (parseFloat(venta.propina_valor) || 0))}</strong></td>
                     </tr>
                 </tfoot>
             </table>
@@ -693,7 +709,11 @@ async function actualizarEstadisticas() {
     const totalVentas = ventasData.length;
     const totalIngresos = ventasData
         .filter(v => v.estado !== 'anulada')
-        .reduce((sum, v) => sum + parseFloat(v.total), 0);
+        .reduce((sum, v) => {
+            // Calcular total correcto considerando todos los campos
+            const total = (parseFloat(v.subtotal) || 0) - (parseFloat(v.descuento) || 0) + (parseFloat(v.impuesto) || 0) + (parseFloat(v.impuestos_adicionales) || 0) + (parseFloat(v.propina_valor) || 0);
+            return sum + total;
+        }, 0);
     const pendientes = ventasData.filter(v => v.estado === 'pendiente').length;
     const ticketPromedio = totalVentas > 0 ? totalIngresos / totalVentas : 0;
 
@@ -743,19 +763,24 @@ async function exportarVentas() {
 
     try {
         // Preparar datos para exportar
-        const datosExportar = ventasData.map(v => ({
-            'Nº Factura': v.numero_factura,
-            'Fecha': new Date(v.fecha_venta).toLocaleString('es-CO'),
-            'Cliente': v.cliente_nombre,
-            'Documento': v.cliente_documento,
-            'Subtotal': v.subtotal,
-            'Descuento': v.descuento,
-            'Impuesto': v.impuesto,
-            'Total': v.total,
-            'Método Pago': v.metodo_pago,
-            'Estado': v.estado,
-            'Vendedor': v.vendedor_nombre
-        }));
+        const datosExportar = ventasData.map(v => {
+            const totalCorrecto = (parseFloat(v.subtotal) || 0) - (parseFloat(v.descuento) || 0) + (parseFloat(v.impuesto) || 0) + (parseFloat(v.impuestos_adicionales) || 0) + (parseFloat(v.propina_valor) || 0);
+            return {
+                'Nº Factura': v.numero_factura,
+                'Fecha': new Date(v.fecha_venta).toLocaleString('es-CO'),
+                'Cliente': v.cliente_nombre,
+                'Documento': v.cliente_documento,
+                'Subtotal': v.subtotal,
+                'Descuento': v.descuento || 0,
+                'Impuesto': v.impuesto,
+                'Impuestos Adic.': v.impuestos_adicionales || 0,
+                'Propina': v.propina_valor || 0,
+                'Total': totalCorrecto,
+                'Método Pago': v.metodo_pago,
+                'Estado': v.estado,
+                'Vendedor': v.vendedor_nombre
+            };
+        });
 
         // Crear libro de Excel
         const wb = XLSX.utils.book_new();

@@ -1581,7 +1581,16 @@ async function guardarVenta() {
         }))
     };
 
-    console.log('ventaData a enviar:', ventaData);
+    console.log('=== DATOS DE VENTA A ENVIAR ===');
+    console.log('Subtotal:', subtotal);
+    console.log('Descuento:', descuento);
+    console.log('Base Imponible:', baseImponible);
+    console.log('Impuesto:', impuesto);
+    console.log('Total (sin propina):', total);
+    console.log('Propina:', propinaValor);
+    console.log('Total Final:', totalFinal);
+    console.log('ventaData completo:', ventaData);
+    console.log('================================');
 
     try {
         const token = localStorage.getItem('token');
@@ -3804,6 +3813,9 @@ function renderizarUltimasVentas() {
             }
         }
         
+        // Calcular total correcto (puede que esté mal en BD si descuento no se guardó)
+        const totalCorrecto = (parseFloat(venta.subtotal) || 0) - (parseFloat(venta.descuento) || 0) + (parseFloat(venta.impuesto) || 0) + (parseFloat(venta.impuestos_adicionales) || 0) + (parseFloat(venta.propina_valor) || 0);
+        
         return `
         <div class="list-group-item">
             <div class="d-flex justify-content-between align-items-start">
@@ -3815,7 +3827,8 @@ function renderizarUltimasVentas() {
                     <small class="text-muted">${new Date(venta.fecha_venta).toLocaleTimeString('es-CO')}</small>
                 </div>
                 <div class="text-end">
-                    <strong class="text-success d-block">$${formatearNumero(venta.total)}</strong>
+                    <strong class="text-success d-block">$${formatearNumero(totalCorrecto)}</strong>
+                    ${venta.descuento > 0 ? `<small class="text-muted">Desc: -$${formatearNumero(venta.descuento)}</small><br>` : ''}
                     <button class="btn btn-sm btn-outline-primary mt-1" onclick="reimprimirFactura('${venta.numero_factura}')">
                         <i class="bi bi-printer"></i>
                     </button>
