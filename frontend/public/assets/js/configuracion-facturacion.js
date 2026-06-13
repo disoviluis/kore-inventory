@@ -1,7 +1,7 @@
 // configuracion-facturacion.js
 // Gestión de configuración de facturación
 
-const API_URL = 'https://kinventoryservices.com/api';
+const API_URL = '/api';
 let empresaActual = null;
 
 // ============================

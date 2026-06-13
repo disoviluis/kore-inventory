@@ -9,7 +9,7 @@ console.log('🚀 Ventas Historial.js cargado - Versión 1.0.0');
 // VARIABLES GLOBALES
 // ============================================
 
-const API_URL = 'https://kinventoryservices.com/api';
+const API_URL = '/api';
 let currentEmpresa = null;
 let currentUsuario = null;
 let ventasData = [];

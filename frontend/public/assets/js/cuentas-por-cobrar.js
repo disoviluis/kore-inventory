@@ -5,7 +5,7 @@
  * =================================
  */
 
-const API_URL = 'https://kinventoryservices.com/api';
+const API_URL = '/api';
 let token = localStorage.getItem('token');
 let usuario = null;
 let currentEmpresa = null;

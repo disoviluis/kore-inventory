@@ -3,9 +3,7 @@
  * Vista para Mensajeros (móvil) y Admin/Supervisor (desktop)
  */
 
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3000/api'
-    : 'https://kinventoryservices.com/api';
+const API_URL = '/api';
 
 let currentEmpresaId = null;
 let currentEmpresa = null;

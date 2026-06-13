@@ -3,7 +3,7 @@
  * Gestión de bodegas, sucursales, almacenes y locales
  */
 
-const API_URL = 'https://kinventoryservices.com/api';
+const API_URL = '/api';
 let currentBodegaId = null;
 let allBodegas = [];
 let currentEmpresaId = null;

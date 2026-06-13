@@ -7,7 +7,7 @@
  */
 
 // API URL - usar el global o fallback
-const SIDEBAR_API_URL = typeof API_URL !== 'undefined' ? API_URL : 'https://kinventoryservices.com/api';
+const SIDEBAR_API_URL = typeof API_URL !== 'undefined' ? API_URL : '/api';
 
 /**
  * Mapeo de enlaces del sidebar a nombres de módulos

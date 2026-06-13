@@ -3,7 +3,7 @@
 // ============================================================================
 
 // API Base URL
-const API_URL = 'https://kinventoryservices.com/api';
+const API_URL = '/api';
 
 // Variables globales
 let currentEmpresa = null;

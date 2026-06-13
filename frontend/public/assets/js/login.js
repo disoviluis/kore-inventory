@@ -6,7 +6,7 @@
  */
 
 // Configuración de la API
-const API_URL = 'https://kinventoryservices.com/api';
+const API_URL = '/api';
 
 // Referencias al DOM
 const loginForm = document.getElementById('loginForm');

@@ -471,9 +471,7 @@
     <!-- Cargar planes dinámicamente desde API -->
     <script>
         // URL base de la API (usa protocolo relativo para HTTPS)
-        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? 'http://localhost:3000/api'
-            : '/api'; // Ruta relativa - usa automáticamente HTTPS si la página está en HTTPS
+        const API_URL = '/api';
 
         /**
          * Cargar planes desde la API pública

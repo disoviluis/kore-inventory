@@ -6,7 +6,7 @@
  * =================================
  */
 
-const API_URL = 'https://kinventoryservices.com/api';
+const API_URL = '/api';
 let currentEmpresa = null;
 let currentUsuario = null;
 let clienteSeleccionado = null;

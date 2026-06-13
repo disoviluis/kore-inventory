@@ -15,9 +15,7 @@ async function cargarEmpresas(usuarioId) {
   if (!companySelector) return;
   
   // Construir API_URL dinámicamente
-  const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3000/api'
-    : 'https://kinventoryservices.com/api';
+  const apiUrl = '/api';
   
   try {
     const response = await fetch(`${apiUrl}/empresas/usuario/${usuarioId}`, {
