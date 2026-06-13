@@ -3931,6 +3931,10 @@ async function reimprimirFactura(numeroFactura) {
             pagos: venta.pagos || []
         };
         
+        // Actualizar variables globales para que generarHTMLImpresion() funcione
+        ultimaVentaGuardada = venta;
+        ultimaVentaData = ventaData;
+        
         // Mostrar el modal de impresión con la factura
         mostrarFactura(venta, ventaData);
         
