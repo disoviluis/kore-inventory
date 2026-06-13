@@ -3920,13 +3920,21 @@ async function reimprimirFactura(numeroFactura) {
             propina_porcentaje: parseFloat(venta.propina_porcentaje) || 0,
             propina_valor: parseFloat(venta.propina_valor) || 0,
             cliente: {
-                razon_social: venta.cliente_razon_social || venta.cliente_nombre,
+                razon_social: venta.razon_social || venta.cliente_nombre,
                 nombre: venta.cliente_nombre,
                 apellido: venta.cliente_apellido,
                 tipo_documento: venta.cliente_tipo_documento,
-                numero_documento: venta.cliente_numero_documento
+                numero_documento: venta.numero_documento
             },
-            productos: venta.productos || [],
+            // Mapear productos del backend al formato esperado por las plantillas
+            productos: (venta.productos || []).map(p => ({
+                id: p.producto_id,
+                nombre: p.producto_nombre,
+                sku: p.sku,
+                cantidad: p.cantidad,
+                precio_unitario: parseFloat(p.precio_unitario),
+                subtotal: parseFloat(p.subtotal || (p.cantidad * p.precio_unitario))
+            })),
             impuestos: venta.impuestos || [],
             pagos: venta.pagos || []
         };

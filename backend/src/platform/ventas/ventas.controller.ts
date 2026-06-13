@@ -179,10 +179,22 @@ export const getVentas = async (req: Request, res: Response): Promise<Response> 
 export const getVentaById = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params;
+    const { empresaId } = req.query;
+
+    if (!empresaId) {
+      return errorResponse(
+        res,
+        'empresaId es requerido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
 
     // Determinar si es ID numérico o número de factura
     const isNumericId = /^\d+$/.test(id);
-    const whereClause = isNumericId ? 'v.id = ?' : 'v.numero_factura = ?';
+    const whereClause = isNumericId 
+      ? 'v.id = ? AND v.empresa_id = ?' 
+      : 'v.numero_factura = ? AND v.empresa_id = ?';
 
     const ventas = await query(
       `SELECT 
@@ -195,7 +207,7 @@ export const getVentaById = async (req: Request, res: Response): Promise<Respons
       INNER JOIN clientes c ON v.cliente_id = c.id
       LEFT JOIN usuarios u ON v.vendedor_id = u.id
       WHERE ${whereClause}`,
-      [id]
+      [id, empresaId]
     );
 
     if (ventas.length === 0) {
