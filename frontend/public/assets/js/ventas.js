@@ -456,6 +456,22 @@ function initEventListeners() {
 
     // Descuento
     document.getElementById('inputDescuento').addEventListener('input', calcularTotales);
+    
+    // Propina
+    document.getElementById('checkPropina').addEventListener('change', function() {
+        const contenedor = document.getElementById('contenedorPropina');
+        if (this.checked) {
+            contenedor.style.display = 'block';
+            // Establecer porcentaje sugerido del 5%
+            document.getElementById('inputPropinaPorcentaje').value = '5';
+        } else {
+            contenedor.style.display = 'none';
+            document.getElementById('inputPropinaPorcentaje').value = '0';
+        }
+        calcularTotales();
+    });
+    
+    document.getElementById('inputPropinaPorcentaje').addEventListener('input', calcularTotales);
 
     // Botones principales
     document.getElementById('btnGuardarVenta').addEventListener('click', guardarVenta);
@@ -1174,14 +1190,18 @@ async function eliminarProducto(index) {
 function calcularTotales() {
     const subtotal = productosVenta.reduce((sum, p) => sum + (parseFloat(p.subtotal) || 0), 0);
     const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
+    
+    // La base imponible es el subtotal después de aplicar el descuento
     const baseImponible = subtotal - descuento;
     
-    // Calcular IVA solo para productos gravados
+    // Calcular IVA solo para productos gravados (sobre la base imponible)
     let impuesto = 0;
     productosVenta.forEach(p => {
         if (p.aplica_iva) {
             const porcentaje = (parseFloat(p.porcentaje_iva) || 19) / 100;
-            const subtotalProducto = (parseFloat(p.subtotal) || 0) * (descuento > 0 ? (1 - descuento / subtotal) : 1);
+            // Aplicar descuento proporcionalmente a cada producto
+            const factorDescuento = descuento > 0 ? (1 - descuento / subtotal) : 1;
+            const subtotalProducto = (parseFloat(p.subtotal) || 0) * factorDescuento;
             impuesto += subtotalProducto * porcentaje;
         }
     });
@@ -1219,13 +1239,35 @@ function calcularTotales() {
         }
     });
     
-    const total = baseImponible + impuesto + totalImpuestosAdicionales;
+    // Total de la factura (sin propina)
+    const totalFactura = baseImponible + impuesto + totalImpuestosAdicionales;
+    
+    // ========================================
+    // CÁLCULO DE PROPINA
+    // ========================================
+    const propinaHabilitada = document.getElementById('checkPropina').checked;
+    let propinaValor = 0;
+    let propinaPorcentaje = 0;
+    
+    if (propinaHabilitada) {
+        propinaPorcentaje = parseFloat(document.getElementById('inputPropinaPorcentaje').value) || 0;
+        // La propina se calcula sobre el NETO (subtotal sin descuento)
+        propinaValor = subtotal * (propinaPorcentaje / 100);
+    }
+    
+    // Total final a pagar (factura + propina)
+    const total = totalFactura + propinaValor;
     
     // Actualizar variable global para gestión de pagos
     totalVentaActual = total;
 
+    // ========================================
+    // ACTUALIZAR UI
+    // ========================================
     document.getElementById('resumenSubtotal').textContent = `$${formatearNumero(subtotal)}`;
     document.getElementById('resumenImpuesto').textContent = `$${formatearNumero(impuesto)}`;
+    document.getElementById('resumenTotalFactura').textContent = `$${formatearNumero(totalFactura)}`;
+    document.getElementById('resumenPropinaValor').textContent = `$${formatearNumero(propinaValor)}`;
     
     // Mostrar impuestos adicionales
     const resumenImpuestos = document.getElementById('resumenImpuestosAdicionales');
@@ -1483,6 +1525,22 @@ async function guardarVenta() {
     
     const total = baseImponible + impuesto + totalImpuestosAdicionales;
     
+    // ========================================
+    // CÁLCULO DE PROPINA
+    // ========================================
+    const propinaHabilitada = document.getElementById('checkPropina').checked;
+    let propinaValor = 0;
+    let propinaPorcentaje = 0;
+    
+    if (propinaHabilitada) {
+        propinaPorcentaje = parseFloat(document.getElementById('inputPropinaPorcentaje').value) || 0;
+        // La propina se calcula sobre el NETO (subtotal sin descuento)
+        propinaValor = subtotal * (propinaPorcentaje / 100);
+    }
+    
+    // Total final a pagar (factura + propina)
+    const totalFinal = total + propinaValor;
+    
     // Determinar método de pago para mostrar en factura
     let metodoPagoResumen = 'No especificado';
     if (pagosPendientes.length === 1) {
@@ -1498,9 +1556,15 @@ async function guardarVenta() {
         subtotal: subtotal,
         descuento: descuento,
         impuesto: impuesto,
-        total: total,
+        total: totalFinal,  // Total incluyendo propina
         metodo_pago: metodoPagoResumen,
         notas: document.getElementById('notasVenta').value || null,
+        // Campos de propina
+        propina_habilitada: propinaHabilitada,
+        propina_porcentaje: propinaHabilitada ? propinaPorcentaje : 0,
+        propina_valor: propinaHabilitada ? propinaValor : 0,
+        propina_base: propinaHabilitada ? subtotal : 0,
+        // Impuestos y pagos
         impuestos: impuestosVenta,
         pagos: pagosPendientes,
         productos: productosVenta.map(p => ({
@@ -1625,6 +1689,9 @@ function limpiarVentaSinConfirmar() {
     document.getElementById('numeroDocumento').value = '';
     document.getElementById('buscarNombre').value = '';
     document.getElementById('inputDescuento').value = '0';
+    document.getElementById('checkPropina').checked = false;
+    document.getElementById('contenedorPropina').style.display = 'none';
+    document.getElementById('inputPropinaPorcentaje').value = '5';
     document.getElementById('notasVenta').value = '';
     
     // Limpiar campos de pago
@@ -1788,6 +1855,16 @@ async function guardarClienteRapido() {
         console.error('Error en guardarClienteRapido:', error);
         mostrarAlerta(error.message || 'Error al guardar cliente', 'danger');
     }
+}
+
+/**
+ * Establecer porcentaje de propina (botones rápidos)
+ */
+function setPropinaPorcentaje(porcentaje) {
+    document.getElementById('checkPropina').checked = true;
+    document.getElementById('contenedorPropina').style.display = 'block';
+    document.getElementById('inputPropinaPorcentaje').value = porcentaje;
+    calcularTotales();
 }
 
 function formatearNumero(num) {
@@ -2750,6 +2827,17 @@ function generarPlantillaTirilla(venta, ventaData, config) {
             <span>IVA (19%):</span>
             <span>$${formatearNumero(impuesto)}</span>
         </div>
+        ${ventaData.propina_habilitada ? `
+        <div class="line"></div>
+        <div class="totals-row">
+            <span>Total Factura:</span>
+            <span>$${formatearNumero(total - (ventaData.propina_valor || 0))}</span>
+        </div>
+        <div class="totals-row" style="font-size: 10pt; color: #28a745;">
+            <span>🎉 Propina ${ventaData.propina_porcentaje}%:</span>
+            <span>$${formatearNumero(ventaData.propina_valor || 0)}</span>
+        </div>
+        ` : ''}
         <div class="totals-row total-final">
             <span>TOTAL:</span>
             <span>$${formatearNumero(total)}</span>

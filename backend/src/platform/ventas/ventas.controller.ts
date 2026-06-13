@@ -244,20 +244,15 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       pagos,
       notas,
       vendedor_id,
-      impuestos
-    } = req.body;
+        impuestos,
+        // Propina
+        propina_habilitada,
+        propina_porcentaje,
+        propina_valor,
+        propina_base
+      } = req.body;
 
-    // Validaciones
-    if (!empresa_id || !cliente_id || !productos || productos.length === 0) {
-      return errorResponse(
-        res,
-        'Campos requeridos: empresa_id, cliente_id, productos (array)',
-        null,
-        CONSTANTS.HTTP_STATUS.BAD_REQUEST
-      );
-    }
-
-    // Validar pagos múltiples
+      // Validaciones
     if (pagos && Array.isArray(pagos) && pagos.length > 0) {
       const totalPagos = pagos.reduce((sum: number, p: any) => sum + parseFloat(p.monto), 0);
       
@@ -369,8 +364,9 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         subtotal, descuento, impuesto, total, 
         retenciones,
         estado, metodo_pago, forma_pago, fecha_vencimiento, notas, vendedor_id,
-        cufe, qr_code
-      ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          cufe, qr_code,
+          propina_habilitada, propina_porcentaje, propina_valor, propina_base
+        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         numeroFactura,
@@ -387,9 +383,14 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         notas || null,
         vendedor_id || null,
         cufe,
-        qrCode
-      ]
-    );
+          qrCode,
+          // Propina
+          propina_habilitada || false,
+          propina_porcentaje || 0,
+          propina_valor || 0,
+          propina_base || 0
+        ]
+      );
 
     const ventaId = resultVenta.insertId;
 
