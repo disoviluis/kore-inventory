@@ -760,9 +760,9 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- IVA -->
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">IVA (19%):</span>
+                                    <!-- IVA (oculto si es 0) -->
+                                    <div id="contenedorIVA" class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">IVA <span id="porcentajeIVA">(19%)</span>:</span>
                                         <strong id="resumenImpuesto">$0</strong>
                                     </div>
                                     
@@ -1408,7 +1408,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Custom JS -->
-    <script src="assets/js/ventas.js?v=5.2"></script>
+    <script src="assets/js/ventas.js?v=5.3"></script>
     <!-- Sidebar Navigation (Common) -->
     <script src="assets/js/sidebar-navigation.js"></script>
 

@@ -596,12 +596,26 @@ function mostrarDetalleVenta(venta, detalle) {
 // IMPRIMIR VENTA
 // ============================================
 
+/**
+ * Imprimir venta usando modal profesional
+ * Redirige a ventas.html con el parámetro de factura para impresión
+ */
 async function imprimirVenta(ventaId) {
-    await verDetalleVenta(ventaId);
-    // Esperar a que se cargue el modal
-    setTimeout(() => {
-        imprimirDetalleVenta();
-    }, 500);
+    try {
+        // Obtener el número de factura
+        const venta = ventasData.find(v => v.id === ventaId);
+        if (!venta) {
+            mostrarAlerta('Venta no encontrada', 'error');
+            return;
+        }
+        
+        // Redirigir a ventas.html con parámetro para abrir modal de impresión
+        window.location.href = `ventas.html?imprimir=${encodeURIComponent(venta.numero_factura)}`;
+        
+    } catch (error) {
+        console.error('Error al preparar impresión:', error);
+        mostrarAlerta('Error al preparar la impresión', 'error');
+    }
 }
 
 function imprimirDetalleVenta() {

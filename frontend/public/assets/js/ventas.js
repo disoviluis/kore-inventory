@@ -187,6 +187,24 @@ document.addEventListener('DOMContentLoaded', async function() {
         initEventListeners();
         deshabilitarSeccionProductos();
 
+        // ============================================
+        // DETECTAR PARÁMETRO DE IMPRESIÓN EN URL
+        // ============================================
+        const urlParams = new URLSearchParams(window.location.search);
+        const numeroFacturaImprimir = urlParams.get('imprimir');
+        
+        if (numeroFacturaImprimir) {
+            console.log(`🖨️ Detectado parámetro de impresión para: ${numeroFacturaImprimir}`);
+            // Esperar un momento para que se carguen todos los datos
+            setTimeout(() => {
+                reimprimirFactura(numeroFacturaImprimir);
+                // Limpiar URL sin recargar la página
+                const url = new URL(window.location);
+                url.searchParams.delete('imprimir');
+                window.history.replaceState({}, '', url);
+            }, 1000);
+        }
+
     } catch (error) {
         console.error('Error de inicialización:', error);
         mostrarAlerta('Error al inicializar el módulo', 'danger');
@@ -1266,6 +1284,15 @@ function calcularTotales() {
     // ========================================
     document.getElementById('resumenSubtotal').textContent = `$${formatearNumero(subtotal)}`;
     document.getElementById('resumenImpuesto').textContent = `$${formatearNumero(impuesto)}`;
+    
+    // Mostrar/ocultar línea de IVA según el valor
+    const contenedorIVA = document.getElementById('contenedorIVA');
+    if (impuesto > 0) {
+        contenedorIVA.style.display = 'flex';
+    } else {
+        contenedorIVA.style.display = 'none';
+    }
+    
     document.getElementById('resumenTotalFactura').textContent = `$${formatearNumero(totalFactura)}`;
     document.getElementById('resumenPropinaValor').textContent = `$${formatearNumero(propinaValor)}`;
     
@@ -3842,9 +3869,72 @@ function renderizarUltimasVentas() {
 /**
  * Reimprimir factura
  */
+/**
+ * Imprimir/reimprimir factura desde cualquier módulo
+ * Carga los datos completos desde el backend y usa la plantilla configurada
+ */
 async function reimprimirFactura(numeroFactura) {
-    mostrarAlerta('Función de reimpresión en desarrollo', 'info');
-    reproducirSonido('add');
+    try {
+        console.log(`📄 Cargando factura ${numeroFactura} para impresión...`);
+        
+        // Mostrar loading
+        const loadingAlert = mostrarAlerta('Cargando factura...', 'info');
+        
+        const token = localStorage.getItem('token');
+        
+        // Cargar datos completos de la venta desde el backend
+        const response = await fetch(`${API_URL}/ventas/${numeroFactura}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al cargar la factura');
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success || !result.data) {
+            throw new Error('Factura no encontrada');
+        }
+        
+        const venta = result.data;
+        
+        console.log('✅ Factura cargada:', venta);
+        
+        // Preparar ventaData en el mismo formato que cuando se guarda
+        const ventaData = {
+            numero_factura: venta.numero_factura,
+            subtotal: parseFloat(venta.subtotal) || 0,
+            descuento: parseFloat(venta.descuento) || 0,
+            impuesto: parseFloat(venta.impuesto) || 0,
+            total: parseFloat(venta.total) || 0,
+            propina_habilitada: venta.propina_habilitada || false,
+            propina_porcentaje: parseFloat(venta.propina_porcentaje) || 0,
+            propina_valor: parseFloat(venta.propina_valor) || 0,
+            cliente: {
+                razon_social: venta.cliente_razon_social || venta.cliente_nombre,
+                nombre: venta.cliente_nombre,
+                apellido: venta.cliente_apellido,
+                tipo_documento: venta.cliente_tipo_documento,
+                numero_documento: venta.cliente_numero_documento
+            },
+            productos: venta.productos || [],
+            impuestos: venta.impuestos || [],
+            pagos: venta.pagos || []
+        };
+        
+        // Mostrar el modal de impresión con la factura
+        mostrarFactura(venta, ventaData);
+        
+        reproducirSonido('success');
+        
+    } catch (error) {
+        console.error('❌ Error al reimprimir factura:', error);
+        mostrarAlerta('Error al cargar la factura para impresión', 'error');
+        reproducirSonido('error');
+    }
 }
 
 // ============================================

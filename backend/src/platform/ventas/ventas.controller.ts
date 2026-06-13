@@ -180,17 +180,21 @@ export const getVentaById = async (req: Request, res: Response): Promise<Respons
   try {
     const { id } = req.params;
 
+    // Determinar si es ID numérico o número de factura
+    const isNumericId = /^\d+$/.test(id);
+    const whereClause = isNumericId ? 'v.id = ?' : 'v.numero_factura = ?';
+
     const ventas = await query(
       `SELECT 
         v.*, 
         c.nombre as cliente_nombre, c.apellido as cliente_apellido,
-        c.razon_social, c.numero_documento, c.email, c.telefono,
-        c.direccion, c.ciudad,
+        c.razon_social, c.numero_documento, c.tipo_documento as cliente_tipo_documento,
+        c.email, c.telefono, c.direccion, c.ciudad,
         u.nombre as vendedor_nombre, u.apellido as vendedor_apellido
       FROM ventas v
       INNER JOIN clientes c ON v.cliente_id = c.id
       LEFT JOIN usuarios u ON v.vendedor_id = u.id
-      WHERE v.id = ?`,
+      WHERE ${whereClause}`,
       [id]
     );
 
@@ -203,6 +207,9 @@ export const getVentaById = async (req: Request, res: Response): Promise<Respons
       );
     }
 
+    const venta = ventas[0];
+
+    // Cargar detalles de productos
     const detalles = await query(
       `SELECT 
         vd.*, 
@@ -210,11 +217,29 @@ export const getVentaById = async (req: Request, res: Response): Promise<Respons
       FROM venta_detalle vd
       INNER JOIN productos p ON vd.producto_id = p.id
       WHERE vd.venta_id = ?`,
-      [id]
+      [venta.id]
     );
 
-    const venta = ventas[0];
-    venta.detalles = detalles;
+    // Cargar impuestos aplicados
+    const impuestos = await query(
+      `SELECT 
+        vi.*,
+        i.nombre as impuesto_nombre, i.codigo
+      FROM venta_impuestos vi
+      LEFT JOIN impuestos i ON vi.impuesto_id = i.id
+      WHERE vi.venta_id = ?`,
+      [venta.id]
+    );
+
+    // Cargar pagos
+    const pagos = await query(
+      `SELECT * FROM venta_pagos WHERE venta_id = ?`,
+      [venta.id]
+    );
+
+    venta.productos = detalles;
+    venta.impuestos = impuestos;
+    venta.pagos = pagos;
 
     return successResponse(res, 'Venta obtenida exitosamente', venta, CONSTANTS.HTTP_STATUS.OK);
 
