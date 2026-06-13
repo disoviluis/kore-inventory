@@ -3882,8 +3882,14 @@ async function reimprimirFactura(numeroFactura) {
         
         const token = localStorage.getItem('token');
         
+        // Obtener empresaId actual
+        const empresaId = currentEmpresa?.id;
+        if (!empresaId) {
+            throw new Error('No se ha seleccionado una empresa');
+        }
+        
         // Cargar datos completos de la venta desde el backend
-        const response = await fetch(`${API_URL}/ventas/${numeroFactura}`, {
+        const response = await fetch(`${API_URL}/ventas/${numeroFactura}?empresaId=${empresaId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
