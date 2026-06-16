@@ -544,12 +544,52 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
                 <p><strong>Producto:</strong> ${productoNombre}</p>
                 <p><strong>Stock disponible:</strong> ${stockDisponible}</p>
                 <label class="form-label mt-3">Cantidad:</label>
-                <input type="number" id="swal-cantidad" class="form-control" min="1" max="${stockDisponible}" value="1">
+                <div class="input-group" style="max-width: 300px; margin: 0 auto;">
+                    <button class="btn btn-outline-primary" type="button" id="btn-decrementar" style="width: 45px;">
+                        <i class="bi bi-dash-lg"></i>
+                    </button>
+                    <input type="number" id="swal-cantidad" class="form-control text-center" 
+                           min="1" max="${stockDisponible}" value="1" 
+                           style="font-size: 1.2rem; font-weight: bold;">
+                    <button class="btn btn-outline-primary" type="button" id="btn-incrementar" style="width: 45px;">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+                <div class="text-center mt-2">
+                    <small class="text-muted">Puedes escribir directamente o usar los botones</small>
+                </div>
             </div>
         `,
         showCancelButton: true,
         confirmButtonText: 'Agregar',
         cancelButtonText: 'Cancelar',
+        didOpen: () => {
+            // Referencias a los elementos
+            const inputCantidad = document.getElementById('swal-cantidad');
+            const btnIncrementar = document.getElementById('btn-incrementar');
+            const btnDecrementar = document.getElementById('btn-decrementar');
+            const maxStock = parseInt(inputCantidad.getAttribute('max'));
+            
+            // Función para incrementar
+            btnIncrementar.addEventListener('click', () => {
+                let valor = parseInt(inputCantidad.value) || 0;
+                if (valor < maxStock) {
+                    inputCantidad.value = valor + 1;
+                }
+            });
+            
+            // Función para decrementar
+            btnDecrementar.addEventListener('click', () => {
+                let valor = parseInt(inputCantidad.value) || 0;
+                if (valor > 1) {
+                    inputCantidad.value = valor - 1;
+                }
+            });
+            
+            // Enfocar el input para que sea más fácil escribir
+            inputCantidad.focus();
+            inputCantidad.select();
+        },
         preConfirm: () => {
             const cantidad = parseInt(document.getElementById('swal-cantidad').value);
             
