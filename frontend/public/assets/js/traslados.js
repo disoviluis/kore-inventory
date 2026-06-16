@@ -537,6 +537,8 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
         return;
     }
 
+    const maxStockDisponible = stockDisponible; // Guardar en variable externa
+    
     Swal.fire({
         title: 'Cantidad a trasladar',
         html: `
@@ -548,9 +550,15 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
                     <button class="btn btn-outline-primary" type="button" id="btn-decrementar" style="width: 45px;">
                         <i class="bi bi-dash-lg"></i>
                     </button>
-                    <input type="number" id="swal-cantidad" class="form-control text-center" 
-                           min="1" max="${stockDisponible}" value="1" 
-                           style="font-size: 1.2rem; font-weight: bold;">
+                    <input type="text" 
+                           id="swal-cantidad" 
+                           class="form-control text-center" 
+                           value="1" 
+                           inputmode="numeric"
+                           pattern="[0-9]*"
+                           autocomplete="off"
+                           data-max="${stockDisponible}"
+                           style="font-size: 1.2rem; font-weight: bold; cursor: text; user-select: text;">
                     <button class="btn btn-outline-primary" type="button" id="btn-incrementar" style="width: 45px;">
                         <i class="bi bi-plus-lg"></i>
                     </button>
@@ -568,10 +576,33 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
             const inputCantidad = document.getElementById('swal-cantidad');
             const btnIncrementar = document.getElementById('btn-incrementar');
             const btnDecrementar = document.getElementById('btn-decrementar');
-            const maxStock = parseInt(inputCantidad.getAttribute('max'));
+            const maxStock = parseInt(inputCantidad.getAttribute('data-max'));
+            
+            // Asegurar que el input sea editable
+            inputCantidad.removeAttribute('readonly');
+            inputCantidad.removeAttribute('disabled');
+            
+            // Hacer el input clickeable y editable
+            inputCantidad.addEventListener('click', function(e) {
+                e.stopPropagation();
+                this.focus();
+                this.select();
+            });
+            
+            // Permitir solo números en el input
+            inputCantidad.addEventListener('input', function(e) {
+                // Remover cualquier carácter que no sea número
+                this.value = this.value.replace(/[^0-9]/g, '');
+                
+                // Asegurar que no sea 0 o vacío
+                if (this.value === '' || this.value === '0') {
+                    this.value = '1';
+                }
+            });
             
             // Función para incrementar
-            btnIncrementar.addEventListener('click', () => {
+            btnIncrementar.addEventListener('click', (e) => {
+                e.preventDefault();
                 let valor = parseInt(inputCantidad.value) || 0;
                 if (valor < maxStock) {
                     inputCantidad.value = valor + 1;
@@ -579,16 +610,19 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
             });
             
             // Función para decrementar
-            btnDecrementar.addEventListener('click', () => {
+            btnDecrementar.addEventListener('click', (e) => {
+                e.preventDefault();
                 let valor = parseInt(inputCantidad.value) || 0;
                 if (valor > 1) {
                     inputCantidad.value = valor - 1;
                 }
             });
             
-            // Enfocar el input para que sea más fácil escribir
-            inputCantidad.focus();
-            inputCantidad.select();
+            // Dar foco al input después de un pequeño delay
+            setTimeout(() => {
+                inputCantidad.focus();
+                inputCantidad.select();
+            }, 100);
         },
         preConfirm: () => {
             const cantidad = parseInt(document.getElementById('swal-cantidad').value);
@@ -598,8 +632,8 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
                 return false;
             }
             
-            if (cantidad > stockDisponible) {
-                Swal.showValidationMessage(`Cantidad máxima: ${stockDisponible}`);
+            if (cantidad > maxStockDisponible) {
+                Swal.showValidationMessage(`Cantidad máxima: ${maxStockDisponible}`);
                 return false;
             }
             
