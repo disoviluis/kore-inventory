@@ -537,149 +537,26 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
         return;
     }
 
-    const maxStockDisponible = stockDisponible;
+    // Establecer datos en el modal
+    document.getElementById('modalCantidadProducto').textContent = productoNombre;
+    document.getElementById('modalCantidadStock').textContent = stockDisponible;
+    document.getElementById('inputCantidadTraslado').value = '1';
+    document.getElementById('inputCantidadTraslado').setAttribute('data-max', stockDisponible);
+    document.getElementById('inputCantidadTraslado').setAttribute('data-producto-id', productoId);
+    document.getElementById('inputCantidadTraslado').setAttribute('data-producto-nombre', productoNombre);
+    document.getElementById('inputCantidadTraslado').setAttribute('data-stock', stockDisponible);
+    document.getElementById('errorCantidad').style.display = 'none';
     
-    Swal.fire({
-        title: 'Cantidad a trasladar',
-        html: `
-            <div class="text-start mb-3">
-                <p><strong>Producto:</strong> ${productoNombre}</p>
-                <p class="mb-2"><strong>Stock disponible:</strong> ${stockDisponible}</p>
-            </div>
-        `,
-        input: 'text',  // ← Usar el input nativo de SweetAlert2
-        inputValue: '1',
-        inputAttributes: {
-            inputmode: 'numeric',
-            pattern: '[0-9]*',
-            autocomplete: 'off',
-            style: 'font-size: 1.5rem; font-weight: bold; text-align: center;'
-        },
-        showCancelButton: true,
-        confirmButtonText: 'Agregar',
-        cancelButtonText: 'Cancelar',
-        allowOutsideClick: false,
-        allowEscapeKey: true,
-        didOpen: () => {
-            const input = Swal.getInput();
-            const popup = Swal.getPopup();
-            
-            // Crear contenedor para los botones
-            const inputContainer = input.parentElement;
-            inputContainer.style.position = 'relative';
-            inputContainer.style.maxWidth = '400px';
-            inputContainer.style.margin = '0 auto';
-            
-            // Crear wrapper para el input con botones
-            const wrapper = document.createElement('div');
-            wrapper.className = 'd-flex align-items-center gap-2 mb-3';
-            wrapper.style.position = 'relative';
-            
-            // Botón decrementar
-            const btnDecrementar = document.createElement('button');
-            btnDecrementar.type = 'button';
-            btnDecrementar.className = 'btn btn-outline-primary flex-shrink-0';
-            btnDecrementar.style.cssText = 'width: 50px; height: 50px; z-index: 1000;';
-            btnDecrementar.innerHTML = '<i class="bi bi-dash-lg fs-4"></i>';
-            
-            // Botón incrementar
-            const btnIncrementar = document.createElement('button');
-            btnIncrementar.type = 'button';
-            btnIncrementar.className = 'btn btn-outline-primary flex-shrink-0';
-            btnIncrementar.style.cssText = 'width: 50px; height: 50px; z-index: 1000;';
-            btnIncrementar.innerHTML = '<i class="bi bi-plus-lg fs-4"></i>';
-            
-            // Estilizar el input
-            input.className = 'swal2-input form-control form-control-lg text-center flex-grow-1';
-            input.style.cssText = 'font-size: 1.5rem; font-weight: bold; margin: 0; height: 50px;';
-            
-            // Reorganizar elementos
-            const inputParent = input.parentElement;
-            inputParent.insertBefore(wrapper, input);
-            wrapper.appendChild(btnDecrementar);
-            wrapper.appendChild(input);
-            wrapper.appendChild(btnIncrementar);
-            
-            // Agregar mensaje de ayuda
-            const helpText = document.createElement('div');
-            helpText.className = 'text-center mt-2';
-            helpText.innerHTML = '<small class="text-muted">Escribe la cantidad o usa los botones + / -</small>';
-            wrapper.parentElement.appendChild(helpText);
-            
-            // Función para validar y actualizar valor
-            const validarValor = () => {
-                let valor = input.value.replace(/[^0-9]/g, '');
-                if (valor === '' || valor === '0') {
-                    input.value = '1';
-                } else if (parseInt(valor) > maxStockDisponible) {
-                    input.value = maxStockDisponible.toString();
-                } else {
-                    input.value = valor;
-                }
-            };
-            
-            // Evento input para validar mientras escribe
-            input.addEventListener('input', validarValor);
-            input.addEventListener('blur', validarValor);
-            
-            // Eventos de botones
-            btnIncrementar.addEventListener('click', (e) => {
-                e.preventDefault();
-                let valor = parseInt(input.value) || 1;
-                if (valor < maxStockDisponible) {
-                    input.value = (valor + 1).toString();
-                }
-                input.focus();
-            });
-            
-            btnDecrementar.addEventListener('click', (e) => {
-                e.preventDefault();
-                let valor = parseInt(input.value) || 1;
-                if (valor > 1) {
-                    input.value = (valor - 1).toString();
-                }
-                input.focus();
-            });
-            
-            // Enfocar y seleccionar
-            setTimeout(() => {
-                input.focus();
-                input.select();
-            }, 100);
-        },
-        preConfirm: (value) => {
-            const cantidad = parseInt(value);
-            
-            if (!cantidad || cantidad < 1) {
-                Swal.showValidationMessage('Ingresa una cantidad válida');
-                return false;
-            }
-            
-            if (cantidad > maxStockDisponible) {
-                Swal.showValidationMessage(`Cantidad máxima: ${maxStockDisponible}`);
-                return false;
-            }
-            
-            return cantidad;
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            productosSeleccionados.push({
-                producto_id: productoId,
-                producto_nombre: productoNombre,
-                cantidad_solicitada: result.value,
-                stock_disponible: stockDisponible
-            });
-            
-            renderProductosSeleccionados();
-            renderListaProductos(); // Actualizar lista
-            
-            // Cerrar modal de productos (solo si está abierto)
-            const modalProductosEl = document.getElementById('modalProductos');
-            const modalProductosInstance = modalProductosEl ? bootstrap.Modal.getInstance(modalProductosEl) : null;
-            if (modalProductosInstance) modalProductosInstance.hide();
-        }
-    });
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('modalCantidad'));
+    modal.show();
+    
+    // Enfocar el input cuando el modal esté completamente abierto
+    document.getElementById('modalCantidad').addEventListener('shown.bs.modal', function() {
+        const input = document.getElementById('inputCantidadTraslado');
+        input.focus();
+        input.select();
+    }, { once: true });
 }
 
 function renderProductosSeleccionados() {
@@ -1230,4 +1107,89 @@ function initializeEventListeners() {
             overlay.classList.remove('active');
         });
     }
+    
+    // ==========================================
+    // MODAL DE CANTIDAD (Bootstrap)
+    // ==========================================
+    const inputCantidad = document.getElementById('inputCantidadTraslado');
+    const btnMas = document.getElementById('btnCantidadMas');
+    const btnMenos = document.getElementById('btnCantidadMenos');
+    const btnConfirmar = document.getElementById('btnConfirmarCantidad');
+    
+    // Validar solo números
+    inputCantidad.addEventListener('input', function() {
+        this.value = this.value.replace(/[^0-9]/g, '');
+        if (this.value === '' || this.value === '0') {
+            this.value = '';
+        }
+        const max = parseInt(this.getAttribute('data-max'));
+        if (parseInt(this.value) > max) {
+            this.value = max.toString();
+        }
+    });
+    
+    // Al perder foco, asegurar que haya un valor válido
+    inputCantidad.addEventListener('blur', function() {
+        if (this.value === '') {
+            this.value = '1';
+        }
+    });
+    
+    // Botón incrementar
+    btnMas.addEventListener('click', () => {
+        const max = parseInt(inputCantidad.getAttribute('data-max'));
+        let valor = parseInt(inputCantidad.value) || 1;
+        if (valor < max) {
+            inputCantidad.value = (valor + 1).toString();
+        }
+    });
+    
+    // Botón decrementar
+    btnMenos.addEventListener('click', () => {
+        let valor = parseInt(inputCantidad.value) || 1;
+        if (valor > 1) {
+            inputCantidad.value = (valor - 1).toString();
+        }
+    });
+    
+    // Confirmar cantidad
+    btnConfirmar.addEventListener('click', () => {
+        const cantidad = parseInt(inputCantidad.value);
+        const max = parseInt(inputCantidad.getAttribute('data-max'));
+        const productoId = inputCantidad.getAttribute('data-producto-id');
+        const productoNombre = inputCantidad.getAttribute('data-producto-nombre');
+        const stockDisponible = parseInt(inputCantidad.getAttribute('data-stock'));
+        const errorDiv = document.getElementById('errorCantidad');
+        
+        // Validar
+        if (!cantidad || cantidad < 1) {
+            errorDiv.textContent = 'Ingresa una cantidad válida';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        
+        if (cantidad > max) {
+            errorDiv.textContent = `Cantidad máxima: ${max}`;
+            errorDiv.style.display = 'block';
+            return;
+        }
+        
+        // Agregar producto
+        productosSeleccionados.push({
+            producto_id: productoId,
+            producto_nombre: productoNombre,
+            cantidad_solicitada: cantidad,
+            stock_disponible: stockDisponible
+        });
+        
+        renderProductosSeleccionados();
+        renderListaProductos();
+        
+        // Cerrar modales
+        const modalCantidad = bootstrap.Modal.getInstance(document.getElementById('modalCantidad'));
+        if (modalCantidad) modalCantidad.hide();
+        
+        const modalProductos = bootstrap.Modal.getInstance(document.getElementById('modalProductos'));
+        if (modalProductos) modalProductos.hide();
+    });
 }
