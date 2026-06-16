@@ -546,31 +546,33 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
                 <p><strong>Producto:</strong> ${productoNombre}</p>
                 <p><strong>Stock disponible:</strong> ${stockDisponible}</p>
                 <label class="form-label mt-3">Cantidad:</label>
-                <div class="input-group" style="max-width: 300px; margin: 0 auto;">
-                    <button class="btn btn-outline-primary" type="button" id="btn-decrementar" style="width: 45px;">
-                        <i class="bi bi-dash-lg"></i>
-                    </button>
-                    <input type="text" 
-                           id="swal-cantidad" 
-                           class="form-control text-center" 
-                           value="1" 
-                           inputmode="numeric"
-                           pattern="[0-9]*"
-                           autocomplete="off"
-                           data-max="${stockDisponible}"
-                           style="font-size: 1.2rem; font-weight: bold; cursor: text; user-select: text;">
-                    <button class="btn btn-outline-primary" type="button" id="btn-incrementar" style="width: 45px;">
-                        <i class="bi bi-plus-lg"></i>
-                    </button>
+                <div style="max-width: 300px; margin: 0 auto;">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <button class="btn btn-outline-primary flex-shrink-0" type="button" id="btn-decrementar" style="width: 50px; height: 50px;">
+                            <i class="bi bi-dash-lg fs-4"></i>
+                        </button>
+                        <input type="text" 
+                               id="swal-cantidad" 
+                               class="form-control form-control-lg text-center flex-grow-1" 
+                               value="1" 
+                               data-max="${stockDisponible}"
+                               style="font-size: 1.5rem; font-weight: bold;">
+                        <button class="btn btn-outline-primary flex-shrink-0" type="button" id="btn-incrementar" style="width: 50px; height: 50px;">
+                            <i class="bi bi-plus-lg fs-4"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="text-center mt-2">
-                    <small class="text-muted">Puedes escribir directamente o usar los botones</small>
+                <div class="text-center">
+                    <small class="text-muted">Escribe la cantidad o usa los botones + / -</small>
                 </div>
             </div>
         `,
         showCancelButton: true,
         confirmButtonText: 'Agregar',
         cancelButtonText: 'Cancelar',
+        allowOutsideClick: false,
+        allowEscapeKey: true,
+        focusConfirm: false,
         didOpen: () => {
             // Referencias a los elementos
             const inputCantidad = document.getElementById('swal-cantidad');
@@ -578,51 +580,100 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
             const btnDecrementar = document.getElementById('btn-decrementar');
             const maxStock = parseInt(inputCantidad.getAttribute('data-max'));
             
-            // Asegurar que el input sea editable
+            // FORZAR que el input sea completamente editable
+            inputCantidad.readOnly = false;
+            inputCantidad.disabled = false;
             inputCantidad.removeAttribute('readonly');
             inputCantidad.removeAttribute('disabled');
             
-            // Hacer el input clickeable y editable
+            // Prevenir que SweetAlert2 interfiera con el input
+            inputCantidad.addEventListener('mousedown', function(e) {
+                e.stopPropagation();
+            });
+            
+            inputCantidad.addEventListener('mouseup', function(e) {
+                e.stopPropagation();
+            });
+            
             inputCantidad.addEventListener('click', function(e) {
                 e.stopPropagation();
+                e.preventDefault();
                 this.focus();
+            });
+            
+            inputCantidad.addEventListener('focus', function(e) {
+                e.stopPropagation();
                 this.select();
             });
             
-            // Permitir solo números en el input
+            // Permitir escritura y validar solo números
+            inputCantidad.addEventListener('keydown', function(e) {
+                e.stopPropagation(); // Evitar que Swal capture el evento
+                
+                // Permitir: backspace, delete, tab, escape, enter, flechas
+                if ([8, 9, 27, 13, 46, 37, 38, 39, 40].indexOf(e.keyCode) !== -1 ||
+                    // Permitir: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                    (e.keyCode === 65 && e.ctrlKey === true) ||
+                    (e.keyCode === 67 && e.ctrlKey === true) ||
+                    (e.keyCode === 86 && e.ctrlKey === true) ||
+                    (e.keyCode === 88 && e.ctrlKey === true)) {
+                    return;
+                }
+                
+                // Asegurar que es un número (0-9)
+                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                    e.preventDefault();
+                }
+            });
+            
+            inputCantidad.addEventListener('keyup', function(e) {
+                e.stopPropagation();
+            });
+            
             inputCantidad.addEventListener('input', function(e) {
                 // Remover cualquier carácter que no sea número
-                this.value = this.value.replace(/[^0-9]/g, '');
+                let valor = this.value.replace(/[^0-9]/g, '');
                 
-                // Asegurar que no sea 0 o vacío
-                if (this.value === '' || this.value === '0') {
-                    this.value = '1';
+                // Si está vacío, poner 1
+                if (valor === '' || valor === '0') {
+                    valor = '1';
                 }
+                
+                // Si excede el máximo, limitarlo
+                if (parseInt(valor) > maxStock) {
+                    valor = maxStock.toString();
+                }
+                
+                this.value = valor;
             });
             
             // Función para incrementar
             btnIncrementar.addEventListener('click', (e) => {
                 e.preventDefault();
-                let valor = parseInt(inputCantidad.value) || 0;
+                e.stopPropagation();
+                let valor = parseInt(inputCantidad.value) || 1;
                 if (valor < maxStock) {
                     inputCantidad.value = valor + 1;
                 }
+                inputCantidad.focus();
             });
             
             // Función para decrementar
             btnDecrementar.addEventListener('click', (e) => {
                 e.preventDefault();
-                let valor = parseInt(inputCantidad.value) || 0;
+                e.stopPropagation();
+                let valor = parseInt(inputCantidad.value) || 1;
                 if (valor > 1) {
                     inputCantidad.value = valor - 1;
                 }
+                inputCantidad.focus();
             });
             
-            // Dar foco al input después de un pequeño delay
+            // Dar foco al input con delay más largo
             setTimeout(() => {
                 inputCantidad.focus();
                 inputCantidad.select();
-            }, 100);
+            }, 150);
         },
         preConfirm: () => {
             const cantidad = parseInt(document.getElementById('swal-cantidad').value);
