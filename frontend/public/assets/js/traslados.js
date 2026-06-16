@@ -579,72 +579,84 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
             const btnIncrementar = document.getElementById('btn-incrementar');
             const btnDecrementar = document.getElementById('btn-decrementar');
             const maxStock = parseInt(inputCantidad.getAttribute('data-max'));
+            const swalContainer = document.querySelector('.swal2-container');
             
             // FORZAR que el input sea completamente editable
             inputCantidad.readOnly = false;
             inputCantidad.disabled = false;
             inputCantidad.removeAttribute('readonly');
             inputCantidad.removeAttribute('disabled');
+            inputCantidad.tabIndex = 0;
             
-            // Prevenir que SweetAlert2 interfiera con el input
+            // SOLUCIÓN AGRESIVA: Interceptar eventos EN EL CONTENEDOR antes que lleguen a SweetAlert2
+            // Usar capture: true para capturar en fase de captura (antes de bubbling)
+            swalContainer.addEventListener('keydown', function(e) {
+                // Si el target es nuestro input, permitir todo y evitar que Swal lo procese
+                if (e.target === inputCantidad) {
+                    e.stopImmediatePropagation();
+                    e.stopPropagation();
+                    
+                    // Validar solo números y teclas especiales
+                    const isNumber = (e.key >= '0' && e.key <= '9') || 
+                                    (e.keyCode >= 96 && e.keyCode <= 105);
+                    const isSpecial = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 
+                                      'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 
+                                      'Home', 'End'].includes(e.key);
+                    const isCtrl = (e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x', 'z'].includes(e.key.toLowerCase());
+                    
+                    // Si no es número ni tecla especial, prevenir
+                    if (!isNumber && !isSpecial && !isCtrl) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            }, true); // ← IMPORTANTE: capture: true
+            
+            swalContainer.addEventListener('keyup', function(e) {
+                if (e.target === inputCantidad) {
+                    e.stopImmediatePropagation();
+                    e.stopPropagation();
+                }
+            }, true);
+            
+            swalContainer.addEventListener('keypress', function(e) {
+                if (e.target === inputCantidad) {
+                    e.stopImmediatePropagation();
+                    e.stopPropagation();
+                }
+            }, true);
+            
+            // Eventos del input
             inputCantidad.addEventListener('mousedown', function(e) {
-                e.stopPropagation();
-            });
-            
-            inputCantidad.addEventListener('mouseup', function(e) {
                 e.stopPropagation();
             });
             
             inputCantidad.addEventListener('click', function(e) {
                 e.stopPropagation();
-                e.preventDefault();
                 this.focus();
             });
             
-            inputCantidad.addEventListener('focus', function(e) {
-                e.stopPropagation();
-                this.select();
-            });
-            
-            // Permitir escritura y validar solo números
-            inputCantidad.addEventListener('keydown', function(e) {
-                e.stopPropagation(); // Evitar que Swal capture el evento
+            inputCantidad.addEventListener('input', function(e) {
+                // Validar y limpiar valor
+                let valor = this.value.replace(/[^0-9]/g, '');
                 
-                // Permitir: backspace, delete, tab, escape, enter, flechas
-                if ([8, 9, 27, 13, 46, 37, 38, 39, 40].indexOf(e.keyCode) !== -1 ||
-                    // Permitir: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                    (e.keyCode === 65 && e.ctrlKey === true) ||
-                    (e.keyCode === 67 && e.ctrlKey === true) ||
-                    (e.keyCode === 86 && e.ctrlKey === true) ||
-                    (e.keyCode === 88 && e.ctrlKey === true)) {
+                if (valor === '' || valor === '0') {
+                    this.value = '';
                     return;
                 }
                 
-                // Asegurar que es un número (0-9)
-                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
-                    e.preventDefault();
-                }
-            });
-            
-            inputCantidad.addEventListener('keyup', function(e) {
-                e.stopPropagation();
-            });
-            
-            inputCantidad.addEventListener('input', function(e) {
-                // Remover cualquier carácter que no sea número
-                let valor = this.value.replace(/[^0-9]/g, '');
-                
-                // Si está vacío, poner 1
-                if (valor === '' || valor === '0') {
-                    valor = '1';
-                }
-                
-                // Si excede el máximo, limitarlo
                 if (parseInt(valor) > maxStock) {
                     valor = maxStock.toString();
                 }
                 
                 this.value = valor;
+            });
+            
+            // Validar al perder foco
+            inputCantidad.addEventListener('blur', function() {
+                if (this.value === '' || this.value === '0') {
+                    this.value = '1';
+                }
             });
             
             // Función para incrementar
@@ -669,11 +681,11 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
                 inputCantidad.focus();
             });
             
-            // Dar foco al input con delay más largo
+            // Dar foco al input
             setTimeout(() => {
                 inputCantidad.focus();
                 inputCantidad.select();
-            }, 150);
+            }, 200);
         },
         preConfirm: () => {
             const cantidad = parseInt(document.getElementById('swal-cantidad').value);
