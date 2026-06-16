@@ -537,158 +537,118 @@ function agregarProducto(productoId, productoNombre, stockDisponible) {
         return;
     }
 
-    const maxStockDisponible = stockDisponible; // Guardar en variable externa
+    const maxStockDisponible = stockDisponible;
     
     Swal.fire({
         title: 'Cantidad a trasladar',
         html: `
-            <div class="text-start">
+            <div class="text-start mb-3">
                 <p><strong>Producto:</strong> ${productoNombre}</p>
-                <p><strong>Stock disponible:</strong> ${stockDisponible}</p>
-                <label class="form-label mt-3">Cantidad:</label>
-                <div style="max-width: 300px; margin: 0 auto;">
-                    <div class="d-flex align-items-center gap-2 mb-3">
-                        <button class="btn btn-outline-primary flex-shrink-0" type="button" id="btn-decrementar" style="width: 50px; height: 50px;">
-                            <i class="bi bi-dash-lg fs-4"></i>
-                        </button>
-                        <input type="text" 
-                               id="swal-cantidad" 
-                               class="form-control form-control-lg text-center flex-grow-1" 
-                               value="1" 
-                               data-max="${stockDisponible}"
-                               style="font-size: 1.5rem; font-weight: bold;">
-                        <button class="btn btn-outline-primary flex-shrink-0" type="button" id="btn-incrementar" style="width: 50px; height: 50px;">
-                            <i class="bi bi-plus-lg fs-4"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="text-center">
-                    <small class="text-muted">Escribe la cantidad o usa los botones + / -</small>
-                </div>
+                <p class="mb-2"><strong>Stock disponible:</strong> ${stockDisponible}</p>
             </div>
         `,
+        input: 'text',  // ← Usar el input nativo de SweetAlert2
+        inputValue: '1',
+        inputAttributes: {
+            inputmode: 'numeric',
+            pattern: '[0-9]*',
+            autocomplete: 'off',
+            style: 'font-size: 1.5rem; font-weight: bold; text-align: center;'
+        },
         showCancelButton: true,
         confirmButtonText: 'Agregar',
         cancelButtonText: 'Cancelar',
         allowOutsideClick: false,
         allowEscapeKey: true,
-        focusConfirm: false,
         didOpen: () => {
-            // Referencias a los elementos
-            const inputCantidad = document.getElementById('swal-cantidad');
-            const btnIncrementar = document.getElementById('btn-incrementar');
-            const btnDecrementar = document.getElementById('btn-decrementar');
-            const maxStock = parseInt(inputCantidad.getAttribute('data-max'));
-            const swalContainer = document.querySelector('.swal2-container');
+            const input = Swal.getInput();
+            const popup = Swal.getPopup();
             
-            // FORZAR que el input sea completamente editable
-            inputCantidad.readOnly = false;
-            inputCantidad.disabled = false;
-            inputCantidad.removeAttribute('readonly');
-            inputCantidad.removeAttribute('disabled');
-            inputCantidad.tabIndex = 0;
+            // Crear contenedor para los botones
+            const inputContainer = input.parentElement;
+            inputContainer.style.position = 'relative';
+            inputContainer.style.maxWidth = '400px';
+            inputContainer.style.margin = '0 auto';
             
-            // SOLUCIÓN AGRESIVA: Interceptar eventos EN EL CONTENEDOR antes que lleguen a SweetAlert2
-            // Usar capture: true para capturar en fase de captura (antes de bubbling)
-            swalContainer.addEventListener('keydown', function(e) {
-                // Si el target es nuestro input, permitir todo y evitar que Swal lo procese
-                if (e.target === inputCantidad) {
-                    e.stopImmediatePropagation();
-                    e.stopPropagation();
-                    
-                    // Validar solo números y teclas especiales
-                    const isNumber = (e.key >= '0' && e.key <= '9') || 
-                                    (e.keyCode >= 96 && e.keyCode <= 105);
-                    const isSpecial = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 
-                                      'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 
-                                      'Home', 'End'].includes(e.key);
-                    const isCtrl = (e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x', 'z'].includes(e.key.toLowerCase());
-                    
-                    // Si no es número ni tecla especial, prevenir
-                    if (!isNumber && !isSpecial && !isCtrl) {
-                        e.preventDefault();
-                        return false;
-                    }
-                }
-            }, true); // ← IMPORTANTE: capture: true
+            // Crear wrapper para el input con botones
+            const wrapper = document.createElement('div');
+            wrapper.className = 'd-flex align-items-center gap-2 mb-3';
+            wrapper.style.position = 'relative';
             
-            swalContainer.addEventListener('keyup', function(e) {
-                if (e.target === inputCantidad) {
-                    e.stopImmediatePropagation();
-                    e.stopPropagation();
-                }
-            }, true);
+            // Botón decrementar
+            const btnDecrementar = document.createElement('button');
+            btnDecrementar.type = 'button';
+            btnDecrementar.className = 'btn btn-outline-primary flex-shrink-0';
+            btnDecrementar.style.cssText = 'width: 50px; height: 50px; z-index: 1000;';
+            btnDecrementar.innerHTML = '<i class="bi bi-dash-lg fs-4"></i>';
             
-            swalContainer.addEventListener('keypress', function(e) {
-                if (e.target === inputCantidad) {
-                    e.stopImmediatePropagation();
-                    e.stopPropagation();
-                }
-            }, true);
+            // Botón incrementar
+            const btnIncrementar = document.createElement('button');
+            btnIncrementar.type = 'button';
+            btnIncrementar.className = 'btn btn-outline-primary flex-shrink-0';
+            btnIncrementar.style.cssText = 'width: 50px; height: 50px; z-index: 1000;';
+            btnIncrementar.innerHTML = '<i class="bi bi-plus-lg fs-4"></i>';
             
-            // Eventos del input
-            inputCantidad.addEventListener('mousedown', function(e) {
-                e.stopPropagation();
-            });
+            // Estilizar el input
+            input.className = 'swal2-input form-control form-control-lg text-center flex-grow-1';
+            input.style.cssText = 'font-size: 1.5rem; font-weight: bold; margin: 0; height: 50px;';
             
-            inputCantidad.addEventListener('click', function(e) {
-                e.stopPropagation();
-                this.focus();
-            });
+            // Reorganizar elementos
+            const inputParent = input.parentElement;
+            inputParent.insertBefore(wrapper, input);
+            wrapper.appendChild(btnDecrementar);
+            wrapper.appendChild(input);
+            wrapper.appendChild(btnIncrementar);
             
-            inputCantidad.addEventListener('input', function(e) {
-                // Validar y limpiar valor
-                let valor = this.value.replace(/[^0-9]/g, '');
-                
+            // Agregar mensaje de ayuda
+            const helpText = document.createElement('div');
+            helpText.className = 'text-center mt-2';
+            helpText.innerHTML = '<small class="text-muted">Escribe la cantidad o usa los botones + / -</small>';
+            wrapper.parentElement.appendChild(helpText);
+            
+            // Función para validar y actualizar valor
+            const validarValor = () => {
+                let valor = input.value.replace(/[^0-9]/g, '');
                 if (valor === '' || valor === '0') {
-                    this.value = '';
-                    return;
+                    input.value = '1';
+                } else if (parseInt(valor) > maxStockDisponible) {
+                    input.value = maxStockDisponible.toString();
+                } else {
+                    input.value = valor;
                 }
-                
-                if (parseInt(valor) > maxStock) {
-                    valor = maxStock.toString();
-                }
-                
-                this.value = valor;
-            });
+            };
             
-            // Validar al perder foco
-            inputCantidad.addEventListener('blur', function() {
-                if (this.value === '' || this.value === '0') {
-                    this.value = '1';
-                }
-            });
+            // Evento input para validar mientras escribe
+            input.addEventListener('input', validarValor);
+            input.addEventListener('blur', validarValor);
             
-            // Función para incrementar
+            // Eventos de botones
             btnIncrementar.addEventListener('click', (e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                let valor = parseInt(inputCantidad.value) || 1;
-                if (valor < maxStock) {
-                    inputCantidad.value = valor + 1;
+                let valor = parseInt(input.value) || 1;
+                if (valor < maxStockDisponible) {
+                    input.value = (valor + 1).toString();
                 }
-                inputCantidad.focus();
+                input.focus();
             });
             
-            // Función para decrementar
             btnDecrementar.addEventListener('click', (e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                let valor = parseInt(inputCantidad.value) || 1;
+                let valor = parseInt(input.value) || 1;
                 if (valor > 1) {
-                    inputCantidad.value = valor - 1;
+                    input.value = (valor - 1).toString();
                 }
-                inputCantidad.focus();
+                input.focus();
             });
             
-            // Dar foco al input
+            // Enfocar y seleccionar
             setTimeout(() => {
-                inputCantidad.focus();
-                inputCantidad.select();
-            }, 200);
+                input.focus();
+                input.select();
+            }, 100);
         },
-        preConfirm: () => {
-            const cantidad = parseInt(document.getElementById('swal-cantidad').value);
+        preConfirm: (value) => {
+            const cantidad = parseInt(value);
             
             if (!cantidad || cantidad < 1) {
                 Swal.showValidationMessage('Ingresa una cantidad válida');
