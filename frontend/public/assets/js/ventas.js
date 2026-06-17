@@ -4037,14 +4037,15 @@ function mostrarFormularioNuevoTurno() {
  */
 async function abrirTurno() {
     try {
-        // Verificar que la empresa y bodega estén cargadas
+        // Verificar que la empresa esté cargada
         if (!currentEmpresa || !currentEmpresa.id) {
             mostrarAlerta('Error: Empresa no cargada', 'error');
             return;
         }
         
-        if (!currentBodega || !currentBodega.id) {
-            mostrarAlerta('Error: Bodega no seleccionada', 'error');
+        // Verificar que el usuario esté cargado
+        if (!currentUsuario || !currentUsuario.id) {
+            mostrarAlerta('Error: Usuario no cargado', 'error');
             return;
         }
         
@@ -4052,6 +4053,14 @@ async function abrirTurno() {
         
         if (baseInicial < 0) {
             mostrarAlerta('La base inicial no puede ser negativa', 'error');
+            return;
+        }
+        
+        // Obtener bodega del usuario (si tiene asignada)
+        const bodegaId = currentUsuario.bodega_id || null;
+        
+        if (!bodegaId) {
+            mostrarAlerta('Error: Usuario sin bodega asignada. Contacte al administrador.', 'error');
             return;
         }
         
@@ -4064,7 +4073,7 @@ async function abrirTurno() {
             },
             body: JSON.stringify({
                 empresaId: currentEmpresa.id,
-                bodegaId: currentBodega.id,
+                bodegaId: bodegaId,
                 baseInicial
             })
         });
