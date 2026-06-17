@@ -25,6 +25,7 @@ let productoSeleccionadoCatalogo = null; // Producto seleccionado en el catálog
 let vistaActual = 'grid'; // Vista actual del catálogo (grid o list)
 let modoRapido = false; // Modo rápido activado
 let turnoActivo = null; // Turno de caja actual
+let gastosDelTurno = []; // Gastos del turno activo
 let ultimasVentas = []; // Últimas ventas del día
 let configuracionPlantilla = null; // Configuración de plantilla de factura
 let cuentasAbiertas = []; // Lista de cuentas abiertas
@@ -3965,9 +3966,6 @@ async function reimprimirFactura(numeroFactura) {
 // ============================================
 // TURNOS DE CAJA
 // ============================================
-
-let turnoActivo = null;
-let gastosDelTurno = [];
 
 /**
  * Abrir modal de turnos
