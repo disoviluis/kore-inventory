@@ -740,11 +740,15 @@ export const getResumenTurno = async (req: Request, res: Response): Promise<Resp
   try {
     const { turnoId } = req.params;
 
-    // Obtener datos del turno con nombre de bodega
+    // Obtener datos del turno con nombre de bodega y usuario
     const turnos = await query(
-      `SELECT t.*, b.nombre as bodega_nombre
+      `SELECT t.*, 
+              b.nombre as bodega_nombre,
+              u.nombre as usuario_nombre,
+              u.apellido as usuario_apellido
        FROM turnos_caja t
        LEFT JOIN bodegas b ON t.bodega_id = b.id
+       LEFT JOIN usuarios u ON t.usuario_id = u.id
        WHERE t.id = ?`,
       [turnoId]
     );
@@ -809,11 +813,15 @@ export const cerrarTurno = async (req: Request, res: Response): Promise<Response
     const { turnoId } = req.params;
     const { efectivoContado, notas } = req.body;
 
-    // Obtener datos del turno
+    // Obtener datos del turno con nombre de bodega y usuario
     const turnos = await query(
-      `SELECT t.*, b.nombre as bodega_nombre
+      `SELECT t.*, 
+              b.nombre as bodega_nombre,
+              u.nombre as usuario_nombre,
+              u.apellido as usuario_apellido
        FROM turnos_caja t
        LEFT JOIN bodegas b ON t.bodega_id = b.id
+       LEFT JOIN usuarios u ON t.usuario_id = u.id
        WHERE t.id = ?`,
       [turnoId]
     );
