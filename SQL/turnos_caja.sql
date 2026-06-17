@@ -60,14 +60,31 @@ CREATE TABLE IF NOT EXISTS gastos_caja (
     INDEX idx_fecha (fecha_registro)
 );
 
--- Agregar columna turno_id a la tabla de ventas
-ALTER TABLE ventas 
-ADD COLUMN turno_id INT NULL AFTER bodega_id,
-ADD INDEX idx_turno_id (turno_id);
+-- Agregar columna turno_id a la tabla de ventas (solo si no existe)
+-- Si la columna ya existe, este comando fallará pero el resto del script continuará
+SET @exist := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+               WHERE TABLE_SCHEMA = DATABASE() 
+               AND TABLE_NAME = 'ventas' 
+               AND COLUMN_NAME = 'turno_id');
 
--- Foreign key para ventas (si no existe)
--- ALTER TABLE ventas 
--- ADD CONSTRAINT fk_ventas_turno 
--- FOREIGN KEY (turno_id) REFERENCES turnos_caja(id) ON DELETE SET NULL;
+SET @sqlstmt := IF(@exist = 0, 
+                   'ALTER TABLE ventas ADD COLUMN turno_id INT NULL', 
+                   'SELECT ''La columna turno_id ya existe en ventas'' AS mensaje');
+PREPARE stmt FROM @sqlstmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Agregar índice si no existe
+SET @exist := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+               WHERE TABLE_SCHEMA = DATABASE() 
+               AND TABLE_NAME = 'ventas' 
+               AND INDEX_NAME = 'idx_turno_id');
+
+SET @sqlstmt := IF(@exist = 0, 
+                   'ALTER TABLE ventas ADD INDEX idx_turno_id (turno_id)', 
+                   'SELECT ''El índice idx_turno_id ya existe'' AS mensaje');
+PREPARE stmt FROM @sqlstmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 COMMIT;
