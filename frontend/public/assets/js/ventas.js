@@ -4033,7 +4033,7 @@ function mostrarTurnoActivo() {
     
     const nombreUsuario = `${turnoActivo.usuario_nombre || ''} ${turnoActivo.usuario_apellido || ''}`.trim();
     document.getElementById('turnoUsuario').textContent = nombreUsuario || 'Usuario';
-    document.getElementById('turnoApertura').textContent = new Date(turnoActivo.fecha_apertura).toLocaleString('es-CO');
+    document.getElementById('turnoApertura').textContent = new Date(turnoActivo.fecha_apertura).toLocaleString('es-CO', { timeZone: 'America/Bogota' });
     document.getElementById('turnoBaseInicial').textContent = formatearNumero(turnoActivo.base_inicial);
     
     // Mostrar bodega/tienda
