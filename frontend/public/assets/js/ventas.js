@@ -4188,15 +4188,13 @@ function mostrarResumenEnModal(resumen) {
     const ayudaEfectivo = document.getElementById('ayudaEfectivoContado');
     const inputEfectivo = document.getElementById('efectivoContado');
     
-    if (resumen.efectivo_a_entregar <= 0) {
-        // Mostrar advertencia
+    if (resumen.efectivo_a_entregar < 0) {
+        // Mostrar advertencia solo si es negativo (gastos excedieron efectivo)
         if (advertenciaDiv && mensajeAdv) {
             advertenciaDiv.classList.remove('d-none');
             if (resumen.efectivo_a_entregar < 0) {
                 const faltante = Math.abs(resumen.efectivo_a_entregar);
                 mensajeAdv.textContent = `Los gastos ($${formatearNumero(resumen.total_gastos)}) excedieron las ventas en efectivo ($${formatearNumero(totalEfectivo)}). Se usaron $${formatearNumero(faltante)} de la base. NO hay efectivo para entregar.`;
-            } else {
-                mensajeAdv.textContent = 'Los gastos igualaron las ventas en efectivo. NO hay efectivo para entregar.';
             }
         }
         
@@ -4282,8 +4280,8 @@ function calcularDiferenciaTurno() {
     const esperadoTexto = document.getElementById('resumenEfectivoEntregar').textContent;
     const esperado = parsearNumeroFormateado(esperadoTexto);
     
-    // CASO ESPECIAL: Si el esperado es negativo o cero, diferente lógica
-    if (esperado <= 0) {
+    // CASO ESPECIAL: Si el esperado es negativo, diferente lógica
+    if (esperado < 0) {
         // En este caso, el efectivo contado debería ser igual a (base + efectivo_a_entregar)
         // Ejemplo: base $50,000 + efectivo_a_entregar -$3,500 = $46,500 esperado
         const baseInicialTexto = document.getElementById('resumenBaseInicial').textContent;
