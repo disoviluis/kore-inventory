@@ -4016,6 +4016,10 @@ function mostrarTurnoActivo() {
     document.getElementById('turnoNuevo').style.display = 'none';
     document.getElementById('turnoAbierto').style.display = 'block';
     
+    // Mostrar/Ocultar botones del footer
+    document.getElementById('btnAbrirTurno').style.display = 'none';
+    document.getElementById('btnCerrarTurno').style.display = 'inline-block';
+    
     const nombreUsuario = `${turnoActivo.usuario_nombre || ''} ${turnoActivo.usuario_apellido || ''}`.trim();
     document.getElementById('turnoUsuario').textContent = nombreUsuario || 'Usuario';
     document.getElementById('turnoApertura').textContent = new Date(turnoActivo.fecha_apertura).toLocaleString('es-CO');
@@ -4028,6 +4032,11 @@ function mostrarTurnoActivo() {
 function mostrarFormularioNuevoTurno() {
     document.getElementById('turnoNuevo').style.display = 'block';
     document.getElementById('turnoAbierto').style.display = 'none';
+    
+    // Mostrar/Ocultar botones del footer
+    document.getElementById('btnAbrirTurno').style.display = 'inline-block';
+    document.getElementById('btnCerrarTurno').style.display = 'none';
+    
     document.getElementById('baseInicialTurno').value = '50000';
     document.getElementById('notasAperturaTurno').value = '';
 }
@@ -4104,7 +4113,7 @@ async function cargarResumenTurno() {
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(
-            `${API_URL}/ventas/turno/${turnoActivo.id}/resumen`,
+            `${API_URL}/ventas/turno/${turnoActivo.id}/resumen?empresa_id=${currentEmpresa.id}`,
             {
                 headers: { 'Authorization': `Bearer ${token}` }
             }
@@ -4114,8 +4123,11 @@ async function cargarResumenTurno() {
         
         if (data.success) {
             const resumen = data.data;
+            console.log('📊 Resumen del turno:', resumen);
             mostrarResumenEnModal(resumen);
             gastosDelTurno = resumen.gastos || [];
+        } else {
+            console.error('❌ Error en respuesta:', data);
         }
         
     } catch (error) {
@@ -4165,6 +4177,13 @@ function mostrarResumenEnModal(resumen) {
 function mostrarDesglosePorMetodo(ventas) {
     const container = document.getElementById('desglosePorMetodo');
     if (!container) return;
+    
+    console.log('📊 Ventas por método:', ventas);
+    
+    if (!ventas || ventas.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center small">Sin ventas registradas</p>';
+        return;
+    }
     
     let html = '<div class="row g-2 mt-2">';
     
