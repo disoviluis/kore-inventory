@@ -19,7 +19,8 @@ import {
   getResumenTurno,
   cerrarTurno,
   registrarGasto,
-  getGastosTurno
+  getGastosTurno,
+  getHistorialTurnos
 } from './ventas.controller';
 
 const router = Router();
@@ -114,5 +115,12 @@ router.post('/turno/:turnoId/gastos', registrarGasto);
  * @access  Private
  */
 router.get('/turno/:turnoId/gastos', getGastosTurno);
+
+/**
+ * @route   GET /api/ventas/turnos/historial
+ * @desc    Obtener historial de turnos cerrados del usuario
+ * @access  Private
+ */
+router.get('/turnos/historial', getHistorialTurnos);
 
 export default router;

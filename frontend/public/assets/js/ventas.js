@@ -4452,15 +4452,174 @@ async function confirmarRegistroGasto() {
 }
 
 /**
+ * Abrir modal de historial de turnos
+ */
+async function abrirHistorialTurnos() {
+    const modal = new bootstrap.Modal(document.getElementById('modalHistorialTurnos'));
+    modal.show();
+    await cargarHistorialTurnos();
+}
+
+/**
+ * Cargar historial de turnos cerrados
+ */
+async function cargarHistorialTurnos() {
+    try {
+        if (!currentEmpresa || !currentEmpresa.id) {
+            mostrarAlerta('No se ha seleccionado una empresa', 'warning');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/ventas/turnos/historial?empresaId=${currentEmpresa.id}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+            mostrarListaHistorialTurnos(data.data);
+        } else {
+            document.getElementById('listaHistorialTurnos').innerHTML = 
+                `<div class="alert alert-warning">${data.message || 'Error al cargar historial'}</div>`;
+        }
+
+    } catch (error) {
+        console.error('Error al cargar historial de turnos:', error);
+        document.getElementById('listaHistorialTurnos').innerHTML = 
+            '<div class="alert alert-danger">Error al cargar historial de turnos</div>';
+    }
+}
+
+/**
+ * Mostrar lista de turnos en el modal
+ */
+function mostrarListaHistorialTurnos(turnos) {
+    const container = document.getElementById('listaHistorialTurnos');
+
+    if (!turnos || turnos.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No hay turnos cerrados registrados</div>';
+        return;
+    }
+
+    let html = '<div class="list-group">';
+
+    turnos.forEach(turno => {
+        const fechaCierre = new Date(turno.fecha_cierre).toLocaleString('es-CO');
+        const diferencia = turno.diferencia !== null ? parseFloat(turno.diferencia) : null;
+        let claseDiferencia = 'text-muted';
+        let textoDiferencia = 'N/A';
+
+        if (diferencia !== null) {
+            if (Math.abs(diferencia) < 0.01) {
+                claseDiferencia = 'text-success';
+                textoDiferencia = 'Exacto ✓';
+            } else if (diferencia > 0) {
+                claseDiferencia = 'text-success';
+                textoDiferencia = `+$${formatearNumero(diferencia)}`;
+            } else {
+                claseDiferencia = 'text-danger';
+                textoDiferencia = `-$${formatearNumero(Math.abs(diferencia))}`;
+            }
+        }
+
+        html += `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            <i class="bi bi-calendar3 me-1"></i>${fechaCierre}
+                        </h6>
+                        <p class="mb-1 small">
+                            <i class="bi bi-shop me-1"></i><strong>${turno.bodega_nombre || 'N/A'}</strong>
+                        </p>
+                        <div class="row g-2 small">
+                            <div class="col-6">
+                                <span class="text-muted">Total ventas:</span><br>
+                                <strong>$${formatearNumero(turno.total_ventas)}</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-muted">Efectivo a entregar:</span><br>
+                                <strong>$${formatearNumero(turno.efectivo_a_entregar)}</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-muted">Gastos:</span><br>
+                                <strong class="text-danger">$${formatearNumero(turno.total_gastos)}</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-muted">Diferencia:</span><br>
+                                <strong class="${claseDiferencia}">${textoDiferencia}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="reimprimirCierreTurno(${turno.id})">
+                            <i class="bi bi-printer"></i> Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+/**
+ * Re-imprimir cierre de un turno anterior
+ */
+async function reimprimirCierreTurno(turnoId) {
+    try {
+        if (!currentEmpresa || !currentEmpresa.id) {
+            mostrarAlerta('No se ha seleccionado una empresa', 'warning');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/ventas/turno/${turnoId}/resumen?empresa_id=${currentEmpresa.id}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+            imprimirCierreCaja(data.data);
+        } else {
+            mostrarAlerta(data.message || 'Error al obtener datos del turno', 'error');
+        }
+
+    } catch (error) {
+        console.error('Error al re-imprimir cierre:', error);
+        mostrarAlerta('Error al re-imprimir cierre', 'error');
+    }
+}
+
+/**
  * Imprimir cierre de caja
  */
 function imprimirCierreCaja(resumen) {
     const ventana = window.open('', '', 'width=300,height=600');
     const nombreEmpresa = currentEmpresa.nombre || 'Mi Empresa';
-    const nombreUsuario = `${turnoActivo.usuario_nombre || ''} ${turnoActivo.usuario_apellido || ''}`.trim();
-    const nombreBodega = resumen.turno.bodega_nombre || turnoActivo.bodega_nombre || 'N/A';
-    const fechaApertura = new Date(turnoActivo.fecha_apertura).toLocaleString('es-CO');
-    const fechaCierre = new Date().toLocaleString('es-CO');
+    
+    // Usar datos del resumen (que vienen del backend) en lugar de turnoActivo
+    const turno = resumen.turno;
+    const nombreUsuario = turno.usuario_nombre && turno.usuario_apellido 
+        ? `${turno.usuario_nombre} ${turno.usuario_apellido}` 
+        : 'N/A';
+    const nombreBodega = turno.bodega_nombre || 'N/A';
+    const fechaApertura = new Date(turno.fecha_apertura).toLocaleString('es-CO');
+    const fechaCierre = turno.fecha_cierre ? new Date(turno.fecha_cierre).toLocaleString('es-CO') : new Date().toLocaleString('es-CO');
     
     let htmlVentas = '';
     resumen.ventas_por_metodo.forEach(v => {

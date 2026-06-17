@@ -965,3 +965,34 @@ export const getGastosTurno = async (req: Request, res: Response): Promise<Respo
     return errorResponse(res, 'Error al obtener gastos del turno', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
+
+/**
+ * Obtener historial de turnos cerrados del usuario
+ * GET /api/ventas/turnos/historial
+ */
+export const getHistorialTurnos = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const usuario = (req as any).user;
+    const { empresaId } = req.query;
+
+    const turnos = await query(
+      `SELECT t.*, 
+              u.nombre as usuario_nombre, 
+              u.apellido as usuario_apellido,
+              b.nombre as bodega_nombre
+       FROM turnos_caja t
+       LEFT JOIN usuarios u ON t.usuario_id = u.id
+       LEFT JOIN bodegas b ON t.bodega_id = b.id
+       WHERE t.usuario_id = ? AND t.empresa_id = ? AND t.estado = 'cerrado'
+       ORDER BY t.fecha_cierre DESC
+       LIMIT 50`,
+      [usuario.id, empresaId]
+    );
+
+    return successResponse(res, 'Historial de turnos', turnos, CONSTANTS.HTTP_STATUS.OK);
+
+  } catch (error) {
+    logger.error('Error al obtener historial de turnos:', error);
+    return errorResponse(res, 'Error al obtener historial de turnos', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
