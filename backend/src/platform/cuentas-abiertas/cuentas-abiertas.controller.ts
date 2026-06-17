@@ -934,13 +934,26 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
     const observacionesVenta = notas || 
       `${nombreDescriptivo} (${cuenta.numero_cuenta})`;
 
+    // Buscar turno activo del usuario (para asociar venta al turno)
+    let turnoId = null;
+    if (usuarioId) {
+      const turnoActivo = await query(
+        'SELECT id FROM turnos_caja WHERE usuario_id = ? AND empresa_id = ? AND estado = "abierto" LIMIT 1',
+        [usuarioId, cuenta.empresa_id]
+      );
+      
+      if (turnoActivo.length > 0) {
+        turnoId = turnoActivo[0].id;
+      }
+    }
+
     // Crear venta
     const ventaResult = await query(
       `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, vendedor_id,
         fecha_venta, subtotal, impuesto, total, metodo_pago,
-        observaciones, estado, forma_pago
-      ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'pagada', 'contado')`,
+        observaciones, estado, forma_pago, turno_id
+      ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'pagada', 'contado', ?)`,
       [
         cuenta.empresa_id,
         numero_factura,
@@ -950,7 +963,8 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
         cuenta.total_impuestos, // En cuentas_abiertas es total_impuestos, en ventas es impuesto
         cuenta.total,
         metodoPagoResumen,
-        observacionesVenta
+        observacionesVenta,
+        turnoId
       ]
     );
 
