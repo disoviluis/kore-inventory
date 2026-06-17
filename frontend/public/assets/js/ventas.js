@@ -1911,6 +1911,17 @@ function formatearNumero(num) {
     }).format(num);
 }
 
+/**
+ * Parsear número formateado en formato colombiano (es-CO)
+ * Ejemplo: "8.500" -> 8500, "1.234,56" -> 1234.56
+ */
+function parsearNumeroFormateado(texto) {
+    if (!texto) return 0;
+    // Remover puntos (separador de miles) y reemplazar coma por punto (decimal)
+    const limpio = texto.toString().replace(/\./g, '').replace(/,/g, '.');
+    return parseFloat(limpio) || 0;
+}
+
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -4268,14 +4279,15 @@ function calcularDiferenciaTurno() {
     }
     
     const efectivoContado = parseFloat(inputEfectivo.value) || 0;
-    const esperadoTexto = document.getElementById('resumenEfectivoEntregar').textContent.replace(/,/g, '');
-    const esperado = parseFloat(esperadoTexto) || 0;
+    const esperadoTexto = document.getElementById('resumenEfectivoEntregar').textContent;
+    const esperado = parsearNumeroFormateado(esperadoTexto);
     
     // CASO ESPECIAL: Si el esperado es negativo o cero, diferente lógica
     if (esperado <= 0) {
         // En este caso, el efectivo contado debería ser igual a (base + efectivo_a_entregar)
         // Ejemplo: base $50,000 + efectivo_a_entregar -$3,500 = $46,500 esperado
-        const baseInicial = parseFloat(document.getElementById('resumenBaseInicial').textContent.replace(/,/g, '')) || 0;
+        const baseInicialTexto = document.getElementById('resumenBaseInicial').textContent;
+        const baseInicial = parsearNumeroFormateado(baseInicialTexto);
         const totalEsperado = baseInicial + esperado; // Si esperado es negativo, resta de la base
         const diferencia = efectivoContado - totalEsperado;
         
