@@ -4325,7 +4325,11 @@ async function confirmarRegistroGasto() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ descripcion, monto })
+                body: JSON.stringify({ 
+                    descripcion, 
+                    monto,
+                    empresa_id: currentEmpresa.id // Requerido por middleware verificarEmpresaActiva
+                })
             }
         );
         
