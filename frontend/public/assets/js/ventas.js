@@ -3974,6 +3974,12 @@ let gastosDelTurno = [];
  */
 async function abrirModalTurno() {
     try {
+        // Verificar que la empresa esté cargada
+        if (!currentEmpresa || !currentEmpresa.id) {
+            mostrarAlerta('Por favor espera a que se cargue la empresa', 'warning');
+            return;
+        }
+        
         // Obtener turno actual del usuario desde el backend
         const token = localStorage.getItem('token');
         const response = await fetch(
@@ -4033,6 +4039,17 @@ function mostrarFormularioNuevoTurno() {
  */
 async function abrirTurno() {
     try {
+        // Verificar que la empresa y bodega estén cargadas
+        if (!currentEmpresa || !currentEmpresa.id) {
+            mostrarAlerta('Error: Empresa no cargada', 'error');
+            return;
+        }
+        
+        if (!currentBodega || !currentBodega.id) {
+            mostrarAlerta('Error: Bodega no seleccionada', 'error');
+            return;
+        }
+        
         const baseInicial = parseFloat(document.getElementById('baseInicialTurno').value) || 0;
         
         if (baseInicial < 0) {
