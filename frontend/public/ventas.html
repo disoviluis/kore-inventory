@@ -1324,6 +1324,7 @@
                             <h6 class="alert-heading"><i class="bi bi-check-circle me-2"></i>Turno Activo</h6>
                             <hr>
                             <p class="mb-1"><strong>Cajero:</strong> <span id="turnoUsuario"></span></p>
+                            <p class="mb-1"><strong>Tienda:</strong> <span id="turnoBodega"></span></p>
                             <p class="mb-1"><strong>Apertura:</strong> <span id="turnoApertura"></span></p>
                             <p class="mb-0"><strong>Base inicial:</strong> $<span id="turnoBaseInicial"></span></p>
                         </div>
@@ -1370,10 +1371,7 @@
                                 <h6 class="card-title text-info">
                                     <i class="bi bi-calculator me-2"></i>Cálculo Efectivo a Entregar
                                 </h6>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>Base inicial:</span>
-                                    <span>$<span id="resumenBaseInicial"></span></span>
-                                </div>
+                                <small class="text-muted d-block mb-2">* La base ($<span id="resumenBaseInicial"></span>) NO se entrega, se queda en caja</small>
                                 <div class="d-flex justify-content-between mb-1">
                                     <span>Ventas en efectivo:</span>
                                     <span class="text-success">$<span id="resumenVentasEfectivo">0</span></span>
@@ -1381,10 +1379,6 @@
                                 <div class="d-flex justify-content-between mb-1">
                                     <span>(-) Gastos del turno:</span>
                                     <span class="text-danger">$<span id="resumenTotalGastos2">0</span></span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>(-) Base inicial:</span>
-                                    <span>$<span id="resumenBaseInicial2"></span></span>
                                 </div>
                                 <hr>
                                 <div class="d-flex justify-content-between">
@@ -1484,7 +1478,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Custom JS -->
-    <script src="assets/js/ventas.js?v=5.9"></script>
+    <script src="assets/js/ventas.js?v=6.0"></script>
     <!-- Sidebar Navigation (Common) -->
     <script src="assets/js/sidebar-navigation.js"></script>
 

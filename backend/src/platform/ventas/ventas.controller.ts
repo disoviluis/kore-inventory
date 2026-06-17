@@ -740,8 +740,14 @@ export const getResumenTurno = async (req: Request, res: Response): Promise<Resp
   try {
     const { turnoId } = req.params;
 
-    // Obtener datos del turno
-    const turnos = await query('SELECT * FROM turnos_caja WHERE id = ?', [turnoId]);
+    // Obtener datos del turno con nombre de bodega
+    const turnos = await query(
+      `SELECT t.*, b.nombre as bodega_nombre
+       FROM turnos_caja t
+       LEFT JOIN bodegas b ON t.bodega_id = b.id
+       WHERE t.id = ?`,
+      [turnoId]
+    );
 
     if (turnos.length === 0) {
       return errorResponse(res, 'Turno no encontrado', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
@@ -770,10 +776,11 @@ export const getResumenTurno = async (req: Request, res: Response): Promise<Resp
     const totalGastos = gastos.reduce((sum: number, g: any) => sum + parseFloat(g.monto), 0);
     const totalVentas = ventas.reduce((sum: number, v: any) => sum + parseFloat(v.total), 0);
     
-    // Calcular efectivo a entregar (ventas en efectivo - base - gastos)
+    // Calcular efectivo a entregar (ventas en efectivo - gastos)
+    // NOTA: La base NO se entrega, se queda en caja para el siguiente turno
     const ventasEfectivo = ventas.find((v: any) => v.metodo_pago === 'efectivo');
     const montoEfectivo = ventasEfectivo ? parseFloat(ventasEfectivo.total) : 0;
-    const efectivoAEntregar = montoEfectivo - parseFloat(turno.base_inicial) - totalGastos;
+    const efectivoAEntregar = montoEfectivo - totalGastos;
 
     const resumen = {
       turno,

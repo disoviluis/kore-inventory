@@ -4024,6 +4024,12 @@ function mostrarTurnoActivo() {
     document.getElementById('turnoUsuario').textContent = nombreUsuario || 'Usuario';
     document.getElementById('turnoApertura').textContent = new Date(turnoActivo.fecha_apertura).toLocaleString('es-CO');
     document.getElementById('turnoBaseInicial').textContent = formatearNumero(turnoActivo.base_inicial);
+    
+    // Mostrar bodega/tienda
+    const bodegaEl = document.getElementById('turnoBodega');
+    if (bodegaEl) {
+        bodegaEl.textContent = turnoActivo.bodega_nombre || 'N/A';
+    }
 }
 
 /**
@@ -4139,12 +4145,9 @@ async function cargarResumenTurno() {
  * Mostrar resumen en el modal
  */
 function mostrarResumenEnModal(resumen) {
-    // Base inicial
+    // Base inicial (se muestra pero NO se resta del efectivo a entregar)
     const baseInicial1 = document.getElementById('resumenBaseInicial');
     if (baseInicial1) baseInicial1.textContent = formatearNumero(resumen.base_inicial);
-    
-    const baseInicial2 = document.getElementById('resumenBaseInicial2');
-    if (baseInicial2) baseInicial2.textContent = formatearNumero(resumen.base_inicial);
     
     // Ventas en efectivo
     const ventasEfectivo = resumen.ventas_por_metodo.find(v => v.metodo_pago === 'efectivo');
@@ -4163,7 +4166,7 @@ function mostrarResumenEnModal(resumen) {
     const totalGastos2 = document.getElementById('resumenTotalGastos2');
     if (totalGastos2) totalGastos2.textContent = formatearNumero(resumen.total_gastos);
     
-    // Efectivo a entregar (sin base, sin gastos)
+    // Efectivo a entregar (ventas en efectivo - gastos, SIN restar la base)
     const efectivoEntregarEl = document.getElementById('resumenEfectivoEntregar');
     if (efectivoEntregarEl) efectivoEntregarEl.textContent = formatearNumero(resumen.efectivo_a_entregar);
     
@@ -4264,7 +4267,8 @@ async function cerrarTurno() {
                 },
                 body: JSON.stringify({
                     efectivoContado,
-                    notas
+                    notas,
+                    empresa_id: currentEmpresa.id // Requerido por middleware verificarEmpresaActiva
                 })
             }
         );
@@ -4378,6 +4382,7 @@ function imprimirCierreCaja(resumen) {
     const ventana = window.open('', '', 'width=300,height=600');
     const nombreEmpresa = currentEmpresa.nombre || 'Mi Empresa';
     const nombreUsuario = `${turnoActivo.usuario_nombre || ''} ${turnoActivo.usuario_apellido || ''}`.trim();
+    const nombreBodega = resumen.turno.bodega_nombre || turnoActivo.bodega_nombre || 'N/A';
     const fechaApertura = new Date(turnoActivo.fecha_apertura).toLocaleString('es-CO');
     const fechaCierre = new Date().toLocaleString('es-CO');
     
@@ -4423,6 +4428,7 @@ function imprimirCierreCaja(resumen) {
             <h3>CIERRE DE CAJA</h3>
             <hr>
             <p><strong>Cajero:</strong> ${nombreUsuario}</p>
+            <p><strong>Tienda:</strong> ${nombreBodega}</p>
             <p><strong>Apertura:</strong> ${fechaApertura}</p>
             <p><strong>Cierre:</strong> ${fechaCierre}</p>
             <hr>
@@ -4459,7 +4465,7 @@ function imprimirCierreCaja(resumen) {
             <h3>RESUMEN EFECTIVO</h3>
             <table>
                 <tr>
-                    <td>Base Inicial:</td>
+                    <td>Base Inicial (no se entrega):</td>
                     <td align="right">$${formatearNumero(resumen.base_inicial)}</td>
                 </tr>
                 <tr>
@@ -4470,15 +4476,12 @@ function imprimirCierreCaja(resumen) {
                     <td>(-) Gastos:</td>
                     <td align="right">-$${formatearNumero(resumen.total_gastos)}</td>
                 </tr>
-                <tr>
-                    <td>(-) Base:</td>
-                    <td align="right">-$${formatearNumero(resumen.base_inicial)}</td>
-                </tr>
                 <tr class="highlight">
                     <td><strong>EFECTIVO A ENTREGAR:</strong></td>
                     <td align="right"><strong>$${formatearNumero(resumen.efectivo_a_entregar)}</strong></td>
                 </tr>
             </table>
+            <p style="font-size: 10px; margin: 5px 0;"><em>* La base se queda en caja para el siguiente turno</em></p>
             <hr>
             <p style="text-align: center; margin-top: 20px;">
                 _____________________________<br>
