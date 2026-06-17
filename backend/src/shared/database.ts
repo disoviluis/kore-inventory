@@ -22,7 +22,7 @@ const pool = mysql.createPool({
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
-  timezone: 'America/Bogota' // Configurar zona horaria de Colombia
+  timezone: '-05:00' // Zona horaria de Colombia (UTC-5)
 });
 
 /**
