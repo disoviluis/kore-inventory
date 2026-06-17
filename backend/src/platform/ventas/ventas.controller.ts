@@ -419,7 +419,7 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         cufe, qr_code,
         propina_habilitada, propina_porcentaje, propina_valor, propina_base,
         turno_id
-        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         numeroFactura,
@@ -678,10 +678,10 @@ export const abrirTurno = async (req: Request, res: Response): Promise<Response>
       return errorResponse(res, 'Ya tienes un turno abierto. Ciérralo antes de abrir uno nuevo.', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
     }
 
-    // Crear nuevo turno
+    // Crear nuevo turno con fecha_apertura explícita en zona horaria de Colombia
     const result = await query(
-      `INSERT INTO turnos_caja (empresa_id, usuario_id, bodega_id, base_inicial, estado)
-       VALUES (?, ?, ?, ?, 'abierto')`,
+      `INSERT INTO turnos_caja (empresa_id, usuario_id, bodega_id, base_inicial, estado, fecha_apertura)
+       VALUES (?, ?, ?, ?, 'abierto', CONVERT_TZ(NOW(), '+00:00', '-05:00'))`,
       [empresaId, usuario.id, bodegaId, baseInicial]
     );
 
@@ -882,7 +882,7 @@ export const cerrarTurno = async (req: Request, res: Response): Promise<Response
     // Cerrar turno
     await query(
       `UPDATE turnos_caja 
-       SET fecha_cierre = NOW(), 
+       SET fecha_cierre = CONVERT_TZ(NOW(), '+00:00', '-05:00'), 
            estado = 'cerrado',
            total_ventas = ?,
            total_gastos = ?,
@@ -935,7 +935,7 @@ export const registrarGasto = async (req: Request, res: Response): Promise<Respo
 
     // Registrar gasto
     const result = await query(
-      'INSERT INTO gastos_caja (turno_id, descripcion, monto, usuario_id) VALUES (?, ?, ?, ?)',
+      'INSERT INTO gastos_caja (turno_id, descripcion, monto, usuario_id, fecha_registro) VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), \'+00:00\', \'-05:00\'))',
       [turnoId, descripcion, monto, usuario.id]
     );
 

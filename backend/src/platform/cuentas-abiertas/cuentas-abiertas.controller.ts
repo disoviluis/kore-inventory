@@ -780,7 +780,7 @@ export const solicitarCuenta = async (req: Request, res: Response): Promise<Resp
 
     await query(
       `UPDATE cuentas_abiertas
-       SET cuenta_solicitada = TRUE, fecha_cuenta_solicitada = NOW()
+       SET cuenta_solicitada = TRUE, fecha_cuenta_solicitada = CONVERT_TZ(NOW(), '+00:00', '-05:00')
        WHERE id = ? AND estado = 'abierta'`,
       [id]
     );
@@ -953,7 +953,7 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
         empresa_id, numero_factura, cliente_id, vendedor_id,
         fecha_venta, subtotal, impuesto, total, metodo_pago,
         observaciones, estado, forma_pago, turno_id
-      ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'pagada', 'contado', ?)`,
+      ) VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, 'pagada', 'contado', ?)`,
       [
         cuenta.empresa_id,
         numero_factura,
@@ -1009,7 +1009,7 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
     // Cerrar cuenta
     await query(
       `UPDATE cuentas_abiertas
-       SET estado = 'cerrada', venta_id = ?, usuario_cierre = ?, fecha_cierre = NOW()
+       SET estado = 'cerrada', venta_id = ?, usuario_cierre = ?, fecha_cierre = CONVERT_TZ(NOW(), '+00:00', '-05:00')
        WHERE id = ?`,
       [ventaId, usuarioId, id]
     );
@@ -1128,7 +1128,7 @@ export const cancelarCuenta = async (req: Request, res: Response): Promise<Respo
     // Marcar cuenta como cancelada
     await query(
       `UPDATE cuentas_abiertas
-       SET estado = 'cancelada', usuario_cierre = ?, fecha_cierre = NOW(), notas = CONCAT(COALESCE(notas, ''), '\nMotivo cancelación: ', ?)
+       SET estado = 'cancelada', usuario_cierre = ?, fecha_cierre = CONVERT_TZ(NOW(), '+00:00', '-05:00'), notas = CONCAT(COALESCE(notas, ''), '\nMotivo cancelación: ', ?)
        WHERE id = ?`,
       [usuarioId, motivo, id]
     );
