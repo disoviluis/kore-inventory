@@ -4128,25 +4128,32 @@ async function cargarResumenTurno() {
  */
 function mostrarResumenEnModal(resumen) {
     // Base inicial
-    document.getElementById('resumenBaseInicial').textContent = formatearNumero(resumen.base_inicial);
+    const baseInicial1 = document.getElementById('resumenBaseInicial');
+    if (baseInicial1) baseInicial1.textContent = formatearNumero(resumen.base_inicial);
+    
     const baseInicial2 = document.getElementById('resumenBaseInicial2');
     if (baseInicial2) baseInicial2.textContent = formatearNumero(resumen.base_inicial);
     
     // Ventas en efectivo
     const ventasEfectivo = resumen.ventas_por_metodo.find(v => v.metodo_pago === 'efectivo');
     const totalEfectivo = ventasEfectivo ? parseFloat(ventasEfectivo.total) : 0;
-    document.getElementById('resumenVentasEfectivo').textContent = formatearNumero(totalEfectivo);
+    const ventasEfectivoEl = document.getElementById('resumenVentasEfectivo');
+    if (ventasEfectivoEl) ventasEfectivoEl.textContent = formatearNumero(totalEfectivo);
     
     // Total ventas (todos los métodos)
-    document.getElementById('resumenTotalVentas').textContent = formatearNumero(resumen.total_ventas);
+    const totalVentasEl = document.getElementById('resumenTotalVentas');
+    if (totalVentasEl) totalVentasEl.textContent = formatearNumero(resumen.total_ventas);
     
     // Gastos
-    document.getElementById('resumenTotalGastos').textContent = formatearNumero(resumen.total_gastos);
+    const gastosEl = document.getElementById('resumenTotalGastos');
+    if (gastosEl) gastosEl.textContent = formatearNumero(resumen.total_gastos);
+    
     const totalGastos2 = document.getElementById('resumenTotalGastos2');
     if (totalGastos2) totalGastos2.textContent = formatearNumero(resumen.total_gastos);
     
     // Efectivo a entregar (sin base, sin gastos)
-    document.getElementById('resumenEfectivoEntregar').textContent = formatearNumero(resumen.efectivo_a_entregar);
+    const efectivoEntregarEl = document.getElementById('resumenEfectivoEntregar');
+    if (efectivoEntregarEl) efectivoEntregarEl.textContent = formatearNumero(resumen.efectivo_a_entregar);
     
     // Mostrar desglose por método de pago
     mostrarDesglosePorMetodo(resumen.ventas_por_metodo);
@@ -4268,59 +4275,76 @@ async function cerrarTurno() {
 /**
  * Registrar gasto en el turno
  */
-async function registrarGasto() {
-    if (!turnoActivo) return;
+function registrarGasto() {
+    if (!turnoActivo) {
+        mostrarAlerta('No hay un turno activo', 'warning');
+        return;
+    }
     
-    const { value: formValues } = await Swal.fire({
-        title: 'Registrar Gasto',
-        html:
-            '<input id="swal-desc" class="swal2-input" placeholder="Descripción (ej: Almuerzo)">' +
-            '<input id="swal-monto" type="number" class="swal2-input" placeholder="Monto" step="0.01" min="0">',
-        focusConfirm: false,
-        showCancelButton: true,
-        confirmButtonText: 'Registrar',
-        cancelButtonText: 'Cancelar',
-        preConfirm: () => {
-            const descripcion = document.getElementById('swal-desc').value;
-            const monto = parseFloat(document.getElementById('swal-monto').value);
-            
-            if (!descripcion || !monto || monto <= 0) {
-                Swal.showValidationMessage('Por favor complete todos los campos correctamente');
-                return false;
-            }
-            
-            return { descripcion, monto };
-        }
-    });
+    // Limpiar campos del modal
+    document.getElementById('gastoDescripcion').value = '';
+    document.getElementById('gastoMonto').value = '';
     
-    if (formValues) {
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(
-                `${API_URL}/ventas/turno/${turnoActivo.id}/gastos`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(formValues)
-                }
-            );
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                mostrarAlerta('Gasto registrado exitosamente', 'success');
-                await cargarResumenTurno();
-            } else {
-                mostrarAlerta(data.message || 'Error al registrar gasto', 'error');
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('modalRegistrarGasto'));
+    modal.show();
+    
+    // Focus en el primer campo
+    setTimeout(() => {
+        document.getElementById('gastoDescripcion').focus();
+    }, 500);
+}
+
+/**
+ * Confirmar y enviar el registro de gasto
+ */
+async function confirmarRegistroGasto() {
+    const descripcion = document.getElementById('gastoDescripcion').value.trim();
+    const monto = parseFloat(document.getElementById('gastoMonto').value);
+    
+    // Validaciones
+    if (!descripcion) {
+        mostrarAlerta('Ingresa una descripción del gasto', 'warning');
+        document.getElementById('gastoDescripcion').focus();
+        return;
+    }
+    
+    if (!monto || monto <= 0) {
+        mostrarAlerta('Ingresa un monto válido', 'warning');
+        document.getElementById('gastoMonto').focus();
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/ventas/turno/${turnoActivo.id}/gastos`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ descripcion, monto })
             }
+        );
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalRegistrarGasto'));
+            modal.hide();
             
-        } catch (error) {
-            console.error('Error al registrar gasto:', error);
-            mostrarAlerta('Error al registrar gasto', 'error');
+            mostrarAlerta('Gasto registrado exitosamente', 'success');
+            await cargarResumenTurno();
+        } else {
+            mostrarAlerta(data.message || 'Error al registrar gasto', 'error');
         }
+        
+    } catch (error) {
+        console.error('Error al registrar gasto:', error);
+        mostrarAlerta('Error al registrar gasto', 'error');
     }
 }
 
