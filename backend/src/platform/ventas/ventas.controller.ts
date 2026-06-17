@@ -809,15 +809,58 @@ export const cerrarTurno = async (req: Request, res: Response): Promise<Response
     const { turnoId } = req.params;
     const { efectivoContado, notas } = req.body;
 
-    // Obtener resumen del turno
-    const resumenResponse = await getResumenTurno({ params: { turnoId } } as any, {} as Response);
-    const resumen = (resumenResponse as any).data;
+    // Obtener datos del turno
+    const turnos = await query(
+      `SELECT t.*, b.nombre as bodega_nombre
+       FROM turnos_caja t
+       LEFT JOIN bodegas b ON t.bodega_id = b.id
+       WHERE t.id = ?`,
+      [turnoId]
+    );
 
-    if (!resumen) {
-      return errorResponse(res, 'No se pudo obtener resumen del turno', null, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    if (turnos.length === 0) {
+      return errorResponse(res, 'Turno no encontrado', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
     }
 
-    const diferencia = efectivoContado !== undefined ? efectivoContado - resumen.efectivo_a_entregar : null;
+    const turno = turnos[0];
+
+    // Obtener ventas del turno agrupadas por método de pago
+    const ventas = await query(
+      `SELECT metodo_pago, COUNT(*) as cantidad, SUM(total) as total
+       FROM ventas
+       WHERE turno_id = ? AND estado != 'anulada'
+       GROUP BY metodo_pago`,
+      [turnoId]
+    );
+
+    // Obtener gastos del turno
+    const gastos = await query(
+      `SELECT id, descripcion, monto, fecha_registro
+       FROM gastos_caja
+       WHERE turno_id = ?
+       ORDER BY fecha_registro DESC`,
+      [turnoId]
+    );
+
+    const totalGastos = gastos.reduce((sum: number, g: any) => sum + parseFloat(g.monto), 0);
+    const totalVentas = ventas.reduce((sum: number, v: any) => sum + parseFloat(v.total), 0);
+    
+    // Calcular efectivo a entregar (ventas en efectivo - gastos)
+    const ventasEfectivo = ventas.find((v: any) => v.metodo_pago === 'efectivo');
+    const montoEfectivo = ventasEfectivo ? parseFloat(ventasEfectivo.total) : 0;
+    const efectivoAEntregar = montoEfectivo - totalGastos;
+
+    const resumen = {
+      turno,
+      ventas_por_metodo: ventas,
+      gastos,
+      total_ventas: totalVentas,
+      total_gastos: totalGastos,
+      efectivo_a_entregar: efectivoAEntregar,
+      base_inicial: parseFloat(turno.base_inicial)
+    };
+
+    const diferencia = efectivoContado !== undefined ? efectivoContado - efectivoAEntregar : null;
 
     // Guardar totales por método de pago
     for (const venta of resumen.ventas_por_metodo) {
