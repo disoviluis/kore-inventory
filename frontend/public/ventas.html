@@ -1328,32 +1328,70 @@
                             <p class="mb-0"><strong>Base inicial:</strong> $<span id="turnoBaseInicial"></span></p>
                         </div>
                         
+                        <!-- Botón para registrar gastos -->
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="registrarGasto()">
+                                <i class="bi bi-dash-circle me-1"></i>Registrar Gasto
+                            </button>
+                        </div>
+                        
+                        <!-- Resumen de ventas -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">Resumen de Ventas</h6>
+                                
+                                <!-- Desglose por método de pago -->
+                                <div id="desglosePorMetodo"></div>
+                                
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <span><strong>TOTAL VENTAS:</strong></span>
+                                    <strong class="text-success">$<span id="resumenTotalVentas">0</span></strong>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <span><strong>TOTAL GASTOS:</strong></span>
+                                    <strong class="text-danger">$<span id="resumenTotalGastos">0</span></strong>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <h6 class="mt-4 mb-3">Cerrar Turno</h6>
                         <div class="mb-3">
                             <label class="form-label">Efectivo Contado en Caja</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="number" class="form-control" id="efectivoContado" min="0" step="0.01">
+                                <input type="number" class="form-control" id="efectivoContado" min="0" step="0.01" oninput="calcularDiferenciaTurno()">
                             </div>
+                            <small class="text-muted">Efectivo físico contado en la caja (sin incluir la base)</small>
                         </div>
                         
-                        <div class="card bg-light">
+                        <div class="card bg-info bg-opacity-10 border-info">
                             <div class="card-body">
-                                <h6 class="card-title">Resumen del Turno</h6>
-                                <div class="d-flex justify-content-between mb-2">
+                                <h6 class="card-title text-info">
+                                    <i class="bi bi-calculator me-2"></i>Cálculo Efectivo a Entregar
+                                </h6>
+                                <div class="d-flex justify-content-between mb-1">
                                     <span>Base inicial:</span>
-                                    <strong>$<span id="resumenBaseInicial"></span></strong>
+                                    <span>$<span id="resumenBaseInicial"></span></span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
+                                <div class="d-flex justify-content-between mb-1">
                                     <span>Ventas en efectivo:</span>
-                                    <strong class="text-success">$<span id="resumenVentasEfectivo"></span></strong>
+                                    <span class="text-success">$<span id="resumenVentasEfectivo">0</span></span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Esperado en caja:</span>
-                                    <strong>$<span id="resumenEsperado"></span></strong>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>(-) Gastos del turno:</span>
+                                    <span class="text-danger">$<span id="resumenTotalGastos2">0</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>(-) Base inicial:</span>
+                                    <span>$<span id="resumenBaseInicial2"></span></span>
                                 </div>
                                 <hr>
                                 <div class="d-flex justify-content-between">
+                                    <span><strong>Efectivo a entregar:</strong></span>
+                                    <strong class="text-primary">$<span id="resumenEfectivoEntregar">0</span></strong>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
                                     <span><strong>Diferencia:</strong></span>
                                     <strong id="resumenDiferencia" class="text-primary">$0</strong>
                                 </div>

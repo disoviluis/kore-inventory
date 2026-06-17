@@ -13,7 +13,13 @@ import {
   getVentas,
   getVentaById,
   createVenta,
-  anularVenta
+  anularVenta,
+  abrirTurno,
+  getTurnoActual,
+  getResumenTurno,
+  cerrarTurno,
+  registrarGasto,
+  getGastosTurno
 } from './ventas.controller';
 
 const router = Router();
@@ -62,5 +68,51 @@ router.post('/', createVenta);
  * @access  Private
  */
 router.put('/:id/anular', anularVenta);
+
+// =====================================================
+// RUTAS DE TURNOS DE CAJA
+// =====================================================
+
+/**
+ * @route   POST /api/ventas/turno/abrir
+ * @desc    Abrir turno de caja
+ * @access  Private
+ */
+router.post('/turno/abrir', abrirTurno);
+
+/**
+ * @route   GET /api/ventas/turno/actual
+ * @desc    Obtener turno actual del usuario
+ * @access  Private
+ */
+router.get('/turno/actual', getTurnoActual);
+
+/**
+ * @route   GET /api/ventas/turno/:turnoId/resumen
+ * @desc    Obtener resumen del turno para cierre
+ * @access  Private
+ */
+router.get('/turno/:turnoId/resumen', getResumenTurno);
+
+/**
+ * @route   POST /api/ventas/turno/:turnoId/cerrar
+ * @desc    Cerrar turno de caja
+ * @access  Private
+ */
+router.post('/turno/:turnoId/cerrar', cerrarTurno);
+
+/**
+ * @route   POST /api/ventas/turno/:turnoId/gastos
+ * @desc    Registrar gasto en el turno
+ * @access  Private
+ */
+router.post('/turno/:turnoId/gastos', registrarGasto);
+
+/**
+ * @route   GET /api/ventas/turno/:turnoId/gastos
+ * @desc    Obtener gastos del turno
+ * @access  Private
+ */
+router.get('/turno/:turnoId/gastos', getGastosTurno);
 
 export default router;

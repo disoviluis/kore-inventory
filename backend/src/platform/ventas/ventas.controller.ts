@@ -394,6 +394,21 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
     // Determinar estado de la venta
     const estadoVenta = (forma_pago === 'credito') ? 'pendiente' : 'pagada';
 
+    // Obtener turno activo del usuario (si existe)
+    const usuario = (req as any).user;
+    let turnoId = null;
+    
+    if (usuario?.id) {
+      const turnoActivo = await query(
+        'SELECT id FROM turnos_caja WHERE usuario_id = ? AND empresa_id = ? AND estado = "abierto" LIMIT 1',
+        [usuario.id, empresa_id]
+      );
+      
+      if (turnoActivo.length > 0) {
+        turnoId = turnoActivo[0].id;
+      }
+    }
+
     // Insertar venta
     const resultVenta = await query(
       `INSERT INTO ventas (
@@ -401,9 +416,10 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         subtotal, descuento, impuesto, total, 
         retenciones,
         estado, metodo_pago, forma_pago, fecha_vencimiento, notas, vendedor_id,
-          cufe, qr_code,
-          propina_habilitada, propina_porcentaje, propina_valor, propina_base
-        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        cufe, qr_code,
+        propina_habilitada, propina_porcentaje, propina_valor, propina_base,
+        turno_id
+        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         numeroFactura,
@@ -420,12 +436,13 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         notas || null,
         vendedor_id || null,
         cufe,
-          qrCode,
-          // Propina
-          propina_habilitada || false,
-          propina_porcentaje || 0,
-          propina_valor || 0,
-          propina_base || 0
+        qrCode,
+        // Propina
+        propina_habilitada || false,
+        propina_porcentaje || 0,
+        propina_valor || 0,
+        propina_base || 0,
+        turnoId
         ]
       );
 
@@ -631,5 +648,270 @@ export const anularVenta = async (req: Request, res: Response): Promise<Response
   } catch (error) {
     logger.error('Error al anular venta:', error);
     return errorResponse(res, 'Error al anular venta', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+// =====================================================
+// TURNOS DE CAJA (Apertura/Cierre)
+// =====================================================
+
+/**
+ * Abrir turno de caja
+ * POST /api/ventas/turno/abrir
+ */
+export const abrirTurno = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { empresaId, bodegaId, baseInicial } = req.body;
+    const usuario = (req as any).user;
+
+    if (!empresaId || !bodegaId || baseInicial === undefined) {
+      return errorResponse(res, 'Faltan parámetros: empresaId, bodegaId, baseInicial', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Verificar si el usuario ya tiene un turno abierto
+    const turnoActivo = await query(
+      'SELECT id FROM turnos_caja WHERE usuario_id = ? AND empresa_id = ? AND estado = "abierto"',
+      [usuario.id, empresaId]
+    );
+
+    if (turnoActivo.length > 0) {
+      return errorResponse(res, 'Ya tienes un turno abierto. Ciérralo antes de abrir uno nuevo.', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Crear nuevo turno
+    const result = await query(
+      `INSERT INTO turnos_caja (empresa_id, usuario_id, bodega_id, base_inicial, estado)
+       VALUES (?, ?, ?, ?, 'abierto')`,
+      [empresaId, usuario.id, bodegaId, baseInicial]
+    );
+
+    const turnoId = result.insertId;
+
+    logger.info(`Turno abierto: ${turnoId} - Usuario: ${usuario.id} - Bodega: ${bodegaId}`);
+
+    return successResponse(res, 'Turno abierto exitosamente', { turnoId }, CONSTANTS.HTTP_STATUS.CREATED);
+
+  } catch (error) {
+    logger.error('Error al abrir turno:', error);
+    return errorResponse(res, 'Error al abrir turno', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+/**
+ * Obtener turno actual del usuario
+ * GET /api/ventas/turno/actual?empresaId=X
+ */
+export const getTurnoActual = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { empresaId } = req.query;
+    const usuario = (req as any).user;
+
+    if (!empresaId) {
+      return errorResponse(res, 'Parámetro empresaId requerido', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const turnos = await query(
+      `SELECT t.*, b.nombre as bodega_nombre, u.nombre as usuario_nombre, u.apellido as usuario_apellido
+       FROM turnos_caja t
+       LEFT JOIN bodegas b ON t.bodega_id = b.id
+       LEFT JOIN usuarios u ON t.usuario_id = u.id
+       WHERE t.usuario_id = ? AND t.empresa_id = ? AND t.estado = 'abierto'
+       LIMIT 1`,
+      [usuario.id, empresaId]
+    );
+
+    if (turnos.length === 0) {
+      return successResponse(res, 'No hay turno activo', null, CONSTANTS.HTTP_STATUS.OK);
+    }
+
+    return successResponse(res, 'Turno actual', turnos[0], CONSTANTS.HTTP_STATUS.OK);
+
+  } catch (error) {
+    logger.error('Error al obtener turno actual:', error);
+    return errorResponse(res, 'Error al obtener turno actual', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+/**
+ * Obtener resumen del turno para cierre
+ * GET /api/ventas/turno/:turnoId/resumen
+ */
+export const getResumenTurno = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { turnoId } = req.params;
+
+    // Obtener datos del turno
+    const turnos = await query('SELECT * FROM turnos_caja WHERE id = ?', [turnoId]);
+
+    if (turnos.length === 0) {
+      return errorResponse(res, 'Turno no encontrado', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
+    }
+
+    const turno = turnos[0];
+
+    // Obtener ventas del turno agrupadas por método de pago
+    const ventas = await query(
+      `SELECT metodo_pago, COUNT(*) as cantidad, SUM(total) as total
+       FROM ventas
+       WHERE turno_id = ? AND estado != 'anulada'
+       GROUP BY metodo_pago`,
+      [turnoId]
+    );
+
+    // Obtener gastos del turno
+    const gastos = await query(
+      `SELECT id, descripcion, monto, fecha_registro
+       FROM gastos_caja
+       WHERE turno_id = ?
+       ORDER BY fecha_registro DESC`,
+      [turnoId]
+    );
+
+    const totalGastos = gastos.reduce((sum: number, g: any) => sum + parseFloat(g.monto), 0);
+    const totalVentas = ventas.reduce((sum: number, v: any) => sum + parseFloat(v.total), 0);
+    
+    // Calcular efectivo a entregar (ventas en efectivo - base - gastos)
+    const ventasEfectivo = ventas.find((v: any) => v.metodo_pago === 'efectivo');
+    const montoEfectivo = ventasEfectivo ? parseFloat(ventasEfectivo.total) : 0;
+    const efectivoAEntregar = montoEfectivo - parseFloat(turno.base_inicial) - totalGastos;
+
+    const resumen = {
+      turno,
+      ventas_por_metodo: ventas,
+      gastos,
+      total_ventas: totalVentas,
+      total_gastos: totalGastos,
+      efectivo_a_entregar: efectivoAEntregar,
+      base_inicial: parseFloat(turno.base_inicial)
+    };
+
+    return successResponse(res, 'Resumen del turno', resumen, CONSTANTS.HTTP_STATUS.OK);
+
+  } catch (error) {
+    logger.error('Error al obtener resumen del turno:', error);
+    return errorResponse(res, 'Error al obtener resumen del turno', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+/**
+ * Cerrar turno de caja
+ * POST /api/ventas/turno/:turnoId/cerrar
+ */
+export const cerrarTurno = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { turnoId } = req.params;
+    const { efectivoContado, notas } = req.body;
+
+    // Obtener resumen del turno
+    const resumenResponse = await getResumenTurno({ params: { turnoId } } as any, {} as Response);
+    const resumen = (resumenResponse as any).data;
+
+    if (!resumen) {
+      return errorResponse(res, 'No se pudo obtener resumen del turno', null, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    }
+
+    const diferencia = efectivoContado !== undefined ? efectivoContado - resumen.efectivo_a_entregar : null;
+
+    // Guardar totales por método de pago
+    for (const venta of resumen.ventas_por_metodo) {
+      await query(
+        `INSERT INTO turnos_caja_totales (turno_id, metodo_pago, total, cantidad_transacciones)
+         VALUES (?, ?, ?, ?)`,
+        [turnoId, venta.metodo_pago, venta.total, venta.cantidad]
+      );
+    }
+
+    // Cerrar turno
+    await query(
+      `UPDATE turnos_caja 
+       SET fecha_cierre = NOW(), 
+           estado = 'cerrado',
+           total_ventas = ?,
+           total_gastos = ?,
+           efectivo_a_entregar = ?,
+           efectivo_contado = ?,
+           diferencia = ?,
+           notas_cierre = ?
+       WHERE id = ?`,
+      [
+        resumen.total_ventas,
+        resumen.total_gastos,
+        resumen.efectivo_a_entregar,
+        efectivoContado || null,
+        diferencia,
+        notas || null,
+        turnoId
+      ]
+    );
+
+    logger.info(`Turno cerrado: ${turnoId}`);
+
+    return successResponse(res, 'Turno cerrado exitosamente', resumen, CONSTANTS.HTTP_STATUS.OK);
+
+  } catch (error) {
+    logger.error('Error al cerrar turno:', error);
+    return errorResponse(res, 'Error al cerrar turno', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+/**
+ * Registrar gasto en el turno
+ * POST /api/ventas/turno/:turnoId/gastos
+ */
+export const registrarGasto = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { turnoId } = req.params;
+    const { descripcion, monto } = req.body;
+    const usuario = (req as any).user;
+
+    if (!descripcion || !monto) {
+      return errorResponse(res, 'Faltan parámetros: descripcion, monto', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Verificar que el turno existe y está abierto
+    const turnos = await query('SELECT id FROM turnos_caja WHERE id = ? AND estado = "abierto"', [turnoId]);
+
+    if (turnos.length === 0) {
+      return errorResponse(res, 'Turno no encontrado o ya cerrado', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
+    }
+
+    // Registrar gasto
+    const result = await query(
+      'INSERT INTO gastos_caja (turno_id, descripcion, monto, usuario_id) VALUES (?, ?, ?, ?)',
+      [turnoId, descripcion, monto, usuario.id]
+    );
+
+    logger.info(`Gasto registrado en turno ${turnoId}: ${descripcion} - $${monto}`);
+
+    return successResponse(res, 'Gasto registrado', { gastoId: result.insertId }, CONSTANTS.HTTP_STATUS.CREATED);
+
+  } catch (error) {
+    logger.error('Error al registrar gasto:', error);
+    return errorResponse(res, 'Error al registrar gasto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+/**
+ * Obtener gastos del turno
+ * GET /api/ventas/turno/:turnoId/gastos
+ */
+export const getGastosTurno = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { turnoId } = req.params;
+
+    const gastos = await query(
+      `SELECT g.*, u.nombre as usuario_nombre, u.apellido as usuario_apellido
+       FROM gastos_caja g
+       LEFT JOIN usuarios u ON g.usuario_id = u.id
+       WHERE g.turno_id = ?
+       ORDER BY g.fecha_registro DESC`,
+      [turnoId]
+    );
+
+    return successResponse(res, 'Gastos del turno', gastos, CONSTANTS.HTTP_STATUS.OK);
+
+  } catch (error) {
+    logger.error('Error al obtener gastos del turno:', error);
+    return errorResponse(res, 'Error al obtener gastos del turno', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };

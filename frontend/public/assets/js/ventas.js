@@ -3962,78 +3962,208 @@ async function reimprimirFactura(numeroFactura) {
 /**
  * Abrir modal de turno de caja
  */
-function abrirModalTurno() {
-    // Verificar si hay turno activo en localStorage
-    turnoActivo = JSON.parse(localStorage.getItem('turnoActivo'));
-    
-    if (turnoActivo) {
-        // Mostrar turno activo
-        document.getElementById('turnoNuevo').style.display = 'none';
-        document.getElementById('turnoAbierto').style.display = 'block';
-        document.getElementById('btnAbrirTurno').style.display = 'none';
-        document.getElementById('btnCerrarTurno').style.display = 'block';
+// ============================================
+// TURNOS DE CAJA
+// ============================================
+
+let turnoActivo = null;
+let gastosDelTurno = [];
+
+/**
+ * Abrir modal de turnos
+ */
+async function abrirModalTurno() {
+    try {
+        // Obtener turno actual del usuario desde el backend
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/ventas/turno/actual?empresaId=${currentEmpresa.id}`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+
+        const data = await response.json();
         
-        document.getElementById('turnoUsuario').textContent = turnoActivo.usuario;
-        document.getElementById('turnoApertura').textContent = new Date(turnoActivo.apertura).toLocaleString('es-CO');
-        document.getElementById('turnoBaseInicial').textContent = formatearNumero(turnoActivo.baseInicial);
-        document.getElementById('resumenBaseInicial').textContent = formatearNumero(turnoActivo.baseInicial);
+        if (data.success && data.data) {
+            // Hay turno activo
+            turnoActivo = data.data;
+            mostrarTurnoActivo();
+            await cargarResumenTurno();
+        } else {
+            // No hay turno activo
+            turnoActivo = null;
+            mostrarFormularioNuevoTurno();
+        }
         
-        // Calcular ventas en efectivo del turno
-        calcularResumenTurno();
-    } else {
-        // Mostrar formulario nuevo turno
-        document.getElementById('turnoNuevo').style.display = 'block';
-        document.getElementById('turnoAbierto').style.display = 'none';
-        document.getElementById('btnAbrirTurno').style.display = 'block';
-        document.getElementById('btnCerrarTurno').style.display = 'none';
+        const modal = new bootstrap.Modal(document.getElementById('turnoCajaModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error al cargar turno:', error);
+        mostrarAlerta('Error al cargar información del turno', 'error');
     }
+}
+
+/**
+ * Mostrar turno activo
+ */
+function mostrarTurnoActivo() {
+    document.getElementById('turnoNuevo').style.display = 'none';
+    document.getElementById('turnoAbierto').style.display = 'block';
     
-    const modal = new bootstrap.Modal(document.getElementById('turnoCajaModal'));
-    modal.show();
+    const nombreUsuario = `${turnoActivo.usuario_nombre || ''} ${turnoActivo.usuario_apellido || ''}`.trim();
+    document.getElementById('turnoUsuario').textContent = nombreUsuario || 'Usuario';
+    document.getElementById('turnoApertura').textContent = new Date(turnoActivo.fecha_apertura).toLocaleString('es-CO');
+    document.getElementById('turnoBaseInicial').textContent = formatearNumero(turnoActivo.base_inicial);
+}
+
+/**
+ * Mostrar formulario para nuevo turno
+ */
+function mostrarFormularioNuevoTurno() {
+    document.getElementById('turnoNuevo').style.display = 'block';
+    document.getElementById('turnoAbierto').style.display = 'none';
+    document.getElementById('baseInicialTurno').value = '50000';
+    document.getElementById('notasAperturaTurno').value = '';
 }
 
 /**
  * Abrir nuevo turno
  */
-function abrirTurno() {
-    const baseInicial = parseFloat(document.getElementById('baseInicialTurno').value) || 0;
-    const notas = document.getElementById('notasAperturaTurno').value;
-    
-    turnoActivo = {
-        id: Date.now(),
-        usuario: `${currentUsuario.nombre} ${currentUsuario.apellido}`,
-        usuario_id: currentUsuario.id,
-        empresa_id: currentEmpresa.id,
-        apertura: new Date().toISOString(),
-        baseInicial: baseInicial,
-        notas: notas
-    };
-    
-    localStorage.setItem('turnoActivo', JSON.stringify(turnoActivo));
-    
-    bootstrap.Modal.getInstance(document.getElementById('turnoCajaModal')).hide();
-    mostrarAlerta('Turno abierto exitosamente', 'success');
-    reproducirSonido('success');
+async function abrirTurno() {
+    try {
+        const baseInicial = parseFloat(document.getElementById('baseInicialTurno').value) || 0;
+        
+        if (baseInicial < 0) {
+            mostrarAlerta('La base inicial no puede ser negativa', 'error');
+            return;
+        }
+        
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/ventas/turno/abrir`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                empresaId: currentEmpresa.id,
+                bodegaId: currentBodega.id,
+                baseInicial
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarAlerta('Turno abierto exitosamente', 'success');
+            reproducirSonido('success');
+            bootstrap.Modal.getInstance(document.getElementById('turnoCajaModal')).hide();
+            setTimeout(() => abrirModalTurno(), 500);
+        } else {
+            mostrarAlerta(data.message || 'Error al abrir turno', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error al abrir turno:', error);
+        mostrarAlerta('Error al abrir turno', 'error');
+    }
 }
 
 /**
- * Calcular resumen del turno
+ * Cargar resumen del turno
  */
-async function calcularResumenTurno() {
+async function cargarResumenTurno() {
     if (!turnoActivo) return;
     
-    // Filtrar ventas en efectivo desde la apertura
-    const ventasEfectivo = ultimasVentas.filter(v => {
-        const fechaVenta = new Date(v.fecha_venta);
-        const fechaApertura = new Date(turnoActivo.apertura);
-        return fechaVenta >= fechaApertura && v.metodo_pago === 'efectivo';
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/ventas/turno/${turnoActivo.id}/resumen`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const resumen = data.data;
+            mostrarResumenEnModal(resumen);
+            gastosDelTurno = resumen.gastos || [];
+        }
+        
+    } catch (error) {
+        console.error('Error al cargar resumen:', error);
+    }
+}
+
+/**
+ * Mostrar resumen en el modal
+ */
+function mostrarResumenEnModal(resumen) {
+    // Base inicial
+    document.getElementById('resumenBaseInicial').textContent = formatearNumero(resumen.base_inicial);
+    const baseInicial2 = document.getElementById('resumenBaseInicial2');
+    if (baseInicial2) baseInicial2.textContent = formatearNumero(resumen.base_inicial);
+    
+    // Ventas en efectivo
+    const ventasEfectivo = resumen.ventas_por_metodo.find(v => v.metodo_pago === 'efectivo');
+    const totalEfectivo = ventasEfectivo ? parseFloat(ventasEfectivo.total) : 0;
+    document.getElementById('resumenVentasEfectivo').textContent = formatearNumero(totalEfectivo);
+    
+    // Total ventas (todos los métodos)
+    document.getElementById('resumenTotalVentas').textContent = formatearNumero(resumen.total_ventas);
+    
+    // Gastos
+    document.getElementById('resumenTotalGastos').textContent = formatearNumero(resumen.total_gastos);
+    const totalGastos2 = document.getElementById('resumenTotalGastos2');
+    if (totalGastos2) totalGastos2.textContent = formatearNumero(resumen.total_gastos);
+    
+    // Efectivo a entregar (sin base, sin gastos)
+    document.getElementById('resumenEfectivoEntregar').textContent = formatearNumero(resumen.efectivo_a_entregar);
+    
+    // Mostrar desglose por método de pago
+    mostrarDesglosePorMetodo(resumen.ventas_por_metodo);
+}
+
+/**
+ * Mostrar desglose por método de pago
+ */
+function mostrarDesglosePorMetodo(ventas) {
+    const container = document.getElementById('desglosePorMetodo');
+    if (!container) return;
+    
+    let html = '<div class="row g-2 mt-2">';
+    
+    const metodosNombres = {
+        'efectivo': '💵 Efectivo',
+        'tarjeta_debito': '💳 T. Débito',
+        'tarjeta_credito': '💳 T. Crédito',
+        'transferencia': '🏦 Transferencia',
+        'nequi': '📱 Nequi',
+        'daviplata': '📱 Daviplata',
+        'cheque': '📄 Cheque'
+    };
+    
+    ventas.forEach(v => {
+        const nombre = metodosNombres[v.metodo_pago] || v.metodo_pago;
+        html += `
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-body p-2">
+                        <small class="d-block">${nombre}</small>
+                        <strong>$${formatearNumero(v.total)}</strong>
+                        <small class="text-muted d-block">(${v.cantidad} trans.)</small>
+                    </div>
+                </div>
+            </div>
+        `;
     });
     
-    const totalEfectivo = ventasEfectivo.reduce((sum, v) => sum + parseFloat(v.total), 0);
-    const esperado = turnoActivo.baseInicial + totalEfectivo;
-    
-    document.getElementById('resumenVentasEfectivo').textContent = formatearNumero(totalEfectivo);
-    document.getElementById('resumenEsperado').textContent = formatearNumero(esperado);
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 /**
@@ -4041,11 +4171,11 @@ async function calcularResumenTurno() {
  */
 function calcularDiferenciaTurno() {
     const efectivoContado = parseFloat(document.getElementById('efectivoContado').value) || 0;
-    const esperado = turnoActivo.baseInicial + parseFloat(document.getElementById('resumenVentasEfectivo').textContent.replace(/,/g, ''));
+    const esperadoTexto = document.getElementById('resumenEfectivoEntregar').textContent.replace(/,/g, '');
+    const esperado = parseFloat(esperadoTexto) || 0;
     const diferencia = efectivoContado - esperado;
     
     const elemento = document.getElementById('resumenDiferencia');
-    elemento.textContent = `$${formatearNumero(Math.abs(diferencia))}`;
     
     if (diferencia > 0) {
         elemento.className = 'text-success';
@@ -4062,30 +4192,238 @@ function calcularDiferenciaTurno() {
 /**
  * Cerrar turno
  */
-function cerrarTurno() {
+async function cerrarTurno() {
+    if (!turnoActivo) return;
+    
     if (!confirm('¿Está seguro de cerrar el turno? Esta acción no se puede deshacer.')) {
         return;
     }
     
-    const cierreTurno = {
-        ...turnoActivo,
-        cierre: new Date().toISOString(),
-        efectivoContado: parseFloat(document.getElementById('efectivoContado').value) || 0,
-        notasCierre: document.getElementById('notasCierreTurno').value
-    };
+    try {
+        const efectivoContado = parseFloat(document.getElementById('efectivoContado').value) || 0;
+        const notas = document.getElementById('notasCierreTurno').value;
+        
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/ventas/turno/${turnoActivo.id}/cerrar`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    efectivoContado,
+                    notas
+                })
+            }
+        );
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarAlerta('Turno cerrado exitosamente', 'success');
+            reproducirSonido('success');
+            bootstrap.Modal.getInstance(document.getElementById('turnoCajaModal')).hide();
+            turnoActivo = null;
+            
+            // Preguntar si desea imprimir el cierre
+            if (confirm('¿Desea imprimir el cierre de caja?')) {
+                imprimirCierreCaja(data.data);
+            }
+        } else {
+            mostrarAlerta(data.message || 'Error al cerrar turno', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error al cerrar turno:', error);
+        mostrarAlerta('Error al cerrar turno', 'error');
+    }
+}
+
+/**
+ * Registrar gasto en el turno
+ */
+async function registrarGasto() {
+    if (!turnoActivo) return;
     
-    // Guardar en historial (por ahora en localStorage)
-    const historial = JSON.parse(localStorage.getItem('historialTurnos') || '[]');
-    historial.push(cierreTurno);
-    localStorage.setItem('historialTurnos', JSON.stringify(historial));
+    const { value: formValues } = await Swal.fire({
+        title: 'Registrar Gasto',
+        html:
+            '<input id="swal-desc" class="swal2-input" placeholder="Descripción (ej: Almuerzo)">' +
+            '<input id="swal-monto" type="number" class="swal2-input" placeholder="Monto" step="0.01" min="0">',
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Registrar',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const descripcion = document.getElementById('swal-desc').value;
+            const monto = parseFloat(document.getElementById('swal-monto').value);
+            
+            if (!descripcion || !monto || monto <= 0) {
+                Swal.showValidationMessage('Por favor complete todos los campos correctamente');
+                return false;
+            }
+            
+            return { descripcion, monto };
+        }
+    });
     
-    // Limpiar turno activo
-    localStorage.removeItem('turnoActivo');
-    turnoActivo = null;
+    if (formValues) {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(
+                `${API_URL}/ventas/turno/${turnoActivo.id}/gastos`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(formValues)
+                }
+            );
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                mostrarAlerta('Gasto registrado exitosamente', 'success');
+                await cargarResumenTurno();
+            } else {
+                mostrarAlerta(data.message || 'Error al registrar gasto', 'error');
+            }
+            
+        } catch (error) {
+            console.error('Error al registrar gasto:', error);
+            mostrarAlerta('Error al registrar gasto', 'error');
+        }
+    }
+}
+
+/**
+ * Imprimir cierre de caja
+ */
+function imprimirCierreCaja(resumen) {
+    const ventana = window.open('', '', 'width=300,height=600');
+    const nombreEmpresa = currentEmpresa.nombre || 'Mi Empresa';
+    const nombreUsuario = `${turnoActivo.usuario_nombre || ''} ${turnoActivo.usuario_apellido || ''}`.trim();
+    const fechaApertura = new Date(turnoActivo.fecha_apertura).toLocaleString('es-CO');
+    const fechaCierre = new Date().toLocaleString('es-CO');
     
-    bootstrap.Modal.getInstance(document.getElementById('turnoCajaModal')).hide();
-    mostrarAlerta('Turno cerrado exitosamente', 'success');
-    reproducirSonido('success');
+    let htmlVentas = '';
+    resumen.ventas_por_metodo.forEach(v => {
+        const metodo = v.metodo_pago.replace(/_/g, ' ').toUpperCase();
+        htmlVentas += `
+            <tr>
+                <td>${metodo}</td>
+                <td align="right">$${formatearNumero(v.total)}</td>
+                <td align="center">${v.cantidad}</td>
+            </tr>
+        `;
+    });
+    
+    let htmlGastos = '';
+    resumen.gastos.forEach(g => {
+        htmlGastos += `
+            <tr>
+                <td>${g.descripcion}</td>
+                <td align="right">$${formatearNumero(g.monto)}</td>
+            </tr>
+        `;
+    });
+    
+    ventana.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Cierre de Caja</title>
+            <style>
+                body { font-family: 'Courier New', monospace; font-size: 12px; margin: 10px; }
+                h2, h3 { margin: 5px 0; text-align: center; }
+                table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+                th, td { padding: 3px; border-bottom: 1px dashed #000; }
+                .total { font-weight: bold; border-top: 2px solid #000; }
+                .highlight { background: #f0f0f0; font-weight: bold; }
+                hr { border: none; border-top: 2px solid #000; }
+            </style>
+        </head>
+        <body>
+            <h2>${nombreEmpresa}</h2>
+            <h3>CIERRE DE CAJA</h3>
+            <hr>
+            <p><strong>Cajero:</strong> ${nombreUsuario}</p>
+            <p><strong>Apertura:</strong> ${fechaApertura}</p>
+            <p><strong>Cierre:</strong> ${fechaCierre}</p>
+            <hr>
+            <h3>VENTAS POR MÉTODO</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th align="left">Método</th>
+                        <th align="right">Total</th>
+                        <th align="center">Cant.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${htmlVentas}
+                    <tr class="total">
+                        <td>TOTAL VENTAS</td>
+                        <td align="right">$${formatearNumero(resumen.total_ventas)}</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+            ${htmlGastos ? `
+            <hr>
+            <h3>GASTOS</h3>
+            <table>
+                ${htmlGastos}
+                <tr class="total">
+                    <td>TOTAL GASTOS</td>
+                    <td align="right">$${formatearNumero(resumen.total_gastos)}</td>
+                </tr>
+            </table>
+            ` : ''}
+            <hr>
+            <h3>RESUMEN EFECTIVO</h3>
+            <table>
+                <tr>
+                    <td>Base Inicial:</td>
+                    <td align="right">$${formatearNumero(resumen.base_inicial)}</td>
+                </tr>
+                <tr>
+                    <td>Ventas Efectivo:</td>
+                    <td align="right">$${formatearNumero(resumen.ventas_por_metodo.find(v => v.metodo_pago === 'efectivo')?.total || 0)}</td>
+                </tr>
+                <tr>
+                    <td>(-) Gastos:</td>
+                    <td align="right">-$${formatearNumero(resumen.total_gastos)}</td>
+                </tr>
+                <tr>
+                    <td>(-) Base:</td>
+                    <td align="right">-$${formatearNumero(resumen.base_inicial)}</td>
+                </tr>
+                <tr class="highlight">
+                    <td><strong>EFECTIVO A ENTREGAR:</strong></td>
+                    <td align="right"><strong>$${formatearNumero(resumen.efectivo_a_entregar)}</strong></td>
+                </tr>
+            </table>
+            <hr>
+            <p style="text-align: center; margin-top: 20px;">
+                _____________________________<br>
+                Firma Cajero
+            </p>
+            <p style="text-align: center; font-size: 10px; margin-top: 20px;">
+                KORE Inventory - ${new Date().toLocaleDateString('es-CO')}
+            </p>
+        </body>
+        </html>
+    `);
+    
+    setTimeout(() => {
+        ventana.print();
+        ventana.close();
+    }, 250);
 }
 
 // ============================================
