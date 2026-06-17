@@ -4170,8 +4170,42 @@ function mostrarResumenEnModal(resumen) {
     const efectivoEntregarEl = document.getElementById('resumenEfectivoEntregar');
     if (efectivoEntregarEl) efectivoEntregarEl.textContent = formatearNumero(resumen.efectivo_a_entregar);
     
+    // CASO ESPECIAL: Efectivo a entregar negativo o cero
+    const advertenciaDiv = document.getElementById('advertenciaEfectivoNegativo');
+    const mensajeAdv = document.getElementById('mensajeAdvertencia');
+    const labelEfectivo = document.getElementById('labelEfectivoContado');
+    const ayudaEfectivo = document.getElementById('ayudaEfectivoContado');
+    const inputEfectivo = document.getElementById('efectivoContado');
+    
+    if (resumen.efectivo_a_entregar <= 0) {
+        // Mostrar advertencia
+        if (advertenciaDiv && mensajeAdv) {
+            advertenciaDiv.classList.remove('d-none');
+            if (resumen.efectivo_a_entregar < 0) {
+                const faltante = Math.abs(resumen.efectivo_a_entregar);
+                mensajeAdv.textContent = `Los gastos ($${formatearNumero(resumen.total_gastos)}) excedieron las ventas en efectivo ($${formatearNumero(totalEfectivo)}). Se usaron $${formatearNumero(faltante)} de la base. NO hay efectivo para entregar.`;
+            } else {
+                mensajeAdv.textContent = 'Los gastos igualaron las ventas en efectivo. NO hay efectivo para entregar.';
+            }
+        }
+        
+        // Cambiar etiquetas
+        if (labelEfectivo) labelEfectivo.textContent = 'Total Efectivo Contado en Caja';
+        if (ayudaEfectivo) ayudaEfectivo.textContent = 'Efectivo físico total contado (debe ser igual o cercano a la base)';
+        if (inputEfectivo) inputEfectivo.value = formatearNumero(resumen.base_inicial + resumen.efectivo_a_entregar);
+    } else {
+        // Ocultar advertencia (caso normal)
+        if (advertenciaDiv) advertenciaDiv.classList.add('d-none');
+        if (labelEfectivo) labelEfectivo.textContent = 'Efectivo Contado en Caja';
+        if (ayudaEfectivo) ayudaEfectivo.textContent = 'Efectivo físico contado en la caja (sin incluir la base)';
+        if (inputEfectivo) inputEfectivo.value = '';
+    }
+    
     // Mostrar desglose por método de pago
     mostrarDesglosePorMetodo(resumen.ventas_por_metodo);
+    
+    // Calcular diferencia inicial
+    calcularDiferenciaTurno();
 }
 
 /**
@@ -4226,19 +4260,40 @@ function calcularDiferenciaTurno() {
     const efectivoContado = parseFloat(document.getElementById('efectivoContado').value) || 0;
     const esperadoTexto = document.getElementById('resumenEfectivoEntregar').textContent.replace(/,/g, '');
     const esperado = parseFloat(esperadoTexto) || 0;
-    const diferencia = efectivoContado - esperado;
-    
     const elemento = document.getElementById('resumenDiferencia');
     
-    if (diferencia > 0) {
-        elemento.className = 'text-success';
-        elemento.innerHTML = `<i class="bi bi-arrow-up-circle me-1"></i>+$${formatearNumero(diferencia)} (Sobrante)`;
-    } else if (diferencia < 0) {
-        elemento.className = 'text-danger';
-        elemento.innerHTML = `<i class="bi bi-arrow-down-circle me-1"></i>-$${formatearNumero(Math.abs(diferencia))} (Faltante)`;
+    // CASO ESPECIAL: Si el esperado es negativo o cero, diferente lógica
+    if (esperado <= 0) {
+        // En este caso, el efectivo contado debería ser igual a (base + efectivo_a_entregar)
+        // Ejemplo: base $50,000 + efectivo_a_entregar -$3,500 = $46,500 esperado
+        const baseInicial = parseFloat(document.getElementById('resumenBaseInicial').textContent.replace(/,/g, '')) || 0;
+        const totalEsperado = baseInicial + esperado; // Si esperado es negativo, resta de la base
+        const diferencia = efectivoContado - totalEsperado;
+        
+        if (Math.abs(diferencia) < 0.01) {
+            elemento.className = 'text-success';
+            elemento.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Correcto - Cuadra exactamente`;
+        } else if (diferencia > 0) {
+            elemento.className = 'text-success';
+            elemento.innerHTML = `<i class="bi bi-arrow-up-circle me-1"></i>+$${formatearNumero(diferencia)} (Sobrante)`;
+        } else {
+            elemento.className = 'text-danger';
+            elemento.innerHTML = `<i class="bi bi-arrow-down-circle me-1"></i>-$${formatearNumero(Math.abs(diferencia))} (Faltante)`;
+        }
     } else {
-        elemento.className = 'text-primary';
-        elemento.innerHTML = `<i class="bi bi-check-circle me-1"></i>$0 (Exacto)`;
+        // CASO NORMAL: Hay efectivo para entregar
+        const diferencia = efectivoContado - esperado;
+        
+        if (Math.abs(diferencia) < 0.01) {
+            elemento.className = 'text-success';
+            elemento.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Correcto - Cuadra exactamente`;
+        } else if (diferencia > 0) {
+            elemento.className = 'text-success';
+            elemento.innerHTML = `<i class="bi bi-arrow-up-circle me-1"></i>+$${formatearNumero(diferencia)} (Sobrante)`;
+        } else {
+            elemento.className = 'text-danger';
+            elemento.innerHTML = `<i class="bi bi-arrow-down-circle me-1"></i>-$${formatearNumero(Math.abs(diferencia))} (Faltante)`;
+        }
     }
 }
 
