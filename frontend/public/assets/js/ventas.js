@@ -4257,10 +4257,19 @@ function mostrarDesglosePorMetodo(ventas) {
  * Calcular diferencia en el cierre
  */
 function calcularDiferenciaTurno() {
-    const efectivoContado = parseFloat(document.getElementById('efectivoContado').value) || 0;
+    const inputEfectivo = document.getElementById('efectivoContado');
+    const elemento = document.getElementById('resumenDiferencia');
+    
+    // Si el campo está vacío, no calcular diferencia
+    if (!inputEfectivo.value || inputEfectivo.value.trim() === '') {
+        elemento.className = 'text-muted';
+        elemento.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>Pendiente de contar`;
+        return;
+    }
+    
+    const efectivoContado = parseFloat(inputEfectivo.value) || 0;
     const esperadoTexto = document.getElementById('resumenEfectivoEntregar').textContent.replace(/,/g, '');
     const esperado = parseFloat(esperadoTexto) || 0;
-    const elemento = document.getElementById('resumenDiferencia');
     
     // CASO ESPECIAL: Si el esperado es negativo o cero, diferente lógica
     if (esperado <= 0) {
