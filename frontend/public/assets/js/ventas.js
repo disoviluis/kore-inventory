@@ -4618,8 +4618,8 @@ function imprimirCierreCaja(resumen) {
         ? `${turno.usuario_nombre} ${turno.usuario_apellido}` 
         : 'N/A';
     const nombreBodega = turno.bodega_nombre || 'N/A';
-    const fechaApertura = new Date(turno.fecha_apertura).toLocaleString('es-CO');
-    const fechaCierre = turno.fecha_cierre ? new Date(turno.fecha_cierre).toLocaleString('es-CO') : new Date().toLocaleString('es-CO');
+    const fechaApertura = new Date(turno.fecha_apertura).toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+    const fechaCierre = turno.fecha_cierre ? new Date(turno.fecha_cierre).toLocaleString('es-CO', { timeZone: 'America/Bogota' }) : new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' });
     
     let htmlVentas = '';
     resumen.ventas_por_metodo.forEach(v => {
