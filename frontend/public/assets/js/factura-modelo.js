@@ -70,7 +70,6 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
     const accentBorder = config.colorPrimario;
     const esGranContribuyente = currentEmpresa?.es_gran_contribuyente || currentEmpresa?.gran_contribuyente || false;
     const badgeHtml = config.mostrarBadges && esGranContribuyente ? `<span style="display:inline-block; padding:6px 14px; border-radius:999px; background: ${config.colorPrimario}; color:white; font-weight:600;">GRAN CONTRIBUYENTE</span>` : '';
-    const modeloBadgeHtml = config.mostrarBadges ? `<span style="display:inline-block; padding:6px 14px; border-radius:999px; border:1px solid ${config.colorPrimario}; color:${config.colorPrimario}; margin-left: 10px;">Modelo ${config.plantillaId}</span>` : '';
     const logoAlignment = config.logoPosicion === 'left' ? 'flex-start' : config.logoPosicion === 'right' ? 'flex-end' : 'center';
     const logoElement = config.mostrarLogo ? (logoUrl ? `<img src="${logoUrl}" alt="Logo" style="max-height: 90px; width: auto; object-fit: contain;">` : `<div style="width: 90px; height: 90px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: ${config.colorPrimario}; color: white; font-size: 28px; font-weight: bold;">${(currentEmpresa?.nombre || '').charAt(0).toUpperCase() || 'E'}</div>`) : '';
 
@@ -83,7 +82,7 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                         <p style="margin: 4px 0;">${currentEmpresa?.razon_social || ''}</p>
                         <p style="margin: 4px 0;">NIT: ${nitCompleto}</p>
                         <div style="margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            ${badgeHtml}${modeloBadgeHtml}
+                            ${badgeHtml}
                         </div>
                     </div>
                     <div style="flex: 1; min-width: 180px; display: flex; justify-content: ${logoAlignment};">
