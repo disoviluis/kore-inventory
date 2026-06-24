@@ -334,16 +334,20 @@ function formatearNumero(valor) {
     return Number(valor || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
+function obtenerDatosClienteVenta(venta) {
+    return {
+        razon_social: venta.cliente_razon_social || venta.razon_social || `${venta.cliente_nombre || ''} ${venta.cliente_apellido || ''}`.trim(),
+        nombre: venta.cliente_nombre || venta.cliente?.nombre || '',
+        apellido: venta.cliente_apellido || venta.cliente?.apellido || '',
+        tipo_documento: venta.cliente_tipo_documento || venta.tipo_documento || venta.cliente?.tipo_documento || '',
+        numero_documento: venta.cliente_numero_documento || venta.numero_documento || venta.cliente?.numero_documento || venta.cliente_documento || '',
+        telefono: venta.cliente_telefono || venta.cliente_celular || venta.cliente?.telefono || ''
+    };
+}
+
 function generarHTMLFacturaVentaHistorial(venta, detalle) {
     const ventaData = {
-        cliente: {
-            razon_social: venta.cliente_razon_social || `${venta.cliente_nombre || ''} ${venta.cliente_apellido || ''}`.trim(),
-            nombre: venta.cliente_nombre || '',
-            apellido: venta.cliente_apellido || '',
-            tipo_documento: venta.cliente_tipo_documento || '',
-            numero_documento: venta.cliente_numero_documento || '',
-            telefono: venta.cliente_telefono || venta.cliente_celular || ''
-        },
+        cliente: obtenerDatosClienteVenta(venta),
         productos: detalle.map((item) => ({
             nombre: item.producto_nombre || item.nombre || '',
             sku: item.producto_sku || item.sku || '',
@@ -631,14 +635,7 @@ function imprimirDetalleVenta() {
 
     const detalle = ventaActual.detalles || [];
     const ventaData = {
-        cliente: {
-            razon_social: ventaActual.cliente_razon_social || `${ventaActual.cliente_nombre || ''} ${ventaActual.cliente_apellido || ''}`.trim(),
-            nombre: ventaActual.cliente_nombre || '',
-            apellido: ventaActual.cliente_apellido || '',
-            tipo_documento: ventaActual.cliente_tipo_documento || '',
-            numero_documento: ventaActual.cliente_numero_documento || '',
-            telefono: ventaActual.cliente_telefono || ventaActual.cliente_celular || ''
-        },
+        cliente: obtenerDatosClienteVenta(ventaActual),
         productos: detalle.map((item) => ({
             nombre: item.producto_nombre || item.nombre || '',
             sku: item.producto_sku || item.sku || '',
