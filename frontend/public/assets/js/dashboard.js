@@ -3777,7 +3777,12 @@ document.getElementById('usuarioEmpresaForm')?.addEventListener('submit', async 
  */
 async function verDetalleUsuarioEmpresa(usuarioId) {
   try {
-    const response = await fetch(`${API_URL}/usuarios/${usuarioId}`, {
+    const empresaActivaId = localStorage.getItem('empresaActiva');
+    const url = empresaActivaId
+      ? `${API_URL}/usuarios/${usuarioId}?empresa_id=${empresaActivaId}`
+      : `${API_URL}/usuarios/${usuarioId}`;
+
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
