@@ -485,7 +485,12 @@
                 <!-- Tabs -->
                 <ul class="nav nav-tabs mb-4" id="inventarioTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="movimientos-tab" data-bs-toggle="tab" data-bs-target="#movimientos" type="button" role="tab">
+                        <button class="nav-link active" id="productos-stock-tab" data-bs-toggle="tab" data-bs-target="#productos-stock" type="button" role="tab">
+                            <i class="bi bi-box-seam me-2"></i>Stock por Producto
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="movimientos-tab" data-bs-toggle="tab" data-bs-target="#movimientos" type="button" role="tab">
                             <i class="bi bi-arrow-left-right me-2"></i>Movimientos
                         </button>
                     </li>
@@ -500,8 +505,48 @@
                 <!-- Tab Content -->
                 <div class="tab-content" id="inventarioTabContent">
                     
+                    <!-- Stock por Producto Tab -->
+                    <div class="tab-pane fade show active" id="productos-stock" role="tabpanel">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="searchProductoInventario" placeholder="Buscar producto o SKU...">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle" id="productosStockTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Producto</th>
+                                                        <th>SKU</th>
+                                                        <th>Stock Total</th>
+                                                        <th>Stock Mínimo</th>
+                                                        <th>Ubicación</th>
+                                                        <th>Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="productosStockTableBody"></tbody>
+                                            </table>
+                                        </div>
+                                        <div class="text-center py-5" id="emptyStateProductosStock" style="display: none;">
+                                            <i class="bi bi-box-seam display-1 text-muted opacity-25 d-block mb-3"></i>
+                                            <h5 class="text-muted">No hay productos registrados</h5>
+                                            <p class="text-muted">Los productos activos con stock aparecerán aquí</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Movimientos Tab -->
-                    <div class="tab-pane fade show active" id="movimientos" role="tabpanel">
+                    <div class="tab-pane fade" id="movimientos" role="tabpanel">
                         
                         <!-- Filters -->
                         <div class="row mb-4">
@@ -729,6 +774,43 @@
                                 <!-- Se llenará dinámicamente -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Desglose por Bodega -->
+    <div class="modal fade" id="desgloseBodegaModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Desglose por Bodega</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 id="desgloseProductoNombre" class="mb-3"></h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Bodega</th>
+                                    <th>Stock Actual</th>
+                                    <th>Stock Reservado</th>
+                                    <th>Stock Disponible</th>
+                                    <th>Ubicación</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desgloseBodegaTableBody">
+                                <!-- Se llenará dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3 text-end">
+                        <span class="fw-semibold">Total empresa:</span> <span id="desgloseTotalStock">0</span>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('btnAjusteQuick').addEventListener('click', abrirModalAjuste);
         document.getElementById('ajusteForm').addEventListener('submit', guardarAjuste);
         document.getElementById('searchMovimiento').addEventListener('input', filtrarMovimientos);
+        document.getElementById('searchProductoInventario').addEventListener('input', filtrarProductosStock);
         document.getElementById('filterTipo').addEventListener('change', filtrarMovimientos);
         document.getElementById('btnLimpiarFiltros').addEventListener('click', limpiarFiltros);
         
@@ -369,6 +370,8 @@ async function cargarProductosParaAjuste() {
                 option.dataset.stock = producto.stock_actual;
                 select.appendChild(option);
             });
+
+            renderizarProductosStock(productos);
         }
     } catch (error) {
         console.error('Error al cargar productos:', error);
@@ -439,6 +442,88 @@ function renderizarAlertas(alertas) {
             </tr>
         `;
     }).join('');
+}
+
+function renderizarProductosStock(items) {
+    const tbody = document.getElementById('productosStockTableBody');
+    const empty = document.getElementById('emptyStateProductosStock');
+
+    if (!items || items.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+
+    empty.style.display = 'none';
+    tbody.innerHTML = items.map(producto => `
+        <tr>
+            <td>${producto.nombre}</td>
+            <td><code>${producto.sku}</code></td>
+            <td><span class="badge bg-primary">${producto.stock_actual || 0}</span></td>
+            <td>${producto.stock_minimo || 0}</td>
+            <td>${producto.ubicacion_almacen || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick='verDesgloseBodegas(${producto.id}, ${JSON.stringify(producto.nombre)})' title="Ver desglose por bodega">
+                    <i class="bi bi-diagram-3 me-1"></i>Ver por bodega
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filtrarProductosStock() {
+    const searchTerm = document.getElementById('searchProductoInventario').value.toLowerCase();
+    const filtered = productos.filter(producto =>
+        producto.nombre.toLowerCase().includes(searchTerm) ||
+        producto.sku.toLowerCase().includes(searchTerm) ||
+        (producto.ubicacion_almacen || '').toLowerCase().includes(searchTerm)
+    );
+
+    renderizarProductosStock(filtered);
+}
+
+async function verDesgloseBodegas(productoId, productoNombre) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/productos/${productoId}/disponibilidad-bodegas?empresa_id=${currentEmpresa.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('desgloseProductoNombre').textContent = `Producto: ${productoNombre}`;
+            const tbody = document.getElementById('desgloseBodegaTableBody');
+            const totalStock = data.data.reduce((sum, row) => sum + (row.stock_disponible || 0), 0);
+
+            if (data.data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            No hay bodegas registradas o no se encontró stock para este producto.
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = data.data.map(row => `
+                    <tr>
+                        <td>${row.bodega_nombre || 'Sin nombre'}</td>
+                        <td>${row.bodega_tipo || '-'}</td>
+                        <td><span class="badge bg-${row.stock_disponible > 0 ? 'success' : 'danger'}">${row.stock_disponible || 0}</span></td>
+                        <td>${row.bodega_id || '-'}</td>
+                    </tr>
+                `).join('');
+            }
+
+            document.getElementById('desgloseTotalStock').textContent = totalStock;
+            new bootstrap.Modal(document.getElementById('desgloseBodegaModal')).show();
+        } else {
+            throw new Error(data.message || 'No se pudo obtener el desglose por bodega');
+        }
+    } catch (error) {
+        console.error('Error al cargar desglose por bodega:', error);
+        mostrarAlerta('Error al cargar desglose por bodega', 'danger');
+    }
 }
 
 // ============================================
