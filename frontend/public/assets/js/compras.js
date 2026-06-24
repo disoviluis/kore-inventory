@@ -268,6 +268,9 @@ function renderizarCompras(data) {
                     <i class="bi bi-eye"></i>
                 </button>
                 ${compra.estado === 'pendiente' ? `
+                    <button class="btn btn-sm btn-outline-success me-1" onclick="recibirCompra(${compra.id})">
+                        <i class="bi bi-check-circle"></i>
+                    </button>
                     <button class="btn btn-sm btn-outline-danger" onclick="anularCompra(${compra.id})">
                         <i class="bi bi-x-circle"></i>
                     </button>

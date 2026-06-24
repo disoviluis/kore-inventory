@@ -92,10 +92,6 @@ export const getCompra = async (req: Request, res: Response) => {
             `SELECT 
                 c.*,
                 p.razon_social as proveedor_nombre,
-                p.tipo_documento as proveedor_tipo_doc,
-                p.numero_documento as proveedor_documento,
-                p.telefono as proveedor_telefono,
-                p.email as proveedor_email,
                 u.nombre as usuario_nombre,
                 u.apellido as usuario_apellido
             FROM compras c
@@ -113,9 +109,7 @@ export const getCompra = async (req: Request, res: Response) => {
         const detalle = await query(
             `SELECT 
                 cd.*,
-                pr.nombre as producto_nombre,
-                pr.codigo as producto_codigo,
-                pr.unidad_medida
+                pr.nombre as producto_nombre
             FROM compras_detalle cd
             LEFT JOIN productos pr ON cd.producto_id = pr.id
             WHERE cd.compra_id = ?`,
