@@ -162,7 +162,7 @@ async function cargarEmpresas(usuarioId) {
                     const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
                     localStorage.setItem('empresaActiva', empresaId);
                     currentEmpresa = empresaSeleccionada;
-                    await Promise.all([cargarResumen(), cargarCompras()]);
+                    await Promise.all([cargarResumen(), cargarCompras(), cargarProveedores(), cargarProductos()]);
                 });
             }
         }
@@ -279,6 +279,11 @@ function renderizarCompras(data) {
 
 async function cargarProveedores() {
     try {
+        if (!currentEmpresa || !currentEmpresa.id) {
+            console.error('No hay empresa activa para cargar proveedores');
+            return;
+        }
+
         const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/proveedores?empresaId=${currentEmpresa.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -291,10 +296,16 @@ async function cargarProveedores() {
             const filter = document.getElementById('filterProveedor');
             
             select.innerHTML = '<option value="">Seleccione un proveedor</option>' + 
-                proveedores.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+                proveedores.map(p => {
+                    const label = p.razon_social || p.nombre_comercial || p.nombre_contacto || 'Proveedor sin nombre';
+                    return `<option value="${p.id}">${label}</option>`;
+                }).join('');
             
             filter.innerHTML = '<option value="">Todos los proveedores</option>' + 
-                proveedores.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+                proveedores.map(p => {
+                    const label = p.razon_social || p.nombre_comercial || p.nombre_contacto || 'Proveedor sin nombre';
+                    return `<option value="${p.id}">${label}</option>`;
+                }).join('');
         }
     } catch (error) {
         console.error('Error al cargar proveedores:', error);
