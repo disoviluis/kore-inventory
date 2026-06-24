@@ -21,21 +21,31 @@ function facturaModel_calcularDigitoVerificacion(nit) {
     return residuo > 1 ? 11 - residuo : residuo;
 }
 
+function facturaModel_esBanderasValidas(valor) {
+    return valor === true || valor === 1 || valor === '1';
+}
+
 function facturaModel_obtenerConfiguracionActual(configuracionPlantilla, currentEmpresa) {
     return {
         plantillaId: configuracionPlantilla?.plantilla_id || 1,
         colorPrimario: configuracionPlantilla?.color_primario || currentEmpresa?.color_primario || '#1E40AF',
         colorSecundario: configuracionPlantilla?.color_secundario || '#6c757d',
         fuente: configuracionPlantilla?.fuente || 'Arial',
-        mostrarLogo: configuracionPlantilla?.mostrar_logo !== false,
-        mostrarQR: configuracionPlantilla?.mostrar_qr !== false,
-        mostrarCUFE: configuracionPlantilla?.mostrar_cufe !== false,
-        mostrarBadges: configuracionPlantilla?.mostrar_badges !== false
+        mostrarLogo: configuracionPlantilla?.mostrar_logo === undefined ? true : facturaModel_esBanderasValidas(configuracionPlantilla.mostrar_logo),
+        mostrarQR: configuracionPlantilla?.mostrar_qr === undefined ? true : facturaModel_esBanderasValidas(configuracionPlantilla.mostrar_qr),
+        mostrarCUFE: configuracionPlantilla?.mostrar_cufe === undefined ? true : facturaModel_esBanderasValidas(configuracionPlantilla.mostrar_cufe),
+        mostrarBadges: configuracionPlantilla?.mostrar_badges === undefined ? true : facturaModel_esBanderasValidas(configuracionPlantilla.mostrar_badges),
+        logoPosicion: configuracionPlantilla?.logo_posicion || 'center'
     };
+}
+
+function facturaModel_obtenerLogoUrl(currentEmpresa) {
+    return currentEmpresa?.logo_url || currentEmpresa?.logo || currentEmpresa?.logoUrl || currentEmpresa?.empresa_logo || null;
 }
 
 function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, configuracionPlantilla) {
     const config = facturaModel_obtenerConfiguracionActual(configuracionPlantilla, currentEmpresa);
+    const logoUrl = facturaModel_obtenerLogoUrl(currentEmpresa);
     const fechaFormateada = new Date(venta.fecha_venta || new Date()).toLocaleString('es-CO', {
         year: 'numeric',
         month: '2-digit',
@@ -58,18 +68,28 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
     const textColor = config.plantillaId === 4 ? '#ffffff' : '#000000';
     const titleBackground = config.plantillaId === 2 ? `${config.colorPrimario}20` : '#f8f9fa';
     const accentBorder = config.colorPrimario;
-    const badgeHtml = config.mostrarBadges ? `<span style="display:inline-block; padding:6px 14px; border-radius:999px; border:1px solid ${config.colorPrimario}; color:${config.colorPrimario};">Modelo ${config.plantillaId}</span>` : '';
+    const esGranContribuyente = currentEmpresa?.es_gran_contribuyente || currentEmpresa?.gran_contribuyente || false;
+    const badgeHtml = config.mostrarBadges && esGranContribuyente ? `<span style="display:inline-block; padding:6px 14px; border-radius:999px; background: ${config.colorPrimario}; color:white; font-weight:600;">GRAN CONTRIBUYENTE</span>` : '';
+    const modeloBadgeHtml = config.mostrarBadges ? `<span style="display:inline-block; padding:6px 14px; border-radius:999px; border:1px solid ${config.colorPrimario}; color:${config.colorPrimario}; margin-left: 10px;">Modelo ${config.plantillaId}</span>` : '';
+    const logoAlignment = config.logoPosicion === 'left' ? 'flex-start' : config.logoPosicion === 'right' ? 'flex-end' : 'center';
+    const logoElement = config.mostrarLogo ? (logoUrl ? `<img src="${logoUrl}" alt="Logo" style="max-height: 90px; width: auto; object-fit: contain;">` : `<div style="width: 90px; height: 90px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: ${config.colorPrimario}; color: white; font-size: 28px; font-weight: bold;">${(currentEmpresa?.nombre || '').charAt(0).toUpperCase() || 'E'}</div>`) : '';
 
     return `
         <div id="facturaDetallePrint" style="font-family: ${config.fuente}, Arial, sans-serif; color: ${textColor};">
             <div style="padding: 20px; border: 1px solid #ddd; border-radius: 12px; background: #fff;">
                 <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; align-items: center; background: ${headerBg}; color: ${textColor}; padding: 18px; border-radius: 12px 12px 0 0; border: 1px solid ${accentBorder};">
-                    <div>
+                    <div style="flex: 1; min-width: 220px;">
                         <h2 style="margin:0; font-size: 1.4rem;">${currentEmpresa?.nombre || ''}</h2>
                         <p style="margin: 4px 0;">${currentEmpresa?.razon_social || ''}</p>
                         <p style="margin: 4px 0;">NIT: ${nitCompleto}</p>
+                        <div style="margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            ${badgeHtml}${modeloBadgeHtml}
+                        </div>
                     </div>
-                    <div style="text-align: right;">
+                    <div style="flex: 1; min-width: 180px; display: flex; justify-content: ${logoAlignment};">
+                        ${logoElement}
+                    </div>
+                    <div style="min-width: 180px; text-align: right;">
                         <p style="margin: 4px 0; font-weight: bold;">${tipoFactura}</p>
                         <p style="margin: 4px 0; font-size: 1.2rem; font-weight: 700;">${numeroFactura}</p>
                     </div>
@@ -155,8 +175,11 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                     </div>
                 ` : ''}
 
+                <div style="margin-top: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; align-items: center;">
+                    ${config.mostrarCUFE && venta.cufe ? `<div style="flex: 1; min-width: 220px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background: #f8f9fa; font-size: 0.85rem;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+                    ${config.mostrarQR && venta.qr_code ? `<div style="flex: 0 0 120px; text-align: center; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background: #f8f9fa;"><img src="${venta.qr_code}" alt="QR Code" style="width: 100px; height: 100px; object-fit: contain;"></div>` : ''}
+                </div>
                 <div style="margin-top: 24px; text-align:center; color: #6c757d;">
-                    ${badgeHtml}
                     <p style="margin-top: 12px; font-size: 0.95rem;">Gracias por preferirnos.</p>
                 </div>
             </div>

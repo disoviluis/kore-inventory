@@ -279,7 +279,8 @@ async function cargarConfiguracionPlantilla() {
                 mostrar_logo: true,
                 mostrar_qr: true,
                 mostrar_cufe: true,
-                mostrar_badges: true
+                mostrar_badges: true,
+                logo_posicion: 'center'
             };
             return;
         }
