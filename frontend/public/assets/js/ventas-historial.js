@@ -667,13 +667,6 @@ function imprimirDetalleVenta() {
     printWindow.document.close();
 }
 
-        </body>
-        </html>
-    `);
-    
-    printWindow.document.close();
-}
-
 // ============================================
 // ANULAR VENTA
 // ============================================
