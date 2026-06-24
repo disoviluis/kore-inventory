@@ -429,6 +429,44 @@
                 </div>
             </div>
 
+            <!-- Compras Pendientes -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="mb-0">
+                            <i class="bi bi-bag-check me-2"></i>
+                            Compras Pendientes de Recepción
+                        </h5>
+                        <small class="text-muted">Recepciona compras pendientes de la empresa activa.</small>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" id="btnRecargarComprasPendientes">
+                        <i class="bi bi-arrow-clockwise"></i> Recargar
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="120">Número</th>
+                                    <th width="120">Fecha</th>
+                                    <th>Proveedor</th>
+                                    <th width="120" class="text-end">Total</th>
+                                    <th width="140" class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comprasPendientesTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        Cargando compras pendientes...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Bodegas Table -->
             <div class="card shadow-sm">
                 <div class="card-header bg-white">

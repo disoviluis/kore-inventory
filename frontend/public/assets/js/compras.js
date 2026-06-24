@@ -324,7 +324,10 @@ async function cargarProductos() {
             productos = data.data.filter(p => p.estado === 'activo');
             const select = document.getElementById('selectProducto');
             select.innerHTML = '<option value="">Seleccione un producto</option>' + 
-                productos.map(p => `<option value="${p.id}" data-precio="${p.precio_compra || 0}">${p.nombre} (${p.codigo})</option>`).join('');
+                productos.map(p => {
+                    const codigo = p.codigo || p.codigo_barras || p.sku || '';
+                    return `<option value="${p.id}" data-precio="${p.precio_compra || 0}">${p.nombre}${codigo ? ` (${codigo})` : ''}</option>`;
+                }).join('');
         }
     } catch (error) {
         console.error('Error al cargar productos:', error);

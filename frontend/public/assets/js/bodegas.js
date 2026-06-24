@@ -26,13 +26,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeEventListeners();
     
     // Wait for empresaActiva to be loaded by company-selector.js
-    // Then load bodegas
+    // Then load bodegas and pending purchase data
     setTimeout(() => {
         const empresaActivaId = localStorage.getItem('empresaActiva');
         if (empresaActivaId) {
             currentEmpresaId = empresaActivaId;
             loadBodegas();
             loadResponsables();
+            loadComprasPendientes();
         }
     }, 500);
 });
@@ -43,6 +44,7 @@ window.addEventListener('empresaCambiada', (event) => {
     currentEmpresaId = event.detail.empresaId;
     loadBodegas();
     loadResponsables();
+    loadComprasPendientes();
 });
 
 // ==========================================
@@ -122,6 +124,123 @@ async function loadResponsables() {
         }
     } catch (error) {
         console.error('Error loading responsables:', error);
+    }
+}
+
+// ==========================================
+// CARGA DE COMPRAS PENDIENTES
+// ==========================================
+
+async function loadComprasPendientes() {
+    try {
+        if (!currentEmpresaId) {
+            console.warn('No hay empresa activa para cargar compras pendientes');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/compras?empresaId=${currentEmpresaId}&estado=pendiente`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            renderComprasPendientes(result.data);
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Error loading compras pendientes:', error);
+        document.getElementById('comprasPendientesTableBody').innerHTML = `
+            <tr><td colspan="5" class="text-center py-4 text-danger">
+                Error al cargar compras pendientes.
+            </td></tr>
+        `;
+    }
+}
+
+function renderComprasPendientes(compras) {
+    const tbody = document.getElementById('comprasPendientesTableBody');
+
+    if (!compras || compras.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-4 text-muted">
+                    No hay compras pendientes para recibir.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = compras.map(compra => `
+        <tr>
+            <td>${compra.numero_compra}</td>
+            <td>${compra.fecha_compra ? new Date(compra.fecha_compra).toLocaleDateString('es-CO') : '-'}</td>
+            <td>${compra.proveedor_nombre || 'Proveedor desconocido'}</td>
+            <td class="text-end">${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(compra.total || 0)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-success" onclick="receiveCompraFromBodegas(${compra.id})">
+                    <i class="bi bi-check-circle"></i> Recibir
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function receiveCompraFromBodegas(compraId) {
+    const result = await Swal.fire({
+        title: 'Recibir compra',
+        text: '¿Confirma que la compra ha sido recibida y desea actualizar inventario?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, recibir',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const usuario = JSON.parse(localStorage.getItem('usuario')) || {};
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/compras/${compraId}/recibir`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                empresaId: currentEmpresaId,
+                usuarioId: usuario.id,
+                fechaRecepcion: new Date().toISOString().split('T')[0]
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Compra recibida',
+                text: 'El inventario se actualizó correctamente.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            loadComprasPendientes();
+            loadBodegas();
+        } else {
+            throw new Error(data.message || 'Error al recibir la compra');
+        }
+    } catch (error) {
+        console.error('Error receiving compra:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'No se pudo recibir la compra'
+        });
     }
 }
 
@@ -518,6 +637,9 @@ function initializeEventListeners() {
     
     // Guardar bodega
     document.getElementById('btnGuardarBodega').addEventListener('click', saveBodega);
+
+    // Recargar compras pendientes
+    document.getElementById('btnRecargarComprasPendientes')?.addEventListener('click', loadComprasPendientes);
     
     // Filters
     document.getElementById('searchBodega').addEventListener('input', applyFilters);
