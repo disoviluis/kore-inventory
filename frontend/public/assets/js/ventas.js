@@ -2015,8 +2015,7 @@ function mostrarFactura(venta, ventaData) {
     console.log('=== mostrarFactura - Usando plantilla configurada ===');
     console.log('Plantilla ID:', configuracionPlantilla?.plantilla_id);
     
-    // Usar generarHTMLImpresion con la configuración de plantilla actual
-    const htmlFactura = generarHTMLImpresion('carta');
+    const htmlFactura = generarHTMLFacturaVenta(venta, ventaData);
     
     document.getElementById('facturaContent').innerHTML = htmlFactura;
     const modal = new bootstrap.Modal(document.getElementById('facturaModal'));
@@ -2297,18 +2296,7 @@ async function descargarPDF() {
 // ============================================
 
 function obtenerConfiguracionActual() {
-    const config = {
-        plantillaId: configuracionPlantilla?.plantilla_id || 1,
-        colorPrimario: configuracionPlantilla?.color_primario || currentEmpresa.color_primario || '#1E40AF',
-        colorSecundario: configuracionPlantilla?.color_secundario || '#6c757d',
-        fuente: configuracionPlantilla?.fuente || 'Arial',
-        mostrarLogo: configuracionPlantilla?.mostrar_logo !== false,
-        mostrarQR: configuracionPlantilla?.mostrar_qr !== false,
-        mostrarCUFE: configuracionPlantilla?.mostrar_cufe !== false,
-        mostrarBadges: configuracionPlantilla?.mostrar_badges !== false
-    };
-    console.log('🎨 Configuración actual para generación:', config);
-    return config;
+    return facturaModel_obtenerConfiguracionActual(configuracionPlantilla, currentEmpresa);
 }
 
 function generarHTMLImpresion(formato = 'carta') {
@@ -2318,15 +2306,17 @@ function generarHTMLImpresion(formato = 'carta') {
     const config = obtenerConfiguracionActual();
     console.log('📄 Usando plantilla ID:', config.plantillaId);
     
-    // Decidir qué plantilla usar según formato y configuración
     if (formato === 'tirilla') {
         return generarPlantillaTirilla(venta, ventaData, config);
     } else if (formato === 'media-carta') {
         return generarPlantillaMediaCarta(venta, ventaData, config);
     } else {
-        // Formato carta - usar plantilla seleccionada
-        return generarPlantillaCarta(venta, ventaData, config);
+        return facturaModel_generarFacturaHtmlPage(venta, ventaData, currentEmpresa, configuracionPlantilla);
     }
+}
+
+function generarHTMLFacturaVenta(venta, ventaData) {
+    return facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, configuracionPlantilla);
 }
 
 // Generar plantilla formato CARTA según configuración
@@ -2757,53 +2747,39 @@ function generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto
 </html>`;
 }
 
-// FORMATO MEDIA CARTA - Escalado de formato carta
+// FORMATO MEDIA CARTA - escalar usando el mismo cuerpo de factura
 function generarPlantillaMediaCarta(venta, ventaData, config) {
-    const numeroFactura = venta.numero_factura;
-    const subtotal = ventaData.subtotal;
-    const descuento = ventaData.descuento || 0;
-    const impuesto = ventaData.impuesto;
-    const total = ventaData.total;
-    
-    const fecha = new Date().toLocaleString('es-CO', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-    
-    const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
-    const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
-    
-    // Usa la misma plantilla que carta pero con estilos adaptados a media carta
-    const htmlCarta = config.plantillaId === 2 ? 
-        generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) :
-        config.plantillaId === 3 ?
-        generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) :
-        generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura);
-    
-    // Ajustar estilos para media carta (5.5" x 8.5")
-    return htmlCarta
-        .replace('size: letter;', 'size: 5.5in 8.5in;')
-        .replace('margin: 15mm;', 'margin: 8mm;')
-        .replace('font-size: 10pt;', 'font-size: 8pt;')
-        .replace('font-size: 16pt;', 'font-size: 12pt;')
-        .replace('font-size: 13pt;', 'font-size: 10pt;')
-        .replace('font-size: 11pt;', 'font-size: 9pt;')
-        .replace(/padding: 8mm;/g, 'padding: 5mm;')
-        .replace(/padding: 12px;/g, 'padding: 8px;');
+    const facturaBody = facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, configuracionPlantilla);
+    const numeroFactura = venta.numero_factura || 'FACTURA';
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>${numeroFactura}</title>
+    <style>
+        @page { size: 5.5in 8.5in; margin: 8mm; }
+        body { margin: 0; padding: 0; background: #f0f0f0; }
+        .invoice-wrapper { padding: 8mm; }
+        @media print { body { margin: 0; } }
+    </style>
+</head>
+<body>
+    <div class="invoice-wrapper">${facturaBody}</div>
+    <script>window.onload=function(){setTimeout(function(){window.print();window.close();},250);};</script>
+</body>
+</html>`;
 }
 
-// FORMATO TIRILLA (mantiene formato térmico estándar - sin plantillas personalizadas)
+// FORMATO TIRILLA (mantiene formato térmico estándar)
 function generarPlantillaTirilla(venta, ventaData, config) {
-    const numeroFactura = venta.numero_factura;
-    
-    const subtotal = ventaData.subtotal;
+    const configActual = facturaModel_obtenerConfiguracionActual(configuracionPlantilla, currentEmpresa);
+    const numeroFactura = venta.numero_factura || 'FACTURA';
+    const subtotal = ventaData.subtotal || 0;
     const descuento = ventaData.descuento || 0;
-    const impuesto = ventaData.impuesto;
-    const total = ventaData.total;
-    
+    const impuesto = ventaData.impuesto || 0;
+    const propinaValor = ventaData.propina_valor || 0;
+    const total = Number(ventaData.total || subtotal - descuento + impuesto + propinaValor);
     const fecha = new Date().toLocaleString('es-CO', {
         year: 'numeric',
         month: '2-digit',
@@ -2811,8 +2787,8 @@ function generarPlantillaTirilla(venta, ventaData, config) {
         hour: '2-digit',
         minute: '2-digit'
     });
+    const tipoFactura = configActual.plantillaId === 5 ? 'FACTURA ELECTRÓNICA SIIGO' : 'FACTURA DE VENTA';
 
-    // FORMATO TÉRMICO (58mm o 80mm)
     return `
 <!DOCTYPE html>
 <html>
@@ -2821,168 +2797,64 @@ function generarPlantillaTirilla(venta, ventaData, config) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Factura_${numeroFactura}</title>
     <style>
-    <title>Factura_${numeroFactura}</title>
-    <style>
-        @page {
-            size: 58mm auto;
-            margin: 2mm;
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Courier New', monospace;
-            font-size: 9pt;
-            width: 58mm;
-            padding: 2mm;
-            background: white;
-            color: black;
-        }
+        @page { size: 58mm auto; margin: 2mm; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: 9pt; width: 58mm; padding: 2mm; background: white; color: black; }
         .center { text-align: center; }
         .bold { font-weight: bold; }
-        .line { 
-            border-top: 1px dashed #000; 
-            margin: 3mm 0;
-        }
-        .item {
-            margin: 2mm 0;
-            font-size: 8pt;
-        }
-        .item-name { 
-            font-weight: bold;
-        }
-        .item-details {
-            display: flex;
-            justify-content: space-between;
-            font-size: 8pt;
-        }
-        .totals {
-            margin-top: 3mm;
-            font-size: 9pt;
-        }
-        .totals-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 1mm 0;
-        }
-        .total-final {
-            font-size: 11pt;
-            font-weight: bold;
-            margin-top: 2mm;
-        }
-        @media print {
-            body { padding: 0; }
-        }
+        .line { border-top: 1px dashed #000; margin: 3mm 0; }
+        .item { margin: 2mm 0; font-size: 8pt; }
+        .item-name { font-weight: bold; }
+        .item-details { display: flex; justify-content: space-between; font-size: 8pt; }
+        .totals { margin-top: 3mm; font-size: 9pt; }
+        .totals-row { display: flex; justify-content: space-between; margin: 1mm 0; }
+        .total-final { font-size: 11pt; font-weight: bold; margin-top: 2mm; }
+        @media print { body { padding: 0; } }
     </style>
 </head>
 <body>
-    <div class="center bold" style="font-size: 11pt;">${currentEmpresa.nombre}</div>
-    <div class="center" style="font-size: 8pt;">${currentEmpresa.razon_social}</div>
-    <div class="center" style="font-size: 8pt;">NIT: ${currentEmpresa.nit}</div>
+    <div class="center bold" style="font-size: 11pt;">${currentEmpresa.nombre || ''}</div>
+    <div class="center" style="font-size: 8pt;">${currentEmpresa.razon_social || ''}</div>
+    <div class="center" style="font-size: 8pt;">NIT: ${currentEmpresa.nit || ''}</div>
     <div class="center" style="font-size: 8pt;">${currentEmpresa.telefono || ''}</div>
-    
     <div class="line"></div>
-    
-    <div class="center bold" style="font-size: 10pt;">FACTURA DE VENTA</div>
+    <div class="center bold" style="font-size: 10pt;">${tipoFactura}</div>
     <div class="center bold" style="font-size: 10pt;">${numeroFactura}</div>
     <div class="center" style="font-size: 8pt;">${fecha}</div>
-    
     <div class="line"></div>
-    
     <div style="font-size: 8pt;">
         <div><strong>Cliente:</strong></div>
-        <div>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre} ${ventaData.cliente.apellido || ''}`}</div>
-        <div>${ventaData.cliente.tipo_documento}: ${ventaData.cliente.numero_documento}</div>
+        <div>${ventaData.cliente.razon_social || `${ventaData.cliente.nombre || ''} ${ventaData.cliente.apellido || ''}`.trim()}</div>
+        <div>${ventaData.cliente.tipo_documento || ''}: ${ventaData.cliente.numero_documento || ''}</div>
     </div>
-    
     <div class="line"></div>
-    
     ${ventaData.productos.map(p => `
         <div class="item">
             <div class="item-name">${p.nombre}</div>
             <div class="item-details">
-                <span>${p.cantidad} x $${formatearNumero(p.precio_unitario)}</span>
-                <span>$${formatearNumero(p.subtotal)}</span>
+                <span>${p.cantidad} x $${facturaModel_formatearNumero(p.precio)}</span>
+                <span>$${facturaModel_formatearNumero(p.subtotal)}</span>
             </div>
         </div>
     `).join('')}
-    
     <div class="line"></div>
-    
     <div class="totals">
-        <div class="totals-row">
-            <span>Subtotal:</span>
-            <span>$${formatearNumero(subtotal)}</span>
-        </div>
-        ${descuento > 0 ? `
-        <div class="totals-row">
-            <span>Descuento:</span>
-            <span>-$${formatearNumero(descuento)}</span>
-        </div>
+        <div class="totals-row"><span>Subtotal:</span><span>$${facturaModel_formatearNumero(subtotal)}</span></div>
+        ${descuento > 0 ? `<div class="totals-row"><span>Descuento:</span><span>-$${facturaModel_formatearNumero(descuento)}</span></div>` : ''}
+        <div class="totals-row"><span>IVA (19%):</span><span>$${facturaModel_formatearNumero(impuesto)}</span></div>
+        ${ventaData.propina_valor > 0 ? `
+            <div class="totals-row"><span>Propina ${ventaData.propina_porcentaje || 0}%:</span><span>$${facturaModel_formatearNumero(ventaData.propina_valor)}</span></div>
         ` : ''}
-        <div class="totals-row">
-            <span>IVA (19%):</span>
-            <span>$${formatearNumero(impuesto)}</span>
-        </div>
-        ${ventaData.propina_habilitada ? `
-        <div class="line"></div>
-        <div class="totals-row">
-            <span>Total Factura:</span>
-            <span>$${formatearNumero(total - (ventaData.propina_valor || 0))}</span>
-        </div>
-        <div class="totals-row" style="font-size: 10pt; color: #28a745;">
-            <span>🎉 Propina ${ventaData.propina_porcentaje}%:</span>
-            <span>$${formatearNumero(ventaData.propina_valor || 0)}</span>
-        </div>
-        ` : ''}
-        <div class="totals-row total-final">
-            <span>TOTAL:</span>
-            <span>$${formatearNumero(total)}</span>
-        </div>
+        <div class="totals-row total-final"><span>TOTAL:</span><span>$${facturaModel_formatearNumero(total)}</span></div>
     </div>
-    
+    ${configActual.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${configActual.mostrarQR && venta.qr_code ? `<div class="center" style="margin-top: 4mm;"><img src="${venta.qr_code}" style="width: 70px; height: 70px; border-radius: 8px;"></div>` : ''}
     <div class="line"></div>
-    
-    ${ventaData.pagos && ventaData.pagos.length > 0 ? `
-    <div style="font-size: 8pt;">
-        <div class="bold">FORMA DE PAGO:</div>
-        ${ventaData.pagos.map(pago => {
-            const nombres = {
-                'efectivo': 'Efectivo',
-                'tarjeta_debito': 'T. Débito',
-                'tarjeta_credito': 'T. Crédito',
-                'transferencia': 'Transferencia',
-                'nequi': 'Nequi',
-                'daviplata': 'Daviplata',
-                'cheque': 'Cheque'
-            };
-            return `<div class="totals-row">
-                <span>${nombres[pago.metodo_pago] || pago.metodo_pago}:</span>
-                <span>$${formatearNumero(pago.monto)}</span>
-            </div>`;
-        }).join('')}
-    </div>
-    <div class="line"></div>
-    ` : ''}
-    
-    <div class="center" style="font-size: 8pt; margin-top: 3mm;">
-        ¡Gracias por su compra!
-    </div>
-    <div class="center" style="font-size: 7pt;">Vendedor: ${currentUsuario.nombre} ${currentUsuario.apellido}</div>
-    
-    <script>
-        window.onload = function() {
-            setTimeout(function() {
-                window.print();
-                setTimeout(function() { window.close(); }, 100);
-            }, 250);
-        };
-    </script>
+    <div class="center" style="font-size: 8pt; margin-top: 3mm;">¡Gracias por su compra!</div>
+    <div class="center" style="font-size: 7pt;">Vendedor: ${currentUsuario?.nombre || ''} ${currentUsuario?.apellido || ''}</div>
+    <script>window.onload=function(){setTimeout(function(){window.print();setTimeout(function(){window.close();},100);},250);};</script>
 </body>
-</html>
-    `;
+</html>`;
 }
 
 // ============================================

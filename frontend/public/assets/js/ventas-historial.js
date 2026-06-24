@@ -15,6 +15,7 @@ let currentUsuario = null;
 let ventasData = [];
 let ventaActual = null;
 let detalleVentaModal = null;
+let configuracionPlantilla = null;
 
 // ============================================
 // INICIALIZACIÓN
@@ -69,6 +70,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!currentEmpresa || !currentEmpresa.id) {
             await cargarDatosEmpresa(empresaActivaId);
         }
+
+        // Cargar configuración de plantilla de facturación de la empresa activa
+        await cargarConfiguracionPlantilla();
 
         // Cargar ventas
         await cargarVentas();
@@ -252,6 +256,111 @@ async function cargarDatosEmpresa(empresaId) {
     } catch (error) {
         console.error('❌ Error al cargar datos de empresa:', error);
     }
+}
+
+// ============================================
+// CARGAR PLANTILLA DE FACTURA
+
+async function cargarConfiguracionPlantilla() {
+    if (!currentEmpresa || !currentEmpresa.id) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/facturacion/configuracion/${currentEmpresa.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            configuracionPlantilla = {
+                plantilla_id: 1,
+                color_primario: currentEmpresa.color_primario || '#1E40AF',
+                color_secundario: '#6c757d',
+                fuente: 'Arial',
+                mostrar_logo: true,
+                mostrar_qr: true,
+                mostrar_cufe: true,
+                mostrar_badges: true
+            };
+            return;
+        }
+
+        const data = await response.json();
+        if (data.success && data.data) {
+            configuracionPlantilla = data.data;
+        } else {
+            configuracionPlantilla = {
+                plantilla_id: 1,
+                color_primario: currentEmpresa.color_primario || '#1E40AF',
+                color_secundario: '#6c757d',
+                fuente: 'Arial',
+                mostrar_logo: true,
+                mostrar_qr: true,
+                mostrar_cufe: true,
+                mostrar_badges: true
+            };
+        }
+    } catch (error) {
+        console.error('Error cargando configuración de plantilla:', error);
+        configuracionPlantilla = {
+            plantilla_id: 1,
+            color_primario: currentEmpresa.color_primario || '#1E40AF',
+            color_secundario: '#6c757d',
+            fuente: 'Arial',
+            mostrar_logo: true,
+            mostrar_qr: true,
+            mostrar_cufe: true,
+            mostrar_badges: true
+        };
+    }
+}
+
+function obtenerConfiguracionActual() {
+    return facturaModel_obtenerConfiguracionActual(configuracionPlantilla, currentEmpresa);
+}
+
+function calcularDigitoVerificacion(nit) {
+    const nitNumeros = (nit || '').replace(/[^0-9]/g, '');
+    const vpri = [3,7,13,17,19,23,29,37,41,43,47,53,59,67,71];
+    let suma = 0;
+    for (let i = 0; i < nitNumeros.length && i < 15; i++) {
+        suma += parseInt(nitNumeros[nitNumeros.length - 1 - i]) * vpri[i];
+    }
+    const residuo = suma % 11;
+    return residuo > 1 ? 11 - residuo : residuo;
+}
+
+function formatearNumero(valor) {
+    return Number(valor || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function generarHTMLFacturaVentaHistorial(venta, detalle) {
+    const ventaData = {
+        cliente: {
+            razon_social: venta.cliente_razon_social || `${venta.cliente_nombre || ''} ${venta.cliente_apellido || ''}`.trim(),
+            nombre: venta.cliente_nombre || '',
+            apellido: venta.cliente_apellido || '',
+            tipo_documento: venta.cliente_tipo_documento || '',
+            numero_documento: venta.cliente_numero_documento || '',
+            telefono: venta.cliente_telefono || venta.cliente_celular || ''
+        },
+        productos: detalle.map((item) => ({
+            nombre: item.producto_nombre || item.nombre || '',
+            sku: item.producto_sku || item.sku || '',
+            cantidad: item.cantidad || 0,
+            precio: item.precio_unitario || item.precio || item.valor_unitario || 0,
+            subtotal: item.subtotal || item.total || ((item.cantidad || 0) * (item.precio_unitario || item.precio || 0))
+        })),
+        subtotal: venta.subtotal || 0,
+        descuento: venta.descuento || 0,
+        impuesto: venta.impuesto || 0,
+        impuestos_adicionales: venta.impuestos_adicionales || 0,
+        total: (parseFloat(venta.subtotal) || 0) - (parseFloat(venta.descuento) || 0) + (parseFloat(venta.impuesto) || 0) + (parseFloat(venta.impuestos_adicionales) || 0) + (parseFloat(venta.propina_valor) || 0),
+        propina_porcentaje: venta.propina_porcentaje || 0,
+        propina_valor: venta.propina_valor || 0,
+        notas: venta.notas || ''
+    };
+
+    return facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, configuracionPlantilla);
 }
 
 // ============================================
@@ -482,112 +591,7 @@ function mostrarDetalleVenta(venta, detalle) {
         minute: '2-digit'
     });
 
-    const html = `
-        <div id="facturaDetalleP rint">
-            <!-- Encabezado -->
-            <div class="text-center mb-4">
-                <h3>${currentEmpresa.nombre}</h3>
-                <p>${currentEmpresa.razon_social}</p>
-                <p>NIT: ${currentEmpresa.nit}</p>
-                <p>${currentEmpresa.direccion || ''}</p>
-                <p>Tel: ${currentEmpresa.telefono || ''} | Email: ${currentEmpresa.email}</p>
-                <hr>
-                <h4>FACTURA DE VENTA</h4>
-                <p><strong>${venta.numero_factura}</strong></p>
-            </div>
-
-            <!-- Info Venta -->
-            <div class="row mb-4">
-                <div class="col-6">
-                    <strong>Cliente:</strong><br>
-                    ${venta.cliente_razon_social || `${venta.cliente_nombre} ${venta.cliente_apellido || ''}`}<br>
-                    ${venta.cliente_tipo_documento}: ${venta.cliente_numero_documento}<br>
-                    Tel: ${venta.cliente_telefono || venta.cliente_celular || '-'}<br>
-                    ${venta.cliente_direccion || ''}
-                </div>
-                <div class="col-6 text-end">
-                    <strong>Fecha:</strong> ${fechaFormateada}<br>
-                    <strong>Vendedor:</strong> ${venta.vendedor_nombre}<br>
-                    <strong>Método de Pago:</strong> ${venta.metodo_pago}<br>
-                    <strong>Estado:</strong> ${getEstadoBadge(venta.estado)}
-                </div>
-            </div>
-
-            <!-- Productos -->
-            <div class="table-responsive">
-            <table class="table table-bordered">
-                <thead class="table-light">
-                    <tr>
-                        <th>Producto</th>
-                        <th>SKU</th>
-                        <th class="text-center">Cantidad</th>
-                        <th class="text-end">Precio Unit.</th>
-                        <th class="text-end">Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${detalle.map(item => `
-                        <tr>
-                            <td>${item.producto_nombre}</td>
-                            <td><small class="text-muted">${item.producto_sku || '-'}</small></td>
-                            <td class="text-center">${item.cantidad}</td>
-                            <td class="text-end">$${formatearNumero(item.precio_unitario)}</td>
-                            <td class="text-end">$${formatearNumero(item.subtotal)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
-                        <td class="text-end">$${formatearNumero(venta.subtotal)}</td>
-                    </tr>
-                    ${venta.descuento > 0 ? `
-                    <tr>
-                        <td colspan="4" class="text-end"><strong>Descuento:</strong></td>
-                        <td class="text-end">-$${formatearNumero(venta.descuento)}</td>
-                    </tr>
-                    ` : ''}
-                    <tr>
-                        <td colspan="4" class="text-end"><strong>IVA (19%):</strong></td>
-                        <td class="text-end">$${formatearNumero(venta.impuesto)}</td>
-                    </tr>
-                    ${venta.impuestos_adicionales > 0 ? `
-                    <tr>
-                        <td colspan="4" class="text-end"><strong>Impuestos Adicionales:</strong></td>
-                        <td class="text-end">$${formatearNumero(venta.impuestos_adicionales)}</td>
-                    </tr>
-                    ` : ''}
-                    ${venta.propina_valor > 0 ? `
-                    <tr style="border-top: 2px solid #ddd;">
-                        <td colspan="4" class="text-end">Total Factura:</td>
-                        <td class="text-end">$${formatearNumero((parseFloat(venta.subtotal) - parseFloat(venta.descuento || 0) + parseFloat(venta.impuesto) + parseFloat(venta.impuestos_adicionales || 0)))}</td>
-                    </tr>
-                    <tr style="color: #28a745;">
-                        <td colspan="4" class="text-end"><strong>🎉 Propina ${venta.propina_porcentaje}%:</strong></td>
-                        <td class="text-end">$${formatearNumero(venta.propina_valor)}</td>
-                    </tr>
-                    ` : ''}
-                    <tr class="table-primary">
-                        <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
-                        <td class="text-end"><strong>$${formatearNumero((parseFloat(venta.subtotal) || 0) - (parseFloat(venta.descuento) || 0) + (parseFloat(venta.impuesto) || 0) + (parseFloat(venta.impuestos_adicionales) || 0) + (parseFloat(venta.propina_valor) || 0))}</strong></td>
-                    </tr>
-                </tfoot>
-            </table>
-            </div>
-
-            ${venta.notas ? `
-                <div class="mt-3">
-                    <strong>Notas:</strong><br>
-                    <p class="text-muted">${venta.notas}</p>
-                </div>
-            ` : ''}
-
-            <div class="text-center mt-4">
-                <p class="text-muted">¡Gracias por su compra!</p>
-            </div>
-        </div>
-    `;
-
+    const html = generarHTMLFacturaVentaHistorial(venta, detalle);
     document.getElementById('detalleVentaContent').innerHTML = html;
     detalleVentaModal.show();
 }
@@ -619,56 +623,50 @@ async function imprimirVenta(ventaId) {
 }
 
 function imprimirDetalleVenta() {
-    const facturaContent = document.getElementById('facturaDetallePrint');
-    if (!facturaContent) {
-        mostrarAlerta('No se encontró el contenido de la factura', 'error');
+    if (!ventaActual) {
+        mostrarAlerta('No se encontró la venta actual para imprimir', 'error');
         return;
     }
 
-    // Obtener el número de factura para el nombre del archivo
-    const numeroFactura = ventaActual?.numero_factura || 'factura';
-    const nombreArchivo = `Factura_${numeroFactura}`;
+    const detalle = ventaActual.detalles || [];
+    const ventaData = {
+        cliente: {
+            razon_social: ventaActual.cliente_razon_social || `${ventaActual.cliente_nombre || ''} ${ventaActual.cliente_apellido || ''}`.trim(),
+            nombre: ventaActual.cliente_nombre || '',
+            apellido: ventaActual.cliente_apellido || '',
+            tipo_documento: ventaActual.cliente_tipo_documento || '',
+            numero_documento: ventaActual.cliente_numero_documento || '',
+            telefono: ventaActual.cliente_telefono || ventaActual.cliente_celular || ''
+        },
+        productos: detalle.map((item) => ({
+            nombre: item.producto_nombre || item.nombre || '',
+            sku: item.producto_sku || item.sku || '',
+            cantidad: item.cantidad || 0,
+            precio: item.precio_unitario || item.precio || item.valor_unitario || 0,
+            subtotal: item.subtotal || item.total || ((item.cantidad || 0) * (item.precio_unitario || item.precio || 0))
+        })),
+        subtotal: ventaActual.subtotal || 0,
+        descuento: ventaActual.descuento || 0,
+        impuesto: ventaActual.impuesto || 0,
+        impuestos_adicionales: ventaActual.impuestos_adicionales || 0,
+        total: ventaActual.total || ((parseFloat(ventaActual.subtotal) || 0) - (parseFloat(ventaActual.descuento) || 0) + (parseFloat(ventaActual.impuesto) || 0) + (parseFloat(ventaActual.impuestos_adicionales) || 0) + (parseFloat(ventaActual.propina_valor) || 0)),
+        propina_porcentaje: ventaActual.propina_porcentaje || 0,
+        propina_valor: ventaActual.propina_valor || 0,
+        notas: ventaActual.notas || ''
+    };
 
+    const htmlImpresion = facturaModel_generarFacturaHtmlPage(ventaActual, ventaData, currentEmpresa, configuracionPlantilla);
     const printWindow = window.open('', '', 'width=800,height=600');
     if (!printWindow) {
         mostrarAlerta('No se pudo abrir la ventana de impresión', 'warning');
         return;
     }
 
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>${nombreArchivo}</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-            <style>
-                @page { size: letter; margin: 1cm; }
-                body { font-family: Arial, sans-serif; font-size: 12pt; padding: 20px; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { border: 1px solid #ddd; padding: 8px; }
-                th { background-color: #f8f9fa; }
-                .text-center { text-align: center; }
-                .text-end { text-align: right; }
-                .table-primary { background-color: #cfe2ff; font-weight: bold; }
-                @media print {
-                    body { padding: 0; }
-                }
-            </style>
-        </head>
-        <body>
-            ${facturaContent.innerHTML}
-            <script>
-                // Configurar el nombre del archivo antes de imprimir
-                document.title = '${nombreArchivo}';
-                
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                        setTimeout(function() { window.close(); }, 100);
-                    }, 250);
-                };
-            </script>
+    printWindow.document.open();
+    printWindow.document.write(htmlImpresion);
+    printWindow.document.close();
+}
+
         </body>
         </html>
     `);
