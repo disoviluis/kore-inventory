@@ -120,15 +120,13 @@ export const createCategoria = async (req: Request, res: Response): Promise<Resp
         empresa_id,
         nombre,
         descripcion,
-        activo,
-        creado_por
-      ) VALUES (?, ?, ?, ?, ?)`,
+        activo
+      ) VALUES (?, ?, ?, ?)`,
       [
         empresa_id,
         nombre,
         descripcion || null,
-        activo !== undefined ? activo : 1,
-        req.body.userId || null
+        activo !== undefined ? activo : 1
       ]
     );
 
