@@ -713,7 +713,13 @@ async function guardarTraslado() {
 async function verDetalle(trasladoId) {
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/traslados/${trasladoId}`, {
+        const empresaId = currentEmpresaId || localStorage.getItem('empresaActiva');
+
+        if (!empresaId) {
+            throw new Error('No se encontró la empresa activa');
+        }
+
+        const response = await fetch(`${API_URL}/traslados/${trasladoId}?empresa_id=${empresaId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -721,90 +727,92 @@ async function verDetalle(trasladoId) {
 
         const result = await response.json();
 
-        if (result.success) {
-            const t = result.data;
-            
-            document.getElementById('detalleNumero').textContent = t.numero_traslado;
-            document.getElementById('modalDetalleContent').innerHTML = `
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <h6 class="text-primary border-bottom pb-2">Información General</h6>
-                        <table class="table table-sm">
-                            <tr><th width="120">Estado:</th><td><span class="badge bg-${getEstadoColor(t.estado)}">${getEstadoTexto(t.estado)}</span></td></tr>
-                            <tr><th>Creado:</th><td>${formatFecha(t.fecha_solicitud)}</td></tr>
-                            ${t.fecha_aprobacion ? `<tr><th>Aprobado:</th><td>${formatFecha(t.fecha_aprobacion)}</td></tr>` : ''}
-                            ${t.fecha_envio ? `<tr><th>Enviado:</th><td>${formatFecha(t.fecha_envio)}</td></tr>` : ''}
-                            ${t.fecha_recepcion ? `<tr><th>Recibido:</th><td>${formatFecha(t.fecha_recepcion)}</td></tr>` : ''}
-                            <tr><th>Solicitante:</th><td>${t.usuario_solicita_nombre}</td></tr>
-                            ${t.usuario_aprueba_nombre ? `<tr><th>Aprobó:</th><td>${t.usuario_aprueba_nombre}</td></tr>` : ''}
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="text-primary border-bottom pb-2">Ruta</h6>
-                        <div class="border rounded p-3 bg-light">
-                            <div class="mb-2">
-                                <strong>Origen:</strong><br>
-                                ${t.bodega_origen_nombre}
-                            </div>
-                            <div class="text-center my-2">
-                                <i class="bi bi-arrow-down fs-3 text-primary"></i>
-                            </div>
-                            <div>
-                                <strong>Destino:</strong><br>
-                                ${t.bodega_destino_nombre}
-                            </div>
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'No se pudo cargar el detalle del traslado');
+        }
+
+        const t = result.data;
+        
+        document.getElementById('detalleNumero').textContent = t.numero_traslado;
+        document.getElementById('modalDetalleContent').innerHTML = `
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h6 class="text-primary border-bottom pb-2">Información General</h6>
+                    <table class="table table-sm">
+                        <tr><th width="120">Estado:</th><td><span class="badge bg-${getEstadoColor(t.estado)}">${getEstadoTexto(t.estado)}</span></td></tr>
+                        <tr><th>Creado:</th><td>${formatFecha(t.fecha_solicitud)}</td></tr>
+                        ${t.fecha_aprobacion ? `<tr><th>Aprobado:</th><td>${formatFecha(t.fecha_aprobacion)}</td></tr>` : ''}
+                        ${t.fecha_envio ? `<tr><th>Enviado:</th><td>${formatFecha(t.fecha_envio)}</td></tr>` : ''}
+                        ${t.fecha_recepcion ? `<tr><th>Recibido:</th><td>${formatFecha(t.fecha_recepcion)}</td></tr>` : ''}
+                        <tr><th>Solicitante:</th><td>${t.usuario_solicita_nombre}</td></tr>
+                        ${t.usuario_aprueba_nombre ? `<tr><th>Aprobó:</th><td>${t.usuario_aprueba_nombre}</td></tr>` : ''}
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-primary border-bottom pb-2">Ruta</h6>
+                    <div class="border rounded p-3 bg-light">
+                        <div class="mb-2">
+                            <strong>Origen:</strong><br>
+                            ${t.bodega_origen_nombre}
                         </div>
-                        ${t.destinatario_nombre ? `
-                            <div class="mt-3">
-                                <h6 class="border-bottom pb-2">Destinatario</h6>
-                                <small>
-                                    <strong>${t.destinatario_nombre}</strong><br>
-                                    ${t.destinatario_cargo || ''}<br>
-                                    ${t.destinatario_telefono || ''}
-                                </small>
-                            </div>
-                        ` : ''}
-                    </div>
-                    <div class="col-12">
-                        <h6 class="text-primary border-bottom pb-2">Productos (${t.detalle.length})</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Producto</th>
-                                        <th width="100" class="text-center">Solicitado</th>
-                                        <th width="100" class="text-center">Aprobado</th>
-                                        <th width="100" class="text-center">Recibido</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${t.detalle.map(item => `
-                                        <tr>
-                                            <td>${item.producto_nombre}</td>
-                                            <td class="text-center">${item.cantidad_solicitada}</td>
-                                            <td class="text-center">${item.cantidad_aprobada || '-'}</td>
-                                            <td class="text-center">${item.cantidad_recibida || '-'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                        <div class="text-center my-2">
+                            <i class="bi bi-arrow-down fs-3 text-primary"></i>
+                        </div>
+                        <div>
+                            <strong>Destino:</strong><br>
+                            ${t.bodega_destino_nombre}
                         </div>
                     </div>
-                    ${t.observaciones ? `
-                        <div class="col-12">
-                            <h6 class="border-bottom pb-2">Observaciones</h6>
-                            <p class="text-muted">${t.observaciones}</p>
+                    ${t.destinatario_nombre ? `
+                        <div class="mt-3">
+                            <h6 class="border-bottom pb-2">Destinatario</h6>
+                            <small>
+                                <strong>${t.destinatario_nombre}</strong><br>
+                                ${t.destinatario_cargo || ''}<br>
+                                ${t.destinatario_telefono || ''}
+                            </small>
                         </div>
                     ` : ''}
                 </div>
-            `;
+                <div class="col-12">
+                    <h6 class="text-primary border-bottom pb-2">Productos (${t.detalle.length})</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th width="100" class="text-center">Solicitado</th>
+                                    <th width="100" class="text-center">Aprobado</th>
+                                    <th width="100" class="text-center">Recibido</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${t.detalle.map(item => `
+                                    <tr>
+                                        <td>${item.producto_nombre}</td>
+                                        <td class="text-center">${item.cantidad_solicitada}</td>
+                                        <td class="text-center">${item.cantidad_aprobada || '-'}</td>
+                                        <td class="text-center">${item.cantidad_recibida || '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ${t.observaciones ? `
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2">Observaciones</h6>
+                        <p class="text-muted">${t.observaciones}</p>
+                    </div>
+                ` : ''}
+            </div>
+        `;
 
-            const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
-            modal.show();
-        }
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
+        modal.show();
     } catch (error) {
         console.error('Error:', error);
-        Swal.fire('Error', 'No se pudo cargar el detalle', 'error');
+        Swal.fire('Error', error.message || 'No se pudo cargar el detalle', 'error');
     }
 }
 

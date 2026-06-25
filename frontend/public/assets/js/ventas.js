@@ -14,6 +14,8 @@ let productosVenta = [];
 let productosBusqueda = []; // Resultados del buscador para selección rápida
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 let ultimaVentaGuardada = null; // Guardar última venta para impresión
+let ultimoCodigoEscaneado = null; // Código de barras que se agregó recientemente
+let ultimoEscaneoAgregadoAt = 0; // Timestamp del último escaneo agregado
 let ultimaVentaData = null; // Guardar datos de última venta para impresión
 let impuestosDisponibles = [];
 let impuestosSeleccionados = [];
@@ -485,6 +487,11 @@ function initEventListeners() {
             const valorActual = buscarProductoInput.value.trim().toLowerCase();
             if (!valorActual) return;
 
+            if (esEscaneoRecienteDuplicado(valorActual)) {
+                console.log('Enter ignorado por escaneo duplicado reciente:', valorActual);
+                return;
+            }
+
             let productoExacto = productosBusqueda.find(p => productoCoincideConBusqueda(p, valorActual));
             if (!productoExacto && productosBusqueda.length === 0) {
                 await buscarProductos();
@@ -492,14 +499,20 @@ function initEventListeners() {
             }
 
             if (productoExacto) {
+                ultimoCodigoEscaneado = valorActual;
+                ultimoEscaneoAgregadoAt = Date.now();
                 agregarProducto(productoExacto);
                 return;
             }
 
             if (productosBusqueda.length === 1) {
+                ultimoCodigoEscaneado = valorActual;
+                ultimoEscaneoAgregadoAt = Date.now();
                 agregarProducto(productosBusqueda[0]);
             } else if (productosBusqueda.length > 1) {
                 // Si el lector dio más de un resultado, seleccionar el primero
+                ultimoCodigoEscaneado = valorActual;
+                ultimoEscaneoAgregadoAt = Date.now();
                 agregarProducto(productosBusqueda[0]);
             }
         }
@@ -734,6 +747,11 @@ async function buscarProductos() {
         return;
     }
 
+    if (esEscaneoRecienteDuplicado(busqueda.toLowerCase())) {
+        console.log('Ignorando escaneo duplicado reciente:', busqueda);
+        return;
+    }
+
     productosBusqueda = [];
 
     try {
@@ -774,6 +792,8 @@ function intentarAgregarProductoEscaneo(busqueda, productos) {
     );
 
     if (productoExacto) {
+        ultimoCodigoEscaneado = valor;
+        ultimoEscaneoAgregadoAt = Date.now();
         agregarProducto(productoExacto);
         return true;
     }
@@ -786,6 +806,14 @@ function productoCoincideConBusqueda(producto, valor) {
     return (
         (producto.sku && producto.sku.toString().toLowerCase() === busqueda) ||
         (producto.codigo_barras && producto.codigo_barras.toString().toLowerCase() === busqueda)
+    );
+}
+
+function esEscaneoRecienteDuplicado(busqueda) {
+    return (
+        busqueda &&
+        ultimoCodigoEscaneado === busqueda &&
+        (Date.now() - ultimoEscaneoAgregadoAt) < 800
     );
 }
 
