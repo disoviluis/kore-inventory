@@ -5,7 +5,7 @@
  * =================================
  */
 
-const API_URL = '/api';
+window.API_URL = window.API_URL || '/api';
 let impuestosCache = [];
 
 /**

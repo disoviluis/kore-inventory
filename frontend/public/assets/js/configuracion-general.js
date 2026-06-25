@@ -3,7 +3,7 @@
 // ============================================================================
 
 // API Base URL
-const API_URL = '/api';
+window.API_URL = window.API_URL || '/api';
 
 // Variables globales
 let currentEmpresa = null;
