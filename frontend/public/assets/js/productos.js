@@ -1588,14 +1588,24 @@ async function confirmarImportacion() {
                 const productoData = {...item.producto};
                 delete productoData._esActualizacion; // Remover flag interno
 
-                if (!esActualizacion && productoData.id === null) {
-                    delete productoData.id; // No enviar id nulo en creaciones
+                const skuBuscar = productoData.sku?.toString().trim().toLowerCase();
+                let productoIdParaActualizar = esActualizacion ? productoData.id : null;
+
+                if (!productoIdParaActualizar && skuBuscar) {
+                    const existing = productos.find(p => p.sku?.toString().trim().toLowerCase() === skuBuscar);
+                    if (existing && existing.id) {
+                        productoIdParaActualizar = existing.id;
+                    }
                 }
 
-                // Determinar método y URL según si es creación o actualización
-                let metodo = esActualizacion ? 'PUT' : 'POST';
-                let url = esActualizacion 
-                    ? `${API_URL}/productos/${productoData.id}` 
+                if (!productoIdParaActualizar) {
+                    delete productoData.id; // No enviar id nulo en creaciones o si no hay ID válido
+                }
+
+                const esActualizacionReal = Boolean(productoIdParaActualizar);
+                let metodo = esActualizacionReal ? 'PUT' : 'POST';
+                let url = esActualizacionReal
+                    ? `${API_URL}/productos/${productoIdParaActualizar}`
                     : `${API_URL}/productos`;
 
                 let response = await fetch(url, {
