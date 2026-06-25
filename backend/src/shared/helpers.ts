@@ -41,15 +41,33 @@ export const errorResponse = (
   error: any = null,
   statusCode: number = CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
 ): Response => {
+  const errorPayload = (() => {
+    if (typeof error === 'string') {
+      return error;
+    }
+    if (error && typeof error === 'object') {
+      if (typeof error.message === 'string' && error.message.trim()) {
+        return error.message.trim();
+      }
+      try {
+        return JSON.stringify(error);
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  })();
+
   const response: ApiResponse = {
     success: false,
     message,
-    error: process.env.NODE_ENV === 'development'
-      ? error
-      : typeof error === 'string'
-      ? error
-      : error?.message || undefined
+    error: errorPayload
   };
+
+  if (process.env.NODE_ENV === 'development') {
+    response.error = error;
+  }
+
   return res.status(statusCode).json(response);
 };
 

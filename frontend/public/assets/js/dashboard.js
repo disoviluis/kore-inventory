@@ -32,10 +32,26 @@ async function parseApiError(response) {
 
   try {
     const data = await response.json();
-    if (data && data.message) {
-      message = data.message;
-    } else if (typeof data === 'string' && data.trim()) {
-      message = data.trim();
+    if (data) {
+      const rawMessage = data.message || data.error || data.error?.message;
+      if (rawMessage) {
+        if (typeof rawMessage === 'string') {
+          message = rawMessage.trim();
+        } else if (typeof rawMessage === 'object' && rawMessage.message) {
+          message = String(rawMessage.message).trim();
+        }
+      } else if (typeof data === 'string' && data.trim()) {
+        message = data.trim();
+      }
+
+      if (message === 'Error al crear impuesto' && data.error) {
+        const detail = typeof data.error === 'string'
+          ? data.error.trim()
+          : data.error.message || JSON.stringify(data.error);
+        if (detail) {
+          message = `${message} - ${detail}`;
+        }
+      }
     }
   } catch (jsonError) {
     try {
