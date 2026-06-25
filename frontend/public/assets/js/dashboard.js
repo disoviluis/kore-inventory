@@ -2863,7 +2863,13 @@ function abrirModalImpuesto(impuestoId = null) {
 
 async function cargarDatosImpuesto(id) {
   try {
-    const response = await fetch(`${API_URL}/impuestos/${id}`, {
+    const empresaId = localStorage.getItem('empresaActiva');
+    if (!empresaId) {
+      mostrarError('No hay empresa activa seleccionada. Por favor seleccione una empresa antes de editar el impuesto.');
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/impuestos/${id}?empresaId=${empresaId}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
     
@@ -2959,7 +2965,7 @@ async function guardarImpuesto() {
   
   try {
     const url = id 
-      ? `${API_URL}/impuestos/${id}`
+      ? `${API_URL}/impuestos/${id}?empresaId=${empresaId}`
       : `${API_URL}/impuestos`;
     
     const response = await fetch(url, {
@@ -2992,7 +2998,13 @@ async function guardarImpuesto() {
 
 async function verDetalleImpuesto(id) {
   try {
-    const response = await fetch(`${API_URL}/impuestos/${id}`, {
+    const empresaId = localStorage.getItem('empresaActiva');
+    if (!empresaId) {
+      mostrarError('No hay empresa activa seleccionada. Por favor seleccione una empresa antes de ver el impuesto.');
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/impuestos/${id}?empresaId=${empresaId}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
     
@@ -3096,7 +3108,13 @@ async function eliminarImpuesto(id, nombre) {
   }
   
   try {
-    const response = await fetch(`${API_URL}/impuestos/${id}`, {
+    const empresaId = localStorage.getItem('empresaActiva');
+    if (!empresaId) {
+      mostrarError('No hay empresa activa seleccionada. Por favor seleccione una empresa antes de eliminar el impuesto.');
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/impuestos/${id}?empresaId=${empresaId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });

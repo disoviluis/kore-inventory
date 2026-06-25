@@ -92,10 +92,23 @@ export const getImpuestosActivos = async (req: Request, res: Response): Promise<
 export const getImpuestoById = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params;
+    const usuario = (req as any).user || (req as any).usuario;
+    const empresaIdValue = Number(
+      req.query.empresaId || req.query.empresa_id || req.params.empresaId || req.params.empresa_id || usuario?.empresa_id
+    );
+
+    if (!Number.isFinite(empresaIdValue) || empresaIdValue <= 0) {
+      return errorResponse(
+        res,
+        'empresa_id es requerido para obtener el impuesto',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
 
     const [impuestos] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM impuestos WHERE id = ?',
-      [id]
+      'SELECT * FROM impuestos WHERE id = ? AND empresa_id = ?',
+      [id, empresaIdValue]
     );
 
     if (impuestos.length === 0) {
@@ -328,6 +341,19 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
       );
     }
 
+    const empresaIdValue = Number(
+      req.body.empresa_id || req.body.empresaId || req.query.empresa_id || req.query.empresaId || usuario.empresa_id
+    );
+
+    if (!Number.isFinite(empresaIdValue) || empresaIdValue <= 0) {
+      return errorResponse(
+        res,
+        'empresa_id es requerido y debe ser un número válido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
     if (!codigo || !String(codigo).trim()) {
       return errorResponse(
         res,
@@ -393,10 +419,10 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
 
     await connection.beginTransaction();
 
-    // Verificar que existe
+    // Verificar que existe y pertenece a la empresa activa
     const [existe] = await connection.query<RowDataPacket[]>(
-      'SELECT id FROM impuestos WHERE id = ?',
-      [id]
+      'SELECT id FROM impuestos WHERE id = ? AND empresa_id = ?',
+      [id, empresaIdValue]
     );
 
     if (existe.length === 0) {
@@ -425,7 +451,7 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
         orden = ?,
         activo = ?,
         updated_at = NOW()
-      WHERE id = ?`,
+      WHERE id = ? AND empresa_id = ?`,
       [
         codigo,
         nombre,
@@ -439,7 +465,8 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
         cuenta_contable,
         orden,
         activo,
-        id
+        id,
+        empresaIdValue
       ]
     );
 
@@ -476,6 +503,28 @@ export const deleteImpuesto = async (req: Request, res: Response): Promise<Respo
     const { id } = req.params;
     const usuario = (req as any).user || (req as any).usuario;
 
+    if (!usuario || !usuario.id) {
+      return errorResponse(
+        res,
+        'Usuario no autenticado',
+        null,
+        CONSTANTS.HTTP_STATUS.UNAUTHORIZED
+      );
+    }
+
+    const empresaIdValue = Number(
+      req.query.empresa_id || req.query.empresaId || req.params.empresa_id || req.params.empresaId || usuario.empresa_id
+    );
+
+    if (!Number.isFinite(empresaIdValue) || empresaIdValue <= 0) {
+      return errorResponse(
+        res,
+        'empresa_id es requerido y debe ser un número válido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
     await connection.beginTransaction();
 
     // Verificar si hay ventas asociadas
@@ -494,8 +543,21 @@ export const deleteImpuesto = async (req: Request, res: Response): Promise<Respo
       );
     }
 
-    // Eliminar
-    await connection.query('DELETE FROM impuestos WHERE id = ?', [id]);
+    // Eliminar perteneciendo a la empresa activa
+    const [result] = await connection.query<ResultSetHeader>(
+      'DELETE FROM impuestos WHERE id = ? AND empresa_id = ?',
+      [id, empresaIdValue]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      return errorResponse(
+        res,
+        'Impuesto no encontrado o no pertenece a la empresa activa',
+        null,
+        CONSTANTS.HTTP_STATUS.NOT_FOUND
+      );
+    }
 
     // Auditoría
     await connection.query(
