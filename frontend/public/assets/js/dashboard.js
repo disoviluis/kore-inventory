@@ -6,6 +6,7 @@
  */
 
 const API_URL = '/api';
+let impuestosCache = [];
 
 /**
  * Mostrar mensaje de error
@@ -2395,7 +2396,8 @@ async function cargarImpuestos() {
     }
     
     const data = await response.json();
-    renderizarTablaImpuestos(data.data);
+    impuestosCache = data.data || [];
+    renderizarTablaImpuestos(impuestosCache);
   } catch (error) {
     console.error('Error completo:', error);
     mostrarError('Error al cargar impuestos: ' + error.message);
@@ -2462,6 +2464,300 @@ function renderizarTablaImpuestos(impuestos) {
   `).join('');
 }
 
+function exportarImpuestos() {
+  if (!impuestosCache || impuestosCache.length === 0) {
+    mostrarError('No hay impuestos para exportar');
+    return;
+  }
+
+  const datosExportar = impuestosCache.map(imp => ({
+    empresa_id: imp.empresa_id,
+    codigo: imp.codigo,
+    nombre: imp.nombre,
+    descripcion: imp.descripcion || '',
+    tipo: imp.tipo,
+    tasa: imp.tasa,
+    aplica_sobre: imp.aplica_sobre,
+    afecta_total: imp.afecta_total,
+    aplica_automaticamente: imp.aplica_automaticamente ? 1 : 0,
+    requiere_autorizacion: imp.requiere_autorizacion ? 1 : 0,
+    cuenta_contable: imp.cuenta_contable || '',
+    orden: imp.orden || 0,
+    activo: imp.activo ? 1 : 0
+  }));
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(datosExportar, {
+    header: [
+      'empresa_id', 'codigo', 'nombre', 'descripcion', 'tipo', 'tasa',
+      'aplica_sobre', 'afecta_total', 'aplica_automaticamente', 'requiere_autorizacion',
+      'cuenta_contable', 'orden', 'activo'
+    ]
+  });
+  XLSX.utils.book_append_sheet(wb, ws, 'Impuestos');
+
+  const empresaId = localStorage.getItem('empresaActiva') || 'empresa_id';
+  const instrucciones = [
+    ['INSTRUCCIONES'],
+    ['- No modifique los encabezados.'],
+    ['- Complete los impuestos en el formato indicado.'],
+    ['- Las columnas obligatorias son: codigo, nombre, tipo, tasa, aplica_sobre, afecta_total, activo.'],
+    ['- Los valores permitidos para tipo son: porcentaje, valor_fijo.'],
+    ['- Los valores permitidos para aplica_sobre son: subtotal, iva, total.'],
+    ['- Los valores permitidos para afecta_total son: suma, resta.'],
+    ['- Los valores booleanos pueden ser 1/0, sí/no, true/false.'],
+    ['- La importación se realiza en la empresa activa actual.']
+  ];
+  const wsInfo = XLSX.utils.aoa_to_sheet(instrucciones);
+  XLSX.utils.book_append_sheet(wb, wsInfo, 'Instrucciones');
+
+  const fecha = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `impuestos_${empresaId}_${fecha}.xlsx`);
+}
+
+function descargarPlantillaImpuestos() {
+  const empresaId = localStorage.getItem('empresaActiva') || '';
+  const plantilla = [{
+    empresa_id: empresaId,
+    codigo: 'RTE_FTE',
+    nombre: 'Retención en la Fuente',
+    descripcion: 'Impuesto por retención en la fuente',
+    tipo: 'porcentaje',
+    tasa: 2.5,
+    aplica_sobre: 'subtotal',
+    afecta_total: 'resta',
+    aplica_automaticamente: 0,
+    requiere_autorizacion: 0,
+    cuenta_contable: '236525',
+    orden: 0,
+    activo: 1
+  }];
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(plantilla, {
+    header: [
+      'empresa_id', 'codigo', 'nombre', 'descripcion', 'tipo', 'tasa',
+      'aplica_sobre', 'afecta_total', 'aplica_automaticamente', 'requiere_autorizacion',
+      'cuenta_contable', 'orden', 'activo'
+    ]
+  });
+  XLSX.utils.book_append_sheet(wb, ws, 'Impuestos');
+
+  const instrucciones = [
+    ['INSTRUCCIONES'],
+    ['- No modifique los encabezados.'],
+    ['- Complete una fila por impuesto.'],
+    ['- Las columnas obligatorias son: codigo, nombre, tipo, tasa, aplica_sobre, afecta_total, activo.'],
+    ['- Valores válidos para tipo: porcentaje, valor_fijo.'],
+    ['- Valores válidos para aplica_sobre: subtotal, iva, total.'],
+    ['- Valores válidos para afecta_total: suma, resta.'],
+    ['- Valores booleanos: 1/0, si/no, true/false.'],
+    ['- El impuesto se importará en la empresa activa actual.']
+  ];
+  const wsInfo = XLSX.utils.aoa_to_sheet(instrucciones);
+  XLSX.utils.book_append_sheet(wb, wsInfo, 'Instrucciones');
+
+  XLSX.writeFile(wb, `plantilla_importacion_impuestos_${empresaId || 'empresa'}.xlsx`);
+}
+
+function normalizarFilaImpuesto(rawRow) {
+  const row = {};
+  Object.keys(rawRow).forEach((key) => {
+    const normalizedKey = key.toString().trim()
+      .toLowerCase()
+      .replace(/[áÁ]/g, 'a')
+      .replace(/[éÉ]/g, 'e')
+      .replace(/[íÍ]/g, 'i')
+      .replace(/[óÓ]/g, 'o')
+      .replace(/[úÚ]/g, 'u')
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '_');
+    row[normalizedKey] = rawRow[key];
+  });
+  return row;
+}
+
+function parseExcelBoolean(value) {
+  if (value === null || value === undefined) return 0;
+  const text = String(value).trim().toLowerCase();
+  if (['1', 'true', 'si', 'sí', 'yes', 'y'].includes(text)) return 1;
+  if (['0', 'false', 'no', 'n'].includes(text)) return 0;
+  if (!isNaN(Number(text))) {
+    return Number(text) !== 0 ? 1 : 0;
+  }
+  return 0;
+}
+
+function validarImpuestosExcel(rows) {
+  const validRows = [];
+  const errors = [];
+  const seenCodes = new Set();
+  const existingCodes = new Set(impuestosCache.map(i => String(i.codigo).trim().toUpperCase()));
+
+  rows.forEach((rawRow, index) => {
+    const rowNumber = index + 2;
+    const row = normalizarFilaImpuesto(rawRow);
+    const codigo = String(row.codigo || '').trim();
+    const nombre = String(row.nombre || '').trim();
+    const tipo = String(row.tipo || 'porcentaje').trim();
+    const tasa = row.tasa !== undefined && row.tasa !== '' ? Number(row.tasa) : NaN;
+    const aplicaSobre = String(row.aplica_sobre || row.aplica_sobre || row.aplica_sobre || '').trim() || 'subtotal';
+    const afectaTotal = String(row.afecta_total || row.afecta_total || row.afecta_total || '').trim() || 'resta';
+    const activo = parseExcelBoolean(row.activo);
+    const aplicaAutomaticamente = parseExcelBoolean(row.aplica_automaticamente);
+    const requiereAutorizacion = parseExcelBoolean(row.requiere_autorizacion);
+    const cuentaContable = row.cuenta_contable || '';
+    const orden = Number.isFinite(Number(row.orden)) ? Number(row.orden) : 0;
+
+    if (!codigo) {
+      errors.push(`Fila ${rowNumber}: El campo codigo es obligatorio.`);
+      return;
+    }
+
+    if (existingCodes.has(codigo.toUpperCase())) {
+      errors.push(`Fila ${rowNumber}: El impuesto con código '${codigo}' ya existe.`);
+      return;
+    }
+
+    if (seenCodes.has(codigo.toUpperCase())) {
+      errors.push(`Fila ${rowNumber}: Código duplicado en el archivo: '${codigo}'.`);
+      return;
+    }
+
+    if (!nombre) {
+      errors.push(`Fila ${rowNumber}: El campo nombre es obligatorio.`);
+      return;
+    }
+
+    if (!['porcentaje', 'valor_fijo'].includes(tipo)) {
+      errors.push(`Fila ${rowNumber}: Tipo inválido. Use porcentaje o valor_fijo.`);
+      return;
+    }
+
+    if (isNaN(tasa) || tasa < 0) {
+      errors.push(`Fila ${rowNumber}: Tasa inválida.`);
+      return;
+    }
+
+    if (!['subtotal', 'iva', 'total'].includes(aplicaSobre)) {
+      errors.push(`Fila ${rowNumber}: Aplica Sobre inválido. Use subtotal, iva o total.`);
+      return;
+    }
+
+    if (!['suma', 'resta'].includes(afectaTotal)) {
+      errors.push(`Fila ${rowNumber}: Afecta Total inválido. Use suma o resta.`);
+      return;
+    }
+
+    validRows.push({
+      codigo: codigo.toUpperCase(),
+      nombre,
+      descripcion: row.descripcion || '',
+      tipo,
+      tasa,
+      aplica_sobre: aplicaSobre,
+      afecta_total: afectaTotal,
+      aplica_automaticamente: aplicaAutomaticamente,
+      requiere_autorizacion: requiereAutorizacion,
+      cuenta_contable: cuentaContable || null,
+      orden,
+      activo
+    });
+
+    seenCodes.add(codigo.toUpperCase());
+  });
+
+  return { validRows, errors };
+}
+
+async function procesarArchivoImpuestosExcel(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (!/\.(xlsx|xls)$/i.test(file.name)) {
+    mostrarError('Solo se permiten archivos .xlsx o .xls');
+    return;
+  }
+
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+    if (!jsonData.length) {
+      mostrarError('El archivo Excel no contiene datos.');
+      return;
+    }
+
+    const { validRows, errors } = validarImpuestosExcel(jsonData);
+
+    if (errors.length > 0) {
+      console.error('Errores de validación al importar impuestos:', errors);
+    }
+
+    if (validRows.length === 0) {
+      mostrarError('No hay filas válidas para importar. Revisa el archivo y vuelve a intentarlo.');
+      return;
+    }
+
+    const result = await importarImpuestos(validRows);
+    const mensajes = [];
+    if (result.created.length > 0) {
+      mensajes.push(`Importados ${result.created.length} impuestos`);
+    }
+    if (result.errors.length > 0) {
+      mensajes.push(`${result.errors.length} errores encontrados`);
+      console.error('Errores al crear impuestos:', result.errors);
+    }
+
+    if (mensajes.length > 0) {
+      mostrarExito(mensajes.join(' - '));
+    }
+
+    cargarImpuestos();
+  } catch (error) {
+    console.error('Error al procesar archivo de impuestos:', error);
+    mostrarError('Error al leer el archivo Excel de impuestos.');
+  }
+}
+
+async function importarImpuestos(impuestos) {
+  const created = [];
+  const errors = [];
+  const empresaId = localStorage.getItem('empresaActiva');
+
+  for (const impuesto of impuestos) {
+    try {
+      const payload = {
+        empresa_id: parseInt(empresaId, 10),
+        ...impuesto
+      };
+
+      const response = await fetch(`${API_URL}/impuestos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        errors.push(`${impuesto.codigo}: ${data.message || 'Error al crear impuesto'}`);
+      } else {
+        created.push(impuesto.codigo);
+      }
+    } catch (error) {
+      errors.push(`${impuesto.codigo}: ${error.message}`);
+    }
+  }
+
+  return { created, errors };
+}
+
 function abrirModalImpuesto(impuestoId = null) {
   const modal = new bootstrap.Modal(document.getElementById('impuestoModal'));
   const title = document.getElementById('impuestoModalTitle');
@@ -2519,7 +2815,7 @@ async function cargarDatosImpuesto(id) {
   }
 }
 
-// Event listener para formulario de impuesto
+// Event listener para formulario de impuesto y botones de import/export
 document.addEventListener('DOMContentLoaded', () => {
   const impuestoForm = document.getElementById('impuestoForm');
   if (impuestoForm) {
@@ -2528,11 +2824,37 @@ document.addEventListener('DOMContentLoaded', () => {
       await guardarImpuesto();
     });
   }
+
+  const btnDescargarPlantilla = document.getElementById('btnDescargarPlantillaImpuestos');
+  if (btnDescargarPlantilla) {
+    btnDescargarPlantilla.addEventListener('click', descargarPlantillaImpuestos);
+  }
+
+  const btnExportar = document.getElementById('btnExportarImpuestos');
+  if (btnExportar) {
+    btnExportar.addEventListener('click', exportarImpuestos);
+  }
+
+  const btnImportar = document.getElementById('btnImportarImpuestos');
+  if (btnImportar) {
+    btnImportar.addEventListener('click', () => {
+      const input = document.getElementById('archivoImpuestosExcel');
+      if (input) {
+        input.value = '';
+        input.click();
+      }
+    });
+  }
+
+  const archivoInput = document.getElementById('archivoImpuestosExcel');
+  if (archivoInput) {
+    archivoInput.addEventListener('change', procesarArchivoImpuestosExcel);
+  }
 });
 
 async function guardarImpuesto() {
   const id = document.getElementById('impuestoId').value;
-  const empresaId = localStorage.getItem('empresa_activa') || currentEmpresa?.id;
+  const empresaId = localStorage.getItem('empresaActiva') || currentEmpresa?.id;
   
   const impuesto = {
     empresa_id: parseInt(empresaId),

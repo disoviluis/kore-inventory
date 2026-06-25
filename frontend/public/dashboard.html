@@ -1379,6 +1379,7 @@
             <div class="page-content">
                 <div class="container-fluid">
                     <div id="alertContainerImpuestos"></div>
+                    <input type="file" id="archivoImpuestosExcel" accept=".xlsx,.xls" class="d-none">
                     
                     <!-- Page Header -->
                     <div class="page-header mb-4">
@@ -1388,7 +1389,18 @@
                                 <p class="text-muted mb-0">Configuración de impuestos adicionales (Retenciones, ICA, etc.)</p>
                             </div>
                             <div class="col-md-4 text-md-end">
-                                <button class="btn btn-primary" onclick="abrirModalImpuesto()">
+                                <div class="btn-group" role="group" aria-label="Acciones impuestos">
+                                    <button class="btn btn-outline-secondary" id="btnDescargarPlantillaImpuestos">
+                                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Plantilla
+                                    </button>
+                                    <button class="btn btn-outline-success" id="btnImportarImpuestos">
+                                        <i class="bi bi-cloud-upload me-1"></i>Importar
+                                    </button>
+                                    <button class="btn btn-outline-primary" id="btnExportarImpuestos">
+                                        <i class="bi bi-download me-1"></i>Exportar
+                                    </button>
+                                </div>
+                                <button class="btn btn-primary ms-2" onclick="abrirModalImpuesto()">
                                     <i class="bi bi-plus-circle me-2"></i>Nuevo Impuesto
                                 </button>
                             </div>
@@ -2623,6 +2635,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS para import/export Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <!-- Custom JS (debe cargar primero para declarar API_URL) -->
     <script src="assets/js/dashboard.js"></script>
     <!-- Sidebar Navigation (Common) - Usa API_URL si existe -->
