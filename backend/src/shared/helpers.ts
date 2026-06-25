@@ -44,7 +44,11 @@ export const errorResponse = (
   const response: ApiResponse = {
     success: false,
     message,
-    error: process.env.NODE_ENV === 'development' ? error : undefined
+    error: process.env.NODE_ENV === 'development'
+      ? error
+      : typeof error === 'string'
+      ? error
+      : error?.message || undefined
   };
   return res.status(statusCode).json(response);
 };

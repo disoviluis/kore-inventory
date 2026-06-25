@@ -24,6 +24,33 @@ function mostrarExito(mensaje) {
   alert(mensaje);
 }
 
+/**
+ * Parsear respuesta de error de la API
+ */
+async function parseApiError(response) {
+  let message = `Error ${response.status}: ${response.statusText}`;
+
+  try {
+    const data = await response.json();
+    if (data && data.message) {
+      message = data.message;
+    } else if (typeof data === 'string' && data.trim()) {
+      message = data.trim();
+    }
+  } catch (jsonError) {
+    try {
+      const text = await response.text();
+      if (text) {
+        message = text;
+      }
+    } catch (_err) {
+      // Ignorar si no se puede leer el body
+    }
+  }
+
+  return message;
+}
+
 // ============================================
 // FUNCIONES PARA EMPRESAS - DÍGITO VERIFICACIÓN Y RUES
 // ============================================
@@ -2769,8 +2796,8 @@ async function importarImpuestos(impuestos) {
       });
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        errors.push(`${impuesto.codigo}: ${data.message || 'Error al crear impuesto'}`);
+        const message = await parseApiError(response);
+        errors.push(`${impuesto.codigo}: ${message || 'Error al crear impuesto'}`);
       } else {
         created.push(impuesto.codigo);
       }
@@ -2917,8 +2944,8 @@ async function guardarImpuesto() {
     });
     
     if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || 'Error al guardar impuesto');
+      const message = await parseApiError(response);
+      throw new Error(message || 'Error al guardar impuesto');
     }
     
     mostrarExito(id ? 'Impuesto actualizado exitosamente' : 'Impuesto creado exitosamente');
