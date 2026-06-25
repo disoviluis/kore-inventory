@@ -361,15 +361,27 @@ export const getPaginaPublica = async (req: Request, res: Response): Promise<Res
     );
 
     if (records.length === 0) {
-      return errorResponse(
+      return successResponse(
         res,
-        'Configuración de página pública no encontrada',
-        null,
-        CONSTANTS.HTTP_STATUS.NOT_FOUND
+        'Configuración de página pública obtenida exitosamente',
+        {},
+        CONSTANTS.HTTP_STATUS.OK
       );
     }
 
-    const config = records[0].valor ? JSON.parse(records[0].valor) : {};
+    let config = {};
+    const rawValor = records[0].valor;
+
+    if (rawValor) {
+      try {
+        config = JSON.parse(rawValor);
+      } catch (parseError) {
+        logger.info(
+          `JSON inválido en empresa_configuracion.valor para empresa ${id}: ${parseError}`
+        );
+        config = {};
+      }
+    }
 
     return successResponse(
       res,
