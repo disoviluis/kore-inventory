@@ -147,7 +147,7 @@ export const createPlan = async (req: Request, res: Response): Promise<void> => 
     if (usuario && usuario.id) {
       await connection.query(
         `INSERT INTO auditoria_logs (
-          usuario_id, accion, tabla_afectada, registro_id, fecha
+          usuario_id, accion, tabla, registro_id, fecha
         ) VALUES (?, ?, ?, ?, NOW())`,
         [usuario.id, 'INSERT', 'planes', planId]
       );
@@ -245,7 +245,7 @@ export const updatePlan = async (req: Request, res: Response): Promise<void> => 
     if (usuario && usuario.id) {
       await connection.query(
         `INSERT INTO auditoria_logs (
-          usuario_id, accion, tabla_afectada, registro_id, fecha
+          usuario_id, accion, tabla, registro_id, fecha
         ) VALUES (?, ?, ?, ?, NOW())`,
         [usuario.id, 'UPDATE', 'planes', id]
       );
@@ -302,7 +302,7 @@ export const deletePlan = async (req: Request, res: Response): Promise<void> => 
     if (usuario && usuario.id) {
       await connection.query(
         `INSERT INTO auditoria_logs (
-          usuario_id, accion, tabla_afectada, registro_id, fecha
+          usuario_id, accion, tabla, registro_id, fecha
         ) VALUES (?, ?, ?, ?, NOW())`,
         [usuario.id, 'DELETE', 'planes', id]
       );
@@ -434,7 +434,7 @@ export const createLicencia = async (req: Request, res: Response): Promise<void>
     if (usuario && usuario.id) {
       await connection.query(
         `INSERT INTO auditoria_logs (
-          usuario_id, accion, tabla_afectada, registro_id, fecha
+          usuario_id, accion, tabla, registro_id, fecha
         ) VALUES (?, ?, ?, ?, NOW())`,
         [usuario.id, 'CREATE', 'licencias', licenciaId]
       );
@@ -486,7 +486,7 @@ export const updateLicencia = async (req: Request, res: Response): Promise<void>
     if (usuario && usuario.id) {
       await connection.query(
         `INSERT INTO auditoria_logs (
-          usuario_id, accion, tabla_afectada, registro_id, fecha
+          usuario_id, accion, tabla, registro_id, fecha
         ) VALUES (?, ?, ?, ?, NOW())`,
         [usuario.id, 'UPDATE', 'licencias', id]
       );
@@ -528,7 +528,7 @@ export const deleteLicencia = async (req: Request, res: Response): Promise<void>
     if (usuario && usuario.id) {
       await connection.query(
         `INSERT INTO auditoria_logs (
-          usuario_id, accion, tabla_afectada, registro_id, fecha
+          usuario_id, accion, tabla, registro_id, fecha
         ) VALUES (?, ?, ?, ?, NOW())`,
         [usuario.id, 'DELETE', 'licencias', id]
       );
