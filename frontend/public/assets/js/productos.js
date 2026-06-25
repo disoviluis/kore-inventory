@@ -1108,9 +1108,8 @@ function exportarProductos() {
 
     try {
         // Preparar datos para exportar
-        // NOTA: Se incluye ID y SKU para poder actualizar productos al re-importar
+        // NOTA: Se usa SKU para poder actualizar productos al re-importar. ID no es necesario en el archivo.
         const datosExportar = productos.map(p => ({
-            'ID': p.id,
             'SKU': p.sku,
             'Nombre': p.nombre,
             'Tipo': p.tipo,
@@ -1151,7 +1150,6 @@ function exportarProductos() {
 
         // Ajustar ancho de columnas
         const colWidths = [
-            { wch: 6 },   // ID
             { wch: 10 },  // Tipo
             { wch: 18 },  // Maneja Inventario
             { wch: 30 },  // Nombre
@@ -1384,6 +1382,9 @@ async function validarProductosImportados(datos) {
         }
     });
 
+    // Contador de SKUs dentro del archivo para detectar duplicados internos
+    const skuImportCount = {};
+
     // Validar cada producto
     for (let i = 0; i < datos.length; i++) {
         const fila = datos[i];
@@ -1432,7 +1433,16 @@ async function validarProductosImportados(datos) {
 
         // Verificar si el producto ya existe (por SKU)
         const skuBuscar = fila['SKU']?.toString().trim();
-        const productoExistente = skuBuscar ? productosExistentesMap[skuBuscar.toLowerCase()] : null;
+        const skuLower = skuBuscar ? skuBuscar.toLowerCase() : null;
+
+        if (skuLower) {
+            skuImportCount[skuLower] = (skuImportCount[skuLower] || 0) + 1;
+            if (skuImportCount[skuLower] > 1) {
+                erroresFila.push('SKU duplicado en el archivo');
+            }
+        }
+
+        const productoExistente = skuLower ? productosExistentesMap[skuLower] : null;
         const esActualizacion = productoExistente !== null;
 
         // Preparar objeto producto
@@ -1578,13 +1588,17 @@ async function confirmarImportacion() {
                 const productoData = {...item.producto};
                 delete productoData._esActualizacion; // Remover flag interno
 
+                if (!esActualizacion && productoData.id === null) {
+                    delete productoData.id; // No enviar id nulo en creaciones
+                }
+
                 // Determinar método y URL según si es creación o actualización
-                const metodo = esActualizacion ? 'PUT' : 'POST';
-                const url = esActualizacion 
+                let metodo = esActualizacion ? 'PUT' : 'POST';
+                let url = esActualizacion 
                     ? `${API_URL}/productos/${productoData.id}` 
                     : `${API_URL}/productos`;
 
-                const response = await fetch(url, {
+                let response = await fetch(url, {
                     method: metodo,
                     headers: {
                         'Content-Type': 'application/json',
@@ -1593,15 +1607,39 @@ async function confirmarImportacion() {
                     body: JSON.stringify(productoData)
                 });
 
+                if (!response.ok && !esActualizacion && productoData.sku) {
+                    // Si la creación falla por SKU ya existente, intentar actualizar el producto existente.
+                    const existing = productos.find(p => p.sku?.toString().trim().toLowerCase() === productoData.sku.toString().trim().toLowerCase());
+                    if (existing) {
+                        metodo = 'PUT';
+                        url = `${API_URL}/productos/${existing.id}`;
+                        response = await fetch(url, {
+                            method: metodo,
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(productoData)
+                        });
+                    }
+                }
+
                 if (response.ok) {
                     exitosos++;
                 } else {
-                    const error = await response.json();
+                    let errorMessage = 'Error desconocido';
+                    try {
+                        const errorBody = await response.json();
+                        errorMessage = errorBody?.message || errorBody?.error || JSON.stringify(errorBody);
+                    } catch (parseError) {
+                        errorMessage = `${response.status} ${response.statusText}`;
+                    }
+
                     fallidos++;
                     erroresImportacion.push({
                         fila: item.fila,
                         nombre: item.producto.nombre,
-                        error: error.message || 'Error desconocido'
+                        error: errorMessage
                     });
                 }
             } catch (error) {

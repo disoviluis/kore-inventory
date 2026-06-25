@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empresa Pública</title>
+    <meta name="description" content="Página pública de empresa">
+    <link rel="icon" type="image/png" href="assets/img/favicon.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .public-hero {
+            min-height: 320px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            color: white;
+        }
+        .public-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+        }
+        .public-hero .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+        .producto-card img {
+            object-fit: cover;
+            height: 180px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="assets/img/logo-kore-inventory.png" alt="KORE Inventory" style="height:38px; width:auto;">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPublic">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarPublic">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="login.html">Ingresar</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="py-4">
+        <section id="paginaHero" class="public-hero d-flex align-items-center">
+            <div class="container hero-content">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <span id="empresaBadge" class="badge bg-primary mb-3 d-inline-flex align-items-center"></span>
+                        <h1 id="paginaTitulo" class="display-5 fw-bold">Cargando...</h1>
+                        <p id="paginaSubtitulo" class="lead text-white-75">Espera mientras cargamos la información de la empresa.</p>
+                        <p id="paginaDescripcion" class="text-white-75"></p>
+                        <div class="d-flex gap-3 flex-wrap mt-3" id="contactosInfo"></div>
+                    </div>
+                    <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                        <img id="empresaLogo" src="assets/img/logo-kore-inventory.png" alt="Logo empresa" class="img-fluid rounded shadow-sm border" style="max-height:120px; background:white;">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="container mt-5">
+            <div id="contenidoPublico">
+                <div class="row">
+                    <div class="col-12">
+                        <div id="alertContainer"></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-body">
+                                <h3 class="card-title">Sobre la empresa</h3>
+                                <p id="empresaDescripcion" class="card-text text-secondary"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title">Contacto</h5>
+                                <ul class="list-unstyled mb-0" id="empresaDetalles"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" id="productosSection">
+                    <div class="col-12">
+                        <h3 class="mb-4">Productos destacados</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="py-4 bg-light">
+        <div class="container text-center text-muted">
+            Página pública generada por KORE Inventory.
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/empresa-publica.js"></script>
+</body>
+</html>

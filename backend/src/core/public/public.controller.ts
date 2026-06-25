@@ -84,3 +84,88 @@ export const getInfoPublica = async (req: Request, res: Response): Promise<void>
     });
   }
 };
+
+export const getEmpresaPublica = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { slug } = req.params;
+
+    const [empresas] = await pool.query<RowDataPacket[]>(
+      `SELECT 
+        e.id,
+        e.nombre,
+        e.logo_url,
+        e.sitio_web,
+        e.descripcion,
+        e.slogan,
+        e.email,
+        e.telefono,
+        e.direccion,
+        e.ciudad,
+        e.pais,
+        ec.valor as pagina_valor
+      FROM empresas e
+      INNER JOIN empresa_configuracion ec ON ec.empresa_id = e.id AND ec.clave = 'pagina_publica'
+      WHERE e.estado = 'activa'
+        AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(ec.valor, '$.pagina_slug'))) = ?
+      LIMIT 1`,
+      [slug]
+    );
+
+    if (empresas.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Empresa pública no encontrada'
+      });
+    }
+
+    const empresa = empresas[0];
+    const paginaConfig = empresa.pagina_valor ? JSON.parse(empresa.pagina_valor) : null;
+
+    if (!paginaConfig || !paginaConfig.pagina_publica_activa) {
+      return res.status(404).json({
+        success: false,
+        message: 'Página pública no habilitada para esta empresa'
+      });
+    }
+
+    const productos: any[] = [];
+    if (paginaConfig.pagina_mostrar_productos) {
+      const [rows] = await pool.query<RowDataPacket[]>(
+        `SELECT id, nombre, descripcion, precio_venta, imagen_url, estado
+         FROM productos
+         WHERE empresa_id = ? AND estado = 'activo'
+         ORDER BY nombre ASC
+         LIMIT 20`,
+        [empresa.id]
+      );
+      productos.push(...rows);
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        empresa: {
+          id: empresa.id,
+          nombre: empresa.nombre,
+          logo_url: empresa.logo_url,
+          sitio_web: empresa.sitio_web,
+          descripcion: empresa.descripcion,
+          slogan: empresa.slogan,
+          email: empresa.email,
+          telefono: empresa.telefono,
+          direccion: empresa.direccion,
+          ciudad: empresa.ciudad,
+          pais: empresa.pais
+        },
+        pagina: paginaConfig,
+        productos
+      }
+    });
+  } catch (error) {
+    logger.error('Error al obtener página pública:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al obtener datos de la empresa pública'
+    });
+  }
+};

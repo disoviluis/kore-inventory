@@ -381,6 +381,12 @@
                                         </button>
                                     </li>
                                     <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="pagina-tab" data-bs-toggle="tab" data-bs-target="#pagina-panel" type="button" role="tab">
+                                            <i class="bi bi-globe me-2"></i>Configurar Página
+                                            <span class="badge bg-warning text-dark ms-2">Pública</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
                                         <button class="nav-link" id="plantilla-tab" data-bs-toggle="tab" data-bs-target="#plantilla-panel" type="button" role="tab">
                                             <i class="bi bi-file-earmark-text me-2"></i>Plantilla de Factura
                                             <span class="badge bg-info ms-2">Nuevo</span>
@@ -996,6 +1002,130 @@
                                                 </div>
                                             </div>
                                         </form>
+
+                                    </div>
+
+                                    <!-- Tab: Configurador de Página -->
+                                    <div class="tab-pane fade" id="pagina-panel" role="tabpanel">
+
+                                        <div class="mb-4">
+                                            <h5 class="mb-1">Configurador de Página Pública</h5>
+                                            <p class="text-muted small mb-0">Define cómo se presenta la empresa al público y controla el contenido de la página externa.</p>
+                                        </div>
+
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" id="paginaPublicaActiva">
+                                                    <label class="form-check-label" for="paginaPublicaActiva">
+                                                        Activar página pública
+                                                    </label>
+                                                </div>
+                                                <small class="text-muted">Activa esta opción para que la empresa tenga una página pública visible sin iniciar sesión.</small>
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label class="form-label">Slug de URL pública</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">empresa-publica.html?slug=</span>
+                                                    <input type="text" class="form-control" id="paginaSlug" placeholder="empresa-ejemplo" maxlength="100">
+                                                </div>
+                                                <small class="text-muted">Identificador único que se usará para publicar la página.</small>
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label class="form-label">URL de banner / imagen principal</label>
+                                                <input type="url" class="form-control" id="paginaBannerUrl" placeholder="https://.../banner.jpg">
+                                                <small class="text-muted">Puedes usar una imagen externa o el repositorio de imágenes S3 de tu empresa.</small>
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label class="form-label">Subir banner a S3</label>
+                                                <div class="input-group">
+                                                    <input type="file" class="form-control" id="paginaBannerFile" accept="image/*">
+                                                    <button class="btn btn-outline-secondary" type="button" id="paginaSubirBannerBtn" disabled>
+                                                        <i class="bi bi-cloud-upload"></i> Subir
+                                                    </button>
+                                                </div>
+                                                <small class="text-muted">Selecciona un archivo local y súbelo al bucket S3 de la empresa.</small>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label class="form-label">Imágenes disponibles en S3</label>
+                                                <div id="paginaBannerS3List" class="d-flex flex-wrap gap-2"></div>
+                                                <small class="text-muted">Haz clic en una imagen para usar su URL en el banner público.</small>
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label class="form-label">Título principal</label>
+                                                <input type="text" class="form-control" id="paginaTitulo" placeholder="Soluciones de inventario para tu empresa">
+                                            </div>
+
+                                            <div class="col-md-6">
+                                                <label class="form-label">Subtítulo</label>
+                                                <input type="text" class="form-control" id="paginaSubtitulo" placeholder="Controla stock, ventas y facturación desde una sola plataforma">
+                                            </div>
+
+                                            <div class="col-12">
+                                                <label class="form-label">Descripción breve</label>
+                                                <textarea class="form-control" id="paginaDescripcion" rows="3" placeholder="Describe brevemente los beneficios y la propuesta de valor de tu empresa."></textarea>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" id="paginaMostrarProductos" checked>
+                                                    <label class="form-check-label" for="paginaMostrarProductos">Mostrar productos</label>
+                                                </div>
+                                                <small class="text-muted">Permite ver los productos activos de la empresa en la página pública.</small>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" id="paginaMostrarPrecios" checked>
+                                                    <label class="form-check-label" for="paginaMostrarPrecios">Mostrar precios</label>
+                                                </div>
+                                                <small class="text-muted">Muestra precios en la vista pública cuando está habilitado.</small>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label">Plantilla pública</label>
+                                                <select class="form-select" id="paginaPlantilla">
+                                                    <option value="clasica" selected>Clásica</option>
+                                                    <option value="moderna">Moderna</option>
+                                                    <option value="minimalista">Minimalista</option>
+                                                </select>
+                                                <small class="text-muted">Próximamente se usará para renderizar la página pública según plantilla.</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="card bg-light mt-4">
+                                            <div class="card-body">
+                                                <h6 class="card-title">Vista previa rápida</h6>
+                                                <p class="small text-muted mb-2">URL pública esperada:</p>
+                                                <a id="paginaPreviewUrl" href="#" target="_blank" class="d-block text-primary mb-3">/empresa-publica/...</a>
+                                                <div id="paginaPreviewHero" class="border rounded p-3 bg-white">
+                                                    <h5>Título de presentación</h5>
+                                                    <p class="text-muted">Subtítulo de la página pública</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                            <div>
+                                                <p class="text-muted small mb-0">
+                                                    <i class="bi bi-info-circle me-1"></i>
+                                                    Los cambios se guardan por empresa y estarán listos para la página pública externa.
+                                                </p>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-outline-primary" type="button" onclick="actualizarPreviewPagina()">
+                                                    <i class="bi bi-eye me-2"></i>Actualizar Vista
+                                                </button>
+                                                <button class="btn btn-primary" type="button" onclick="guardarConfiguracionPagina()">
+                                                    <i class="bi bi-save me-2"></i>Guardar Configuración
+                                                </button>
+                                            </div>
+                                        </div>
 
                                     </div>
 

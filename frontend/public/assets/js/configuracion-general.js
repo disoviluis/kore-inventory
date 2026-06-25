@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof cargarImpuestos === 'function') {
         cargarImpuestos();
     }
+    initPaginaTab();
 });
 
 // ============================================================================
@@ -552,6 +553,259 @@ function initImpuestosTab() {
             cargarImpuestos();
         }
     });
+}
+
+function initPaginaTab() {
+    const paginaTab = document.getElementById('pagina-tab');
+    if (!paginaTab) return;
+
+    paginaTab.addEventListener('shown.bs.tab', () => {
+        cargarConfiguracionPagina();
+        cargarImagenesPaginaS3();
+    });
+
+    document.getElementById('paginaBannerFile')?.addEventListener('change', (event) => {
+        const files = event.target.files;
+        const uploadButton = document.getElementById('paginaSubirBannerBtn');
+        if (uploadButton) {
+            uploadButton.disabled = !files || files.length === 0;
+        }
+    });
+
+    document.getElementById('paginaSubirBannerBtn')?.addEventListener('click', () => {
+        subirBannerS3();
+    });
+}
+
+function actualizarPreviewPagina() {
+    const slug = document.getElementById('paginaSlug').value.trim() || 'empresa-ejemplo';
+    const titulo = document.getElementById('paginaTitulo').value.trim() || 'Título de presentación';
+    const subtitulo = document.getElementById('paginaSubtitulo').value.trim() || 'Subtítulo de la empresa en la página pública';
+    const activa = document.getElementById('paginaPublicaActiva').checked;
+    const previewUrl = document.getElementById('paginaPreviewUrl');
+    const previewHero = document.getElementById('paginaPreviewHero');
+
+    if (previewUrl) {
+        previewUrl.textContent = `empresa-publica.html?slug=${encodeURIComponent(slug)}`;
+        previewUrl.href = `empresa-publica.html?slug=${encodeURIComponent(slug)}`;
+        previewUrl.classList.toggle('text-decoration-line-through', !activa);
+    }
+
+    if (previewHero) {
+        previewHero.innerHTML = `
+            <h5 class="mb-2">${titulo}</h5>
+            <p class="text-muted mb-1">${subtitulo}</p>
+            <span class="badge ${activa ? 'bg-success' : 'bg-secondary'}">
+                ${activa ? 'Pública activada' : 'Pública desactivada'}
+            </span>
+        `;
+    }
+}
+
+async function cargarConfiguracionPagina() {
+    const empresaActivaId = localStorage.getItem('empresaActiva');
+    if (!empresaActivaId) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/empresas/${empresaActivaId}/pagina-publica`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            console.warn('No se encontró configuración pública para la empresa');
+            llenarPaginaDefaults();
+            return;
+        }
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Error al cargar configuración de página');
+        }
+
+        const config = data.data || {};
+
+        document.getElementById('paginaPublicaActiva').checked = !!config.pagina_publica_activa;
+        document.getElementById('paginaSlug').value = config.pagina_slug || '';
+        document.getElementById('paginaBannerUrl').value = config.pagina_banner_url || '';
+        document.getElementById('paginaTitulo').value = config.pagina_titulo || '';
+        document.getElementById('paginaSubtitulo').value = config.pagina_subtitulo || '';
+        document.getElementById('paginaDescripcion').value = config.pagina_descripcion || '';
+        document.getElementById('paginaMostrarProductos').checked = !!config.pagina_mostrar_productos;
+        document.getElementById('paginaMostrarPrecios').checked = !!config.pagina_mostrar_precios;
+        document.getElementById('paginaPlantilla').value = config.pagina_plantilla || 'clasica';
+
+        actualizarPreviewPagina();
+        cargarImagenesPaginaS3();
+    } catch (error) {
+        console.error('Error al cargar configuración de página:', error);
+        llenarPaginaDefaults();
+    }
+}
+
+function llenarPaginaDefaults() {
+    document.getElementById('paginaPublicaActiva').checked = false;
+    document.getElementById('paginaSlug').value = '';
+    document.getElementById('paginaBannerUrl').value = '';
+    document.getElementById('paginaTitulo').value = '';
+    document.getElementById('paginaSubtitulo').value = '';
+    document.getElementById('paginaDescripcion').value = '';
+    document.getElementById('paginaMostrarProductos').checked = true;
+    document.getElementById('paginaMostrarPrecios').checked = true;
+    document.getElementById('paginaPlantilla').value = 'clasica';
+    actualizarPreviewPagina();
+}
+
+async function guardarConfiguracionPagina() {
+    const empresaId = localStorage.getItem('empresaActiva');
+    if (!empresaId) {
+        showNotification('No hay empresa seleccionada', 'warning');
+        return;
+    }
+
+    const config = {
+        pagina_publica_activa: document.getElementById('paginaPublicaActiva').checked ? 1 : 0,
+        pagina_slug: document.getElementById('paginaSlug').value.trim(),
+        pagina_banner_url: document.getElementById('paginaBannerUrl').value.trim() || null,
+        pagina_titulo: document.getElementById('paginaTitulo').value.trim() || null,
+        pagina_subtitulo: document.getElementById('paginaSubtitulo').value.trim() || null,
+        pagina_descripcion: document.getElementById('paginaDescripcion').value.trim() || null,
+        pagina_mostrar_productos: document.getElementById('paginaMostrarProductos').checked ? 1 : 0,
+        pagina_mostrar_precios: document.getElementById('paginaMostrarPrecios').checked ? 1 : 0,
+        pagina_plantilla: document.getElementById('paginaPlantilla').value || 'clasica'
+    };
+
+    if (!config.pagina_slug) {
+        showNotification('El slug público es obligatorio para activar la página', 'warning');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/empresas/${empresaId}/pagina-publica`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(config)
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            showNotification('Configuración de página guardada exitosamente', 'success');
+            actualizarPreviewPagina();
+        } else {
+            throw new Error(data.message || 'Error al guardar configuración de página');
+        }
+    } catch (error) {
+        console.error('Error al guardar configuración de página:', error);
+        showNotification(error.message || 'Error al guardar la configuración', 'danger');
+    }
+}
+
+async function cargarImagenesPaginaS3() {
+    const empresaId = localStorage.getItem('empresaActiva');
+    if (!empresaId) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/empresas/${empresaId}/pagina-publica/imagenes-s3`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            console.warn('No se pudieron cargar las imágenes S3');
+            return;
+        }
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Error al obtener imágenes S3');
+        }
+
+        const images = data.data || [];
+        const container = document.getElementById('paginaBannerS3List');
+        if (!container) return;
+
+        container.innerHTML = images.map(img => `
+            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center" data-url="${img.url}">
+                <img src="${img.url}" alt="banner" style="height: 36px; width: 50px; object-fit: cover; border-radius: 4px; margin-right: 8px;">
+                Usar
+            </button>
+        `).join('');
+
+        container.querySelectorAll('button[data-url]').forEach(button => {
+            button.addEventListener('click', () => {
+                const url = button.getAttribute('data-url');
+                if (url) {
+                    document.getElementById('paginaBannerUrl').value = url;
+                    actualizarPreviewPagina();
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Error al cargar imágenes S3:', error);
+    }
+}
+
+async function subirBannerS3() {
+    const empresaId = localStorage.getItem('empresaActiva');
+    if (!empresaId) {
+        showNotification('No hay empresa seleccionada', 'warning');
+        return;
+    }
+
+    const fileInput = document.getElementById('paginaBannerFile');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showNotification('Selecciona una imagen para subir.', 'warning');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    try {
+        const token = localStorage.getItem('token');
+        const presignResponse = await fetch(`${API_URL}/empresas/${empresaId}/pagina-publica/presign-upload`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ filename: file.name, contentType: file.type })
+        });
+
+        const presignData = await presignResponse.json();
+        if (!presignResponse.ok || !presignData.success) {
+            throw new Error(presignData.message || 'No se pudo generar URL de subida');
+        }
+
+        const { uploadUrl, publicUrl } = presignData.data;
+        const uploadResult = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': file.type
+            },
+            body: file
+        });
+
+        if (!uploadResult.ok) {
+            throw new Error('Error al subir la imagen a S3');
+        }
+
+        document.getElementById('paginaBannerUrl').value = publicUrl;
+        actualizarPreviewPagina();
+        showNotification('Imagen subida a S3 correctamente', 'success');
+        cargarImagenesPaginaS3();
+    } catch (error) {
+        console.error('Error al subir imagen S3:', error);
+        showNotification(error.message || 'Error al subir imagen a S3', 'danger');
+    }
 }
 
 // ============================================================================

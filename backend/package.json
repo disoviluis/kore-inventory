@@ -30,7 +30,9 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "mysql2": "^3.6.5",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "@aws-sdk/client-s3": "^3.385.0",
+    "@aws-sdk/s3-request-presigner": "^3.385.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

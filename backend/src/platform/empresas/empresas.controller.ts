@@ -10,6 +10,7 @@ import { query } from '../../shared/database';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
+import { listS3Objects, createS3PresignedUploadUrl, getS3BucketName } from '../../shared/s3';
 
 /**
  * Obtener todas las empresas
@@ -220,6 +221,71 @@ export const getEmpresasByUsuario = async (req: Request, res: Response): Promise
   }
 };
 
+export const getPaginaPublicaImagenesS3 = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const prefix = `empresa/${id}/pagina-publica/`;
+    const contents = await listS3Objects(prefix);
+
+    const images = contents
+      .filter(item => item.Key)
+      .map(item => ({
+        key: item.Key,
+        url: `https://${getS3BucketName()}.s3.amazonaws.com/${item.Key}`
+      }));
+
+    return successResponse(
+      res,
+      'Imágenes S3 obtenidas exitosamente',
+      images,
+      CONSTANTS.HTTP_STATUS.OK
+    );
+  } catch (error) {
+    logger.error('Error al obtener imágenes S3:', error);
+    return errorResponse(
+      res,
+      'Error al obtener imágenes S3',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+export const getPaginaPublicaPresignedUpload = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { filename, contentType } = req.body;
+
+    if (!filename || !contentType) {
+      return errorResponse(
+        res,
+        'filename y contentType son obligatorios',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const key = `empresa/${id}/pagina-publica/${Date.now()}-${filename}`;
+    const uploadUrl = await createS3PresignedUploadUrl(key, contentType);
+    const publicUrl = `https://${getS3BucketName()}.s3.amazonaws.com/${key}`;
+
+    return successResponse(
+      res,
+      'URL presignada generada correctamente',
+      { uploadUrl, publicUrl },
+      CONSTANTS.HTTP_STATUS.OK
+    );
+  } catch (error) {
+    logger.error('Error al generar URL presignada para S3:', error);
+    return errorResponse(
+      res,
+      'Error al generar URL presignada para S3',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
 /**
  * Actualizar empresa
  * PUT /api/empresas/:id
@@ -282,5 +348,86 @@ export const updateEmpresa = async (req: Request, res: Response): Promise<Respon
   } catch (error) {
     logger.error('Error al actualizar empresa:', error);
     return errorResponse(res, 'Error al actualizar empresa', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+export const getPaginaPublica = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+
+    const records = await query(
+      `SELECT valor FROM empresa_configuracion WHERE empresa_id = ? AND clave = 'pagina_publica' LIMIT 1`,
+      [id]
+    );
+
+    if (records.length === 0) {
+      return errorResponse(
+        res,
+        'Configuración de página pública no encontrada',
+        null,
+        CONSTANTS.HTTP_STATUS.NOT_FOUND
+      );
+    }
+
+    const config = records[0].valor ? JSON.parse(records[0].valor) : {};
+
+    return successResponse(
+      res,
+      'Configuración de página pública obtenida exitosamente',
+      config,
+      CONSTANTS.HTTP_STATUS.OK
+    );
+  } catch (error) {
+    logger.error('Error al obtener configuración de página pública:', error);
+    return errorResponse(
+      res,
+      'Error al obtener la configuración de página pública',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+export const updatePaginaPublica = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const config = req.body || {};
+    const valor = JSON.stringify(config);
+
+    const existing = await query(
+      `SELECT id FROM empresa_configuracion WHERE empresa_id = ? AND clave = 'pagina_publica' LIMIT 1`,
+      [id]
+    );
+
+    if (existing.length === 0) {
+      await query(
+        `INSERT INTO empresa_configuracion (empresa_id, clave, valor, tipo, categoria, descripcion)
+         VALUES (?, 'pagina_publica', ?, 'json', 'publica', 'Configuración de página pública')`,
+        [id, valor]
+      );
+    } else {
+      await query(
+        `UPDATE empresa_configuracion SET valor = ?, tipo = 'json', categoria = 'publica', descripcion = 'Configuración de página pública', updated_at = CURRENT_TIMESTAMP
+         WHERE empresa_id = ? AND clave = 'pagina_publica'`,
+        [valor, id]
+      );
+    }
+
+    logger.info(`Página pública actualizada para empresa ${id}`);
+
+    return successResponse(
+      res,
+      'Configuración de página pública actualizada exitosamente',
+      null,
+      CONSTANTS.HTTP_STATUS.OK
+    );
+  } catch (error) {
+    logger.error('Error al actualizar página pública:', error);
+    return errorResponse(
+      res,
+      'Error al guardar la configuración de página pública',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
   }
 };
