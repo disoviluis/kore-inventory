@@ -270,7 +270,7 @@ export const createImpuesto = async (req: Request, res: Response): Promise<Respo
     // Auditoría
     await connection.query(
       `INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, fecha
+        usuario_id, accion, tabla, registro_id, created_at
       ) VALUES (?, ?, ?, ?, NOW())`,
       [usuario.id, 'CREATE', 'impuestos', result.insertId]
     );
@@ -446,7 +446,7 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
     // Auditoría
     await connection.query(
       `INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, fecha
+        usuario_id, accion, tabla, registro_id, created_at
       ) VALUES (?, ?, ?, ?, NOW())`,
       [usuario.id, 'UPDATE', 'impuestos', id]
     );
@@ -500,7 +500,7 @@ export const deleteImpuesto = async (req: Request, res: Response): Promise<Respo
     // Auditoría
     await connection.query(
       `INSERT INTO auditoria_logs (
-        usuario_id, accion, tabla, registro_id, fecha
+        usuario_id, accion, tabla, registro_id, created_at
       ) VALUES (?, ?, ?, ?, NOW())`,
       [usuario.id, 'DELETE', 'impuestos', id]
     );
