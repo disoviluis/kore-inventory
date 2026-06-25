@@ -529,7 +529,7 @@ function initEventListeners() {
     
     // Cuando se activa la pestaña Empresa, cargar sus datos
     document.getElementById('empresa-tab')?.addEventListener('shown.bs.tab', () => {
-        cargarDatosEmpresa();
+        cargarDatosEmpresaActiva();
     });
 
     // Submit del formulario de empresa
@@ -540,7 +540,7 @@ function initEventListeners() {
 
     // Botón cancelar
     document.getElementById('btnCancelarEmpresa')?.addEventListener('click', () => {
-        cargarDatosEmpresa(); // Recargar datos originales
+        cargarDatosEmpresaActiva(); // Recargar datos originales
     });
 }
 
@@ -812,7 +812,7 @@ async function subirBannerS3() {
 // EMPRESA TAB - Funciones
 // ============================================================================
 
-async function cargarDatosEmpresa() {
+async function cargarDatosEmpresaActiva() {
     const empresaActivaId = localStorage.getItem('empresaActiva');
     if (!empresaActivaId) {
         console.error('No hay empresa activa seleccionada');
