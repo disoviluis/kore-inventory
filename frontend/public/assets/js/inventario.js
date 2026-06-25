@@ -459,7 +459,7 @@ function renderizarProductosStock(items) {
         <tr>
             <td>${producto.nombre}</td>
             <td><code>${producto.sku}</code></td>
-            <td><span class="badge bg-primary">${producto.stock_actual || 0}</span></td>
+            <td><span class="badge bg-primary">${(producto.stock_total ?? producto.stock_actual) || 0}</span></td>
             <td>${producto.stock_minimo || 0}</td>
             <td>${producto.ubicacion_almacen || '-'}</td>
             <td>

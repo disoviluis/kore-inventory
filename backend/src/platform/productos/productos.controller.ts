@@ -66,6 +66,13 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         p.tipo_impuesto,
         p.iva_incluido_en_precio,
         ${stockField},
+        COALESCE(
+          (SELECT SUM(pb2.stock_actual)
+           FROM productos_bodegas pb2
+           INNER JOIN bodegas b2 ON pb2.bodega_id = b2.id AND b2.empresa_id = ? AND b2.estado = 'activa'
+           WHERE pb2.producto_id = p.id),
+          p.stock_actual
+        ) as stock_total,
         p.stock_minimo,
         p.stock_maximo,
         p.unidad_medida,
@@ -96,7 +103,7 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
       ${joinBodega}
       WHERE p.empresa_id = ?
       ORDER BY p.nombre ASC`,
-      [empresaId]
+      [empresaId, empresaId]
     );
 
     logger.info(`Productos obtenidos para empresa ${empresaId}: ${productos.length}`);
