@@ -470,10 +470,32 @@ function initEventListeners() {
 
     // Búsqueda de productos
     const buscarProductoInput = document.getElementById('buscarProducto');
-    buscarProductoInput.addEventListener('input', debounce(buscarProductos, 300));
-    buscarProductoInput.addEventListener('keydown', (e) => {
+    const debouncedBuscarProductos = debounce(buscarProductos, 300);
+    buscarProductoInput.addEventListener('input', () => {
+        productosBusqueda = [];
+        const resultadosContainer = document.getElementById('resultadosProducto');
+        if (resultadosContainer) {
+            resultadosContainer.style.display = 'none';
+        }
+        debouncedBuscarProductos();
+    });
+    buscarProductoInput.addEventListener('keydown', async (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
+            const valorActual = buscarProductoInput.value.trim().toLowerCase();
+            if (!valorActual) return;
+
+            let productoExacto = productosBusqueda.find(p => productoCoincideConBusqueda(p, valorActual));
+            if (!productoExacto && productosBusqueda.length === 0) {
+                await buscarProductos();
+                productoExacto = productosBusqueda.find(p => productoCoincideConBusqueda(p, valorActual));
+            }
+
+            if (productoExacto) {
+                agregarProducto(productoExacto);
+                return;
+            }
+
             if (productosBusqueda.length === 1) {
                 agregarProducto(productosBusqueda[0]);
             } else if (productosBusqueda.length > 1) {
@@ -712,6 +734,8 @@ async function buscarProductos() {
         return;
     }
 
+    productosBusqueda = [];
+
     try {
         const token = localStorage.getItem('token');
         const response = await fetch(
@@ -755,6 +779,14 @@ function intentarAgregarProductoEscaneo(busqueda, productos) {
     }
 
     return false;
+}
+
+function productoCoincideConBusqueda(producto, valor) {
+    const busqueda = valor.toString().trim().toLowerCase();
+    return (
+        (producto.sku && producto.sku.toString().toLowerCase() === busqueda) ||
+        (producto.codigo_barras && producto.codigo_barras.toString().toLowerCase() === busqueda)
+    );
 }
 
 function mostrarOpcionesProductos(productos) {
