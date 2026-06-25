@@ -2745,12 +2745,17 @@ async function procesarArchivoImpuestosExcel(event) {
 async function importarImpuestos(impuestos) {
   const created = [];
   const errors = [];
-  const empresaId = localStorage.getItem('empresaActiva');
+  const empresaIdRaw = localStorage.getItem('empresaActiva');
+  const empresaId = parseInt(empresaIdRaw, 10);
+
+  if (!empresaId || Number.isNaN(empresaId)) {
+    throw new Error('No hay empresa activa seleccionada para importar impuestos.');
+  }
 
   for (const impuesto of impuestos) {
     try {
       const payload = {
-        empresa_id: parseInt(empresaId, 10),
+        empresa_id: empresaId,
         ...impuesto
       };
 
@@ -2873,22 +2878,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function guardarImpuesto() {
   const id = document.getElementById('impuestoId').value;
-  const empresaId = localStorage.getItem('empresaActiva') || currentEmpresa?.id;
-  
+  const empresaIdRaw = localStorage.getItem('empresaActiva') || (typeof currentEmpresa !== 'undefined' ? currentEmpresa?.id : null);
+  const empresaId = parseInt(empresaIdRaw, 10);
+
+  if (!empresaId || Number.isNaN(empresaId)) {
+    mostrarError('No hay empresa activa seleccionada. Por favor seleccione una empresa antes de guardar el impuesto.');
+    return;
+  }
+
   const impuesto = {
-    empresa_id: parseInt(empresaId),
+    empresa_id: empresaId,
     codigo: document.getElementById('impuestoCodigo').value.toUpperCase(),
     nombre: document.getElementById('impuestoNombre').value,
     descripcion: document.getElementById('impuestoDescripcion').value,
     tipo: document.getElementById('impuestoTipo').value,
     tasa: parseFloat(document.getElementById('impuestoTasa').value),
-    orden: parseInt(document.getElementById('impuestoOrden').value) || 0,
+    orden: parseInt(document.getElementById('impuestoOrden').value, 10) || 0,
     aplica_sobre: document.getElementById('impuestoAplicaSobre').value,
     afecta_total: document.getElementById('impuestoAfectaTotal').value,
     aplica_automaticamente: document.getElementById('impuestoAutomatico').checked ? 1 : 0,
     requiere_autorizacion: document.getElementById('impuestoRequiereAuth').checked ? 1 : 0,
     cuenta_contable: document.getElementById('impuestoCuentaContable').value || null,
-    activo: parseInt(document.getElementById('impuestoActivo').value)
+    activo: parseInt(document.getElementById('impuestoActivo').value, 10) === 1 ? 1 : 0
   };
   
   try {

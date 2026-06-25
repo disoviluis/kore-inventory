@@ -135,17 +135,101 @@ export const createImpuesto = async (req: Request, res: Response): Promise<Respo
       aplica_automaticamente,
       requiere_autorizacion,
       cuenta_contable,
-      orden
+      orden,
+      activo
     } = req.body;
 
     const usuario = (req as any).user || (req as any).usuario;
+    if (!usuario || !usuario.id) {
+      return errorResponse(
+        res,
+        'Usuario no autenticado',
+        null,
+        CONSTANTS.HTTP_STATUS.UNAUTHORIZED
+      );
+    }
+
+    const empresaIdValue = Number(empresa_id);
+    if (!Number.isFinite(empresaIdValue) || empresaIdValue <= 0) {
+      return errorResponse(
+        res,
+        'empresa_id es requerido y debe ser un número válido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const codigoValue = String(codigo || '').trim().toUpperCase();
+    if (!codigoValue) {
+      return errorResponse(
+        res,
+        'El código del impuesto es requerido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const nombreValue = String(nombre || '').trim();
+    if (!nombreValue) {
+      return errorResponse(
+        res,
+        'El nombre del impuesto es requerido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const tasaValue = Number(tasa);
+    if (Number.isNaN(tasaValue) || tasaValue < 0) {
+      return errorResponse(
+        res,
+        'La tasa del impuesto es inválida',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const tipoValue = String(tipo || 'porcentaje').trim();
+    if (!['porcentaje', 'valor_fijo'].includes(tipoValue)) {
+      return errorResponse(
+        res,
+        'El tipo de impuesto es inválido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const aplicaSobreValue = String(aplica_sobre || 'subtotal').trim();
+    if (!['subtotal', 'iva', 'total'].includes(aplicaSobreValue)) {
+      return errorResponse(
+        res,
+        'El campo aplica_sobre es inválido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const afectaTotalValue = String(afecta_total || 'resta').trim();
+    if (!['suma', 'resta'].includes(afectaTotalValue)) {
+      return errorResponse(
+        res,
+        'El campo afecta_total es inválido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const aplicaAutomaticamenteValue = Number(aplica_automaticamente) === 1 ? 1 : 0;
+    const requiereAutorizacionValue = Number(requiere_autorizacion) === 1 ? 1 : 0;
+    const ordenValue = Number.isFinite(Number(orden)) ? Number(orden) : 0;
+    const activoValue = Number(activo) === 1 ? 1 : 0;
 
     await connection.beginTransaction();
 
     // Validar que el código no exista para esta empresa
     const [existente] = await connection.query<RowDataPacket[]>(
       'SELECT id FROM impuestos WHERE empresa_id = ? AND codigo = ?',
-      [empresa_id, codigo]
+      [empresaIdValue, codigoValue]
     );
 
     if (existente.length > 0) {
@@ -163,21 +247,22 @@ export const createImpuesto = async (req: Request, res: Response): Promise<Respo
       `INSERT INTO impuestos (
         empresa_id, codigo, nombre, descripcion, tipo, tasa,
         aplica_sobre, afecta_total, aplica_automaticamente,
-        requiere_autorizacion, cuenta_contable, orden, creado_por
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        requiere_autorizacion, cuenta_contable, orden, activo, creado_por
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        empresa_id,
-        codigo,
-        nombre,
+        empresaIdValue,
+        codigoValue,
+        nombreValue,
         descripcion || null,
-        tipo || 'porcentaje',
-        tasa,
-        aplica_sobre || 'subtotal',
-        afecta_total || 'resta',
-        aplica_automaticamente || 0,
-        requiere_autorizacion || 0,
+        tipoValue,
+        tasaValue,
+        aplicaSobreValue,
+        afectaTotalValue,
+        aplicaAutomaticamenteValue,
+        requiereAutorizacionValue,
         cuenta_contable || null,
-        orden || 0,
+        ordenValue,
+        activoValue,
         usuario.id
       ]
     );
@@ -234,6 +319,77 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
     } = req.body;
 
     const usuario = (req as any).user || (req as any).usuario;
+    if (!usuario || !usuario.id) {
+      return errorResponse(
+        res,
+        'Usuario no autenticado',
+        null,
+        CONSTANTS.HTTP_STATUS.UNAUTHORIZED
+      );
+    }
+
+    if (!codigo || !String(codigo).trim()) {
+      return errorResponse(
+        res,
+        'El código del impuesto es requerido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    if (!nombre || !String(nombre).trim()) {
+      return errorResponse(
+        res,
+        'El nombre del impuesto es requerido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const tasaValue = Number(tasa);
+    if (Number.isNaN(tasaValue) || tasaValue < 0) {
+      return errorResponse(
+        res,
+        'La tasa del impuesto es inválida',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const tipoValue = String(tipo || 'porcentaje').trim();
+    if (!['porcentaje', 'valor_fijo'].includes(tipoValue)) {
+      return errorResponse(
+        res,
+        'El tipo de impuesto es inválido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const aplicaSobreValue = String(aplica_sobre || 'subtotal').trim();
+    if (!['subtotal', 'iva', 'total'].includes(aplicaSobreValue)) {
+      return errorResponse(
+        res,
+        'El campo aplica_sobre es inválido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const afectaTotalValue = String(afecta_total || 'resta').trim();
+    if (!['suma', 'resta'].includes(afectaTotalValue)) {
+      return errorResponse(
+        res,
+        'El campo afecta_total es inválido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const aplicaAutomaticamenteValue = Number(aplica_automaticamente) === 1 ? 1 : 0;
+    const requiereAutorizacionValue = Number(requiere_autorizacion) === 1 ? 1 : 0;
+    const ordenValue = Number.isFinite(Number(orden)) ? Number(orden) : 0;
+    const activoValue = Number(activo) === 1 ? 1 : 0;
 
     await connection.beginTransaction();
 
