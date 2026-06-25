@@ -2385,24 +2385,43 @@ async function cargarImpuestos() {
     }
 
     console.log('Cargando impuestos para empresa:', empresaId);
-    const response = await fetch(`${API_URL}/impuestos?empresaId=${empresaId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Error response:', response.status, errorData);
-      throw new Error(`Error ${response.status}: ${errorData.message || 'Error al cargar impuestos'}`);
+    if (window.impuestosUtils && typeof window.impuestosUtils.cargarImpuestosGlobales === 'function') {
+      impuestosCache = await window.impuestosUtils.cargarImpuestosGlobales(empresaId);
+    } else {
+      const response = await fetch(`${API_URL}/impuestos?empresaId=${empresaId}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', response.status, errorData);
+        throw new Error(`Error ${response.status}: ${errorData.message || 'Error al cargar impuestos'}`);
+      }
+      const data = await response.json();
+      impuestosCache = data.data || [];
     }
-    
-    const data = await response.json();
-    impuestosCache = data.data || [];
+
     renderizarTablaImpuestos(impuestosCache);
   } catch (error) {
     console.error('Error completo:', error);
     mostrarError('Error al cargar impuestos: ' + error.message);
   }
 }
+
+window.addEventListener('impuestosActualizados', (event) => {
+  if (!event?.detail?.impuestos) return;
+  impuestosCache = event.detail.impuestos || [];
+  if (document.getElementById('impuestosTableBody')) {
+    renderizarTablaImpuestos(impuestosCache);
+  }
+});
+
+window.addEventListener('empresaCambiada', async () => {
+  if (typeof cargarImpuestos === 'function') {
+    await cargarImpuestos();
+  }
+});
 
 function renderizarTablaImpuestos(impuestos) {
   const tbody = document.getElementById('impuestosTableBody');

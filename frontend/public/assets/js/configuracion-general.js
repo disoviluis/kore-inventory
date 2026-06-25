@@ -15,7 +15,7 @@ let editingCategoriaId = null;
 // INICIALIZACIÓN
 // ============================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Configuración General cargado');
     
     // Verificar autenticación
@@ -27,11 +27,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Cargar datos iniciales
-    loadUserData();
-    loadCompanies();
+    await loadUserData();
+    await loadCompanies();
     
+    if (window.impuestosUtils && typeof window.impuestosUtils.cargarImpuestosGlobales === 'function') {
+        await window.impuestosUtils.cargarImpuestosGlobales(localStorage.getItem('empresaActiva'));
+    }
+
     // Inicializar event listeners
     initEventListeners();
+    initImpuestosTab();
+    if (typeof cargarImpuestos === 'function') {
+        cargarImpuestos();
+    }
 });
 
 // ============================================================================
@@ -532,6 +540,17 @@ function initEventListeners() {
     // Botón cancelar
     document.getElementById('btnCancelarEmpresa')?.addEventListener('click', () => {
         cargarDatosEmpresa(); // Recargar datos originales
+    });
+}
+
+function initImpuestosTab() {
+    const impuestosTab = document.getElementById('impuestos-tab');
+    if (!impuestosTab) return;
+
+    impuestosTab.addEventListener('shown.bs.tab', () => {
+        if (typeof cargarImpuestos === 'function') {
+            cargarImpuestos();
+        }
     });
 }
 

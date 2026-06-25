@@ -3092,28 +3092,33 @@ async function cargarImpuestosActivos() {
             return;
         }
 
-        const url = `${API_URL}/impuestos/activos?empresaId=${empresaId}`;
-        console.log('📡 Fetching impuestos:', url);
-        
-        const response = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
+        if (window.impuestosUtils && typeof window.impuestosUtils.cargarImpuestosGlobales === 'function') {
+            await window.impuestosUtils.cargarImpuestosGlobales(empresaId);
+            impuestosDisponibles = window.impuestosUtils.getImpuestosActivos();
+        } else {
+            const url = `${API_URL}/impuestos/activos?empresaId=${empresaId}`;
+            console.log('📡 Fetching impuestos:', url);
+            
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
 
-        console.log('📡 Response impuestos status:', response.status);
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-            console.error('❌ Error del backend (impuestos):', errorData);
-            if (response.status === 401) {
-                console.warn('⚠️ Token inválido al cargar impuestos - puede necesitar refrescar la página');
+            console.log('📡 Response impuestos status:', response.status);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+                console.error('❌ Error del backend (impuestos):', errorData);
+                if (response.status === 401) {
+                    console.warn('⚠️ Token inválido al cargar impuestos - puede necesitar refrescar la página');
+                }
+                // NO cerrar sesión aquí - solo fallar silenciosamente
+                return;
             }
-            // NO cerrar sesión aquí - solo fallar silenciosamente
-            return;
+            
+            const data = await response.json();
+            impuestosDisponibles = data.data || [];
         }
-        
-        const data = await response.json();
-        impuestosDisponibles = data.data || [];
-        
+
         if (impuestosDisponibles.length > 0) {
             // Mostrar contenedor de impuestos
             document.getElementById('impuestosAdicionalesContainer').style.display = 'block';

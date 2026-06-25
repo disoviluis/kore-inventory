@@ -74,6 +74,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         console.log(`✅ Empresa activa: ${currentEmpresa.nombre} (ID: ${currentEmpresa.id})`);
 
+        if (window.impuestosUtils && typeof window.impuestosUtils.cargarImpuestosGlobales === 'function') {
+            await window.impuestosUtils.cargarImpuestosGlobales(currentEmpresa.id);
+        }
+
         // Cargar datos iniciales
         await Promise.all([
             cargarCategorias(),
@@ -193,11 +197,16 @@ async function cargarEmpresas(usuarioId) {
                 }
                 
                 // Event listener para cambio de empresa
-                companySelector.addEventListener('change', (e) => {
+                companySelector.addEventListener('change', async (e) => {
                     const empresaId = e.target.value;
                     const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
                     localStorage.setItem('empresaActiva', empresaId);
                     currentEmpresa = empresaSeleccionada;
+
+                    if (window.impuestosUtils && typeof window.impuestosUtils.cargarImpuestosGlobales === 'function') {
+                        await window.impuestosUtils.cargarImpuestosGlobales(empresaId);
+                    }
+
                     // Recargar datos del módulo
                     cargarProductos();
                     cargarCategorias();
