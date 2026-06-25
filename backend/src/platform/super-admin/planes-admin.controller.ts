@@ -143,7 +143,7 @@ export const createPlan = async (req: Request, res: Response): Promise<void> => 
     const planId = result.insertId;
 
     // Registrar auditoría
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user || (req as any).usuario;
     if (usuario && usuario.id) {
       await connection.query(
         `INSERT INTO auditoria_logs (
@@ -241,7 +241,7 @@ export const updatePlan = async (req: Request, res: Response): Promise<void> => 
     );
 
     // Registrar auditoría
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user || (req as any).usuario;
     if (usuario && usuario.id) {
       await connection.query(
         `INSERT INTO auditoria_logs (

@@ -138,7 +138,7 @@ export const createImpuesto = async (req: Request, res: Response): Promise<Respo
       orden
     } = req.body;
 
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user || (req as any).usuario;
 
     await connection.beginTransaction();
 
@@ -233,7 +233,7 @@ export const updateImpuesto = async (req: Request, res: Response): Promise<Respo
       activo
     } = req.body;
 
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user || (req as any).usuario;
 
     await connection.beginTransaction();
 
@@ -318,7 +318,7 @@ export const deleteImpuesto = async (req: Request, res: Response): Promise<Respo
   
   try {
     const { id } = req.params;
-    const usuario = (req as any).usuario;
+    const usuario = (req as any).user || (req as any).usuario;
 
     await connection.beginTransaction();
 

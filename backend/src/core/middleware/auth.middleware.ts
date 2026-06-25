@@ -54,6 +54,7 @@ export const authMiddleware = (
 
     // Agregar usuario al request
     (req as any).user = decoded;
+    (req as any).usuario = decoded;
 
     next();
   } catch (error: any) {
