@@ -2653,6 +2653,7 @@ function parseExcelBoolean(value) {
 function validarImpuestosExcel(rows) {
   const validRows = [];
   const errors = [];
+  const warnings = [];
   const seenCodes = new Set();
   const existingCodes = new Set(impuestosCache.map(i => String(i.codigo).trim().toUpperCase()));
 
@@ -2677,7 +2678,7 @@ function validarImpuestosExcel(rows) {
     }
 
     if (existingCodes.has(codigo.toUpperCase())) {
-      errors.push(`Fila ${rowNumber}: El impuesto con código '${codigo}' ya existe.`);
+      warnings.push(`Fila ${rowNumber}: El impuesto con código '${codigo}' ya existe y se omitirá.`);
       return;
     }
 
@@ -2729,7 +2730,7 @@ function validarImpuestosExcel(rows) {
     seenCodes.add(codigo.toUpperCase());
   });
 
-  return { validRows, errors };
+  return { validRows, errors, warnings };
 }
 
 async function procesarArchivoImpuestosExcel(event) {
@@ -2753,19 +2754,30 @@ async function procesarArchivoImpuestosExcel(event) {
       return;
     }
 
-    const { validRows, errors } = validarImpuestosExcel(jsonData);
+    const { validRows, errors, warnings } = validarImpuestosExcel(jsonData);
+
+    if (warnings.length > 0) {
+      console.info('Advertencias al importar impuestos:', warnings);
+    }
 
     if (errors.length > 0) {
       console.error('Errores de validación al importar impuestos:', errors);
     }
 
     if (validRows.length === 0) {
-      mostrarError('No hay filas válidas para importar. Revisa el archivo y vuelve a intentarlo.');
+      if (warnings.length > 0 && errors.length === 0) {
+        mostrarExito('No se importaron registros nuevos. Los códigos existentes fueron omitidos.');
+      } else {
+        mostrarError('No hay filas válidas para importar. Revisa el archivo y vuelve a intentarlo.');
+      }
       return;
     }
 
     const result = await importarImpuestos(validRows);
     const mensajes = [];
+    if (warnings.length > 0) {
+      mensajes.push(`${warnings.length} filas omitidas por códigos ya existentes`);
+    }
     if (result.created.length > 0) {
       mensajes.push(`Importados ${result.created.length} impuestos`);
     }
