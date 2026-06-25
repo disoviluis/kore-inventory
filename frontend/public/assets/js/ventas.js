@@ -499,6 +499,10 @@ function initEventListeners() {
             }
 
             if (productoExacto) {
+                if (esEscaneoRecienteDuplicado(valorActual)) {
+                    console.log('Enter ignorado porque el escaneo ya fue procesado:', valorActual);
+                    return;
+                }
                 ultimoCodigoEscaneado = valorActual;
                 ultimoEscaneoAgregadoAt = Date.now();
                 agregarProducto(productoExacto);
@@ -506,11 +510,19 @@ function initEventListeners() {
             }
 
             if (productosBusqueda.length === 1) {
+                if (esEscaneoRecienteDuplicado(valorActual)) {
+                    console.log('Enter ignorado porque el escaneo ya fue procesado:', valorActual);
+                    return;
+                }
                 ultimoCodigoEscaneado = valorActual;
                 ultimoEscaneoAgregadoAt = Date.now();
                 agregarProducto(productosBusqueda[0]);
             } else if (productosBusqueda.length > 1) {
                 // Si el lector dio más de un resultado, seleccionar el primero
+                if (esEscaneoRecienteDuplicado(valorActual)) {
+                    console.log('Enter ignorado porque el escaneo ya fue procesado:', valorActual);
+                    return;
+                }
                 ultimoCodigoEscaneado = valorActual;
                 ultimoEscaneoAgregadoAt = Date.now();
                 agregarProducto(productosBusqueda[0]);
@@ -752,6 +764,8 @@ async function buscarProductos() {
         return;
     }
 
+    ultimoCodigoEscaneado = busqueda.toLowerCase();
+    ultimoEscaneoAgregadoAt = Date.now();
     productosBusqueda = [];
 
     try {
