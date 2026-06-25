@@ -404,6 +404,12 @@ function renderizarProductos(items) {
                     }
                 </td>
                 <td class="text-center">
+                    ${prod.tipo === 'servicio' ? 
+                        '<span class="text-muted">N/A</span>' :
+                        `<span class="badge ${getStockBadgeClass(prod.stock_total ?? prod.stock_actual, prod.stock_minimo)}">${(prod.stock_total ?? prod.stock_actual) || 0}</span>`
+                    }
+                </td>
+                <td class="text-center">
                     <span class="badge ${prod.estado === 'activo' ? 'bg-success' : 'bg-secondary'}">
                         ${prod.estado === 'activo' ? 'Activo' : 'Inactivo'}
                     </span>
