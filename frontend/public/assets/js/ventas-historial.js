@@ -493,13 +493,7 @@ function renderVentas() {
 
     const html = ventasData.map((venta, index) => {
         const estadoBadge = getEstadoBadge(venta.estado);
-        const fechaFormateada = new Date(venta.fecha_venta).toLocaleString('es-CO', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        const fechaFormateada = formatFechaColombia(venta.fecha_venta);
 
         // Determinar nombre del cliente
         let nombreCliente = venta.cliente_nombre || venta.razon_social || 'N/A';
@@ -588,13 +582,7 @@ async function verDetalleVenta(ventaId) {
 }
 
 function mostrarDetalleVenta(venta, detalle) {
-    const fechaFormateada = new Date(venta.fecha_venta).toLocaleString('es-CO', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    const fechaFormateada = formatFechaColombia(venta.fecha_venta);
 
     const html = generarHTMLFacturaVentaHistorial(venta, detalle);
     document.getElementById('detalleVentaContent').innerHTML = html;
@@ -770,7 +758,7 @@ async function exportarVentas() {
             const totalCorrecto = (parseFloat(v.subtotal) || 0) - (parseFloat(v.descuento) || 0) + (parseFloat(v.impuesto) || 0) + (parseFloat(v.impuestos_adicionales) || 0) + (parseFloat(v.propina_valor) || 0);
             return {
                 'Nº Factura': v.numero_factura,
-                'Fecha': new Date(v.fecha_venta).toLocaleString('es-CO'),
+                'Fecha': formatFechaColombia(v.fecha_venta),
                 'Cliente': v.cliente_nombre,
                 'Documento': v.cliente_documento,
                 'Subtotal': v.subtotal,

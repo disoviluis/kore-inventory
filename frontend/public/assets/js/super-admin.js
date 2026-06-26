@@ -612,12 +612,7 @@ function formatearNumero(numero) {
 
 function formatearFecha(fecha) {
     if (!fecha) return '-';
-    const date = new Date(fecha);
-    return date.toLocaleDateString('es-CO', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-    });
+    return formatFechaColombiaDate(fecha);
 }
 
 function mostrarAlertaSuperAdmin(mensaje, tipo = 'info') {

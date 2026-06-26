@@ -507,9 +507,7 @@ async function completarEntrega() {
 // ========================================
 
 function formatearFecha(fecha) {
-    const date = new Date(fecha);
-    const opciones = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
-    return date.toLocaleDateString('es-CO', opciones);
+    return formatFechaColombia(fecha);
 }
 
 function getBadgeClass(estado) {

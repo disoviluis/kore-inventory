@@ -1030,15 +1030,7 @@ function getEstadoTexto(estado) {
 }
 
 function formatFecha(fecha) {
-    if (!fecha) return '-';
-    const date = new Date(fecha);
-    return date.toLocaleString('es-CO', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    return formatFechaColombia(fecha);
 }
 
 // ==========================================

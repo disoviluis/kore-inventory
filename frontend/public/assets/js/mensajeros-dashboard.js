@@ -750,15 +750,7 @@ function filtrarPorFecha(traslados, filtro) {
 
 function formatearFecha(fecha) {
     if (!fecha) return 'N/A';
-    const d = new Date(fecha);
-    const opciones = { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    return d.toLocaleDateString('es-ES', opciones);
+    return formatFechaColombia(fecha);
 }
 
 function mostrarError(mensaje) {

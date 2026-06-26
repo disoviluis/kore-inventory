@@ -46,13 +46,7 @@ function facturaModel_obtenerLogoUrl(currentEmpresa) {
 function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, configuracionPlantilla) {
     const config = facturaModel_obtenerConfiguracionActual(configuracionPlantilla, currentEmpresa);
     const logoUrl = facturaModel_obtenerLogoUrl(currentEmpresa);
-    const fechaFormateada = new Date(venta.fecha_venta || new Date()).toLocaleString('es-CO', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    const fechaFormateada = formatFechaColombia(venta.fecha_venta || new Date());
     const nitCompleto = `${currentEmpresa?.nit || ''}-${facturaModel_calcularDigitoVerificacion(currentEmpresa?.nit || '')}`;
     const numeroFactura = venta.numero_factura || 'FACTURA';
 

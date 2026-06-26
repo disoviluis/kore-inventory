@@ -664,7 +664,7 @@ function limpiarFiltros() {
 
 function formatearFecha(fecha) {
     if (!fecha) return '-';
-    return new Date(fecha).toLocaleDateString('es-CO');
+    return formatFechaColombiaDate(fecha);
 }
 
 function formatearMoneda(valor) {

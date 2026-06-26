@@ -179,7 +179,7 @@ function renderComprasPendientes(compras) {
     tbody.innerHTML = compras.map(compra => `
         <tr>
             <td>${compra.numero_compra}</td>
-            <td>${compra.fecha_compra ? new Date(compra.fecha_compra).toLocaleDateString('es-CO') : '-'}</td>
+            <td>${compra.fecha_compra ? formatFechaColombiaDate(compra.fecha_compra) : '-'}</td>
             <td>${compra.proveedor_nombre || 'Proveedor desconocido'}</td>
             <td class="text-end">${new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(compra.total || 0)}</td>
             <td class="text-center">

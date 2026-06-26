@@ -830,14 +830,7 @@ function actualizarUltimasVentas(ventas) {
   }
   
   const html = ventas.map(venta => {
-    const fecha = new Date(venta.fecha_venta);
-    const fechaFormateada = fecha.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const fechaFormateada = formatFechaColombia(venta.fecha_venta);
     
     const total = Number(venta.total) || 0;
     const estadoBadge = venta.estado === 'pagada' 
@@ -1369,7 +1362,7 @@ function renderizarTablaEmpresas(empresas) {
         </td>
         <td>${empresa.usuarios_activos || 0}</td>
         <td>${empresa.total_productos || 0}</td>
-        <td>${new Date(empresa.created_at).toLocaleDateString()}</td>
+        <td>${formatFechaColombiaDate(empresa.created_at)}</td>
         <td>
           <button class="btn btn-sm btn-primary" onclick="verDetalleEmpresa(${empresa.id})" title="Ver detalle">
             <i class="bi bi-eye"></i>
@@ -1460,7 +1453,7 @@ function renderizarTablaUsuarios(usuarios) {
     }[usuario.tipo_usuario] || usuario.tipo_usuario;
 
     const ultimoLogin = usuario.ultimo_login 
-      ? new Date(usuario.ultimo_login).toLocaleDateString() 
+      ? formatFechaColombiaDate(usuario.ultimo_login) 
       : 'Nunca';
 
     return `
@@ -1580,8 +1573,8 @@ function renderizarTablaLicencias(licencias) {
         <td>${licencia.id}</td>
         <td>${licencia.empresa_nombre || ''}</td>
         <td>${licencia.plan_nombre || ''}</td>
-        <td>${new Date(licencia.fecha_inicio).toLocaleDateString()}</td>
-        <td>${new Date(licencia.fecha_fin).toLocaleDateString()}</td>
+        <td>${formatFechaColombiaDate(licencia.fecha_inicio)}</td>
+        <td>${formatFechaColombiaDate(licencia.fecha_fin)}</td>
         <td>
           <span class="badge bg-${estadoBadge}">
             ${diasRestantes < 0 ? 'Vencida' : diasRestantes === 0 ? 'Vence hoy' : `${diasRestantes} días`}
@@ -1647,7 +1640,7 @@ async function verDetalleEmpresa(id) {
                   <span class="badge bg-${empresa.estado === 'activa' ? 'success' : 'warning'}">${empresa.estado}</span>
                 </div>
                 <div class="col-md-12">
-                  <strong>Fecha de Registro:</strong><br>${new Date(empresa.created_at).toLocaleString()}
+                  <strong>Fecha de Registro:</strong><br>${formatFechaColombia(empresa.created_at)}
                 </div>
               </div>
             </div>
@@ -1858,13 +1851,13 @@ async function verDetalleUsuario(id) {
                   </span>
                 </div>
                 <div class="col-md-6">
-                  <strong>Último Login:</strong><br>${usuario.ultimo_login ? new Date(usuario.ultimo_login).toLocaleString() : 'Nunca'}
-                </div>
+                  <strong>Último Login:</strong><br>${usuario.ultimo_login ? formatFechaColombia(usuario.ultimo_login) : 'Nunca'}
+                </div}
                 <div class="col-md-12">
                   <strong>Empresas Asignadas:</strong><br>${usuario.empresas || 'Sin asignar'}
                 </div>
                 <div class="col-md-12">
-                  <strong>Fecha de Registro:</strong><br>${new Date(usuario.created_at).toLocaleString()}
+                  <strong>Fecha de Registro:</strong><br>${formatFechaColombia(usuario.created_at)}
                 </div>
               </div>
             </div>
@@ -3838,7 +3831,7 @@ async function cargarUsuariosEmpresa() {
     tbody.innerHTML = usuarios.map(usuario => {
       const nombreCompleto = `${usuario.nombre} ${usuario.apellido || ''}`.trim();
       const ultimoLogin = usuario.ultimo_login 
-        ? new Date(usuario.ultimo_login).toLocaleDateString() 
+        ? formatFechaColombiaDate(usuario.ultimo_login) 
         : 'Nunca';
       
       const rolesHtml = usuario.roles_nombres && typeof usuario.roles_nombres === 'string'
@@ -4266,7 +4259,7 @@ async function verDetalleUsuarioEmpresa(usuarioId) {
                 </div>
                 <div class="col-md-6">
                   <strong>Último Acceso:</strong><br>
-                  ${usuario.ultimo_login ? new Date(usuario.ultimo_login).toLocaleString() : '<span class="text-muted">Nunca</span>'}
+                  ${usuario.ultimo_login ? formatFechaColombia(usuario.ultimo_login) : '<span class="text-muted">Nunca</span>'}
                 </div>
                 <div class="col-12 mt-4">
                   <h6 class="border-bottom pb-2">Roles Asignados</h6>
@@ -4274,11 +4267,11 @@ async function verDetalleUsuarioEmpresa(usuarioId) {
                 </div>
                 <div class="col-md-6">
                   <strong>Creado:</strong><br>
-                  <small class="text-muted">${new Date(usuario.created_at).toLocaleString()}</small>
+                  <small class="text-muted">${formatFechaColombia(usuario.created_at)}</small>
                 </div>
                 <div class="col-md-6">
                   <strong>Actualizado:</strong><br>
-                  <small class="text-muted">${new Date(usuario.updated_at).toLocaleString()}</small>
+                  <small class="text-muted">${formatFechaColombia(usuario.updated_at)}</small>
                 </div>
               </div>
             </div>

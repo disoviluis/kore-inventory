@@ -2274,7 +2274,7 @@ async function descargarPDF() {
         doc.setFont(undefined, 'bold');
         doc.text('DATOS DE VENTA:', col2 + 2, y + 5);
         doc.setFont(undefined, 'normal');
-        const fecha = new Date(venta.fecha_venta).toLocaleDateString('es-CO');
+        const fecha = formatFechaColombiaDate(venta.fecha_venta);
         doc.text(`Fecha: ${fecha}`, col2 + 2, y + 10);
         doc.text(`Forma de Pago: Contado`, col2 + 2, y + 15);
         doc.text(`Método: ${ventaData.metodo_pago || 'Efectivo'}`, col2 + 2, y + 20);
@@ -2401,13 +2401,7 @@ function generarPlantillaCarta(venta, ventaData, config) {
     const impuesto = ventaData.impuesto;
     const total = ventaData.total;
     
-    const fecha = new Date().toLocaleString('es-CO', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    const fecha = formatFechaColombia(new Date());
     
     const digitoVerificacion = calcularDigitoVerificacion(currentEmpresa.nit);
     const nitCompleto = `${currentEmpresa.nit}-${digitoVerificacion}`;
@@ -2854,13 +2848,7 @@ function generarPlantillaTirilla(venta, ventaData, config) {
     const impuesto = ventaData.impuesto || 0;
     const propinaValor = ventaData.propina_valor || 0;
     const total = Number(ventaData.total || subtotal - descuento + impuesto + propinaValor);
-    const fecha = new Date().toLocaleString('es-CO', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    const fecha = formatFechaColombia(new Date());
     const tipoFactura = configActual.plantillaId === 5 ? 'FACTURA ELECTRÓNICA SIIGO' : 'FACTURA DE VENTA';
 
     return `
@@ -3121,33 +3109,14 @@ document.getElementById('btnConfirmarContraPedido').addEventListener('click', fu
  * Formatear fecha para mostrar
  */
 function formatearFecha(fecha) {
-    const date = new Date(fecha + 'T00:00:00');
-    const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString('es-ES', opciones);
+    return formatFechaColombiaDate(fecha);
 }
 
 /**
  * Formatear fecha y hora para mostrar en cuentas abiertas
  */
 function formatearFechaHora(fechaHora) {
-    const date = new Date(fechaHora);
-    const hoy = new Date();
-    const esHoy = date.toDateString() === hoy.toDateString();
-    
-    const hora = date.toLocaleTimeString('es-ES', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
-    
-    if (esHoy) {
-        return `Hoy ${hora}`;
-    } else {
-        const fecha = date.toLocaleDateString('es-ES', { 
-            day: '2-digit', 
-            month: '2-digit' 
-        });
-        return `${fecha} ${hora}`;
-    }
+    return formatFechaHoraColombia(fechaHora);
 }
 
 // ============================================
@@ -4035,7 +4004,7 @@ function mostrarTurnoActivo() {
     
     const nombreUsuario = `${turnoActivo.usuario_nombre || ''} ${turnoActivo.usuario_apellido || ''}`.trim();
     document.getElementById('turnoUsuario').textContent = nombreUsuario || 'Usuario';
-    document.getElementById('turnoApertura').textContent = new Date(turnoActivo.fecha_apertura).toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+    document.getElementById('turnoApertura').textContent = formatFechaColombia(turnoActivo.fecha_apertura);
     document.getElementById('turnoBaseInicial').textContent = formatearNumero(turnoActivo.base_inicial);
     
     // Mostrar bodega/tienda
@@ -4510,7 +4479,7 @@ function mostrarListaHistorialTurnos(turnos) {
     let html = '<div class="list-group">';
 
     turnos.forEach(turno => {
-        const fechaCierre = new Date(turno.fecha_cierre).toLocaleString('es-CO');
+        const fechaCierre = formatFechaColombia(turno.fecha_cierre);
         const diferencia = turno.diferencia !== null ? parseFloat(turno.diferencia) : null;
         let claseDiferencia = 'text-muted';
         let textoDiferencia = 'N/A';
@@ -4618,8 +4587,8 @@ function imprimirCierreCaja(resumen) {
         ? `${turno.usuario_nombre} ${turno.usuario_apellido}` 
         : 'N/A';
     const nombreBodega = turno.bodega_nombre || 'N/A';
-    const fechaApertura = new Date(turno.fecha_apertura).toLocaleString('es-CO', { timeZone: 'America/Bogota' });
-    const fechaCierre = turno.fecha_cierre ? new Date(turno.fecha_cierre).toLocaleString('es-CO', { timeZone: 'America/Bogota' }) : new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+    const fechaApertura = formatFechaColombia(turno.fecha_apertura);
+    const fechaCierre = turno.fecha_cierre ? formatFechaColombia(turno.fecha_cierre) : formatFechaColombia(new Date());
     
     let htmlVentas = '';
     resumen.ventas_por_metodo.forEach(v => {

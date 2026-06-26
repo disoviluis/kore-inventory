@@ -876,12 +876,7 @@ function formatearMoneda(valor) {
 
 function formatearFecha(fecha) {
     if (!fecha) return '-';
-    const date = new Date(fecha);
-    return date.toLocaleDateString('es-CO', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
+    return formatFechaColombiaDate(fecha);
 }
 
 function renderizarBadgeEstado(estado) {
