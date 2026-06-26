@@ -4,7 +4,18 @@ function parseDateString(fecha) {
   if (typeof fecha === 'string') {
     const trimmed = fecha.trim();
     const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(trimmed);
-    return new Date(isDateOnly ? `${trimmed}T00:00:00` : trimmed);
+    if (isDateOnly) {
+      return new Date(`${trimmed}T00:00:00`);
+    }
+
+    // MySQL/Node dates often arrive as "YYYY-MM-DD HH:mm:ss" without TZ.
+    // Treat that format as UTC so Bogota conversion remains correct.
+    const utcDateTimeMatch = trimmed.match(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/);
+    if (utcDateTimeMatch) {
+      return new Date(`${trimmed.replace(' ', 'T')}Z`);
+    }
+
+    return new Date(trimmed);
   }
   return new Date(fecha);
 }
