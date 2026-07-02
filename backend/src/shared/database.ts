@@ -22,7 +22,7 @@ const pool = mysql.createPool({
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
-  timezone: '-05:00' // Zona horaria de Colombia (UTC-5)
+  timezone: '+00:00' // RDS almacena en UTC; el frontend convierte a Bogotá
 });
 
 /**
