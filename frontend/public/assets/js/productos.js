@@ -581,11 +581,17 @@ function initEventListeners() {
     document.getElementById('archivoExcel').addEventListener('change', procesarArchivoExcel);
     document.getElementById('btnConfirmarImportacion').addEventListener('click', confirmarImportacion);
     
-    // Preview de imagen
+    // Preview de imagen (campo URL manual)
     const imagenUrlInput = document.getElementById('productoImagenUrl');
     if (imagenUrlInput) {
         imagenUrlInput.addEventListener('input', actualizarPreviewImagen);
         imagenUrlInput.addEventListener('blur', actualizarPreviewImagen);
+    }
+
+    // Subida de imagen a S3
+    const imagenFileInput = document.getElementById('productoImagenFile');
+    if (imagenFileInput) {
+        imagenFileInput.addEventListener('change', manejarSubidaImagen);
     }
 
     // Cerrar sesión
@@ -1034,6 +1040,149 @@ function cerrarSesion() {
 // ============================================
 // UTILIDADES
 // ============================================
+
+// ============================================
+// SUBIDA DE IMAGEN A S3 (con compresión)
+// ============================================
+
+/**
+ * Comprime una imagen usando Canvas antes de subirla.
+ * Devuelve un Blob JPEG/WebP reducido.
+ */
+function comprimirImagen(file, maxWidth = 800, maxHeight = 800, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+
+                // Escalar manteniendo proporción
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Preferir WebP si está disponible
+                const mime = canvas.toDataURL('image/webp').startsWith('data:image/webp')
+                    ? 'image/webp' : 'image/jpeg';
+
+                canvas.toBlob(
+                    (blob) => blob ? resolve({ blob, mime }) : reject(new Error('No se pudo comprimir la imagen')),
+                    mime,
+                    quality
+                );
+            };
+            img.onerror = () => reject(new Error('No se pudo leer la imagen'));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * Maneja el flujo completo: comprimir → solicitar presigned URL → subir a S3 → actualizar campo URL
+ */
+async function manejarSubidaImagen(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const token = localStorage.getItem('token');
+    const empresaId = currentEmpresa?.id;
+    if (!empresaId) {
+        mostrarAlerta('Selecciona una empresa primero', 'warning');
+        return;
+    }
+
+    const progressDiv   = document.getElementById('imagenUploadProgress');
+    const progressBar   = document.getElementById('imagenProgressBar');
+    const statusText    = document.getElementById('imagenUploadStatus');
+    const urlInput      = document.getElementById('productoImagenUrl');
+
+    // Mostrar barra
+    progressDiv.style.display = 'block';
+    progressBar.style.width = '10%';
+    statusText.textContent = 'Comprimiendo imagen...';
+
+    try {
+        // 1. Comprimir
+        const { blob, mime } = await comprimirImagen(file);
+        const ext = mime === 'image/webp' ? 'webp' : 'jpg';
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const compressedFile = new File([blob], `${safeName}.${ext}`, { type: mime });
+
+        progressBar.style.width = '35%';
+        statusText.textContent = `Comprimido: ${(compressedFile.size / 1024).toFixed(0)} KB → solicitando URL...`;
+
+        // 2. Obtener presigned URL del backend
+        const productoId = document.getElementById('productoId')?.value || null;
+        const resp = await fetch(`${API_URL}/productos/upload-url`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                empresa_id: empresaId,
+                producto_id: productoId || undefined,
+                filename: compressedFile.name,
+                content_type: mime
+            })
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.message || 'Error al obtener URL de subida');
+        }
+
+        const { data } = await resp.json();
+        progressBar.style.width = '60%';
+        statusText.textContent = 'Subiendo a S3...';
+
+        // 3. Subir directamente a S3 con la presigned URL
+        const s3Resp = await fetch(data.upload_url, {
+            method: 'PUT',
+            headers: { 'Content-Type': mime },
+            body: compressedFile
+        });
+
+        if (!s3Resp.ok) throw new Error('Error al subir la imagen al servidor de almacenamiento');
+
+        progressBar.style.width = '100%';
+        statusText.textContent = '¡Imagen subida exitosamente!';
+
+        // 4. Poner la URL pública en el campo y actualizar preview
+        urlInput.value = data.public_url;
+        actualizarPreviewImagen();
+
+        setTimeout(() => { progressDiv.style.display = 'none'; }, 2500);
+
+    } catch (error) {
+        progressBar.style.width = '100%';
+        progressBar.classList.remove('bg-primary');
+        progressBar.classList.add('bg-danger');
+        statusText.textContent = `Error: ${error.message}`;
+        console.error('Error al subir imagen:', error);
+
+        setTimeout(() => {
+            progressDiv.style.display = 'none';
+            progressBar.classList.remove('bg-danger');
+            progressBar.classList.add('bg-primary');
+            progressBar.style.width = '0%';
+        }, 3000);
+    }
+
+    // Limpiar el input de archivo para permitir subir el mismo archivo de nuevo
+    e.target.value = '';
+}
 
 /**
  * Actualizar preview de imagen del producto
