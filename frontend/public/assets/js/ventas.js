@@ -1007,16 +1007,16 @@ function renderizarProductos() {
                 alertaPrecio = `<small class="text-warning"><i class="bi bi-exclamation-circle"></i> Por encima del máximo ($${formatearNumero(p.precio_maximo)})</small>`;
             }
             
-            // Opciones de precios disponibles
+            // Opciones de precios disponibles (etiquetas cortas)
             let opcionesPrecios = '';
             if (p.precio_minorista) {
-                opcionesPrecios += `<option value="${p.precio_minorista}">Minorista - $${formatearNumero(p.precio_minorista)}</option>`;
+                opcionesPrecios += `<option value="${p.precio_minorista}">Min. $${formatearNumero(p.precio_minorista)}</option>`;
             }
             if (p.precio_mayorista) {
-                opcionesPrecios += `<option value="${p.precio_mayorista}">Mayorista - $${formatearNumero(p.precio_mayorista)}</option>`;
+                opcionesPrecios += `<option value="${p.precio_mayorista}">May. $${formatearNumero(p.precio_mayorista)}</option>`;
             }
             if (p.precio_distribuidor) {
-                opcionesPrecios += `<option value="${p.precio_distribuidor}">Distribuidor - $${formatearNumero(p.precio_distribuidor)}</option>`;
+                opcionesPrecios += `<option value="${p.precio_distribuidor}">Dist. $${formatearNumero(p.precio_distribuidor)}</option>`;
             }
             opcionesPrecios += `<option value="manual">✏️ Manual</option>`;
             
@@ -1025,36 +1025,42 @@ function renderizarProductos() {
                 `<br><small class="text-primary"><i class="bi bi-clock-history"></i> Pedido: ${formatearFechaHora(p.fecha_agregado)}</small>` : '';
             
             html += `
-            <div class="producto-item px-2 py-1 border-bottom ${p.tipo_venta === 'contra_pedido' ? 'bg-warning-subtle' : ''}">
+            <div class="producto-item px-2 py-1 border-bottom ${p.tipo_venta === 'contra_pedido' ? 'bg-warning-subtle' : ''} ${clasePrecio ? 'border-start border-3 border-danger' : ''}">
+                <!-- Línea 1: nombre + eliminar -->
                 <div class="d-flex align-items-center gap-1 mb-1">
                     <div class="flex-grow-1" style="min-width:0;">
                         <div class="fw-semibold small text-truncate">${p.nombre}${badgeContraPedido}</div>
-                        <div class="d-flex align-items-center gap-1">
-                            ${p.aplica_iva ? `<span style="font-size:0.65rem;" class="text-info">IVA ${p.porcentaje_iva}%</span>` : '<span style="font-size:0.65rem;" class="text-muted">Sin IVA</span>'}
-                            <span style="font-size:0.65rem;" class="text-muted">SKU: ${p.sku}</span>
-                        </div>
+                        <small style="font-size:0.65rem;" class="text-muted">SKU: ${p.sku}${p.aplica_iva ? ` · IVA ${p.porcentaje_iva}%` : ''}</small>
                     </div>
-                    <button class="btn btn-link text-danger p-0" onclick="eliminarProducto(${index})" style="font-size:1.1rem;line-height:1;" title="Eliminar"><i class="bi bi-x-circle-fill"></i></button>
+                    <button class="btn btn-link text-danger p-0" onclick="eliminarProducto(${index})" style="font-size:1rem;line-height:1;" title="Eliminar"><i class="bi bi-x-circle-fill"></i></button>
                 </div>
-                <div class="d-flex align-items-center gap-1 flex-wrap">
+                <!-- Línea 2: selector de precio + cantidad + subtotal -->
+                <div class="d-flex align-items-center gap-1 mb-1">
+                    <select class="form-select" onchange="cambiarTipoPrecio(${index}, this.value)" id="tipoPrecio${index}"
+                            style="width:100px;height:22px;padding:0 4px;font-size:0.7rem;">
+                        ${opcionesPrecios}
+                    </select>
                     <button class="btn btn-outline-secondary" style="width:22px;height:22px;padding:0;font-size:0.75rem;line-height:1;" onclick="cambiarCantidad(${index}, -1)">−</button>
                     <input type="number" class="form-control text-center" value="${p.cantidad}" min="1" max="${p.tipo_venta === 'contra_pedido' ? 9999 : p.stock_disponible}"
                            onchange="actualizarCantidad(${index}, this.value)"
                            style="width:38px;height:22px;padding:0 2px;font-size:0.8rem;">
                     <button class="btn btn-outline-secondary" style="width:22px;height:22px;padding:0;font-size:0.75rem;line-height:1;" onclick="cambiarCantidad(${index}, 1)">+</button>
-                    <span class="text-muted" style="font-size:0.75rem;">×</span>
-                    <div class="input-group" style="width:88px;">
-                        <span class="input-group-text" style="padding:0 4px;font-size:0.75rem;height:22px;">$</span>
-                        <input type="number" class="form-control text-end"
-                               value="${p.precio_unitario}" min="0" step="0.01"
+                    <strong class="text-success ms-auto" style="font-size:0.85rem;min-width:62px;text-align:right;">$${formatearNumero(p.subtotal)}</strong>
+                </div>
+                <!-- Línea 3: precio unitario editable -->
+                <div class="d-flex align-items-center gap-1">
+                    <small class="text-muted" style="font-size:0.68rem;">Precio unit.:</small>
+                    <div class="input-group" style="width:95px;">
+                        <span class="input-group-text" style="padding:0 3px;font-size:0.7rem;height:20px;">$</span>
+                        <input type="number" class="form-control text-end" value="${p.precio_unitario}" min="0" step="0.01"
                                onchange="actualizarPrecio(${index}, this.value)"
                                onkeypress="if(event.key==='Enter'){event.preventDefault();actualizarPrecio(${index},this.value);}"
                                id="precioInput${index}"
-                               style="height:22px;padding:0 3px;font-size:0.8rem;">
+                               style="height:20px;padding:0 3px;font-size:0.8rem;">
                     </div>
-                    <strong class="text-success ms-auto" style="font-size:0.85rem;min-width:60px;text-align:right;">$${formatearNumero(p.subtotal)}</strong>
+                    ${p.precio_minimo ? `<small style="font-size:0.6rem;" class="text-muted">mín $${formatearNumero(p.precio_minimo)}</small>` : ''}
                 </div>
-                ${alertaPrecio}
+                ${alertaPrecio ? `<div class="mt-1">${alertaPrecio}</div>` : ''}
                 ${infoHoraPedido}${infoEntrega}
             </div>`;
         }
