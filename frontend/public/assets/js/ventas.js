@@ -1025,62 +1025,37 @@ function renderizarProductos() {
                 `<br><small class="text-primary"><i class="bi bi-clock-history"></i> Pedido: ${formatearFechaHora(p.fecha_agregado)}</small>` : '';
             
             html += `
-            <div class="producto-item mb-3 p-3 border rounded ${p.tipo_venta === 'contra_pedido' ? 'border-warning' : ''} ${clasePrecio}">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <strong>${p.nombre}</strong>${badgeContraPedido}
-                        ${p.aplica_iva ? '<span class="badge bg-info ms-2"><i class="bi bi-percent"></i> IVA ' + p.porcentaje_iva + '%</span>' : '<span class="badge bg-secondary ms-2">Sin IVA</span>'}<br>
-                        <small class="text-muted">SKU: ${p.sku} | Stock: ${p.stock_disponible}</small>${infoHoraPedido}${infoEntrega}
+            <div class="producto-item px-2 py-1 border-bottom ${p.tipo_venta === 'contra_pedido' ? 'bg-warning-subtle' : ''}">
+                <div class="d-flex align-items-center gap-1 mb-1">
+                    <div class="flex-grow-1" style="min-width:0;">
+                        <div class="fw-semibold small text-truncate">${p.nombre}${badgeContraPedido}</div>
+                        <div class="d-flex align-items-center gap-1">
+                            ${p.aplica_iva ? `<span style="font-size:0.65rem;" class="text-info">IVA ${p.porcentaje_iva}%</span>` : '<span style="font-size:0.65rem;" class="text-muted">Sin IVA</span>'}
+                            <span style="font-size:0.65rem;" class="text-muted">SKU: ${p.sku}</span>
+                        </div>
                     </div>
-                    <div class="d-flex align-items-start gap-2">
-                        <!-- Cantidad -->
-                        <div class="d-flex flex-column align-items-center">
-                            <small class="text-muted mb-1">Cantidad</small>
-                            <div class="d-flex align-items-center">
-                                <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, -1)">
-                                    <i class="bi bi-dash"></i>
-                                </button>
-                                <input type="number" class="form-control form-control-sm input-cantidad mx-1" 
-                                       value="${p.cantidad}" min="1" max="${p.tipo_venta === 'contra_pedido' ? 9999 : p.stock_disponible}"
-                                       onchange="actualizarCantidad(${index}, this.value)"
-                                       style="width: 60px; text-align: center;">
-                                <button class="btn btn-sm btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(${index}, 1)">
-                                    <i class="bi bi-plus"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Precio -->
-                        <div class="d-flex flex-column" style="min-width: 180px;">
-                            <small class="text-muted mb-1">Tipo de Precio</small>
-                            <select class="form-select form-select-sm mb-1" onchange="cambiarTipoPrecio(${index}, this.value)" id="tipoPrecio${index}">
-                                ${opcionesPrecios}
-                            </select>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text">$</span>
-                                <input type="number" class="form-control form-control-sm" 
-                                       value="${p.precio_unitario}" 
-                                       min="0" step="0.01"
-                                       onchange="actualizarPrecio(${index}, this.value)"
-                                       onkeypress="if(event.key === 'Enter') { event.preventDefault(); actualizarPrecio(${index}, this.value); return false; }"
-                                       id="precioInput${index}"
-                                       style="text-align: right;">
-                            </div>
-                            ${alertaPrecio}
-                        </div>
-                        
-                        <!-- Subtotal -->
-                        <div class="text-end" style="min-width: 100px;">
-                            <small class="text-muted">Subtotal</small><br>
-                            <strong class="text-success fs-5">$${formatearNumero(p.subtotal)}</strong>
-                        </div>
-                        
-                        <!-- Eliminar -->
-                        <button class="btn btn-sm btn-outline-danger" onclick="eliminarProducto(${index})" title="Eliminar producto">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
+                    <button class="btn btn-link text-danger p-0" onclick="eliminarProducto(${index})" style="font-size:1.1rem;line-height:1;" title="Eliminar"><i class="bi bi-x-circle-fill"></i></button>
                 </div>
+                <div class="d-flex align-items-center gap-1 flex-wrap">
+                    <button class="btn btn-outline-secondary" style="width:22px;height:22px;padding:0;font-size:0.75rem;line-height:1;" onclick="cambiarCantidad(${index}, -1)">−</button>
+                    <input type="number" class="form-control text-center" value="${p.cantidad}" min="1" max="${p.tipo_venta === 'contra_pedido' ? 9999 : p.stock_disponible}"
+                           onchange="actualizarCantidad(${index}, this.value)"
+                           style="width:38px;height:22px;padding:0 2px;font-size:0.8rem;">
+                    <button class="btn btn-outline-secondary" style="width:22px;height:22px;padding:0;font-size:0.75rem;line-height:1;" onclick="cambiarCantidad(${index}, 1)">+</button>
+                    <span class="text-muted" style="font-size:0.75rem;">×</span>
+                    <div class="input-group" style="width:88px;">
+                        <span class="input-group-text" style="padding:0 4px;font-size:0.75rem;height:22px;">$</span>
+                        <input type="number" class="form-control text-end"
+                               value="${p.precio_unitario}" min="0" step="0.01"
+                               onchange="actualizarPrecio(${index}, this.value)"
+                               onkeypress="if(event.key==='Enter'){event.preventDefault();actualizarPrecio(${index},this.value);}"
+                               id="precioInput${index}"
+                               style="height:22px;padding:0 3px;font-size:0.8rem;">
+                    </div>
+                    <strong class="text-success ms-auto" style="font-size:0.85rem;min-width:60px;text-align:right;">$${formatearNumero(p.subtotal)}</strong>
+                </div>
+                ${alertaPrecio}
+                ${infoHoraPedido}${infoEntrega}
             </div>`;
         }
         
