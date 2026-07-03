@@ -121,7 +121,7 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                                     <td style="padding: 10px; border: 1px solid #ddd;">${item.nombre || ''}</td>
                                     <td style="padding: 10px; border: 1px solid #ddd;">${item.sku || '-'}</td>
                                     <td style="padding: 10px; border: 1px solid #ddd; text-align:center;">${item.cantidad || 0}</td>
-                                    <td style="padding: 10px; border: 1px solid #ddd; text-align:right;">$${facturaModel_formatearNumero(item.precio)}</td>
+                                    <td style="padding: 10px; border: 1px solid #ddd; text-align:right;">$${facturaModel_formatearNumero(item.precio_unitario || item.precio)}</td>
                                     <td style="padding: 10px; border: 1px solid #ddd; text-align:right;">$${facturaModel_formatearNumero(item.subtotal)}</td>
                                 </tr>
                             `).join('') || ''}
@@ -160,6 +160,20 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                         </tfoot>
                     </table>
                 </div>
+
+                ${ventaData.pagos && ventaData.pagos.length > 0 ? `
+                    <div style="margin-top: 20px; padding: 14px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fbfbfb;">
+                        <strong style="font-size:1rem;">Medios de Pago</strong>
+                        <table style="width:100%; margin-top:8px; border-collapse:collapse;">
+                            ${ventaData.pagos.map(p => {
+                                const nombres = { efectivo:'Efectivo', tarjeta_debito:'Tarjeta Débito', tarjeta_credito:'Tarjeta Crédito', transferencia:'Transferencia', nequi:'Nequi', daviplata:'Daviplata', cheque:'Cheque' };
+                                const nombre = nombres[p.metodo_pago] || p.metodo_pago;
+                                const detalle = [p.referencia ? 'Ref: '+p.referencia : '', p.banco ? p.banco : ''].filter(Boolean).join(' · ');
+                                return `<tr><td style="padding:4px 8px 4px 0;">${nombre}${detalle ? '<br><small style="color:#888;">' + detalle + '</small>' : ''}</td><td style="text-align:right; padding:4px 0; font-weight:600;">$${facturaModel_formatearNumero(p.monto)}</td></tr>`;
+                            }).join('')}
+                        </table>
+                    </div>
+                ` : ''}
 
                 ${ventaData.notas ? `
                     <div style="margin-top: 20px; padding: 14px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fbfbfb;">

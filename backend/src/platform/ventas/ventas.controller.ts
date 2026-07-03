@@ -87,6 +87,11 @@ export const buscarProducto = async (req: Request, res: Response): Promise<Respo
       `SELECT 
         p.id, p.nombre, p.sku, p.codigo_barras, 
         p.precio_minorista as precio_venta,
+        p.precio_minorista,
+        p.precio_mayorista,
+        p.precio_distribuidor,
+        p.precio_minimo,
+        p.precio_maximo,
         p.stock_actual, p.unidad_medida, p.imagen_url,
         p.aplica_iva, p.porcentaje_iva, p.iva_incluido_en_precio,
         p.permite_venta_sin_stock,

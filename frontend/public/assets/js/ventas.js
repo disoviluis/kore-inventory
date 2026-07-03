@@ -1770,7 +1770,8 @@ async function guardarVenta() {
         // Guardar nombres de productos antes de limpiar
         const productosConNombres = ventaData.productos.map(p => ({
             ...p,
-            nombre: productosVenta.find(pv => pv.id === p.producto_id)?.nombre || 'Producto'
+            nombre: productosVenta.find(pv => pv.id === p.producto_id)?.nombre || 'Producto',
+            sku: productosVenta.find(pv => pv.id === p.producto_id)?.sku || ''
         }));
         
         // Guardar datos de venta en variables globales para la impresión
