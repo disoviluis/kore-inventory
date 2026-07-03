@@ -183,7 +183,7 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                 ` : ''}
 
                 <div style="margin-top: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; align-items: center;">
-                    ${config.mostrarCUFE && venta.cufe ? `<div style="flex: 1; min-width: 220px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background: #f8f9fa; font-size: 0.85rem;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+                    ${config.mostrarCUFE && venta.cufe ? `<div style="flex: 1; min-width: 220px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background: #f8f9fa; font-size: 0.72rem; word-break: break-all; overflow-wrap: break-word; font-family: monospace;"><strong style="font-family: sans-serif;">CUFE:</strong><br>${venta.cufe}</div>` : ''}
                     ${config.mostrarQR && venta.qr_code ? `<div style="flex: 0 0 120px; text-align: center; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; background: #f8f9fa;"><img src="${venta.qr_code}" alt="QR Code" style="width: 100px; height: 100px; object-fit: contain;"></div>` : ''}
                 </div>
                 <div style="margin-top: 24px; text-align:center; color: #6c757d;">

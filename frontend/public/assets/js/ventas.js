@@ -2487,7 +2487,7 @@ function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitComple
         </table>
     </div>
     
-    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${venta.cufe}</span></div>` : ''}
     ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
     
     <script>
@@ -2666,7 +2666,7 @@ function generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCo
         </table>
     </div>
     
-    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${venta.cufe}</span></div>` : ''}
     ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
     
     <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
@@ -2729,7 +2729,7 @@ function generarPlantillaCorporativaCarta(venta, ventaData, config, fecha, nitCo
         </table>
     </div>
     
-    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${venta.cufe}</span></div>` : ''}
     ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
     
     <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
@@ -2808,7 +2808,7 @@ function generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto
         </table>
     </div>
     
-    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 10px; padding: 10px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.06); font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 10px; padding: 10px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.06); font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${venta.cufe}</span></div>` : ''}
     ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 10px;"><img src="${venta.qr_code}" style="width: 80px; height: 80px; border-radius: 8px;"></div>` : ''}
     
     <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
@@ -2895,7 +2895,7 @@ function generarPlantillaTirilla(venta, ventaData, config) {
         <div class="item">
             <div class="item-name">${p.nombre}</div>
             <div class="item-details">
-                <span>${p.cantidad} x $${facturaModel_formatearNumero(p.precio)}</span>
+                <span>${p.cantidad} x $${facturaModel_formatearNumero(p.precio_unitario || p.precio)}</span>
                 <span>$${facturaModel_formatearNumero(p.subtotal)}</span>
             </div>
         </div>
@@ -2904,13 +2904,18 @@ function generarPlantillaTirilla(venta, ventaData, config) {
     <div class="totals">
         <div class="totals-row"><span>Subtotal:</span><span>$${facturaModel_formatearNumero(subtotal)}</span></div>
         ${descuento > 0 ? `<div class="totals-row"><span>Descuento:</span><span>-$${facturaModel_formatearNumero(descuento)}</span></div>` : ''}
-        <div class="totals-row"><span>IVA (19%):</span><span>$${facturaModel_formatearNumero(impuesto)}</span></div>
+        <div class="totals-row"><span>IVA:</span><span>$${facturaModel_formatearNumero(impuesto)}</span></div>
         ${ventaData.propina_valor > 0 ? `
             <div class="totals-row"><span>Propina ${ventaData.propina_porcentaje || 0}%:</span><span>$${facturaModel_formatearNumero(ventaData.propina_valor)}</span></div>
         ` : ''}
         <div class="totals-row total-final"><span>TOTAL:</span><span>$${facturaModel_formatearNumero(total)}</span></div>
     </div>
-    ${configActual.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; font-size: 7pt;"><strong>CUFE:</strong> ${venta.cufe}</div>` : ''}
+    ${ventaData.pagos && ventaData.pagos.length > 0 ? `
+    <div class="line"></div>
+    <div style="font-size: 8pt;"><strong>Medios de pago:</strong></div>
+    ${ventaData.pagos.map(p => { const nombres = { efectivo:'Efectivo', tarjeta_debito:'T.D\u00e9bito', tarjeta_credito:'T.Cr\u00e9dito', transferencia:'Transfer.', nequi:'Nequi', daviplata:'Daviplata', cheque:'Cheque' }; return `<div class="totals-row" style="font-size: 8pt;"><span>${nombres[p.metodo_pago] || p.metodo_pago}${p.referencia ? ' ('+p.referencia+')' : ''}</span><span>$${facturaModel_formatearNumero(p.monto)}</span></div>`; }).join('')}
+    ` : ''}
+    ${configActual.mostrarCUFE && venta.cufe ? `<div class="line"></div><div style="font-size: 6pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br>${venta.cufe}</div>` : ''}
     ${configActual.mostrarQR && venta.qr_code ? `<div class="center" style="margin-top: 4mm;"><img src="${venta.qr_code}" style="width: 70px; height: 70px; border-radius: 8px;"></div>` : ''}
     <div class="line"></div>
     <div class="center" style="font-size: 8pt; margin-top: 3mm;">¡Gracias por su compra!</div>
