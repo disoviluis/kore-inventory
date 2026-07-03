@@ -37,3 +37,34 @@ export const createS3PresignedUploadUrl = async (key: string, contentType: strin
 
   return await getSignedUrl(s3Client, command, { expiresIn: 900 });
 };
+
+/**
+ * Crea la carpeta raíz de una empresa en S3.
+ * En S3 las carpetas son objetos vacíos con key terminado en '/'.
+ */
+export const createS3FolderForEmpresa = async (empresaId: number): Promise<void> => {
+  if (!BUCKET_NAME) return; // silenciar si no hay bucket configurado
+
+  const folders = [
+    `empresa/${empresaId}/`,
+    `empresa/${empresaId}/productos/`,
+    `empresa/${empresaId}/logos/`,
+    `empresa/${empresaId}/pagina-publica/`
+  ];
+
+  for (const folder of folders) {
+    const command = new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: folder,
+      ContentLength: 0,
+      Body: ''
+    });
+    await s3Client.send(command);
+  }
+};
+
+/**
+ * Genera URL pública de un objeto S3.
+ */
+export const getS3PublicUrl = (key: string): string =>
+  `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;

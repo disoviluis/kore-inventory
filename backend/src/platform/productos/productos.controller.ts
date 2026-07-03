@@ -10,6 +10,7 @@ import { query } from '../../shared/database';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
+import { createS3PresignedUploadUrl, getS3BucketName } from '../../shared/s3';
 
 /**
  * Obtener todos los productos de una empresa
@@ -675,6 +676,69 @@ export const getDisponibilidadBodegas = async (req: Request, res: Response): Pro
     return errorResponse(
       res,
       'Error al obtener disponibilidad',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+/**
+ * Genera URL presignada S3 para subir imagen de producto
+ * POST /api/productos/upload-url
+ * Body: { empresa_id, producto_id?, filename, content_type }
+ */
+export const getProductoImagenPresignedUrl = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { empresa_id, producto_id, filename, content_type } = req.body;
+
+    if (!empresa_id || !filename || !content_type) {
+      return errorResponse(
+        res,
+        'Se requieren empresa_id, filename y content_type',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    // Solo permitir imágenes
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(content_type)) {
+      return errorResponse(
+        res,
+        'Tipo de archivo no permitido. Use JPEG, PNG, WebP o GIF',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    // Extensión segura
+    const ext = content_type === 'image/jpeg' ? 'jpg'
+      : content_type === 'image/png' ? 'png'
+      : content_type === 'image/webp' ? 'webp'
+      : 'gif';
+
+    const timestamp = Date.now();
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 80);
+    const key = producto_id
+      ? `empresa/${empresa_id}/productos/${producto_id}_${timestamp}.${ext}`
+      : `empresa/${empresa_id}/productos/tmp_${timestamp}_${safeName}`;
+
+    const uploadUrl = await createS3PresignedUploadUrl(key, content_type);
+    const publicUrl = `https://${getS3BucketName()}.s3.amazonaws.com/${key}`;
+
+    logger.info(`URL presignada generada para producto en empresa ${empresa_id}: ${key}`);
+
+    return successResponse(
+      res,
+      'URL presignada generada exitosamente',
+      { upload_url: uploadUrl, public_url: publicUrl, key },
+      CONSTANTS.HTTP_STATUS.OK
+    );
+  } catch (error: any) {
+    logger.error('Error al generar URL presignada para producto:', error);
+    return errorResponse(
+      res,
+      error.message?.includes('AWS_S3_BUCKET') ? 'S3 no configurado en el servidor' : 'Error al generar URL de subida',
       error,
       CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
     );

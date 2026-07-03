@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import pool from '../../shared/database';
 import logger from '../../shared/logger';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { createS3FolderForEmpresa } from '../../shared/s3';
 
 /**
  * ========================================
@@ -392,6 +393,15 @@ export const createEmpresaTrial = async (req: Request, res: Response) => {
     `, [empresaId, 'BOD-PRINCIPAL', 'Bodega Principal', 'bodega', true, true, 'activa']);
 
     logger.info(`Bodega principal creada para empresa ${empresaId}`);
+
+    // Crear carpeta S3 para la empresa
+    try {
+      await createS3FolderForEmpresa(empresaId);
+      logger.info(`Carpeta S3 creada para empresa ${empresaId}`);
+    } catch (s3Error: any) {
+      // No fallar si S3 no está configurado
+      logger.warning(`No se pudo crear carpeta S3 para empresa ${empresaId}: ${s3Error.message}`);
+    }
 
     // Auditoría
     await connection.query(`

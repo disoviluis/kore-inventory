@@ -707,14 +707,28 @@
                                 </label>
                                 <div class="row g-2">
                                     <div class="col-md-8">
-                                        <input type="url" class="form-control" id="productoImagenUrl" placeholder="https://ejemplo.com/imagen.jpg">
+                                        <!-- Subida S3 -->
+                                        <div class="mb-2">
+                                            <label class="btn btn-outline-primary btn-sm w-100" id="btnSubirImagenLabel" style="cursor:pointer;">
+                                                <i class="bi bi-upload me-1"></i>Subir imagen desde tu dispositivo
+                                                <input type="file" id="productoImagenFile" accept="image/*" style="display:none;">
+                                            </label>
+                                            <div id="imagenUploadProgress" style="display:none;" class="mt-1">
+                                                <div class="progress" style="height:6px;">
+                                                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="imagenProgressBar" style="width:0%"></div>
+                                                </div>
+                                                <small class="text-muted" id="imagenUploadStatus">Comprimiendo...</small>
+                                            </div>
+                                        </div>
+                                        <!-- URL manual (alternativa o resultado de subida) -->
+                                        <input type="url" class="form-control form-control-sm" id="productoImagenUrl" placeholder="O pega una URL de imagen...">
                                         <small class="text-muted">
                                             <i class="bi bi-info-circle me-1"></i>
-                                            Ingresa la URL de la imagen (recomendado: 500x500px, formato JPG o PNG)
+                                            Sube una foto o pega una URL. La imagen se comprime automáticamente antes de subir.
                                         </small>
                                     </div>
                                     <div class="col-md-4">
-                                        <div id="imagenPreview" class="border rounded p-2 text-center" style="height: 100px; background: #f8f9fa;">
+                                        <div id="imagenPreview" class="border rounded p-2 text-center" style="height: 100px; background: #f8f9fa; position:relative;">
                                             <div id="imagenPreviewPlaceholder">
                                                 <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
                                                 <p class="text-muted small mb-0">Vista previa</p>

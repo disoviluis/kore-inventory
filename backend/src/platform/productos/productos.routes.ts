@@ -13,7 +13,8 @@ import {
   updateProducto,
   deleteProducto,
   getDisponibilidadProducto,
-  getDisponibilidadBodegas
+  getDisponibilidadBodegas,
+  getProductoImagenPresignedUrl
 } from './productos.controller';
 import { authMiddleware } from '../../core/middleware/auth.middleware';
 
@@ -24,6 +25,9 @@ router.use(authMiddleware);
 
 // GET /api/productos?empresaId=X - Obtener todos los productos de una empresa
 router.get('/', getProductos);
+
+// POST /api/productos/upload-url - Generar URL presignada S3 para subir imagen
+router.post('/upload-url', getProductoImagenPresignedUrl);
 
 // GET /api/productos/:id - Obtener producto por ID
 router.get('/:id/disponibilidad-bodegas', getDisponibilidadBodegas);
