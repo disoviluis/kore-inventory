@@ -923,7 +923,12 @@ function agregarProducto(producto) {
             }
         }
 
-        const precioUnitario = parseFloat(producto.precio_venta || producto.precio_minorista);
+        const precioUnitario = (producto.en_promocion_activa && producto.precio_promocion)
+            ? parseFloat(producto.precio_promocion)
+            : parseFloat(producto.precio_venta || producto.precio_minorista);
+        const precioOriginalPromo = (producto.en_promocion_activa && producto.precio_promocion)
+            ? parseFloat(producto.precio_minorista || producto.precio_venta)
+            : null;
         productosVenta.push({
             id: producto.id,
             nombre: producto.nombre,
@@ -934,6 +939,8 @@ function agregarProducto(producto) {
             precio_distribuidor: producto.precio_distribuidor || null,
             precio_minimo: producto.precio_minimo || null,
             precio_maximo: producto.precio_maximo || null,
+            precio_original_promo: precioOriginalPromo,
+            en_promocion_activa: producto.en_promocion_activa || 0,
             cantidad: 1,
             stock_disponible: producto.stock_actual,
             subtotal: precioUnitario,
@@ -1029,8 +1036,8 @@ function renderizarProductos() {
                 <!-- Línea 1: nombre + eliminar -->
                 <div class="d-flex align-items-center gap-1 mb-1">
                     <div class="flex-grow-1" style="min-width:0;">
-                        <div class="fw-semibold small text-truncate">${p.nombre}${badgeContraPedido}</div>
-                        <small style="font-size:0.65rem;" class="text-muted">SKU: ${p.sku}${p.aplica_iva ? ` · IVA ${p.porcentaje_iva}%` : ''}</small>
+                        <div class="fw-semibold small text-truncate">${p.nombre}${badgeContraPedido}${p.en_promocion_activa ? ' <span class="badge bg-warning text-dark" style="font-size:0.6rem;"><i class="bi bi-tag-fill"></i></span>' : ''}</div>
+                        <small style="font-size:0.65rem;" class="text-muted">SKU: ${p.sku}${p.aplica_iva ? ` · IVA ${p.porcentaje_iva}%` : ''}${p.precio_original_promo ? ` · <span class="text-decoration-line-through">$${formatearNumero(p.precio_original_promo)}</span>` : ''}</small>
                     </div>
                     <button class="btn btn-link text-danger p-0" onclick="eliminarProducto(${index})" style="font-size:1rem;line-height:1;" title="Eliminar"><i class="bi bi-x-circle-fill"></i></button>
                 </div>
@@ -1705,6 +1712,8 @@ async function guardarVenta() {
             producto_id: p.id,
             cantidad: p.cantidad,
             precio_unitario: p.precio_unitario,
+            precio_original_promo: p.precio_original_promo || null,
+            en_promocion_activa: p.en_promocion_activa || 0,
             descuento: 0,
             subtotal: p.subtotal,
             // Campos para ventas contra pedido
@@ -3381,6 +3390,7 @@ function renderizarCatalogoGrid(productos, container) {
                      ondblclick="agregarProductoDesdeCatalogo(${p.id})"
                      data-producto-id="${p.id}">
                     <span class="stock-badge ${stockClass}">${stockText}</span>
+                    ${p.en_promocion_activa ? `<span class="badge bg-warning text-dark" style="position:absolute;top:8px;left:8px;z-index:2;font-size:0.7rem;"><i class="bi bi-tag-fill me-1"></i>PROMO</span>` : ''}
                     ${p.imagen_url ? 
                         `<img src="${p.imagen_url}" class="producto-card-img mb-2" alt="${p.nombre}">` :
                         `<div class="producto-card-img-placeholder mb-2">
@@ -3393,7 +3403,12 @@ function renderizarCatalogoGrid(productos, container) {
                         ${p.aplica_iva ? '<span class="badge bg-info text-white ms-1" style="font-size: 0.65rem;">IVA</span>' : ''}
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
-                        <strong class="text-success" style="font-size: 1.1rem;">$${formatearNumero(p.precio_minorista)}</strong>
+                        <div>
+                            ${p.en_promocion_activa ? `<small class="text-muted text-decoration-line-through d-block" style="font-size:0.75rem;">$${formatearNumero(p.precio_minorista)}</small>` : ''}
+                            <strong class="${p.en_promocion_activa ? 'text-danger' : 'text-success'}" style="font-size: 1.1rem;">
+                                $${formatearNumero(p.en_promocion_activa ? p.precio_promocion : p.precio_minorista)}
+                            </strong>
+                        </div>
                         <button class="btn btn-sm btn-success" 
                                 onclick="event.stopPropagation(); agregarProductoDesdeCatalogo(${p.id});"
                                 title="Agregar producto">
@@ -3436,6 +3451,7 @@ function renderizarCatalogoList(productos, container) {
                         <div class="flex-grow-1">
                             <strong>${p.nombre}</strong>
                             ${p.aplica_iva ? '<span class="badge bg-info text-white ms-2">IVA</span>' : ''}
+                            ${p.en_promocion_activa ? '<span class="badge bg-warning text-dark ms-1"><i class="bi bi-tag-fill me-1"></i>PROMO</span>' : ''}
                             <br>
                             <small class="text-muted">SKU: ${p.sku}</small>
                         </div>
@@ -3443,7 +3459,8 @@ function renderizarCatalogoList(productos, container) {
                             <span class="badge ${stockClass}">${stockText}</span>
                         </div>
                         <div class="text-end me-2">
-                            <strong class="text-success" style="font-size: 1.2rem;">$${formatearNumero(p.precio_minorista)}</strong>
+                            ${p.en_promocion_activa ? `<small class="text-muted text-decoration-line-through d-block" style="font-size:0.75rem;">$${formatearNumero(p.precio_minorista)}</small>` : ''}
+                            <strong class="${p.en_promocion_activa ? 'text-danger' : 'text-success'}" style="font-size: 1.2rem;">$${formatearNumero(p.en_promocion_activa ? p.precio_promocion : p.precio_minorista)}</strong>
                         </div>
                         <div>
                             <button class="btn btn-sm btn-success" 

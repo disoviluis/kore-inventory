@@ -11,6 +11,52 @@ let productos = [];
 let categorias = [];
 
 // ============================================
+// FUNCIONES GLOBALES DE PROMOCIÓN
+// ============================================
+
+function toggleSeccionPromocion(activa) {
+    const seccion = document.getElementById('seccionPromocion');
+    if (seccion) seccion.style.display = activa ? 'block' : 'none';
+    if (!activa) {
+        const preview = document.getElementById('previewPromocion');
+        if (preview) preview.innerHTML = '';
+    } else {
+        actualizarPreviewPromocion();
+    }
+}
+
+function actualizarPreviewPromocion() {
+    const precioMinorista = parseFloat(document.getElementById('productoPrecioMinorista')?.value) || 0;
+    const precioPromo = parseFloat(document.getElementById('productoPrecioPromocion')?.value) || 0;
+    const inicio = document.getElementById('productoPromocionInicio')?.value || '';
+    const fin = document.getElementById('productoPromocionFin')?.value || '';
+    const preview = document.getElementById('previewPromocion');
+    if (!preview) return;
+
+    if (!precioPromo) {
+        preview.innerHTML = '';
+        return;
+    }
+
+    const ahorro = precioMinorista > precioPromo ? precioMinorista - precioPromo : 0;
+    const descPct = precioMinorista > 0 ? ((ahorro / precioMinorista) * 100).toFixed(1) : 0;
+    const hoy = new Date().toISOString().split('T')[0];
+    const activa = (!inicio || inicio <= hoy) && (!fin || fin >= hoy);
+
+    preview.innerHTML = `
+        <div class="alert alert-${activa ? 'warning' : 'secondary'} py-2 mb-0">
+            <i class="bi bi-tag-fill me-2"></i>
+            <strong>Precio normal:</strong> $${precioMinorista.toLocaleString('es-CO')}
+            &nbsp;&rarr;&nbsp;
+            <strong class="text-danger">Precio promo:</strong> $${precioPromo.toLocaleString('es-CO')}
+            ${ahorro > 0 ? `&nbsp;<span class="badge bg-danger">-${descPct}%</span>` : ''}
+            ${inicio || fin ? `<br><small class="text-muted">Vigente: ${inicio || 'hoy'} — ${fin || 'indefinido'}</small>` : ''}
+            <br><small class="${activa ? 'text-success fw-bold' : 'text-muted'}">${activa ? '✅ Esta promoción estaría ACTIVA ahora mismo' : '⏳ Esta promoción no está vigente aún'}</small>
+        </div>
+    `;
+}
+
+// ============================================
 // INICIALIZACIÓN
 // ============================================
 
@@ -422,6 +468,7 @@ function renderizarProductos(items) {
                     <span class="badge ${prod.estado === 'activo' ? 'bg-success' : 'bg-secondary'}">
                         ${prod.estado === 'activo' ? 'Activo' : 'Inactivo'}
                     </span>
+                    ${prod.en_promocion_activa ? `<span class="badge bg-warning text-dark ms-1" title="En Promoción"><i class="bi bi-tag-fill"></i> PROMO</span>` : ''}
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm">
@@ -755,7 +802,18 @@ function abrirModalNuevo() {
     
     // Limpiar tabla resumen
     updateTablaResumenPrecios();
-    
+
+    // Resetear sección de promoción
+    document.getElementById('productoEnPromocion').checked = false;
+    document.getElementById('seccionPromocion').style.display = 'none';
+    const badgeVigente = document.getElementById('badgePromoVigente');
+    if (badgeVigente) badgeVigente.style.display = 'none';
+    document.getElementById('productoPrecioPromocion').value = '';
+    document.getElementById('productoPromocionInicio').value = '';
+    document.getElementById('productoPromocionFin').value = '';
+    const previewPromo = document.getElementById('previewPromocion');
+    if (previewPromo) previewPromo.innerHTML = '';
+
     // Limpiar preview de imagen
     const previewImg = document.getElementById('imagenPreviewImg');
     const previewPlaceholder = document.getElementById('imagenPreviewPlaceholder');
@@ -839,6 +897,17 @@ async function editarProducto(id) {
         
         document.getElementById('productoEstado').value = producto.estado;
 
+        // Promoción
+        const enPromo = !!producto.en_promocion;
+        document.getElementById('productoEnPromocion').checked = enPromo;
+        document.getElementById('seccionPromocion').style.display = enPromo ? 'block' : 'none';
+        document.getElementById('productoPrecioPromocion').value = producto.precio_promocion || '';
+        document.getElementById('productoPromocionInicio').value = producto.promocion_inicio || '';
+        document.getElementById('productoPromocionFin').value = producto.promocion_fin || '';
+        const badgeVigente = document.getElementById('badgePromoVigente');
+        if (badgeVigente) badgeVigente.style.display = producto.en_promocion_activa ? 'inline-flex' : 'none';
+        actualizarPreviewPromocion();
+
         // Mostrar/ocultar sección de inventario según tipo
         const seccionInventario = document.getElementById('seccionInventario');
         if (seccionInventario) {
@@ -907,7 +976,19 @@ async function guardarProducto(e) {
         ubicacion_almacen: document.getElementById('productoUbicacion').value,
         permite_venta_sin_stock: document.getElementById('productoPermiteVentaSinStock').checked,
         
-        estado: document.getElementById('productoEstado').value
+        estado: document.getElementById('productoEstado').value,
+
+        // Promoción
+        en_promocion: document.getElementById('productoEnPromocion').checked ? 1 : 0,
+        precio_promocion: document.getElementById('productoEnPromocion').checked
+            ? (parseFloat(document.getElementById('productoPrecioPromocion').value) || null)
+            : null,
+        promocion_inicio: document.getElementById('productoEnPromocion').checked
+            ? (document.getElementById('productoPromocionInicio').value || null)
+            : null,
+        promocion_fin: document.getElementById('productoEnPromocion').checked
+            ? (document.getElementById('productoPromocionFin').value || null)
+            : null
     };
 
     // Agregar cuentas contables si existen en el formulario
@@ -1290,7 +1371,12 @@ function exportarProductos() {
             'Cuenta Gasto': p.cuenta_gasto || '',
             'Margen Minorista (%)': p.margen_minorista || 0,
             'Margen Mayorista (%)': p.margen_mayorista || 0,
-            'Margen Distribuidor (%)': p.margen_distribuidor || 0
+            'Margen Distribuidor (%)': p.margen_distribuidor || 0,
+            'En Promoción': p.en_promocion ? 'Sí' : 'No',
+            'Precio Promoción': p.precio_promocion || '',
+            'Promo Activa Ahora': p.en_promocion_activa ? 'Sí' : 'No',
+            'Promo Inicio': p.promocion_inicio || '',
+            'Promo Fin': p.promocion_fin || ''
         }));
 
         // Crear libro de Excel

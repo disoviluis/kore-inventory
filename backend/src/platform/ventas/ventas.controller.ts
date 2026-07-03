@@ -95,6 +95,17 @@ export const buscarProducto = async (req: Request, res: Response): Promise<Respo
         p.stock_actual, p.unidad_medida, p.imagen_url,
         p.aplica_iva, p.porcentaje_iva, p.iva_incluido_en_precio,
         p.permite_venta_sin_stock,
+        p.en_promocion,
+        p.precio_promocion,
+        DATE_FORMAT(p.promocion_inicio, '%Y-%m-%d') as promocion_inicio,
+        DATE_FORMAT(p.promocion_fin, '%Y-%m-%d') as promocion_fin,
+        CASE 
+          WHEN p.en_promocion = 1 
+            AND p.precio_promocion IS NOT NULL
+            AND (p.promocion_inicio IS NULL OR p.promocion_inicio <= CURDATE())
+            AND (p.promocion_fin IS NULL OR p.promocion_fin >= CURDATE())
+          THEN 1 ELSE 0
+        END as en_promocion_activa,
         c.nombre as categoria_nombre
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id

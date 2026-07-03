@@ -132,15 +132,23 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                             </tr>
                         </thead>
                         <tbody>
-                            ${ventaData.productos?.map((item, index) => `
+                            ${ventaData.productos?.map((item, index) => {
+                                const tienePromo = item.precio_original_promo && item.precio_original_promo > (item.precio_unitario || item.precio);
+                                const ahorro = tienePromo ? (item.precio_original_promo - (item.precio_unitario || item.precio)) * item.cantidad : 0;
+                                return `
                                 <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f9f9f9'};">
-                                    <td style="padding: ${cellPad}; border: 1px solid #ddd;">${item.nombre || ''}</td>
+                                    <td style="padding: ${cellPad}; border: 1px solid #ddd;">
+                                        ${item.nombre || ''}
+                                        ${tienePromo ? `<br><span style="font-size:0.75em;color:#dc3545;"><i>🏷️ Promo — antes $${facturaModel_formatearNumero(item.precio_original_promo)}</i></span>` : ''}
+                                    </td>
                                     <td style="padding: ${cellPad}; border: 1px solid #ddd;">${item.sku || '-'}</td>
                                     <td style="padding: ${cellPad}; border: 1px solid #ddd; text-align:center;">${item.cantidad || 0}</td>
                                     <td style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">$${facturaModel_formatearNumero(item.precio_unitario || item.precio)}</td>
                                     <td style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">$${facturaModel_formatearNumero(item.subtotal)}</td>
                                 </tr>
-                            `).join('') || ''}
+                                ${tienePromo ? `<tr style="background:#fff3cd;"><td colspan="4" style="padding:2px ${cellPad};border:1px solid #ddd;text-align:right;font-size:0.8em;color:#856404;">Ahorro con promoción (${item.nombre}):</td><td style="padding:2px ${cellPad};border:1px solid #ddd;text-align:right;font-size:0.8em;color:#856404;font-weight:bold;">-$${facturaModel_formatearNumero(ahorro)}</td></tr>` : ''}
+                                `;
+                            }).join('') || ''}
                         </tbody>
                         <tfoot>
                             <tr>

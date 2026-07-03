@@ -855,6 +855,56 @@
                                 <small class="text-muted">Precio máximo sugerido (evita errores de digitación)</small>
                             </div>
 
+                            <!-- SECCIÓN PROMOCIÓN -->
+                            <div class="col-12 mt-3">
+                                <div class="card border-warning border-2">
+                                    <div class="card-header bg-warning bg-opacity-10 py-2">
+                                        <div class="form-check form-switch mb-0">
+                                            <input class="form-check-input" type="checkbox" id="productoEnPromocion"
+                                                   onchange="toggleSeccionPromocion(this.checked)">
+                                            <label class="form-check-label fw-bold" for="productoEnPromocion">
+                                                <i class="bi bi-tag-fill text-warning me-1"></i>
+                                                Poner en Promoción
+                                                <span class="badge bg-warning text-dark ms-2" id="badgePromoVigente" style="display:none;">ACTIVA</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="card-body" id="seccionPromocion" style="display:none;">
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-percent me-1 text-danger"></i>Precio de Promoción
+                                                </label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">$</span>
+                                                    <input type="number" class="form-control" id="productoPrecioPromocion"
+                                                           step="0.01" min="0" placeholder="0.00"
+                                                           oninput="actualizarPreviewPromocion()">
+                                                </div>
+                                                <small class="text-muted">Precio especial durante la promoción</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-calendar-event me-1"></i>Fecha de Inicio
+                                                </label>
+                                                <input type="date" class="form-control" id="productoPromocionInicio"
+                                                       oninput="actualizarPreviewPromocion()">
+                                                <small class="text-muted">Si no se pone, inicia hoy</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="bi bi-calendar-x me-1"></i>Fecha de Fin
+                                                </label>
+                                                <input type="date" class="form-control" id="productoPromocionFin"
+                                                       oninput="actualizarPreviewPromocion()">
+                                                <small class="text-muted">Si no se pone, es indefinida</small>
+                                            </div>
+                                            <div class="col-12" id="previewPromocion"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- IVA -->
                             <div class="col-12 mt-3">
                                 <h6 class="border-bottom pb-2"><i class="bi bi-receipt me-2"></i>Impuestos (IVA)</h6>

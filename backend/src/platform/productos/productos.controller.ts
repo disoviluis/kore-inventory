@@ -88,6 +88,17 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         p.created_at,
         p.updated_at,
         p.fecha_ultimo_cambio_precio,
+        p.en_promocion,
+        p.precio_promocion,
+        DATE_FORMAT(p.promocion_inicio, '%Y-%m-%d') as promocion_inicio,
+        DATE_FORMAT(p.promocion_fin, '%Y-%m-%d') as promocion_fin,
+        CASE 
+          WHEN p.en_promocion = 1 
+            AND p.precio_promocion IS NOT NULL
+            AND (p.promocion_inicio IS NULL OR p.promocion_inicio <= CURDATE())
+            AND (p.promocion_fin IS NULL OR p.promocion_fin >= CURDATE())
+          THEN 1 ELSE 0
+        END as en_promocion_activa,
         ROUND(((p.precio_minorista - p.precio_compra) / p.precio_compra) * 100, 2) as margen_minorista,
         CASE 
           WHEN p.precio_mayorista IS NOT NULL AND p.precio_compra > 0 THEN
@@ -229,37 +240,41 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
     const result = await query(
       `INSERT INTO productos (
         empresa_id,
-        tipo,
-        maneja_inventario,
-        nombre,
-        descripcion,
-        sku,
-        codigo_barras,
-        categoria_id,
-        precio_compra,
-        precio_minorista,
-        precio_mayorista,
-        precio_distribuidor,
-        precio_minimo,
-        precio_maximo,
-        aplica_iva,
-        porcentaje_iva,
-        tipo_impuesto,
-        iva_incluido_en_precio,
-        stock_actual,
-        stock_minimo,
-        stock_maximo,
-        unidad_medida,
-        ubicacion_almacen,
-        permite_venta_sin_stock,
-        imagen_url,
-        estado,
-        cuenta_ingreso,
-        cuenta_costo,
-        cuenta_inventario,
-        cuenta_gasto,
-        creado_por
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      tipo,
+      maneja_inventario,
+      nombre,
+      descripcion,
+      sku,
+      codigo_barras,
+      categoria_id,
+      precio_compra,
+      precio_minorista,
+      precio_mayorista,
+      precio_distribuidor,
+      precio_minimo,
+      precio_maximo,
+      aplica_iva,
+      porcentaje_iva,
+      tipo_impuesto,
+      iva_incluido_en_precio,
+      stock_actual,
+      stock_minimo,
+      stock_maximo,
+      unidad_medida,
+      ubicacion_almacen,
+      permite_venta_sin_stock,
+      imagen_url,
+      estado,
+      cuenta_ingreso,
+      cuenta_costo,
+      cuenta_inventario,
+      cuenta_gasto,
+      en_promocion,
+      precio_promocion,
+      promocion_inicio,
+      promocion_fin,
+      creado_por
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         tipoProducto,
@@ -291,6 +306,10 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         cuenta_costo || null,
         cuenta_inventario || null,
         cuenta_gasto || null,
+        req.body.en_promocion ? 1 : 0,
+        req.body.en_promocion ? (req.body.precio_promocion || null) : null,
+        req.body.en_promocion ? (req.body.promocion_inicio || null) : null,
+        req.body.en_promocion ? (req.body.promocion_fin || null) : null,
         req.body.userId || null // Asumiendo que el userId viene del middleware de auth
       ]
     );
@@ -499,6 +518,23 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
       updates.push('cuenta_gasto = ?');
       values.push(cuenta_gasto);
     }
+    // Campos de promoción
+    if (req.body.en_promocion !== undefined) {
+      const enPromo = req.body.en_promocion ? 1 : 0;
+      updates.push('en_promocion = ?');
+      values.push(enPromo);
+      if (enPromo) {
+        updates.push('precio_promocion = ?');
+        values.push(req.body.precio_promocion || null);
+        updates.push('promocion_inicio = ?');
+        values.push(req.body.promocion_inicio || null);
+        updates.push('promocion_fin = ?');
+        values.push(req.body.promocion_fin || null);
+      } else {
+        // Desactivar promoción: limpiar campos
+        updates.push('precio_promocion = NULL, promocion_inicio = NULL, promocion_fin = NULL');
+      }
+    }
     
     // Agregar modificado_por si viene en el body
     if (req.body.userId) {
@@ -523,6 +559,35 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
       `UPDATE productos SET ${updates.join(', ')} WHERE id = ?`,
       values
     );
+
+    // Registrar historial de promoción si se activó una
+    if (req.body.en_promocion && req.body.precio_promocion) {
+      try {
+        const productoActual: any[] = await query(
+          'SELECT precio_minorista FROM productos WHERE id = ?', [id]
+        );
+        const precioOriginal = productoActual[0]?.precio_minorista || 0;
+        await query(
+          `INSERT INTO productos_promociones 
+            (producto_id, empresa_id, precio_original, precio_promocion, fecha_inicio, fecha_fin, activa, notas, creado_por)
+           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+           ON DUPLICATE KEY UPDATE activa = activa`,
+          [
+            id,
+            productoExiste[0].empresa_id,
+            precioOriginal,
+            req.body.precio_promocion,
+            req.body.promocion_inicio || new Date().toISOString().split('T')[0],
+            req.body.promocion_fin || null,
+            req.body.notas_promocion || null,
+            req.body.userId || null
+          ]
+        );
+        logger.info(`Historial de promoci\u00f3n registrado para producto ${id}`);
+      } catch (histErr) {
+        logger.error('No se pudo registrar historial de promo (tabla puede no existir aún):', histErr);
+      }
+    }
 
     // Si se actualizó stock_actual, sincronizar con bodega principal
     if (stock_actual !== undefined) {
