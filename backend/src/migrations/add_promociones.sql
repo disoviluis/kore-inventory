@@ -5,13 +5,13 @@
 
 -- 1. Agregar columnas de promoción a la tabla productos
 ALTER TABLE productos
-  ADD COLUMN IF NOT EXISTS en_promocion TINYINT(1) NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS precio_promocion DECIMAL(15,2) NULL,
-  ADD COLUMN IF NOT EXISTS promocion_inicio DATE NULL,
-  ADD COLUMN IF NOT EXISTS promocion_fin DATE NULL;
+  ADD COLUMN en_promocion TINYINT(1) NOT NULL DEFAULT 0,
+  ADD COLUMN precio_promocion DECIMAL(15,2) NULL,
+  ADD COLUMN promocion_inicio DATE NULL,
+  ADD COLUMN promocion_fin DATE NULL;
 
 -- 2. Índice para consultas de productos en promoción activa
-CREATE INDEX IF NOT EXISTS idx_productos_promocion ON productos (en_promocion, promocion_inicio, promocion_fin);
+CREATE INDEX idx_productos_promocion ON productos (en_promocion, promocion_inicio, promocion_fin);
 
 -- 3. Tabla histórica de promociones (auditoría completa)
 CREATE TABLE IF NOT EXISTS productos_promociones (
