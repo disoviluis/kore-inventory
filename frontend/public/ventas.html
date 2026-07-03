@@ -142,6 +142,46 @@
             padding: 15px;
             border-radius: 8px;
         }
+
+        /* ===== FIX: ocultar vista carrito móvil en escritorio ===== */
+        .vista-carrito-mobile { display: none; }
+        @media (max-width: 991px) {
+            .vista-carrito-mobile.active { display: flex !important; }
+        }
+
+        /* ===== LAYOUT POS: altura fija, sin scroll vertical en la página ===== */
+        .pos-row {
+            height: calc(100vh - 110px);
+            overflow: hidden;
+        }
+        .pos-col-left {
+            height: 100%;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .pos-col-right {
+            height: 100%;
+            overflow-y: auto;
+        }
+        /* Catálogo de productos ocupa espacio disponible */
+        #gridProductos {
+            max-height: calc(100vh - 430px) !important;
+            min-height: 160px;
+            overflow-y: auto;
+        }
+        /* Lista de artículos en carrito (columna derecha) */
+        .pos-cart-body {
+            max-height: calc(35vh - 40px);
+            min-height: 80px;
+            overflow-y: auto;
+        }
+        /* Card headers más compactos en POS */
+        .pos-card-header {
+            padding: 6px 12px !important;
+        }
+        .pos-card-header h6 {
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -597,10 +637,10 @@
         <div class="page-content">
             <div class="container-fluid">
 
-                <div class="row g-4">
+                <div class="row g-3 pos-row">
                     
                     <!-- Columna Principal: Cliente y Productos -->
-                    <div class="col-lg-8">
+                    <div class="col-lg-8 pos-col-left">
                         
                         <!-- Sección Cliente -->
                         <div class="card mb-4">
@@ -715,7 +755,7 @@
                                     </div>
                                     
                                     <!-- Grid de Productos -->
-                                    <div id="gridProductos" class="row g-3" style="max-height: 400px; overflow-y: auto;">
+                                    <div id="gridProductos" class="row g-3">
                                         <div class="col-12 text-center text-muted py-5">
                                             <i class="bi bi-box-seam display-4"></i>
                                             <p class="mt-2">Cargando productos...</p>
@@ -723,27 +763,36 @@
                                     </div>
                                 </div>
 
-                                <hr>
-
-                                <!-- Lista de Productos en la Venta -->
-                                <div id="listaProductos">
-                                    <div class="text-center text-muted py-4" id="emptyProductos">
-                                        <i class="bi bi-cart display-1 opacity-25"></i>
-                                        <p class="mt-2">No hay productos agregados</p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
                     </div>
 
-                    <!-- Columna Lateral: Resumen y Totales -->
-                    <div class="col-lg-4">
-                        <div class="card sticky-top" style="top: 20px;">
-                            <div class="card-header bg-dark text-white">
+                    <!-- Columna Lateral: Carrito + Resumen + Pago -->
+                    <div class="col-lg-4 pos-col-right">
+
+                        <!-- Artículos en la venta -->
+                        <div class="card mb-2">
+                            <div class="card-header bg-secondary text-white pos-card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="bi bi-cart3 me-2"></i>Artículos en la venta</h6>
+                                <span class="badge bg-light text-dark" id="badgeItemsCarrito">0</span>
+                            </div>
+                            <div class="card-body p-0 pos-cart-body">
+                                <div id="listaProductos">
+                                    <div class="text-center text-muted py-3" id="emptyProductos">
+                                        <i class="bi bi-cart opacity-25" style="font-size:2rem;"></i>
+                                        <p class="mt-1 small">Sin productos</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen de totales -->
+                        <div class="card mb-2">
+                            <div class="card-header bg-dark text-white pos-card-header">
                                 <h6 class="mb-0"><i class="bi bi-calculator me-2"></i>Resumen de Venta</h6>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body py-2">
                                 
                                 <div class="mb-3">
                                     <!-- CONSUMOS (NETO) -->
@@ -768,18 +817,13 @@
                                     
                                     <!-- Impuestos Adicionales -->
                                     <div id="impuestosAdicionalesContainer" style="display: none;">
-                                        <div class="mb-2">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary w-100" 
-                                                    data-bs-toggle="collapse" data-bs-target="#impuestosCollapse">
-                                                <i class="bi bi-calculator me-2"></i>Impuestos Adicionales
-                                                <span class="badge bg-primary ms-2" id="impuestosCount">0</span>
-                                            </button>
-                                        </div>
-                                        <div class="collapse" id="impuestosCollapse">
-                                            <div class="border rounded p-2 mb-2">
-                                                <div id="listaImpuestosDisponibles" class="small">
-                                                    <!-- Se cargarán dinámicamente -->
-                                                </div>
+                                        <div class="border rounded p-2 mb-2 bg-light">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <small class="text-muted fw-bold me-2"><i class="bi bi-calculator me-1"></i>Impuestos disponibles</small>
+                                                <span class="badge bg-primary" id="impuestosCount">0</span>
+                                            </div>
+                                            <div id="listaImpuestosDisponibles" class="small">
+                                                <!-- Se cargarán dinámicamente -->
                                             </div>
                                         </div>
                                         <div id="resumenImpuestosAdicionales" class="small">

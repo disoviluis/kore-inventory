@@ -5956,9 +5956,13 @@ function actualizarCarritoFlotante() {
     const badge = document.getElementById('badgeCarritoFlotante');
     const totalEl = document.getElementById('totalCarritoFlotante');
     
-    if (!btn || !badge || !totalEl) return;
-    
     const cantidadProductos = productosVenta.reduce((sum, p) => sum + p.cantidad, 0);
+
+    // Actualizar badge de artículos en columna derecha (escritorio)
+    const badgeDesktop = document.getElementById('badgeItemsCarrito');
+    if (badgeDesktop) badgeDesktop.textContent = cantidadProductos;
+
+    if (!btn || !badge || !totalEl) return;
     
     badge.textContent = cantidadProductos;
     totalEl.textContent = `$${formatearNumero(totalVentaActual)}`;
