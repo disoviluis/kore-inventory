@@ -1008,3 +1008,176 @@ ssh -i C:\Users\luis.rodriguez\Downloads\korekey.pem ubuntu@18.191.181.99
 - ✅ Proveedores: Migrado de CSV a Excel (SheetJS)
 - ✅ Ventas: Migrado de CSV a Excel (SheetJS)
 
+
+
+---
+
+---
+
+## 🪣 CONFIGURACIÓN AWS S3 — ALMACENAMIENTO DE IMÁGENES
+
+> Bucket para guardar imágenes de productos, logos de empresas y archivos del sistema.
+> Las imágenes se comprimen automáticamente en el navegador antes de subir.
+
+---
+
+### PASO 1 — Crear el bucket en AWS Console
+
+1. Ir a: https://s3.console.aws.amazon.com/s3/buckets
+2. Clic en **"Create bucket"**
+3. Configurar:
+
+| Campo | Valor |
+|-------|-------|
+| **AWS Region** | `us-east-2` (Ohio) — MISMA región que la RDS |
+| **Bucket name** | `kore-inventory-imagenes` |
+| **Bucket type** | General purpose |
+| **Object Ownership** | ACLs disabled (recommended) |
+| **Block all public access** | ✅ DESMARCAR (queremos acceso público a las imágenes) |
+| **Bucket Versioning** | Disable |
+
+> ⚠️ **Importante:** En la pantalla de la imagen veo que está en `us-east-1 (N. Virginia)`.
+> Debes cambiarlo a `us-east-2 (Ohio)` porque tu RDS también está en `us-east-2`.
+> Esto reduce latencia y evita cargos de transferencia entre regiones.
+
+4. Clic **"Create bucket"**
+
+---
+
+### PASO 2 — Agregar política de acceso público (Bucket Policy)
+
+Dentro del bucket → **Permissions** → **Bucket policy** → pegar esto:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::kore-inventory-imagenes/*"
+    }
+  ]
+}
+```
+
+---
+
+### PASO 3 — Configurar CORS en el bucket
+
+Dentro del bucket → **Permissions** → **Cross-origin resource sharing (CORS)** → pegar esto:
+
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT"],
+    "AllowedOrigins": ["https://kinventoryservices.com"],
+    "ExposeHeaders": []
+  }
+]
+```
+
+---
+
+### PASO 4 — Crear usuario IAM con permisos S3
+
+1. Ir a: https://console.aws.amazon.com/iam/home#/users
+2. **Create user** → nombre: `kore-s3-user`
+3. **Attach policies directly** → buscar y seleccionar: `AmazonS3FullAccess`
+4. Crear el usuario
+5. Ir al usuario → **Security credentials** → **Create access key**
+6. Seleccionar: **Application running outside AWS**
+7. Guardar las claves que aparecen (solo se muestran una vez):
+
+```
+AWS_ACCESS_KEY_ID     = AKIAXXXXXXXXXXXXXXXXXX
+AWS_SECRET_ACCESS_KEY = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+---
+
+### PASO 5 — Agregar variables al .env del servidor
+
+```bash
+# Conectar al servidor
+ssh -i "C:\Users\luis.rodriguez\Downloads\korekey.pem" ubuntu@18.191.181.99
+
+# Editar el .env
+nano /home/ubuntu/kore-inventory/backend/.env
+```
+
+Agregar al final del archivo:
+
+```env
+# AWS S3 - Almacenamiento de imágenes
+AWS_REGION=us-east-2
+AWS_S3_BUCKET=kore-inventory-imagenes
+AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXXXX
+AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Guardar con `Ctrl+O` → `Enter` → `Ctrl+X`
+
+---
+
+### PASO 6 — Reiniciar el backend
+
+```bash
+cd /home/ubuntu/kore-inventory/backend
+npm run build
+pm2 restart kore-backend
+pm2 logs kore-backend --lines 20 --nostream
+```
+
+---
+
+### Verificar que S3 funciona
+
+```bash
+# Probar que el endpoint responde correctamente
+curl -s -X POST http://localhost:3000/api/productos/upload-url \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"empresa_id":1,"filename":"test.jpg","content_type":"image/jpeg"}'
+# Debe retornar upload_url y public_url
+```
+
+---
+
+### Estructura de carpetas en S3
+
+```
+kore-inventory-imagenes/
+├── empresa/
+│   ├── 1/
+│   │   ├── logo/
+│   │   │   └── logo_1234567890.jpg
+│   │   └── productos/
+│   │       ├── 5_1234567890.webp
+│   │       └── tmp_1234567891_camisa.webp
+│   ├── 2/
+│   │   └── productos/
+│   └── ...
+```
+
+---
+
+### URLs de las imágenes
+
+Las imágenes subidas quedan accesibles en:
+
+```
+https://kore-inventory-imagenes.s3.amazonaws.com/empresa/{empresa_id}/productos/{producto_id}_{timestamp}.webp
+```
+
+---
+
+### Notas importantes
+
+- Las imágenes se **comprimen automáticamente** en el navegador (Canvas API) antes de subir: máximo 800x800px, calidad 82%, formato WebP cuando el navegador lo soporta
+- Los productos con **URL existente siguen funcionando** — el campo URL y el botón de subida coexisten
+- Si el usuario sube una imagen, la URL S3 reemplaza el link anterior en el campo
+- Si S3 no está configurado, el botón de subida mostrará error pero el campo URL manual sigue funcionando
