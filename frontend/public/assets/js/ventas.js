@@ -2818,7 +2818,7 @@ function generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto
 
 // FORMATO MEDIA CARTA - escalar usando el mismo cuerpo de factura
 function generarPlantillaMediaCarta(venta, ventaData, config) {
-    const facturaBody = facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, configuracionPlantilla);
+    const facturaBody = facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, configuracionPlantilla, true);
     const numeroFactura = venta.numero_factura || 'FACTURA';
 
     return `<!DOCTYPE html>
@@ -2827,14 +2827,13 @@ function generarPlantillaMediaCarta(venta, ventaData, config) {
     <meta charset="UTF-8">
     <title>${numeroFactura}</title>
     <style>
-        @page { size: 5.5in 8.5in; margin: 8mm; }
-        body { margin: 0; padding: 0; background: #f0f0f0; }
-        .invoice-wrapper { padding: 8mm; }
-        @media print { body { margin: 0; } }
+        @page { size: 5.5in 8.5in; margin: 5mm; }
+        html, body { margin: 0; padding: 0; background: white; }
+        @media print { html, body { margin: 0; } }
     </style>
 </head>
 <body>
-    <div class="invoice-wrapper">${facturaBody}</div>
+    ${facturaBody}
     <script>window.onload=function(){setTimeout(function(){window.print();window.close();},250);};</script>
 </body>
 </html>`;
