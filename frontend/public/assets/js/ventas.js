@@ -2482,7 +2482,8 @@ function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitComple
         <table style="width: 250px;">
             <tr><td>Subtotal:</td><td class="text-right">$${formatearNumero(subtotal)}</td></tr>
             ${descuento > 0 ? `<tr><td>Descuento:</td><td class="text-right">-$${formatearNumero(descuento)}</td></tr>` : ''}
-            <tr><td>IVA (19%):</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            <tr><td>IVA:</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            ${(ventaData.impuestos || []).map(imp => `<tr><td>${imp.nombre || imp.nombre_impuesto || imp.impuesto_nombre || 'Impuesto'}${imp.tasa ? ` (${imp.tasa}%)` : ''}:</td><td class="text-right">${imp.afecta_total === 'resta' ? '-' : ''}$${formatearNumero(Math.abs(imp.valor || 0))}</td></tr>`).join('')}
             <tr class="total-final"><td style="padding: 8px;">TOTAL:</td><td class="text-right" style="padding: 8px;">$${formatearNumero(total)}</td></tr>
         </table>
     </div>
@@ -2585,7 +2586,8 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
         <table style="width: 250px; border: none;">
             <tr style="border: none;"><td style="border: none; padding: 4px 8px;">Subtotal:</td><td class="text-right" style="border: none; padding: 4px 8px;">$${formatearNumero(subtotal)}</td></tr>
             ${descuento > 0 ? `<tr style="border: none;"><td style="border: none; padding: 4px 8px;">Descuento:</td><td class="text-right" style="border: none; padding: 4px 8px;">-$${formatearNumero(descuento)}</td></tr>` : ''}
-            <tr style="border: none;"><td style="border: none; padding: 4px 8px;">IVA (19%):</td><td class="text-right" style="border: none; padding: 4px 8px;">$${formatearNumero(impuesto)}</td></tr>
+            <tr style="border: none;"><td style="border: none; padding: 4px 8px;">IVA:</td><td class="text-right" style="border: none; padding: 4px 8px;">$${formatearNumero(impuesto)}</td></tr>
+            ${(ventaData.impuestos || []).map(imp => `<tr style="border: none;"><td style="border: none; padding: 4px 8px;">${imp.nombre || imp.nombre_impuesto || imp.impuesto_nombre || 'Impuesto'}${imp.tasa ? ` (${imp.tasa}%)` : ''}:</td><td class="text-right" style="border: none; padding: 4px 8px;">${imp.afecta_total === 'resta' ? '-' : ''}$${formatearNumero(Math.abs(imp.valor || 0))}</td></tr>`).join('')}
             <tr class="total-final"><td style="padding: 8px;">TOTAL:</td><td class="text-right" style="padding: 8px;">$${formatearNumero(total)}</td></tr>
         </table>
     </div>
@@ -2661,7 +2663,8 @@ function generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCo
         <table style="width: 250px; border: none;">
             <tr><td style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">Subtotal:</td><td class="text-right" style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">$${formatearNumero(subtotal)}</td></tr>
             ${descuento > 0 ? `<tr><td style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">Descuento:</td><td class="text-right" style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">-$${formatearNumero(descuento)}</td></tr>` : ''}
-            <tr><td style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">IVA (19%):</td><td class="text-right" style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">$${formatearNumero(impuesto)}</td></tr>
+            <tr><td style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">IVA:</td><td class="text-right" style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">$${formatearNumero(impuesto)}</td></tr>
+            ${(ventaData.impuestos || []).map(imp => `<tr><td style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">${imp.nombre || imp.nombre_impuesto || imp.impuesto_nombre || 'Impuesto'}${imp.tasa ? ` (${imp.tasa}%)` : ''}:</td><td class="text-right" style="border: none; border-bottom: 1px solid #ddd; padding: 5px;">${imp.afecta_total === 'resta' ? '-' : ''}$${formatearNumero(Math.abs(imp.valor || 0))}</td></tr>`).join('')}
             <tr class="total-final"><td style="padding: 8px;">TOTAL:</td><td class="text-right" style="padding: 8px;">$${formatearNumero(total)}</td></tr>
         </table>
     </div>
@@ -2724,7 +2727,8 @@ function generarPlantillaCorporativaCarta(venta, ventaData, config, fecha, nitCo
         <table style="width: 250px;">
             <tr><td>Subtotal:</td><td class="text-right">$${formatearNumero(subtotal)}</td></tr>
             ${descuento > 0 ? `<tr><td>Descuento:</td><td class="text-right">-$${formatearNumero(descuento)}</td></tr>` : ''}
-            <tr><td>IVA (19%):</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            <tr><td>IVA:</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            ${(ventaData.impuestos || []).map(imp => `<tr><td>${imp.nombre || imp.nombre_impuesto || imp.impuesto_nombre || 'Impuesto'}${imp.tasa ? ` (${imp.tasa}%)` : ''}:</td><td class="text-right">${imp.afecta_total === 'resta' ? '-' : ''}$${formatearNumero(Math.abs(imp.valor || 0))}</td></tr>`).join('')}
             <tr class="total-final"><td style="padding: 8px;">TOTAL:</td><td class="text-right" style="padding: 8px;">$${formatearNumero(total)}</td></tr>
         </table>
     </div>
@@ -2803,7 +2807,8 @@ function generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto
         <table>
             <tr><td>Subtotal:</td><td class="text-right">$${formatearNumero(subtotal)}</td></tr>
             ${descuento > 0 ? `<tr><td>Descuento:</td><td class="text-right">-$${formatearNumero(descuento)}</td></tr>` : ''}
-            <tr><td>IVA (19%):</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            <tr><td>IVA:</td><td class="text-right">$${formatearNumero(impuesto)}</td></tr>
+            ${(ventaData.impuestos || []).map(imp => `<tr><td>${imp.nombre || imp.nombre_impuesto || imp.impuesto_nombre || 'Impuesto'}${imp.tasa ? ` (${imp.tasa}%)` : ''}:</td><td class="text-right">${imp.afecta_total === 'resta' ? '-' : ''}$${formatearNumero(Math.abs(imp.valor || 0))}</td></tr>`).join('')}
             <tr class="total-final"><td style="padding: 10px 8px;">💰 TOTAL:</td><td class="text-right" style="padding: 10px 8px;">$${formatearNumero(total)}</td></tr>
         </table>
     </div>
@@ -2904,6 +2909,7 @@ function generarPlantillaTirilla(venta, ventaData, config) {
         <div class="totals-row"><span>Subtotal:</span><span>$${facturaModel_formatearNumero(subtotal)}</span></div>
         ${descuento > 0 ? `<div class="totals-row"><span>Descuento:</span><span>-$${facturaModel_formatearNumero(descuento)}</span></div>` : ''}
         <div class="totals-row"><span>IVA:</span><span>$${facturaModel_formatearNumero(impuesto)}</span></div>
+        ${(ventaData.impuestos || []).map(imp => `<div class="totals-row"><span>${imp.nombre || imp.nombre_impuesto || imp.impuesto_nombre || 'Impuesto'}${imp.tasa ? ` (${imp.tasa}%)` : ''}:</span><span>${imp.afecta_total === 'resta' ? '-' : ''}$${facturaModel_formatearNumero(Math.abs(imp.valor || 0))}</span></div>`).join('')}
         ${ventaData.propina_valor > 0 ? `
             <div class="totals-row"><span>Propina ${ventaData.propina_porcentaje || 0}%:</span><span>$${facturaModel_formatearNumero(ventaData.propina_valor)}</span></div>
         ` : ''}

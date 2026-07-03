@@ -53,9 +53,8 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
     const subtotal = Number(ventaData.subtotal || 0);
     const descuento = Number(ventaData.descuento || 0);
     const impuesto = Number(ventaData.impuesto || 0);
-    const impuestosAdicionales = Number(ventaData.impuestos_adicionales || 0);
     const propinaValor = Number(ventaData.propina_valor || 0);
-    const total = Number(ventaData.total || subtotal - descuento + impuesto + impuestosAdicionales + propinaValor);
+    const total = Number(ventaData.total || subtotal - descuento + impuesto + propinaValor);
 
     // Valores compactos para media carta
     const outerPad  = compact ? '10px' : '20px';
@@ -158,12 +157,12 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                                 <td colspan="4" style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;"><strong>IVA</strong></td>
                                 <td style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">$${facturaModel_formatearNumero(impuesto)}</td>
                             </tr>
-                            ${impuestosAdicionales > 0 ? `
+                            ${(ventaData.impuestos || []).map(imp => `
                                 <tr>
-                                    <td colspan="4" style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;"><strong>Impuestos Adicionales</strong></td>
-                                    <td style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">$${facturaModel_formatearNumero(impuestosAdicionales)}</td>
+                                    <td colspan="4" style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;"><strong>${imp.nombre || imp.nombre_impuesto || imp.impuesto_nombre || 'Impuesto'}${imp.tasa ? ` (${imp.tasa}%)` : ''}</strong></td>
+                                    <td style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">${imp.afecta_total === 'resta' ? '-' : ''}$${facturaModel_formatearNumero(Math.abs(imp.valor || 0))}</td>
                                 </tr>
-                            ` : ''}
+                            `).join('')}
                             ${propinaValor > 0 ? `
                                 <tr>
                                     <td colspan="4" style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">Propina (${ventaData.propina_porcentaje || 0}%)</td>
