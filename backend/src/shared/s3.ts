@@ -31,8 +31,7 @@ export const createS3PresignedUploadUrl = async (key: string, contentType: strin
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
-    ContentType: contentType,
-    ACL: 'public-read'
+    ContentType: contentType
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn: 900 });
