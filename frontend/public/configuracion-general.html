@@ -971,8 +971,23 @@
                                                 
                                                 <div class="col-md-6 mb-3">
                                                     <label class="form-label">Logo URL</label>
-                                                    <input type="url" class="form-control" id="empresaLogoUrl" placeholder="https://ejemplo.com/logo.png">
-                                                    <small class="text-muted">URL completa del logo (aparece en facturas)</small>
+                                                    <div class="input-group">
+                                                        <input type="url" class="form-control" id="empresaLogoUrl" placeholder="https://ejemplo.com/logo.png">
+                                                        <label class="btn btn-outline-secondary mb-0" title="Subir logo desde tu computador">
+                                                            <i class="bi bi-upload"></i>
+                                                            <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="subirLogoS3(this)">
+                                                        </label>
+                                                    </div>
+                                                    <div id="logoUploadProgress" class="mt-1" style="display:none">
+                                                        <div class="progress" style="height:6px">
+                                                            <div id="logoProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div>
+                                                        </div>
+                                                        <small id="logoUploadStatus" class="text-muted"></small>
+                                                    </div>
+                                                    <div id="logoPreviewContainer" class="mt-2" style="display:none">
+                                                        <img id="logoPreviewImg" src="" alt="Preview logo" style="max-height:80px;border-radius:4px;border:1px solid #ddd;padding:4px">
+                                                    </div>
+                                                    <small class="text-muted">URL del logo (aparece en facturas). Puedes subir desde tu computador o pegar una URL.</small>
                                                 </div>
                                                 
                                                 <div class="col-md-6 mb-3">

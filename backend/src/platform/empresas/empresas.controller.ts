@@ -287,6 +287,46 @@ export const getPaginaPublicaPresignedUpload = async (req: Request, res: Respons
 };
 
 /**
+ * Genera URL presignada S3 para subir logo de empresa
+ * POST /api/empresas/:id/logo/upload-url
+ */
+export const getLogoPresignedUpload = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { filename, contentType } = req.body;
+
+    if (!filename || !contentType) {
+      return errorResponse(
+        res,
+        'filename y contentType son obligatorios',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const ext = filename.split('.').pop() || 'jpg';
+    const key = `empresa/${id}/logo/logo_${Date.now()}.${ext}`;
+    const uploadUrl = await createS3PresignedUploadUrl(key, contentType);
+    const publicUrl = `https://${getS3BucketName()}.s3.amazonaws.com/${key}`;
+
+    return successResponse(
+      res,
+      'URL presignada para logo generada correctamente',
+      { uploadUrl, publicUrl },
+      CONSTANTS.HTTP_STATUS.OK
+    );
+  } catch (error) {
+    logger.error('Error al generar URL presignada para logo:', error);
+    return errorResponse(
+      res,
+      'Error al generar URL presignada para logo',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+/**
  * Actualizar empresa
  * PUT /api/empresas/:id
  */

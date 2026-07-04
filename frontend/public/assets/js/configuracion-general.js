@@ -812,6 +812,83 @@ async function subirBannerS3() {
 // EMPRESA TAB - Funciones
 // ============================================================================
 
+async function subirLogoS3(input) {
+    const empresaId = localStorage.getItem('empresaActiva');
+    if (!empresaId) {
+        showNotification('No hay empresa seleccionada', 'warning');
+        return;
+    }
+
+    if (!input || !input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const progressDiv  = document.getElementById('logoUploadProgress');
+    const progressBar  = document.getElementById('logoProgressBar');
+    const statusText   = document.getElementById('logoUploadStatus');
+
+    progressDiv.style.display = 'block';
+    progressBar.style.width = '20%';
+    statusText.textContent = 'Solicitando URL de subida...';
+
+    try {
+        const token = localStorage.getItem('token');
+        const presignResponse = await fetch(`${API_URL}/empresas/${empresaId}/logo/upload-url`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ filename: file.name, contentType: file.type })
+        });
+
+        const presignData = await presignResponse.json();
+        if (!presignResponse.ok || !presignData.success) {
+            throw new Error(presignData.message || 'No se pudo generar URL de subida');
+        }
+
+        progressBar.style.width = '55%';
+        statusText.textContent = 'Subiendo logo a S3...';
+
+        const { uploadUrl, publicUrl } = presignData.data;
+        const uploadResult = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type },
+            body: file
+        });
+
+        if (!uploadResult.ok) throw new Error('Error al subir el logo a S3');
+
+        progressBar.style.width = '100%';
+        statusText.textContent = '¡Logo subido correctamente!';
+
+        document.getElementById('empresaLogoUrl').value = publicUrl;
+        actualizarPreviewLogo(publicUrl);
+        showNotification('Logo subido a S3 correctamente', 'success');
+
+        setTimeout(() => { progressDiv.style.display = 'none'; }, 2500);
+    } catch (error) {
+        progressBar.style.width = '100%';
+        progressBar.classList.add('bg-danger');
+        statusText.textContent = error.message || 'Error al subir logo';
+        showNotification(error.message || 'Error al subir logo a S3', 'danger');
+        setTimeout(() => {
+            progressDiv.style.display = 'none';
+            progressBar.classList.remove('bg-danger');
+        }, 3000);
+    }
+}
+
+function actualizarPreviewLogo(url) {
+    const container = document.getElementById('logoPreviewContainer');
+    const img = document.getElementById('logoPreviewImg');
+    if (!url) {
+        container.style.display = 'none';
+        return;
+    }
+    img.src = url;
+    container.style.display = 'block';
+}
+
 async function cargarDatosEmpresaActiva() {
     const empresaActivaId = localStorage.getItem('empresaActiva');
     if (!empresaActivaId) {
@@ -868,6 +945,7 @@ async function cargarDatosEmpresaActiva() {
             
             // Branding
             document.getElementById('empresaLogoUrl').value = empresa.logo_url || '';
+            actualizarPreviewLogo(empresa.logo_url || '');
             document.getElementById('empresaSitioWeb').value = empresa.sitio_web || '';
             document.getElementById('empresaSlogan').value = empresa.slogan || '';
             document.getElementById('empresaDescripcion').value = empresa.descripcion || '';

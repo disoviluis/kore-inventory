@@ -28,6 +28,9 @@ router.get('/:id/pagina-publica/imagenes-s3', empresasController.getPaginaPublic
 // Generar URL presignada para subir banner S3
 router.post('/:id/pagina-publica/presign-upload', empresasController.getPaginaPublicaPresignedUpload);
 
+// Generar URL presignada para subir logo de empresa
+router.post('/:id/logo/upload-url', empresasController.getLogoPresignedUpload);
+
 // Actualizar configuración de página pública por empresa
 router.put('/:id/pagina-publica', empresasController.updatePaginaPublica);
 
