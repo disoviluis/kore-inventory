@@ -602,6 +602,113 @@ function actualizarPreviewPagina() {
     }
 }
 
+function generarSlugDesdeNombreEmpresa() {
+    const empresaActivaId = localStorage.getItem('empresaActiva');
+    if (!empresaActivaId) return;
+    const slugInput = document.getElementById('paginaSlug');
+    if (!slugInput) return;
+    // Intenta tomar el nombre de algún campo visible
+    const nombreEmpresa = document.getElementById('empresaNombre')?.value ||
+        document.getElementById('empresaRazonSocial')?.value || '';
+    if (nombreEmpresa) {
+        slugInput.value = generarSlug(nombreEmpresa);
+        actualizarPreviewPagina();
+    } else {
+        // Fetch desde API
+        const token = localStorage.getItem('token');
+        fetch(`${API_URL}/empresas/${empresaActivaId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()).then(data => {
+            if (data.data && data.data.nombre) {
+                slugInput.value = generarSlug(data.data.nombre);
+                actualizarPreviewPagina();
+            }
+        }).catch(() => {});
+    }
+}
+
+function generarSlug(texto) {
+    return texto
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar tildes
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .substring(0, 80);
+}
+
+async function autoLlenarDesdeEmpresa() {
+    const empresaActivaId = localStorage.getItem('empresaActiva');
+    if (!empresaActivaId) return;
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/empresas/${empresaActivaId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        const empresa = data.data || data;
+        if (!empresa) return;
+
+        // Slug: solo si está vacío
+        const slugInput = document.getElementById('paginaSlug');
+        if (slugInput && !slugInput.value.trim() && empresa.nombre) {
+            slugInput.value = generarSlug(empresa.nombre);
+        }
+        // Título
+        const tituloInput = document.getElementById('paginaTitulo');
+        if (tituloInput && !tituloInput.value.trim()) {
+            tituloInput.value = `Bienvenidos a ${empresa.nombre || ''}`;
+        }
+        // Subtítulo
+        const subtituloInput = document.getElementById('paginaSubtitulo');
+        if (subtituloInput && !subtituloInput.value.trim()) {
+            subtituloInput.value = empresa.slogan || '';
+        }
+        // Descripción
+        const descInput = document.getElementById('paginaDescripcion');
+        if (descInput && !descInput.value.trim()) {
+            descInput.value = empresa.descripcion || '';
+        }
+        // WhatsApp
+        const waInput = document.getElementById('paginaWhatsapp');
+        if (waInput && !waInput.value.trim() && empresa.telefono) {
+            waInput.value = empresa.telefono.replace(/\D/g, '');
+        }
+
+        actualizarPreviewPagina();
+        showNotification('Datos de la empresa cargados', 'success');
+    } catch (error) {
+        console.error('Error al auto-llenar desde empresa:', error);
+    }
+}
+
+function abrirPaginaPublica() {
+    const slug = document.getElementById('paginaSlug').value.trim();
+    if (!slug) {
+        showNotification('Define el slug antes de abrir la página', 'warning');
+        return;
+    }
+    window.open(`empresa-publica.html?slug=${encodeURIComponent(slug)}`, '_blank');
+}
+
+function copiarEnlacePagina() {
+    const slug = document.getElementById('paginaSlug').value.trim();
+    if (!slug) {
+        showNotification('Define el slug antes de copiar', 'warning');
+        return;
+    }
+    const url = `${window.location.origin}/empresa-publica.html?slug=${encodeURIComponent(slug)}`;
+    navigator.clipboard.writeText(url).then(() => {
+        showNotification('Enlace copiado al portapapeles', 'success');
+    }).catch(() => {
+        showNotification('No se pudo copiar: ' + url, 'info');
+    });
+}
+        `;
+    }
+}
+
 async function cargarConfiguracionPagina() {
     const empresaActivaId = localStorage.getItem('empresaActiva');
     if (!empresaActivaId) return;
@@ -634,9 +741,16 @@ async function cargarConfiguracionPagina() {
         document.getElementById('paginaTitulo').value = config.pagina_titulo || '';
         document.getElementById('paginaSubtitulo').value = config.pagina_subtitulo || '';
         document.getElementById('paginaDescripcion').value = config.pagina_descripcion || '';
-        document.getElementById('paginaMostrarProductos').checked = !!config.pagina_mostrar_productos;
-        document.getElementById('paginaMostrarPrecios').checked = !!config.pagina_mostrar_precios;
+        document.getElementById('paginaMostrarProductos').checked = config.pagina_mostrar_productos !== 0;
+        document.getElementById('paginaMostrarPrecios').checked = config.pagina_mostrar_precios !== 0;
+        document.getElementById('paginaMostrarPromociones').checked = config.pagina_mostrar_promociones !== 0;
         document.getElementById('paginaPlantilla').value = config.pagina_plantilla || 'clasica';
+        document.getElementById('paginaHorario').value = config.pagina_horario || '';
+        document.getElementById('paginaWhatsapp').value = config.pagina_whatsapp || '';
+        document.getElementById('paginaInstagram').value = config.pagina_instagram || '';
+        document.getElementById('paginaFacebook').value = config.pagina_facebook || '';
+        document.getElementById('paginaTiktok').value = config.pagina_tiktok || '';
+        document.getElementById('paginaColorPrimario').value = config.pagina_color_primario || '#0d6efd';
 
         actualizarPreviewPagina();
         cargarImagenesPaginaS3();
@@ -655,7 +769,14 @@ function llenarPaginaDefaults() {
     document.getElementById('paginaDescripcion').value = '';
     document.getElementById('paginaMostrarProductos').checked = true;
     document.getElementById('paginaMostrarPrecios').checked = true;
+    document.getElementById('paginaMostrarPromociones').checked = true;
     document.getElementById('paginaPlantilla').value = 'clasica';
+    document.getElementById('paginaHorario').value = '';
+    document.getElementById('paginaWhatsapp').value = '';
+    document.getElementById('paginaInstagram').value = '';
+    document.getElementById('paginaFacebook').value = '';
+    document.getElementById('paginaTiktok').value = '';
+    document.getElementById('paginaColorPrimario').value = '#0d6efd';
     actualizarPreviewPagina();
 }
 
@@ -675,7 +796,14 @@ async function guardarConfiguracionPagina() {
         pagina_descripcion: document.getElementById('paginaDescripcion').value.trim() || null,
         pagina_mostrar_productos: document.getElementById('paginaMostrarProductos').checked ? 1 : 0,
         pagina_mostrar_precios: document.getElementById('paginaMostrarPrecios').checked ? 1 : 0,
-        pagina_plantilla: document.getElementById('paginaPlantilla').value || 'clasica'
+        pagina_mostrar_promociones: document.getElementById('paginaMostrarPromociones').checked ? 1 : 0,
+        pagina_plantilla: document.getElementById('paginaPlantilla').value || 'clasica',
+        pagina_horario: document.getElementById('paginaHorario').value.trim() || null,
+        pagina_whatsapp: document.getElementById('paginaWhatsapp').value.trim() || null,
+        pagina_instagram: document.getElementById('paginaInstagram').value.trim() || null,
+        pagina_facebook: document.getElementById('paginaFacebook').value.trim() || null,
+        pagina_tiktok: document.getElementById('paginaTiktok').value.trim() || null,
+        pagina_color_primario: document.getElementById('paginaColorPrimario').value || '#0d6efd'
     };
 
     if (!config.pagina_slug) {

@@ -1023,123 +1023,196 @@
                                     <!-- Tab: Configurador de Página -->
                                     <div class="tab-pane fade" id="pagina-panel" role="tabpanel">
 
-                                        <div class="mb-4">
-                                            <h5 class="mb-1">Configurador de Página Pública</h5>
-                                            <p class="text-muted small mb-0">Define cómo se presenta la empresa al público y controla el contenido de la página externa.</p>
-                                        </div>
-
-                                        <div class="row g-3">
-                                            <div class="col-12">
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input" type="checkbox" id="paginaPublicaActiva">
-                                                    <label class="form-check-label" for="paginaPublicaActiva">
-                                                        Activar página pública
-                                                    </label>
-                                                </div>
-                                                <small class="text-muted">Activa esta opción para que la empresa tenga una página pública visible sin iniciar sesión.</small>
-                                            </div>
-
-                                            <div class="col-md-6">
-                                                <label class="form-label">Slug de URL pública</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text">empresa-publica.html?slug=</span>
-                                                    <input type="text" class="form-control" id="paginaSlug" placeholder="empresa-ejemplo" maxlength="100">
-                                                </div>
-                                                <small class="text-muted">Identificador único que se usará para publicar la página.</small>
-                                            </div>
-
-                                            <div class="col-md-6">
-                                                <label class="form-label">URL de banner / imagen principal</label>
-                                                <input type="url" class="form-control" id="paginaBannerUrl" placeholder="https://.../banner.jpg">
-                                                <small class="text-muted">Puedes usar una imagen externa o el repositorio de imágenes S3 de tu empresa.</small>
-                                            </div>
-
-                                            <div class="col-md-6">
-                                                <label class="form-label">Subir banner a S3</label>
-                                                <div class="input-group">
-                                                    <input type="file" class="form-control" id="paginaBannerFile" accept="image/*">
-                                                    <button class="btn btn-outline-secondary" type="button" id="paginaSubirBannerBtn" disabled>
-                                                        <i class="bi bi-cloud-upload"></i> Subir
-                                                    </button>
-                                                </div>
-                                                <small class="text-muted">Selecciona un archivo local y súbelo al bucket S3 de la empresa.</small>
-                                            </div>
-
-                                            <div class="col-12">
-                                                <label class="form-label">Imágenes disponibles en S3</label>
-                                                <div id="paginaBannerS3List" class="d-flex flex-wrap gap-2"></div>
-                                                <small class="text-muted">Haz clic en una imagen para usar su URL en el banner público.</small>
-                                            </div>
-
-                                            <div class="col-md-6">
-                                                <label class="form-label">Título principal</label>
-                                                <input type="text" class="form-control" id="paginaTitulo" placeholder="Soluciones de inventario para tu empresa">
-                                            </div>
-
-                                            <div class="col-md-6">
-                                                <label class="form-label">Subtítulo</label>
-                                                <input type="text" class="form-control" id="paginaSubtitulo" placeholder="Controla stock, ventas y facturación desde una sola plataforma">
-                                            </div>
-
-                                            <div class="col-12">
-                                                <label class="form-label">Descripción breve</label>
-                                                <textarea class="form-control" id="paginaDescripcion" rows="3" placeholder="Describe brevemente los beneficios y la propuesta de valor de tu empresa."></textarea>
-                                            </div>
-
-                                            <div class="col-md-4">
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input" type="checkbox" id="paginaMostrarProductos" checked>
-                                                    <label class="form-check-label" for="paginaMostrarProductos">Mostrar productos</label>
-                                                </div>
-                                                <small class="text-muted">Permite ver los productos activos de la empresa en la página pública.</small>
-                                            </div>
-
-                                            <div class="col-md-4">
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input" type="checkbox" id="paginaMostrarPrecios" checked>
-                                                    <label class="form-check-label" for="paginaMostrarPrecios">Mostrar precios</label>
-                                                </div>
-                                                <small class="text-muted">Muestra precios en la vista pública cuando está habilitado.</small>
-                                            </div>
-
-                                            <div class="col-md-4">
-                                                <label class="form-label">Plantilla pública</label>
-                                                <select class="form-select" id="paginaPlantilla">
-                                                    <option value="clasica" selected>Clásica</option>
-                                                    <option value="moderna">Moderna</option>
-                                                    <option value="minimalista">Minimalista</option>
-                                                </select>
-                                                <small class="text-muted">Próximamente se usará para renderizar la página pública según plantilla.</small>
-                                            </div>
-                                        </div>
-
-                                        <div class="card bg-light mt-4">
-                                            <div class="card-body">
-                                                <h6 class="card-title">Vista previa rápida</h6>
-                                                <p class="small text-muted mb-2">URL pública esperada:</p>
-                                                <a id="paginaPreviewUrl" href="#" target="_blank" class="d-block text-primary mb-3">/empresa-publica/...</a>
-                                                <div id="paginaPreviewHero" class="border rounded p-3 bg-white">
-                                                    <h5>Título de presentación</h5>
-                                                    <p class="text-muted">Subtítulo de la página pública</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                        <div class="d-flex justify-content-between align-items-start mb-4">
                                             <div>
-                                                <p class="text-muted small mb-0">
-                                                    <i class="bi bi-info-circle me-1"></i>
-                                                    Los cambios se guardan por empresa y estarán listos para la página pública externa.
-                                                </p>
+                                                <h5 class="mb-1">Configurador de Página Pública</h5>
+                                                <p class="text-muted small mb-0">Define cómo se presenta la empresa al público. Comparte el enlace con tus clientes.</p>
                                             </div>
-                                            <div class="d-flex gap-2">
-                                                <button class="btn btn-outline-primary" type="button" onclick="actualizarPreviewPagina()">
-                                                    <i class="bi bi-eye me-2"></i>Actualizar Vista
-                                                </button>
-                                                <button class="btn btn-primary" type="button" onclick="guardarConfiguracionPagina()">
-                                                    <i class="bi bi-save me-2"></i>Guardar Configuración
-                                                </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="autoLlenarDesdeEmpresa()" title="Completar automáticamente con los datos de la empresa">
+                                                <i class="bi bi-magic me-1"></i>Auto-llenar
+                                            </button>
+                                        </div>
+
+                                        <!-- Activación y URL -->
+                                        <div class="card border-0 bg-light mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title mb-3"><i class="bi bi-link-45deg me-1"></i>Activación y URL pública</h6>
+                                                <div class="row g-3">
+                                                    <div class="col-12">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" id="paginaPublicaActiva">
+                                                            <label class="form-check-label fw-semibold" for="paginaPublicaActiva">Activar página pública</label>
+                                                        </div>
+                                                        <small class="text-muted">Cuando está activa, cualquier persona con el enlace puede ver la página de la empresa.</small>
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        <label class="form-label">Slug (identificador en la URL)</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text text-muted small">/empresa-publica.html?slug=</span>
+                                                            <input type="text" class="form-control" id="paginaSlug" placeholder="cafe-la-21" maxlength="100" oninput="actualizarPreviewPagina()">
+                                                            <button class="btn btn-outline-secondary" type="button" onclick="generarSlugDesdeNombreEmpresa()" title="Generar desde nombre de la empresa">
+                                                                <i class="bi bi-arrow-repeat"></i>
+                                                            </button>
+                                                        </div>
+                                                        <small class="text-muted">Solo letras minúsculas, números y guiones. Ej: <code>cafe-la-21</code></small>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Plantilla visual</label>
+                                                        <select class="form-select" id="paginaPlantilla" onchange="actualizarPreviewPagina()">
+                                                            <option value="clasica">Clásica — Profesional</option>
+                                                            <option value="moderna">Moderna — Vibrante</option>
+                                                            <option value="minimalista">Minimalista — Limpia</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
                                             </div>
+                                        </div>
+
+                                        <!-- Contenido principal -->
+                                        <div class="card border-0 bg-light mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title mb-3"><i class="bi bi-card-text me-1"></i>Contenido principal</h6>
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Título principal</label>
+                                                        <input type="text" class="form-control" id="paginaTitulo" placeholder="Bienvenidos a Café La 21" oninput="actualizarPreviewPagina()">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Subtítulo / Slogan</label>
+                                                        <input type="text" class="form-control" id="paginaSubtitulo" placeholder="El mejor café de la ciudad" oninput="actualizarPreviewPagina()">
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label">Descripción breve</label>
+                                                        <textarea class="form-control" id="paginaDescripcion" rows="2" placeholder="Describe tu empresa, qué ofreces y qué te hace especial."></textarea>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">URL de banner / imagen principal</label>
+                                                        <input type="url" class="form-control" id="paginaBannerUrl" placeholder="https://...">
+                                                        <small class="text-muted">Imagen de fondo del encabezado.</small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Subir banner a S3</label>
+                                                        <div class="input-group">
+                                                            <input type="file" class="form-control" id="paginaBannerFile" accept="image/*">
+                                                            <button class="btn btn-outline-secondary" type="button" id="paginaSubirBannerBtn" disabled>
+                                                                <i class="bi bi-cloud-upload"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label">Imágenes disponibles en S3</label>
+                                                        <div id="paginaBannerS3List" class="d-flex flex-wrap gap-2"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Horario -->
+                                        <div class="card border-0 bg-light mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title mb-3"><i class="bi bi-clock me-1"></i>Horario de atención</h6>
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Horario</label>
+                                                        <textarea class="form-control" id="paginaHorario" rows="3" placeholder="Lun - Vie: 8:00 am - 6:00 pm&#10;Sábado: 9:00 am - 2:00 pm&#10;Domingo: Cerrado"></textarea>
+                                                        <small class="text-muted">Escribe el horario línea por línea.</small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Color principal de la página</label>
+                                                        <div class="input-group">
+                                                            <input type="color" class="form-control form-control-color" id="paginaColorPrimario" value="#0d6efd" title="Color principal">
+                                                            <span class="input-group-text">Color de acento</span>
+                                                        </div>
+                                                        <small class="text-muted">Se aplica en botones y secciones destacadas.</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Redes sociales y contacto -->
+                                        <div class="card border-0 bg-light mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title mb-3"><i class="bi bi-share me-1"></i>Contacto y redes sociales</h6>
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label"><i class="bi bi-whatsapp text-success me-1"></i>WhatsApp</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">+</span>
+                                                            <input type="text" class="form-control" id="paginaWhatsapp" placeholder="573001234567" maxlength="20">
+                                                        </div>
+                                                        <small class="text-muted">Número completo con código de país (sin + ni espacios).</small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label"><i class="bi bi-instagram text-danger me-1"></i>Instagram</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">@</span>
+                                                            <input type="text" class="form-control" id="paginaInstagram" placeholder="tu_empresa">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label"><i class="bi bi-facebook text-primary me-1"></i>Facebook</label>
+                                                        <input type="text" class="form-control" id="paginaFacebook" placeholder="facebook.com/tu-empresa o solo el handle">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label"><i class="bi bi-tiktok me-1"></i>TikTok</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">@</span>
+                                                            <input type="text" class="form-control" id="paginaTiktok" placeholder="tu_empresa">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Opciones de catálogo -->
+                                        <div class="card border-0 bg-light mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title mb-3"><i class="bi bi-grid me-1"></i>Opciones del catálogo</h6>
+                                                <div class="row g-3">
+                                                    <div class="col-md-4">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" id="paginaMostrarProductos" checked>
+                                                            <label class="form-check-label" for="paginaMostrarProductos">Mostrar catálogo</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" id="paginaMostrarPrecios" checked>
+                                                            <label class="form-check-label" for="paginaMostrarPrecios">Mostrar precios</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" id="paginaMostrarPromociones" checked>
+                                                            <label class="form-check-label" for="paginaMostrarPromociones">Destacar promociones</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Vista previa -->
+                                        <div class="card border-primary mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title"><i class="bi bi-eye me-1"></i>Vista previa del enlace</h6>
+                                                <div id="paginaPreviewHero" class="border rounded p-3 bg-white mb-2">
+                                                    <h5>Título de presentación</h5>
+                                                    <p class="text-muted mb-1">Subtítulo de la página pública</p>
+                                                </div>
+                                                <a id="paginaPreviewUrl" href="#" target="_blank" class="d-block text-primary">/empresa-publica/...</a>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                                            <button class="btn btn-outline-primary" type="button" id="paginaAbrirBtn" onclick="abrirPaginaPublica()">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i>Ver página
+                                            </button>
+                                            <button class="btn btn-outline-secondary" type="button" onclick="copiarEnlacePagina()">
+                                                <i class="bi bi-clipboard me-1"></i>Copiar enlace
+                                            </button>
+                                            <button class="btn btn-primary" type="button" onclick="guardarConfiguracionPagina()">
+                                                <i class="bi bi-save me-2"></i>Guardar
+                                            </button>
                                         </div>
 
                                     </div>

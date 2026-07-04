@@ -3,114 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Empresa Pública</title>
-    <meta name="description" content="Página pública de empresa">
+    <title id="pageTitle">Cargando...</title>
+    <meta name="description" id="pageDesc" content="Página pública de empresa">
     <link rel="icon" type="image/png" href="assets/img/favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        .public-hero {
-            min-height: 320px;
-            background-size: cover;
-            background-position: center;
-            position: relative;
-            color: white;
+        /* ── Variables dinámicas (sobreescritas por JS) ── */
+        :root { --color-primario: #0d6efd; --color-primario-rgb: 13,110,253; }
+
+        /* ── Base ── */
+        body { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .btn-wa { background:#25D366; color:#fff; border:none; }
+        .btn-wa:hover { background:#1da851; color:#fff; }
+        .promo-badge { background:linear-gradient(135deg,#ff6b35,#f7c59f); color:#fff; font-size:.7rem; font-weight:700; letter-spacing:.5px; }
+        .precio-tachado { text-decoration:line-through; color:#aaa; font-size:.85em; }
+        .precio-promo { color:#e63946; font-weight:700; }
+        .card-producto { transition:transform .2s,box-shadow .2s; cursor:default; }
+        .card-producto:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(0,0,0,.13) !important; }
+        .card-producto .card-img-top { height:190px; object-fit:cover; }
+        .social-icon { width:40px; height:40px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem; transition:opacity .2s; }
+        .social-icon:hover { opacity:.8; }
+        .horario-linea { padding:.25rem 0; border-bottom:1px dashed #e0e0e0; }
+        .horario-linea:last-child { border-bottom:none; }
+        section { scroll-margin-top: 70px; }
+
+        /* ── Navbar ── */
+        .ep-navbar { position:sticky; top:0; z-index:1030; }
+
+        /* ══════════ PLANTILLA CLÁSICA ══════════ */
+        body.plantilla-clasica .ep-navbar { background:#fff; border-bottom:2px solid var(--color-primario); }
+        body.plantilla-clasica .ep-hero {
+            min-height:380px; background-size:cover; background-position:center;
+            background-color: var(--color-primario);
+            position:relative; color:#fff; display:flex; align-items:center;
         }
-        .public-hero::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.45);
+        body.plantilla-clasica .ep-hero::before { content:''; position:absolute; inset:0; background:rgba(0,0,0,.5); }
+        body.plantilla-clasica .ep-hero .ep-hero-content { position:relative; z-index:1; }
+        body.plantilla-clasica .ep-logo { background:#fff; padding:6px; border-radius:10px; max-height:110px; box-shadow:0 4px 12px rgba(0,0,0,.2); }
+        body.plantilla-clasica .ep-section-title { color:var(--color-primario); border-bottom:2px solid var(--color-primario); padding-bottom:.4rem; display:inline-block; }
+        body.plantilla-clasica .ep-btn-accion { background:var(--color-primario); border:none; color:#fff; }
+        body.plantilla-clasica .ep-footer { background:#212529; color:#adb5bd; }
+        body.plantilla-clasica .ep-horario-card { border-left:4px solid var(--color-primario); }
+
+        /* ══════════ PLANTILLA MODERNA ══════════ */
+        body.plantilla-moderna .ep-navbar { background:#1a1a2e; }
+        body.plantilla-moderna .ep-navbar .navbar-brand, body.plantilla-moderna .ep-navbar .nav-link { color:#fff !important; }
+        body.plantilla-moderna .ep-hero {
+            min-height:450px; background-size:cover; background-position:center;
+            background:linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            position:relative; color:#fff; display:flex; align-items:center; overflow:hidden;
         }
-        .public-hero .hero-content {
-            position: relative;
-            z-index: 1;
+        body.plantilla-moderna .ep-hero::before {
+            content:''; position:absolute; inset:0;
+            background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
-        .producto-card img {
-            object-fit: cover;
-            height: 180px;
+        body.plantilla-moderna .ep-hero .ep-hero-content { position:relative; z-index:1; }
+        body.plantilla-moderna .ep-hero .display-4 { background:linear-gradient(90deg,#fff,rgba(255,255,255,.75)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        body.plantilla-moderna .ep-logo { background:rgba(255,255,255,.1); padding:8px; border-radius:16px; max-height:120px; border:2px solid rgba(255,255,255,.3); }
+        body.plantilla-moderna .ep-section-title { color:var(--color-primario); }
+        body.plantilla-moderna .ep-section-title::after { content:''; display:block; width:50px; height:3px; background:var(--color-primario); border-radius:2px; margin-top:6px; }
+        body.plantilla-moderna .ep-btn-accion { background:linear-gradient(135deg, var(--color-primario), color-mix(in srgb, var(--color-primario) 70%, #000)); border:none; color:#fff; }
+        body.plantilla-moderna .card-producto { border:none; border-radius:16px; overflow:hidden; }
+        body.plantilla-moderna .card-producto .card-img-top { height:200px; }
+        body.plantilla-moderna .ep-footer { background:#1a1a2e; color:#8892b0; }
+        body.plantilla-moderna .ep-horario-card { background:linear-gradient(135deg,rgba(var(--color-primario-rgb),.05),rgba(var(--color-primario-rgb),.1)); border:1px solid rgba(var(--color-primario-rgb),.2); border-radius:16px; }
+
+        /* ══════════ PLANTILLA MINIMALISTA ══════════ */
+        body.plantilla-minimalista .ep-navbar { background:#fff; border-bottom:1px solid #e9ecef; }
+        body.plantilla-minimalista .ep-hero {
+            min-height:300px; background-size:cover; background-position:center;
+            background-color:#f8f9fa; position:relative; color:#212529; display:flex; align-items:center;
         }
+        body.plantilla-minimalista .ep-hero.has-banner::before { content:''; position:absolute; inset:0; background:rgba(0,0,0,.55); }
+        body.plantilla-minimalista .ep-hero.has-banner { color:#fff; }
+        body.plantilla-minimalista .ep-hero .ep-hero-content { position:relative; z-index:1; }
+        body.plantilla-minimalista .ep-logo { max-height:90px; }
+        body.plantilla-minimalista .ep-section-title { font-weight:300; letter-spacing:2px; text-transform:uppercase; font-size:1rem; color:#888; }
+        body.plantilla-minimalista .card-producto { border:1px solid #f0f0f0; border-radius:8px; }
+        body.plantilla-minimalista .card-producto .card-img-top { height:170px; }
+        body.plantilla-minimalista .ep-btn-accion { background:#212529; border:none; color:#fff; border-radius:0; }
+        body.plantilla-minimalista .ep-footer { background:#f8f9fa; color:#888; border-top:1px solid #e9ecef; }
+        body.plantilla-minimalista .ep-horario-card { border:1px solid #e9ecef; }
     </style>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+<body class="plantilla-clasica">
+
+    <!-- Navbar -->
+    <nav class="ep-navbar navbar navbar-expand-lg shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="index.html">
-                <img src="assets/img/logo-kore-inventory.png" alt="KORE Inventory" style="height:38px; width:auto;">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+                <img id="navLogo" src="" alt="" style="height:36px;display:none" onerror="this.style.display='none'">
+                <span id="navNombre" class="fw-bold"></span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPublic">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarPublic">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="login.html">Ingresar</a>
+            <div class="collapse navbar-collapse" id="navPublic">
+                <ul class="navbar-nav ms-auto gap-1">
+                    <li class="nav-item"><a class="nav-link" href="#catalogo">Catálogo</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#contacto">Contacto</a></li>
+                    <li class="nav-item" id="navWhatsappItem" style="display:none">
+                        <a class="nav-link btn btn-wa btn-sm rounded-pill px-3 ms-1" id="navWhatsapp" href="#" target="_blank">
+                            <i class="bi bi-whatsapp me-1"></i>WhatsApp
+                        </a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <main class="py-4">
-        <section id="paginaHero" class="public-hero d-flex align-items-center">
-            <div class="container hero-content">
-                <div class="row align-items-center">
-                    <div class="col-lg-8">
-                        <span id="empresaBadge" class="badge bg-primary mb-3 d-inline-flex align-items-center"></span>
-                        <h1 id="paginaTitulo" class="display-5 fw-bold">Cargando...</h1>
-                        <p id="paginaSubtitulo" class="lead text-white-75">Espera mientras cargamos la información de la empresa.</p>
-                        <p id="paginaDescripcion" class="text-white-75"></p>
-                        <div class="d-flex gap-3 flex-wrap mt-3" id="contactosInfo"></div>
-                    </div>
-                    <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
-                        <img id="empresaLogo" src="assets/img/logo-kore-inventory.png" alt="Logo empresa" class="img-fluid rounded shadow-sm border" style="max-height:120px; background:white;">
+    <!-- Alert container -->
+    <div class="container mt-3" id="alertContainer"></div>
+
+    <!-- Hero -->
+    <section id="inicio" class="ep-hero">
+        <div class="container ep-hero-content">
+            <div class="row align-items-center">
+                <div class="col-lg-7">
+                    <h1 id="heroTitulo" class="display-4 fw-bold mb-3">Cargando...</h1>
+                    <p id="heroSubtitulo" class="lead mb-3 opacity-90"></p>
+                    <p id="heroDescripcion" class="mb-4 opacity-75"></p>
+                    <div class="d-flex flex-wrap gap-2" id="heroBotones"></div>
+                </div>
+                <div class="col-lg-5 text-center text-lg-end mt-4 mt-lg-0">
+                    <img id="heroLogo" src="" alt="" class="ep-logo img-fluid" style="display:none" onerror="this.style.display='none'">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contenido principal -->
+    <main>
+        <!-- Sección: Catálogo -->
+        <section id="catalogo" class="py-5">
+            <div class="container">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="ep-section-title mb-0" id="tituloCatalogo">Catálogo</h2>
+                    <span class="badge bg-secondary" id="totalProductosBadge" style="display:none"></span>
+                </div>
+                <!-- Filtro de categorías -->
+                <div id="filtrosCatalogo" class="d-flex flex-wrap gap-2 mb-4"></div>
+                <!-- Promo banner -->
+                <div id="promoBanner" class="alert border-0 mb-4" style="display:none; background:linear-gradient(135deg,#fff3e0,#ffe0b2)">
+                    <i class="bi bi-tags-fill me-2 text-warning"></i>
+                    <strong>Promociones activas:</strong> <span id="promoCount"></span> productos con precio especial hoy.
+                </div>
+                <!-- Grid de productos -->
+                <div id="productosGrid" class="row g-4">
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-secondary" role="status"></div>
+                        <p class="text-muted mt-3">Cargando catálogo...</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <div class="container mt-5">
-            <div id="contenidoPublico">
-                <div class="row">
-                    <div class="col-12">
-                        <div id="alertContainer"></div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-lg-8">
-                        <div class="card shadow-sm mb-4">
-                            <div class="card-body">
-                                <h3 class="card-title">Sobre la empresa</h3>
-                                <p id="empresaDescripcion" class="card-text text-secondary"></p>
-                            </div>
+        <!-- Sección: Horario + Contacto -->
+        <section id="contacto" class="py-5 bg-light">
+            <div class="container">
+                <div class="row g-4">
+                    <!-- Horario -->
+                    <div class="col-lg-5" id="horarioSection" style="display:none">
+                        <h2 class="ep-section-title mb-4">Horario de atención</h2>
+                        <div class="ep-horario-card p-4 rounded bg-white shadow-sm">
+                            <div id="horarioContenido"></div>
                         </div>
                     </div>
-                    <div class="col-lg-4">
-                        <div class="card shadow-sm mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title">Contacto</h5>
-                                <ul class="list-unstyled mb-0" id="empresaDetalles"></ul>
-                            </div>
+                    <!-- Contacto -->
+                    <div id="contactoCol" class="col-lg-7">
+                        <h2 class="ep-section-title mb-4">Contáctanos</h2>
+                        <div class="row g-3">
+                            <div class="col-12" id="contactoDetalles"></div>
+                            <div class="col-12" id="contactoAcciones"></div>
+                            <div class="col-12" id="contactoRedes"></div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row" id="productosSection">
-                    <div class="col-12">
-                        <h3 class="mb-4">Productos destacados</h3>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     </main>
 
-    <footer class="py-4 bg-light">
-        <div class="container text-center text-muted">
-            Página pública generada por KORE Inventory.
+    <!-- Footer -->
+    <footer class="ep-footer py-4">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0 small" id="footerNombre"></p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0 small opacity-50">Creado con <strong>KORE Inventory</strong></p>
+                </div>
+            </div>
         </div>
     </footer>
+
+    <!-- WhatsApp flotante -->
+    <a id="waFlotante" href="#" target="_blank" class="btn btn-wa rounded-circle shadow-lg"
+       style="position:fixed;bottom:24px;right:24px;width:58px;height:58px;font-size:1.6rem;display:none;align-items:center;justify-content:center;z-index:9999">
+        <i class="bi bi-whatsapp"></i>
+    </a>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="assets/js/empresa-publica.js"></script>

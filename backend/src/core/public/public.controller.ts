@@ -131,11 +131,19 @@ export const getEmpresaPublica = async (req: Request, res: Response): Promise<Re
     const productos: any[] = [];
     if (paginaConfig.pagina_mostrar_productos) {
       const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT id, nombre, descripcion, precio_venta, imagen_url, estado
+        `SELECT id, nombre, descripcion, precio_venta, imagen_url, estado,
+                en_promocion, precio_promocion, promocion_inicio, promocion_fin,
+                CASE
+                  WHEN en_promocion = 1
+                    AND precio_promocion IS NOT NULL
+                    AND (promocion_inicio IS NULL OR promocion_inicio <= NOW())
+                    AND (promocion_fin IS NULL OR promocion_fin >= NOW())
+                  THEN 1 ELSE 0
+                END AS en_promocion_activa
          FROM productos
          WHERE empresa_id = ? AND estado = 'activo'
-         ORDER BY nombre ASC
-         LIMIT 20`,
+         ORDER BY en_promocion_activa DESC, nombre ASC
+         LIMIT 50`,
         [empresa.id]
       );
       productos.push(...rows);
