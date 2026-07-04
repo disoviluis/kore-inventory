@@ -3987,13 +3987,13 @@ async function cargarRolesParaUsuario() {
 }
 
 /**
- * Cargar bodegas disponibles en el selector del formulario de usuario
+ * Cargar bodegas disponibles como checkboxes en el formulario de usuario
  */
-async function cargarBodegasParaUsuario() {
+async function cargarBodegasParaUsuario(bodegasSeleccionadas = []) {
   try {
     const empresaActivaId = localStorage.getItem('empresaActiva');
-    const select = document.getElementById('usuarioEmpresaBodegaId');
-    if (!select) return;
+    const container = document.getElementById('usuarioBodegasCheckboxes');
+    if (!container) return;
 
     const response = await fetch(`${API_URL}/bodegas?empresa_id=${empresaActivaId}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -4004,11 +4004,26 @@ async function cargarBodegasParaUsuario() {
     const data = await response.json();
     const bodegas = data.data || [];
 
-    select.innerHTML = '<option value="">Sin bodega específica (ve toda la empresa)</option>' +
-      bodegas.map(b => `<option value="${b.id}">${b.nombre} (${b.tipo})</option>`).join('');
+    if (bodegas.length === 0) {
+      container.innerHTML = '<span class="text-muted small">No hay bodegas registradas para esta empresa.</span>';
+      return;
+    }
+
+    container.innerHTML = bodegas.map(b => {
+      const checked = bodegasSeleccionadas.includes(b.id) ? 'checked' : '';
+      return `
+        <div class="form-check mb-1">
+          <input class="form-check-input bodega-multi-check" type="checkbox" id="bodegaCheck_${b.id}" value="${b.id}" ${checked}>
+          <label class="form-check-label" for="bodegaCheck_${b.id}">
+            <strong>${b.nombre}</strong> <span class="text-muted small">(${b.tipo})</span>
+          </label>
+        </div>`;
+    }).join('');
 
   } catch (error) {
     console.error('Error al cargar bodegas para usuario:', error);
+    const container = document.getElementById('usuarioBodegasCheckboxes');
+    if (container) container.innerHTML = '<span class="text-danger small">Error al cargar bodegas</span>';
   }
 }
 
@@ -4044,10 +4059,7 @@ async function abrirModalUsuarioEmpresa(usuarioId = null) {
   // Cargar roles disponibles
   await cargarRolesParaUsuario();
 
-  // Cargar bodegas en el selector
-  await cargarBodegasParaUsuario();
-  
-  // Si es edición, cargar datos del usuario
+  // Si es edición, cargar datos del usuario primero para tener las bodegas asignadas
   if (usuarioId) {
     try {
       const empresaActivaId = localStorage.getItem('empresaActiva');
@@ -4074,8 +4086,9 @@ async function abrirModalUsuarioEmpresa(usuarioId = null) {
       document.getElementById('usuarioEmpresaTelefono').value = usuario.telefono || '';
       document.getElementById('usuarioEmpresaActivo').value = usuario.activo ? '1' : '0';
       
-      // Cargar bodega asignada
-      document.getElementById('usuarioEmpresaBodegaId').value = usuario.bodega_id || '';
+      // Cargar bodegas con las ya asignadas pre-marcadas
+      const bodegasAsignadas = usuario.bodegas_ids || (usuario.bodega_id ? [usuario.bodega_id] : []);
+      await cargarBodegasParaUsuario(bodegasAsignadas);
       
       // Marcar roles asignados
       if (usuario.roles && usuario.roles.length > 0) {
@@ -4090,6 +4103,9 @@ async function abrirModalUsuarioEmpresa(usuarioId = null) {
       mostrarError('Error al cargar datos del usuario');
       return;
     }
+  } else {
+    // Nuevo usuario: cargar bodegas sin selección previa
+    await cargarBodegasParaUsuario([]);
   }
   
   modal.show();
@@ -4109,7 +4125,10 @@ document.getElementById('usuarioEmpresaForm')?.addEventListener('submit', async 
   const password = document.getElementById('usuarioEmpresaPassword').value;
   const passwordConfirm = document.getElementById('usuarioEmpresaPasswordConfirm').value;
   const activo = document.getElementById('usuarioEmpresaActivo').value === '1';
-  const bodegaId = document.getElementById('usuarioEmpresaBodegaId').value || null;
+  
+  // Obtener bodegas seleccionadas (multi-bodega)
+  const bodegasSeleccionadas = Array.from(document.querySelectorAll('.bodega-multi-check:checked'))
+    .map(cb => parseInt(cb.value));
   
   // Obtener roles seleccionados
   const rolesSeleccionados = Array.from(document.querySelectorAll('.rol-checkbox:checked'))
@@ -4153,7 +4172,8 @@ document.getElementById('usuarioEmpresaForm')?.addEventListener('submit', async 
     activo,
     empresa_id: empresaActivaId,
     roles_ids: rolesSeleccionados,
-    bodega_id: bodegaId ? parseInt(bodegaId) : null
+    bodegas_ids: bodegasSeleccionadas,
+    bodega_id: bodegasSeleccionadas.length > 0 ? bodegasSeleccionadas[0] : null
   };
   
   if (password && password.trim()) {

@@ -91,12 +91,16 @@ export const getUsuariosEmpresa = async (req: Request, res: Response): Promise<v
         u.created_at,
         u.updated_at,
         GROUP_CONCAT(DISTINCT r.id) as roles_ids,
-        GROUP_CONCAT(DISTINCT r.nombre) as roles_nombres
+        GROUP_CONCAT(DISTINCT r.nombre) as roles_nombres,
+        GROUP_CONCAT(DISTINCT ub.bodega_id ORDER BY ub.bodega_id) as bodegas_ids,
+        GROUP_CONCAT(DISTINCT bub.nombre ORDER BY ub.bodega_id) as bodegas_nombres
       FROM usuarios u
       INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
       LEFT JOIN usuario_rol ur ON u.id = ur.usuario_id AND ur.empresa_id = ?
       LEFT JOIN roles r ON ur.rol_id = r.id
       LEFT JOIN bodegas b ON u.bodega_id = b.id
+      LEFT JOIN usuarios_bodegas ub ON ub.usuario_id = u.id AND ub.empresa_id = ?
+      LEFT JOIN bodegas bub ON bub.id = ub.bodega_id
       WHERE ue.empresa_id = ?
         AND ue.activo = 1
         AND u.tipo_usuario != 'super_admin'
@@ -104,13 +108,15 @@ export const getUsuariosEmpresa = async (req: Request, res: Response): Promise<v
       ORDER BY u.created_at DESC
     `;
 
-    const [usuarios] = await pool.execute<Usuario[]>(query, [empresaIdFinal, empresaIdFinal]);
+    const [usuarios] = await pool.execute<Usuario[]>(query, [empresaIdFinal, empresaIdFinal, empresaIdFinal]);
 
-    // Transformar roles_ids y roles_nombres en arrays
+    // Transformar roles_ids, roles_nombres y bodegas en arrays
     const usuariosConRoles = usuarios.map(u => ({
       ...u,
       roles_ids: u.roles_ids ? u.roles_ids.split(',').map(Number) : [],
-      roles_nombres: u.roles_nombres ? u.roles_nombres.split(',') : []
+      roles_nombres: u.roles_nombres ? u.roles_nombres.split(',') : [],
+      bodegas_ids: u.bodegas_ids ? u.bodegas_ids.split(',').map(Number) : [],
+      bodegas_nombres: u.bodegas_nombres ? u.bodegas_nombres.split(',') : []
     }));
 
     res.json({
@@ -214,6 +220,21 @@ export const getUsuarioById = async (req: Request, res: Response): Promise<void>
       [id]
     );
 
+    // Obtener bodegas asignadas (multi-bodega)
+    const empresaIdParam = empresa_id ? parseInt(empresa_id as string) : null;
+    let bodegas: RowDataPacket[] = [];
+    if (empresaIdParam) {
+      const [bodegasResult] = await pool.execute<RowDataPacket[]>(
+        `SELECT ub.bodega_id as id, b.nombre, b.tipo
+         FROM usuarios_bodegas ub
+         INNER JOIN bodegas b ON b.id = ub.bodega_id
+         WHERE ub.usuario_id = ? AND ub.empresa_id = ?
+         ORDER BY b.nombre`,
+        [id, empresaIdParam]
+      );
+      bodegas = bodegasResult;
+    }
+
     res.json({
       success: true,
       data: {
@@ -222,7 +243,9 @@ export const getUsuarioById = async (req: Request, res: Response): Promise<void>
           usuarioData.empresas_ids.split(',').map(Number) : [],
         empresas_nombres: usuarioData.empresas_nombres ? 
           usuarioData.empresas_nombres.split(',') : [],
-        roles
+        roles,
+        bodegas,
+        bodegas_ids: bodegas.map((b: any) => b.id)
       }
     });
   } catch (error: any) {
@@ -255,7 +278,8 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
       tipo_usuario = 'usuario',
       activo = true,
       roles_ids = [],
-      bodega_id = null
+      bodega_id = null,
+      bodegas_ids = []
     } = req.body;
 
     // Validaciones
@@ -315,6 +339,9 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
     }
 
     // Crear usuario
+    // Si se envía bodegas_ids, el bodega_id principal es el primero de la lista
+    const bodegaIdFinal = bodega_id || (Array.isArray(bodegas_ids) && bodegas_ids.length > 0 ? bodegas_ids[0] : null);
+
     const [result] = await connection.execute<ResultSetHeader>(
       `INSERT INTO usuarios (
         nombre,
@@ -329,7 +356,7 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
         bodega_id,
         created_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
-      [nombre, apellido || null, email, hashedPassword, telefono || null, tipo_usuario, nivelPrivilegio, activo ? 1 : 0, bodega_id || null, usuario.id]
+      [nombre, apellido || null, email, hashedPassword, telefono || null, tipo_usuario, nivelPrivilegio, activo ? 1 : 0, bodegaIdFinal || null, usuario.id]
     );
 
     const usuarioId = result.insertId;
@@ -429,6 +456,22 @@ export const createUsuario = async (req: Request, res: Response): Promise<void> 
       }
     }
 
+    // Insertar bodegas asignadas (multi-bodega) para la empresa
+    if (empresaId && Array.isArray(bodegas_ids) && bodegas_ids.length > 0) {
+      for (const bid of bodegas_ids) {
+        await connection.execute(
+          `INSERT IGNORE INTO usuarios_bodegas (usuario_id, empresa_id, bodega_id) VALUES (?, ?, ?)`,
+          [usuarioId, empresaId, bid]
+        );
+      }
+    } else if (empresaId && bodegaIdFinal) {
+      // Compatibilidad: si solo se mandó bodega_id simple, también lo registra
+      await connection.execute(
+        `INSERT IGNORE INTO usuarios_bodegas (usuario_id, empresa_id, bodega_id) VALUES (?, ?, ?)`,
+        [usuarioId, empresaId, bodegaIdFinal]
+      );
+    }
+
     await connection.commit();
 
     res.status(201).json({
@@ -473,7 +516,8 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       password,
       roles_ids,
       empresa_id,
-      bodega_id
+      bodega_id,
+      bodegas_ids
     } = req.body;
 
     // Validar que empresa_id es requerido para admin_empresa
@@ -569,6 +613,16 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       params.push(bodega_id || null);
     }
 
+    // Si se envía bodegas_ids (multi-bodega), deriva bodega_id del primero de la lista
+    if (bodegas_ids !== undefined && Array.isArray(bodegas_ids)) {
+      const primeraBodegaId = bodegas_ids.length > 0 ? bodegas_ids[0] : null;
+      // Solo actualizar bodega_id si no se mandó bodega_id explícito
+      if (bodega_id === undefined) {
+        updates.push('bodega_id = ?');
+        params.push(primeraBodegaId);
+      }
+    }
+
     if (updates.length > 0) {
       params.push(id);
       await connection.execute(
@@ -616,6 +670,23 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
             [id, rolId, empresaIdToUse, usuario.id]
           );
         }
+      }
+    }
+
+    // Actualizar bodegas asignadas (multi-bodega)
+    if (bodegas_ids !== undefined && Array.isArray(bodegas_ids)) {
+      // Eliminar asignaciones actuales de esta empresa
+      await connection.execute(
+        'DELETE FROM usuarios_bodegas WHERE usuario_id = ? AND empresa_id = ?',
+        [id, empresaIdToUse]
+      );
+
+      // Insertar nuevas asignaciones
+      for (const bid of bodegas_ids) {
+        await connection.execute(
+          `INSERT IGNORE INTO usuarios_bodegas (usuario_id, empresa_id, bodega_id) VALUES (?, ?, ?)`,
+          [id, empresaIdToUse, bid]
+        );
       }
     }
 
