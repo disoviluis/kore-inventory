@@ -898,18 +898,45 @@ async function cargarImagenesPaginaS3() {
         if (!container) return;
 
         container.innerHTML = images.map(img => `
-            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center" data-url="${img.url}">
-                <img src="${img.url}" alt="banner" style="height: 36px; width: 50px; object-fit: cover; border-radius: 4px; margin-right: 8px;">
-                Usar
-            </button>
+            <div class="d-flex align-items-center gap-1 mb-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center flex-grow-1" data-url="${img.url}" data-action="usar">
+                    <img src="${img.url}" alt="banner" style="height: 36px; width: 50px; object-fit: cover; border-radius: 4px; margin-right: 8px;">
+                    Usar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-key="${img.key}" data-action="borrar" title="Eliminar imagen">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
         `).join('');
 
-        container.querySelectorAll('button[data-url]').forEach(button => {
+        container.querySelectorAll('button[data-action="usar"]').forEach(button => {
             button.addEventListener('click', () => {
                 const url = button.getAttribute('data-url');
                 if (url) {
                     document.getElementById('paginaBannerUrl').value = url;
                     actualizarPreviewPagina();
+                }
+            });
+        });
+
+        container.querySelectorAll('button[data-action="borrar"]').forEach(button => {
+            button.addEventListener('click', async () => {
+                const key = button.getAttribute('data-key');
+                if (!key) return;
+                if (!confirm('¿Eliminar esta imagen del servidor?')) return;
+                try {
+                    const token = localStorage.getItem('token');
+                    const res = await fetch(`${API_URL}/empresas/${empresaId}/pagina-publica/imagen-s3`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key })
+                    });
+                    const d = await res.json();
+                    if (!d.success) throw new Error(d.message);
+                    showNotification('Imagen eliminada', 'success');
+                    cargarImagenesPaginaS3();
+                } catch (err) {
+                    showNotification('Error al eliminar imagen', 'danger');
                 }
             });
         });

@@ -1,4 +1,4 @@
-import { S3Client, ListObjectsV2Command, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const s3Client = new S3Client({
@@ -73,4 +73,10 @@ export const getS3PublicUrl = (key: string): string => {
     return `${base}/${key}`;
   }
   return `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
+};
+
+export const deleteS3Object = async (key: string): Promise<void> => {
+  if (!BUCKET_NAME || !key) return;
+  const command = new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: key });
+  await s3Client.send(command);
 };

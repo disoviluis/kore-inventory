@@ -10,7 +10,7 @@ import { query } from '../../shared/database';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
-import { listS3Objects, createS3PresignedUploadUrl, getS3BucketName, getS3PublicUrl } from '../../shared/s3';
+import { listS3Objects, createS3PresignedUploadUrl, getS3BucketName, getS3PublicUrl, deleteS3Object } from '../../shared/s3';
 
 /**
  * Obtener todas las empresas
@@ -283,6 +283,30 @@ export const getPaginaPublicaPresignedUpload = async (req: Request, res: Respons
       error,
       CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
     );
+  }
+};
+
+export const deletePaginaPublicaImagenS3 = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { key } = req.body;
+
+    if (!key || typeof key !== 'string') {
+      return errorResponse(res, 'key es obligatorio', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    }
+
+    // Validar que la key pertenece a esta empresa (seguridad)
+    const expectedPrefix = `empresa/${id}/pagina-publica/`;
+    if (!key.startsWith(expectedPrefix)) {
+      return errorResponse(res, 'No autorizado para borrar este archivo', null, CONSTANTS.HTTP_STATUS.FORBIDDEN);
+    }
+
+    await deleteS3Object(key);
+
+    return successResponse(res, 'Imagen eliminada correctamente', null, CONSTANTS.HTTP_STATUS.OK);
+  } catch (error) {
+    logger.error('Error al eliminar imagen S3:', error);
+    return errorResponse(res, 'Error al eliminar imagen S3', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
 

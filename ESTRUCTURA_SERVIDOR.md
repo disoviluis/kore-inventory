@@ -1093,9 +1093,12 @@ Dentro del bucket → **Permissions** → **Cross-origin resource sharing (CORS)
 7. Guardar las claves que aparecen (solo se muestran una vez):
 
 ```
-AWS_ACCESS_KEY_ID     = AKIAXXXXXXXXXXXXXXXXXX
-AWS_SECRET_ACCESS_KEY = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AWS_ACCESS_KEY_ID     = AKIARKNWEU6WITPNZEW3
+AWS_SECRET_ACCESS_KEY = (ver LastPass / gestor de contraseñas — NO guardar aquí)
 ```
+
+> ✅ **Usuario IAM creado:** `kore-s3-user`  
+> ✅ **Claves configuradas en servidor** `/home/ubuntu/kore-inventory/backend/.env`
 
 ---
 
@@ -1115,8 +1118,8 @@ Agregar al final del archivo:
 # AWS S3 - Almacenamiento de imágenes
 AWS_REGION=us-east-2
 AWS_S3_BUCKET=kore-inventory-imagenes
-AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXXXX
-AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AWS_ACCESS_KEY_ID=AKIARKNWEU6WITPNZEW3
+AWS_SECRET_ACCESS_KEY=(ver LastPass — NO guardar en archivos de texto)
 ```
 
 Guardar con `Ctrl+O` → `Enter` → `Ctrl+X`
@@ -1181,3 +1184,75 @@ https://kore-inventory-imagenes.s3.amazonaws.com/empresa/{empresa_id}/productos/
 - Los productos con **URL existente siguen funcionando** — el campo URL y el botón de subida coexisten
 - Si el usuario sube una imagen, la URL S3 reemplaza el link anterior en el campo
 - Si S3 no está configurado, el botón de subida mostrará error pero el campo URL manual sigue funcionando
+
+---
+
+---
+
+## ☁️ CONFIGURACIÓN AWS CLOUDFRONT — CDN PARA IMÁGENES
+
+> CloudFront sirve las imágenes de S3 desde edge locations globales para mayor velocidad.
+
+### Datos de la distribución
+
+| Campo | Valor |
+|-------|-------|
+| **Nombre** | `kore-cdn-imagenes` |
+| **Dominio CloudFront** | `d3u11qo4usbg0o.cloudfront.net` |
+| **ARN** | `arn:aws:cloudfront::091113170860:distribution/E33QHDUDMFI3UH` |
+| **Origin** | `kore-inventory-imagenes.s3.us-east-2.amazonaws.com` |
+| **Plan** | Free (1M requests / 100GB por mes) |
+| **HTTPS** | ✅ Activado (certificado CloudFront) |
+| **Price class** | Use all edge locations (best performance) |
+
+### Variable de entorno en servidor
+
+```env
+# En /home/ubuntu/kore-inventory/backend/.env
+CLOUDFRONT_URL=https://d3u11qo4usbg0o.cloudfront.net
+```
+
+> ✅ Ya configurado en el servidor (2026-07-06)
+
+### Cómo funciona
+
+- El backend genera URLs de imágenes usando `getS3PublicUrl(key)`
+- Si `CLOUDFRONT_URL` está en el `.env`, las URLs son tipo:
+  ```
+  https://d3u11qo4usbg0o.cloudfront.net/empresa/1/productos/5_1234.webp
+  ```
+- Si `CLOUDFRONT_URL` NO está, las URLs van directo a S3:
+  ```
+  https://kore-inventory-imagenes.s3.amazonaws.com/empresa/1/productos/5_1234.webp
+  ```
+
+### URLs de imágenes con CDN
+
+```
+https://d3u11qo4usbg0o.cloudfront.net/empresa/{empresa_id}/productos/{archivo}.webp
+https://d3u11qo4usbg0o.cloudfront.net/empresa/{empresa_id}/logo/{archivo}.jpg
+https://d3u11qo4usbg0o.cloudfront.net/empresa/{empresa_id}/pagina-publica/{archivo}.jpg
+```
+
+### Comandos de gestión
+
+```bash
+# Ver distribución en AWS CLI (si está configurado)
+aws cloudfront get-distribution --id E33QHDUDMFI3UH
+
+# Invalidar caché (cuando se sobreescriba una imagen con el mismo nombre)
+aws cloudfront create-invalidation --distribution-id E33QHDUDMFI3UH --paths "/*"
+
+# Invalidar solo carpeta de empresa específica
+aws cloudfront create-invalidation --distribution-id E33QHDUDMFI3UH --paths "/empresa/1/*"
+```
+
+### Si necesitas subdominio personalizado (cdn.kinventoryservices.com)
+
+1. Solicitar certificado en **ACM (región us-east-1)**  para `cdn.kinventoryservices.com`
+2. Validar por DNS (agregar CNAME en tu proveedor de dominio)
+3. En la distribución CloudFront → Edit → Agregar Alternate domain name: `cdn.kinventoryservices.com`
+4. Asociar el certificado ACM
+5. Agregar CNAME en DNS: `cdn` → `d3u11qo4usbg0o.cloudfront.net`
+6. Actualizar `.env` del servidor: `CLOUDFRONT_URL=https://cdn.kinventoryservices.com`
+7. `pm2 restart kore-backend --update-env`

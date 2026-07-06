@@ -58,21 +58,21 @@ function renderHero(empresa, pagina) {
   document.getElementById('pageDesc').setAttribute('content', descripcion || subtitulo);
 
   const navLogo = document.getElementById('navLogo');
-  if (logoUrl) { navLogo.src = logoUrl; navLogo.style.display = 'block'; }
-  document.getElementById('navNombre').textContent = empresa.nombre || '';
+  if (logoUrl && navLogo) { navLogo.src = logoUrl; navLogo.style.display = 'block'; }
+  const navNombre = document.getElementById('navNombre');
+  if (navNombre) navNombre.textContent = empresa.nombre || '';
 
   const hero = document.querySelector('.ep-hero');
   const heroBannerImg = document.getElementById('heroBannerImg');
 
-  if (bannerUrl) {
+  if (bannerUrl && heroBannerImg) {
     // Imagen completa sin recorte usando <img> tag
     heroBannerImg.src = bannerUrl;
     heroBannerImg.style.display = 'block';
-    hero.style.backgroundImage = '';
-    hero.classList.add('has-banner');
-  } else {
+    if (hero) { hero.style.backgroundImage = ''; hero.classList.add('has-banner'); }
+  } else if (heroBannerImg) {
     heroBannerImg.style.display = 'none';
-    hero.classList.remove('has-banner');
+    if (hero) hero.classList.remove('has-banner');
   }
 
   // Respetar flags de overlay (con banner, por defecto ocultar; sin banner, siempre mostrar)
