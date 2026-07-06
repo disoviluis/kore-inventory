@@ -832,7 +832,14 @@ function abrirModalNuevo() {
 
 async function editarProducto(id) {
     try {
-        const producto = productos.find(p => p.id === id);
+        // Leer desde el API para obtener p.stock_actual directo (no desde bodegas)
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/productos/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('No se pudo cargar el producto');
+        const data = await response.json();
+        const producto = data.data || data;
         if (!producto) {
             mostrarAlerta('Producto no encontrado', 'danger');
             return;

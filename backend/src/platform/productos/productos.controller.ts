@@ -315,7 +315,28 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
     );
 
     logger.info(`Producto creado: ${nombre} (ID: ${result.insertId})`);
-    
+
+    // Sincronizar stock_actual con la bodega principal (igual que en updateProducto)
+    if (manejaInv && stock_actual !== undefined && stock_actual !== null) {
+      try {
+        const bodegaPrincipal: any[] = await query(
+          'SELECT id FROM bodegas WHERE empresa_id = ? AND es_principal = TRUE AND estado = "activa" LIMIT 1',
+          [empresa_id]
+        );
+        if (bodegaPrincipal.length > 0) {
+          await query(
+            `INSERT INTO productos_bodegas (producto_id, bodega_id, stock_actual)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE stock_actual = ?`,
+            [result.insertId, bodegaPrincipal[0].id, stock_actual || 0, stock_actual || 0]
+          );
+          logger.info(`Stock sincronizado con bodega principal ${bodegaPrincipal[0].id} para producto ${result.insertId}`);
+        }
+      } catch (bodegaErr) {
+        logger.info('No se pudo sincronizar stock con bodega (puede no existir aún):', bodegaErr);
+      }
+    }
+
     return successResponse(
       res,
       'Producto creado exitosamente',
