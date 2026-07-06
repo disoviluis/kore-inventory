@@ -10,7 +10,7 @@ import { query } from '../../shared/database';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
-import { listS3Objects, createS3PresignedUploadUrl, getS3BucketName } from '../../shared/s3';
+import { listS3Objects, createS3PresignedUploadUrl, getS3BucketName, getS3PublicUrl } from '../../shared/s3';
 
 /**
  * Obtener todas las empresas
@@ -231,7 +231,7 @@ export const getPaginaPublicaImagenesS3 = async (req: Request, res: Response): P
       .filter(item => item.Key)
       .map(item => ({
         key: item.Key,
-        url: `https://${getS3BucketName()}.s3.amazonaws.com/${item.Key}`
+        url: getS3PublicUrl(item.Key!)
       }));
 
     return successResponse(
@@ -267,7 +267,7 @@ export const getPaginaPublicaPresignedUpload = async (req: Request, res: Respons
 
     const key = `empresa/${id}/pagina-publica/${Date.now()}-${filename}`;
     const uploadUrl = await createS3PresignedUploadUrl(key, contentType);
-    const publicUrl = `https://${getS3BucketName()}.s3.amazonaws.com/${key}`;
+    const publicUrl = getS3PublicUrl(key);
 
     return successResponse(
       res,
@@ -307,7 +307,7 @@ export const getLogoPresignedUpload = async (req: Request, res: Response): Promi
     const ext = filename.split('.').pop() || 'jpg';
     const key = `empresa/${id}/logo/logo_${Date.now()}.${ext}`;
     const uploadUrl = await createS3PresignedUploadUrl(key, contentType);
-    const publicUrl = `https://${getS3BucketName()}.s3.amazonaws.com/${key}`;
+    const publicUrl = getS3PublicUrl(key);
 
     return successResponse(
       res,

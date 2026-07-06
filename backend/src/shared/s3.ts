@@ -64,6 +64,13 @@ export const createS3FolderForEmpresa = async (empresaId: number): Promise<void>
 
 /**
  * Genera URL pública de un objeto S3.
+ * Si CLOUDFRONT_URL está configurado, usa el CDN en vez del S3 directo.
  */
-export const getS3PublicUrl = (key: string): string =>
-  `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
+export const getS3PublicUrl = (key: string): string => {
+  const cdn = process.env.CLOUDFRONT_URL;
+  if (cdn) {
+    const base = cdn.replace(/\/+$/, '');
+    return `${base}/${key}`;
+  }
+  return `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
+};

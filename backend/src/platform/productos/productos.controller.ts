@@ -10,7 +10,7 @@ import { query } from '../../shared/database';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
-import { createS3PresignedUploadUrl, getS3BucketName } from '../../shared/s3';
+import { createS3PresignedUploadUrl, getS3PublicUrl } from '../../shared/s3';
 
 /**
  * Obtener todos los productos de una empresa
@@ -789,7 +789,7 @@ export const getProductoImagenPresignedUrl = async (req: Request, res: Response)
       : `empresa/${empresa_id}/productos/tmp_${timestamp}_${safeName}`;
 
     const uploadUrl = await createS3PresignedUploadUrl(key, content_type);
-    const publicUrl = `https://${getS3BucketName()}.s3.amazonaws.com/${key}`;
+    const publicUrl = getS3PublicUrl(key);
 
     logger.info(`URL presignada generada para producto en empresa ${empresa_id}: ${key}`);
 
