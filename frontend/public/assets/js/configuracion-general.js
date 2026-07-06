@@ -925,7 +925,8 @@ async function subirBannerS3() {
 
         document.getElementById('paginaBannerUrl').value = publicUrl;
         actualizarPreviewPagina();
-        showNotification('Imagen subida a S3 correctamente', 'success');
+        showNotification('Imagen subida. Guardando configuración...', 'info');
+        await guardarConfiguracionPagina();
         cargarImagenesPaginaS3();
     } catch (error) {
         console.error('Error al subir imagen S3:', error);
