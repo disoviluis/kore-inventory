@@ -237,10 +237,24 @@ async function loadEmpresaPublica() {
   try {
     const response = await fetch(`${API_URL}/public/empresa/${encodeURIComponent(slug)}`);
     if (!response.ok) {
-      showAlert(response.status === 404
-        ? 'Página pública no encontrada o no habilitada.'
-        : 'Error al cargar la página. Intenta de nuevo más tarde.', 'danger');
-      document.getElementById('productosGrid').innerHTML = '';
+      let msg = 'Error al cargar la página. Intenta de nuevo más tarde.';
+      if (response.status === 404) {
+        try {
+          const errData = await response.json();
+          msg = errData.message || 'Página pública no encontrada o no habilitada.';
+        } catch(e) {
+          msg = 'Página pública no encontrada o no habilitada.';
+        }
+        document.getElementById('productosGrid').innerHTML = `
+          <div class="col-12 text-center py-5">
+            <i class="bi bi-shop" style="font-size:4rem;color:var(--color-primario,#0d6efd)"></i>
+            <h4 class="mt-3 mb-2">${msg}</h4>
+            <p class="text-muted">Si eres el propietario, activa la página pública desde Configuración → Página.</p>
+          </div>`;
+      } else {
+        showAlert(msg, 'danger');
+        document.getElementById('productosGrid').innerHTML = '';
+      }
       return;
     }
 
