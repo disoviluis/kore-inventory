@@ -9,6 +9,35 @@ window.API_URL = window.API_URL || '/api';
 let impuestosCache = [];
 
 /**
+ * Formatear fecha en formato colombiano (DD/MM/YYYY HH:mm)
+ */
+function formatFechaColombia(fechaStr) {
+  if (!fechaStr) return '—';
+  try {
+    const fecha = new Date(fechaStr);
+    if (isNaN(fecha.getTime())) return fechaStr;
+    return fecha.toLocaleDateString('es-CO', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
+  } catch (e) { return fechaStr; }
+}
+
+/**
+ * Formatear fecha en formato colombiano (solo fecha, sin hora)
+ */
+function formatFechaColombiaDate(fechaStr) {
+  if (!fechaStr) return '—';
+  try {
+    const fecha = new Date(fechaStr);
+    if (isNaN(fecha.getTime())) return fechaStr;
+    return fecha.toLocaleDateString('es-CO', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+  } catch (e) { return fechaStr; }
+}
+
+/**
  * Mostrar mensaje de error
  */
 function mostrarError(mensaje) {

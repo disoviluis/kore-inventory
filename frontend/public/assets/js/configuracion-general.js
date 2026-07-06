@@ -705,9 +705,6 @@ function copiarEnlacePagina() {
         showNotification('No se pudo copiar: ' + url, 'info');
     });
 }
-        `;
-    }
-}
 
 async function cargarConfiguracionPagina() {
     const empresaActivaId = localStorage.getItem('empresaActiva');
