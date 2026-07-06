@@ -1103,6 +1103,24 @@
                                                         <label class="form-label">Imágenes disponibles en S3</label>
                                                         <div id="paginaBannerS3List" class="d-flex flex-wrap gap-2"></div>
                                                     </div>
+                                                    <div class="col-12" id="paginaOverlayOpciones">
+                                                        <label class="form-label"><i class="bi bi-layers me-1"></i>Elementos sobre el banner</label>
+                                                        <small class="d-block text-muted mb-2">Si hay banner, puedes ocultar estos elementos para que la imagen se vea completa.</small>
+                                                        <div class="d-flex flex-wrap gap-3">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" id="paginaHeroMostrarNombre" checked onchange="actualizarPreviewPagina()">
+                                                                <label class="form-check-label" for="paginaHeroMostrarNombre">Nombre de empresa</label>
+                                                            </div>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" id="paginaHeroMostrarLogo" checked onchange="actualizarPreviewPagina()">
+                                                                <label class="form-check-label" for="paginaHeroMostrarLogo">Logo</label>
+                                                            </div>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" id="paginaHeroMostrarWhatsapp" checked onchange="actualizarPreviewPagina()">
+                                                                <label class="form-check-label" for="paginaHeroMostrarWhatsapp">Botón WhatsApp</label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

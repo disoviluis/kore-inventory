@@ -575,6 +575,33 @@ function initPaginaTab() {
     document.getElementById('paginaSubirBannerBtn')?.addEventListener('click', () => {
         subirBannerS3();
     });
+
+    // Auto-toggle overlay checkboxes cuando cambia la URL del banner
+    document.getElementById('paginaBannerUrl')?.addEventListener('input', (event) => {
+        const hasBanner = !!event.target.value.trim();
+        const nombre = document.getElementById('paginaHeroMostrarNombre');
+        const logo = document.getElementById('paginaHeroMostrarLogo');
+        const wa = document.getElementById('paginaHeroMostrarWhatsapp');
+        if (hasBanner) {
+            // Con banner: sugerir ocultar (solo si aun estaban en su default)
+            if (nombre && !nombre.dataset.touched) nombre.checked = false;
+            if (logo && !logo.dataset.touched) logo.checked = false;
+            if (wa && !wa.dataset.touched) wa.checked = false;
+        } else {
+            // Sin banner: mostrar todo
+            if (nombre) { nombre.checked = true; nombre.removeAttribute('data-touched'); }
+            if (logo) { logo.checked = true; logo.removeAttribute('data-touched'); }
+            if (wa) { wa.checked = true; wa.removeAttribute('data-touched'); }
+        }
+        actualizarPreviewPagina();
+    });
+
+    // Marcar como "tocado" cuando el usuario cambia manualmente
+    ['paginaHeroMostrarNombre', 'paginaHeroMostrarLogo', 'paginaHeroMostrarWhatsapp'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', (e) => {
+            e.target.dataset.touched = '1';
+        });
+    });
 }
 
 function actualizarPreviewPagina() {
@@ -742,6 +769,11 @@ async function cargarConfiguracionPagina() {
         document.getElementById('paginaMostrarPrecios').checked = config.pagina_mostrar_precios !== 0;
         document.getElementById('paginaMostrarPromociones').checked = config.pagina_mostrar_promociones !== 0;
         document.getElementById('paginaPlantilla').value = config.pagina_plantilla || 'clasica';
+        // Overlay en banner: default true (mostrar), salvo que esté explícitamente desactivado
+        const hasBanner = !!config.pagina_banner_url;
+        document.getElementById('paginaHeroMostrarNombre').checked = config.pagina_hero_mostrar_nombre !== undefined ? !!config.pagina_hero_mostrar_nombre : !hasBanner || config.pagina_hero_mostrar_nombre !== 0;
+        document.getElementById('paginaHeroMostrarLogo').checked = config.pagina_hero_mostrar_logo !== undefined ? !!config.pagina_hero_mostrar_logo : !hasBanner || config.pagina_hero_mostrar_logo !== 0;
+        document.getElementById('paginaHeroMostrarWhatsapp').checked = config.pagina_hero_mostrar_whatsapp !== undefined ? !!config.pagina_hero_mostrar_whatsapp : !hasBanner || config.pagina_hero_mostrar_whatsapp !== 0;
         document.getElementById('paginaHorario').value = config.pagina_horario || '';
         document.getElementById('paginaWhatsapp').value = config.pagina_whatsapp || '';
         document.getElementById('paginaInstagram').value = config.pagina_instagram || '';
@@ -774,6 +806,9 @@ function llenarPaginaDefaults() {
     document.getElementById('paginaFacebook').value = '';
     document.getElementById('paginaTiktok').value = '';
     document.getElementById('paginaColorPrimario').value = '#0d6efd';
+    document.getElementById('paginaHeroMostrarNombre').checked = true;
+    document.getElementById('paginaHeroMostrarLogo').checked = true;
+    document.getElementById('paginaHeroMostrarWhatsapp').checked = true;
     actualizarPreviewPagina();
 }
 
@@ -800,7 +835,10 @@ async function guardarConfiguracionPagina() {
         pagina_instagram: document.getElementById('paginaInstagram').value.trim() || null,
         pagina_facebook: document.getElementById('paginaFacebook').value.trim() || null,
         pagina_tiktok: document.getElementById('paginaTiktok').value.trim() || null,
-        pagina_color_primario: document.getElementById('paginaColorPrimario').value || '#0d6efd'
+        pagina_color_primario: document.getElementById('paginaColorPrimario').value || '#0d6efd',
+        pagina_hero_mostrar_nombre: document.getElementById('paginaHeroMostrarNombre').checked ? 1 : 0,
+        pagina_hero_mostrar_logo: document.getElementById('paginaHeroMostrarLogo').checked ? 1 : 0,
+        pagina_hero_mostrar_whatsapp: document.getElementById('paginaHeroMostrarWhatsapp').checked ? 1 : 0
     };
 
     if (!config.pagina_slug) {

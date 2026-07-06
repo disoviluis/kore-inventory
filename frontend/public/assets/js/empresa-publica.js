@@ -67,16 +67,28 @@ function renderHero(empresa, pagina) {
     hero.classList.add('has-banner');
   }
 
+  // Respetar flags de overlay (con banner, por defecto ocultar; sin banner, siempre mostrar)
+  const mostrarNombre  = bannerUrl ? pagina.pagina_hero_mostrar_nombre  !== 0 : true;
+  const mostrarLogo    = bannerUrl ? pagina.pagina_hero_mostrar_logo     !== 0 : true;
+  const mostrarWa      = bannerUrl ? pagina.pagina_hero_mostrar_whatsapp !== 0 : true;
+
+  const heroContent = document.getElementById('heroContent');
+  if (heroContent) heroContent.style.display = mostrarNombre ? '' : 'none';
+
   document.getElementById('heroTitulo').textContent = titulo;
   document.getElementById('heroSubtitulo').textContent = subtitulo;
   document.getElementById('heroDescripcion').textContent = descripcion;
 
   const heroLogo = document.getElementById('heroLogo');
-  if (logoUrl) { heroLogo.src = logoUrl; heroLogo.alt = empresa.nombre; heroLogo.style.display = 'block'; }
+  if (logoUrl && mostrarLogo) {
+    heroLogo.src = logoUrl; heroLogo.alt = empresa.nombre; heroLogo.style.display = 'block';
+  } else {
+    heroLogo.style.display = 'none';
+  }
 
   const heroBotones = document.getElementById('heroBotones');
   const btns = [];
-  if (whatsapp) {
+  if (whatsapp && mostrarWa) {
     btns.push(`<a href="${whatsappUrl(whatsapp, `Hola ${empresa.nombre}! Vi su catálogo y quiero información.`)}" target="_blank" class="btn btn-wa rounded-pill px-4"><i class="bi bi-whatsapp me-2"></i>WhatsApp</a>`);
   }
   if (empresa.telefono && !whatsapp) {
