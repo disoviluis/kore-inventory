@@ -131,7 +131,7 @@ export const getEmpresaPublica = async (req: Request, res: Response): Promise<Re
     const productos: any[] = [];
     if (paginaConfig.pagina_mostrar_productos) {
       const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT id, nombre, descripcion, precio_venta, imagen_url, estado,
+        `SELECT id, nombre, descripcion, precio_minorista AS precio_venta, imagen_url, estado,
                 en_promocion, precio_promocion, promocion_inicio, promocion_fin,
                 CASE
                   WHEN en_promocion = 1
