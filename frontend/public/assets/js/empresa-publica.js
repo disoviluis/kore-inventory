@@ -62,9 +62,17 @@ function renderHero(empresa, pagina) {
   document.getElementById('navNombre').textContent = empresa.nombre || '';
 
   const hero = document.querySelector('.ep-hero');
+  const heroBannerImg = document.getElementById('heroBannerImg');
+
   if (bannerUrl) {
-    hero.style.backgroundImage = `url('${bannerUrl}')`;
+    // Imagen completa sin recorte usando <img> tag
+    heroBannerImg.src = bannerUrl;
+    heroBannerImg.style.display = 'block';
+    hero.style.backgroundImage = '';
     hero.classList.add('has-banner');
+  } else {
+    heroBannerImg.style.display = 'none';
+    hero.classList.remove('has-banner');
   }
 
   // Respetar flags de overlay (con banner, por defecto ocultar; sin banner, siempre mostrar)
