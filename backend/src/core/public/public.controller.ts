@@ -105,7 +105,7 @@ export const getEmpresaPublica = async (req: Request, res: Response): Promise<Re
         ec.valor as pagina_valor
       FROM empresas e
       INNER JOIN empresa_configuracion ec ON ec.empresa_id = e.id AND ec.clave = 'pagina_publica'
-      WHERE e.estado = 'activa'
+      WHERE e.estado IN ('activa', 'trial')
         AND LOWER(JSON_UNQUOTE(JSON_EXTRACT(ec.valor, '$.pagina_slug'))) = ?
       LIMIT 1`,
       [slug]
