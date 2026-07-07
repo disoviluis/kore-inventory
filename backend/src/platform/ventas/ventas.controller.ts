@@ -135,7 +135,7 @@ export const buscarProducto = async (req: Request, res: Response): Promise<Respo
  */
 export const getVentas = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { empresaId, fecha_desde, fecha_hasta, estado } = req.query;
+    const { empresaId, fecha_desde, fecha_hasta, fechaInicio, fechaFin, estado, search } = req.query;
 
     if (!empresaId) {
       return errorResponse(
@@ -146,12 +146,17 @@ export const getVentas = async (req: Request, res: Response): Promise<Response> 
       );
     }
 
+    // Accept both naming conventions
+    const fi = (fechaInicio || fecha_desde) as string | undefined;
+    const ff = (fechaFin || fecha_hasta) as string | undefined;
+
     let sqlQuery = `
       SELECT 
         v.id, v.numero_factura, v.fecha_venta, v.subtotal, v.descuento,
-        v.impuesto, v.total, v.estado, v.metodo_pago, v.observaciones,
+        v.impuesto, v.impuestos_adicionales, v.total, v.estado, v.metodo_pago,
+        v.observaciones, v.propina_valor, v.propina_porcentaje,
         c.nombre as cliente_nombre, c.apellido as cliente_apellido,
-        c.razon_social, c.numero_documento,
+        c.razon_social, c.numero_documento, c.tipo_documento as cliente_tipo_documento,
         u.nombre as vendedor_nombre, u.apellido as vendedor_apellido
       FROM ventas v
       INNER JOIN clientes c ON v.cliente_id = c.id
@@ -161,14 +166,14 @@ export const getVentas = async (req: Request, res: Response): Promise<Response> 
 
     const params: any[] = [empresaId];
 
-    if (fecha_desde) {
+    if (fi) {
       sqlQuery += ' AND DATE(v.fecha_venta) >= ?';
-      params.push(fecha_desde);
+      params.push(fi);
     }
 
-    if (fecha_hasta) {
+    if (ff) {
       sqlQuery += ' AND DATE(v.fecha_venta) <= ?';
-      params.push(fecha_hasta);
+      params.push(ff);
     }
 
     if (estado) {
@@ -176,7 +181,13 @@ export const getVentas = async (req: Request, res: Response): Promise<Response> 
       params.push(estado);
     }
 
-    sqlQuery += ' ORDER BY v.fecha_venta DESC LIMIT 100';
+    if (search) {
+      sqlQuery += ' AND (v.numero_factura LIKE ? OR c.nombre LIKE ? OR c.numero_documento LIKE ?)';
+      const like = `%${search}%`;
+      params.push(like, like, like);
+    }
+
+    sqlQuery += ' ORDER BY v.fecha_venta DESC LIMIT 500';
 
     const ventas = await query(sqlQuery, params);
 
@@ -265,6 +276,7 @@ export const getVentaById = async (req: Request, res: Response): Promise<Respons
       [venta.id]
     );
 
+    venta.detalles = detalles;
     venta.productos = detalles;
     venta.impuestos = impuestos;
     venta.pagos = pagos;

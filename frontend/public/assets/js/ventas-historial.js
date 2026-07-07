@@ -573,7 +573,7 @@ async function verDetalleVenta(ventaId) {
 
         // El backend devuelve la venta en data.data con detalles incluidos
         const venta = data.data;
-        const detalle = venta.detalles || [];
+        const detalle = venta.detalles || venta.productos || [];
 
         ventaActual = venta; // Guardar venta actual
         mostrarDetalleVenta(venta, detalle);
@@ -587,7 +587,116 @@ async function verDetalleVenta(ventaId) {
 function mostrarDetalleVenta(venta, detalle) {
     const fechaFormateada = formatFechaColombia(venta.fecha_venta);
 
-    const html = generarHTMLFacturaVentaHistorial(venta, detalle);
+    const estadoBadge = getEstadoBadge(venta.estado);
+    const clienteNombre = venta.razon_social || `${venta.cliente_nombre || ''} ${venta.cliente_apellido || ''}`.trim() || 'N/A';
+    const subtotal = parseFloat(venta.subtotal) || 0;
+    const descuento = parseFloat(venta.descuento) || 0;
+    const impuesto = parseFloat(venta.impuesto) || 0;
+    const impuestosAd = parseFloat(venta.impuestos_adicionales) || 0;
+    const propina = parseFloat(venta.propina_valor) || 0;
+    const total = subtotal - descuento + impuesto + impuestosAd + propina;
+
+    // Productos table
+    const productosHTML = detalle.length > 0 ? detalle.map((item, i) => {
+        const sku = item.sku || item.producto_sku || '';
+        const barcode = item.codigo_barras || item.producto_codigo_barras || '';
+        const nombre = item.producto_nombre || item.nombre || '';
+        const cantidad = item.cantidad || 0;
+        const precio = parseFloat(item.precio_unitario) || 0;
+        const desc = parseFloat(item.descuento) || 0;
+        const subtotalItem = parseFloat(item.subtotal) || (cantidad * precio - desc);
+        return `
+        <tr>
+            <td class="text-center">${i + 1}</td>
+            <td>
+                <div class="fw-semibold">${nombre}</div>
+                ${sku ? `<small class="text-muted"><i class="bi bi-upc-scan"></i> SKU: <code>${sku}</code></small>` : ''}
+                ${barcode ? `<br><small class="text-muted"><i class="bi bi-barcode"></i> Barcode: <code>${barcode}</code></small>` : ''}
+            </td>
+            <td class="text-center">${cantidad}</td>
+            <td class="text-end">$${formatearNumero(precio)}</td>
+            <td class="text-end">${desc > 0 ? `$${formatearNumero(desc)}` : '-'}</td>
+            <td class="text-end fw-semibold">$${formatearNumero(subtotalItem)}</td>
+        </tr>`;
+    }).join('') : `<tr><td colspan="6" class="text-center text-muted py-3">Sin productos</td></tr>`;
+
+    // Pagos
+    const pagosHTML = (venta.pagos || []).map(p =>
+        `<div class="d-flex justify-content-between"><span class="text-muted">${p.metodo_pago || p.tipo || 'Pago'}</span><span>$${formatearNumero(parseFloat(p.monto) || parseFloat(p.valor) || 0)}</span></div>`
+    ).join('') || `<div class="d-flex justify-content-between"><span class="text-muted">${venta.metodo_pago || '-'}</span><span>$${formatearNumero(total)}</span></div>`;
+
+    const html = `
+    <div class="p-1">
+        <!-- Header info -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                    <h6 class="text-muted mb-2"><i class="bi bi-receipt me-1"></i>Información de Venta</h6>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr><td class="text-muted ps-0" style="width:40%">Factura:</td><td><strong>${venta.numero_factura}</strong></td></tr>
+                        <tr><td class="text-muted ps-0">Fecha:</td><td>${fechaFormateada}</td></tr>
+                        <tr><td class="text-muted ps-0">Estado:</td><td>${estadoBadge}</td></tr>
+                        <tr><td class="text-muted ps-0">Vendedor:</td><td>${venta.vendedor_nombre || '-'} ${venta.vendedor_apellido || ''}</td></tr>
+                        ${venta.notas ? `<tr><td class="text-muted ps-0">Notas:</td><td><small>${venta.notas}</small></td></tr>` : ''}
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                    <h6 class="text-muted mb-2"><i class="bi bi-person me-1"></i>Cliente</h6>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr><td class="text-muted ps-0" style="width:40%">Nombre:</td><td><strong>${clienteNombre}</strong></td></tr>
+                        <tr><td class="text-muted ps-0">Documento:</td><td>${venta.cliente_tipo_documento || ''} ${venta.numero_documento || '-'}</td></tr>
+                        ${venta.email ? `<tr><td class="text-muted ps-0">Email:</td><td>${venta.email}</td></tr>` : ''}
+                        ${venta.telefono ? `<tr><td class="text-muted ps-0">Teléfono:</td><td>${venta.telefono}</td></tr>` : ''}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Productos -->
+        <div class="border rounded p-3 mb-3">
+            <h6 class="text-muted mb-2"><i class="bi bi-box-seam me-1"></i>Productos <span class="badge bg-secondary">${detalle.length}</span></h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width:40px">#</th>
+                            <th>Producto</th>
+                            <th class="text-center" style="width:70px">Cant.</th>
+                            <th class="text-end" style="width:100px">Precio</th>
+                            <th class="text-end" style="width:90px">Desc.</th>
+                            <th class="text-end" style="width:110px">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>${productosHTML}</tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Totales + Pagos -->
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                    <h6 class="text-muted mb-2"><i class="bi bi-credit-card me-1"></i>Pagos</h6>
+                    ${pagosHTML}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="border rounded p-3">
+                    <h6 class="text-muted mb-2"><i class="bi bi-calculator me-1"></i>Resumen</h6>
+                    <div class="d-flex justify-content-between"><span class="text-muted">Subtotal:</span><span>$${formatearNumero(subtotal)}</span></div>
+                    ${descuento > 0 ? `<div class="d-flex justify-content-between text-danger"><span>Descuento:</span><span>-$${formatearNumero(descuento)}</span></div>` : ''}
+                    ${impuesto > 0 ? `<div class="d-flex justify-content-between"><span class="text-muted">IVA:</span><span>$${formatearNumero(impuesto)}</span></div>` : ''}
+                    ${impuestosAd > 0 ? `<div class="d-flex justify-content-between"><span class="text-muted">Imp. adicionales:</span><span>$${formatearNumero(impuestosAd)}</span></div>` : ''}
+                    ${propina > 0 ? `<div class="d-flex justify-content-between"><span class="text-muted">Propina (${venta.propina_porcentaje || 0}%):</span><span>$${formatearNumero(propina)}</span></div>` : ''}
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between fw-bold fs-5"><span>Total:</span><span class="text-success">$${formatearNumero(total)}</span></div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
     document.getElementById('detalleVentaContent').innerHTML = html;
     detalleVentaModal.show();
 }
