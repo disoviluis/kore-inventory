@@ -11,6 +11,15 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/dashboard.css">
+    <!-- Print styles -->
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #print-compra, #print-compra * { visibility: visible; }
+            #print-compra { position: fixed; top: 0; left: 0; width: 100%; padding: 20px; }
+            .no-print { display: none !important; }
+        }
+    </style>
 </head>
 <body>
 
@@ -669,6 +678,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-outline-secondary" id="btnImprimirCompra">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
                     <button type="button" class="btn btn-success" id="btnRecibirCompra" style="display:none;">
                         <i class="bi bi-check-circle"></i> Recibir Compra
                     </button>
@@ -676,6 +688,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Contenedor de impresión (oculto en pantalla, visible al imprimir) -->
+    <div id="print-compra" style="display:none;"></div>
 
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

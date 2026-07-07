@@ -363,6 +363,7 @@ function initEventListeners() {
     document.getElementById('btnAgregarProducto').addEventListener('click', agregarProducto);
     document.getElementById('impuestosCompra').addEventListener('input', calcularTotal);
     document.getElementById('descuentoCompra').addEventListener('input', calcularTotal);
+    document.getElementById('btnImprimirCompra').addEventListener('click', imprimirCompra);
     
     // Auto-generar número de compra
     document.getElementById('compraFecha').valueAsDate = new Date();
@@ -405,6 +406,8 @@ function agregarProducto() {
         productosCompra.push({
             producto_id: productoId,
             producto_nombre: producto.nombre,
+            sku: producto.sku || '',
+            codigo_barras: producto.codigo_barras || '',
             cantidad: cantidad,
             precio_unitario: precio,
             subtotal: cantidad * precio
@@ -433,9 +436,14 @@ function renderizarProductosCompra() {
         return;
     }
     
-    tbody.innerHTML = productosCompra.map((prod, index) => `
+    tbody.innerHTML = productosCompra.map((prod, index) => {
+        const meta = [prod.sku ? `SKU: ${prod.sku}` : '', prod.codigo_barras ? `Cód: ${prod.codigo_barras}` : ''].filter(Boolean).join(' | ');
+        return `
         <tr>
-            <td>${prod.producto_nombre}</td>
+            <td>
+                <div>${prod.producto_nombre}</div>
+                ${meta ? `<small class="text-muted">${meta}</small>` : ''}
+            </td>
             <td>${prod.cantidad}</td>
             <td>${formatearMoneda(prod.precio_unitario)}</td>
             <td>${formatearMoneda(prod.subtotal)}</td>
@@ -444,8 +452,8 @@ function renderizarProductosCompra() {
                     <i class="bi bi-trash"></i>
                 </button>
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 }
 
 function calcularTotal() {
@@ -544,8 +552,10 @@ function mostrarDetalleCompra(compra) {
             <thead>
                 <tr>
                     <th>Producto</th>
+                    <th>SKU</th>
+                    <th>Cód. Barras</th>
                     <th>Cantidad</th>
-                    <th>Precio</th>
+                    <th>Precio Unit.</th>
                     <th>Subtotal</th>
                 </tr>
             </thead>
@@ -553,6 +563,8 @@ function mostrarDetalleCompra(compra) {
                 ${compra.productos.map(p => `
                     <tr>
                         <td>${p.producto_nombre}</td>
+                        <td><small class="text-muted">${p.sku || '—'}</small></td>
+                        <td><small class="text-muted">${p.codigo_barras || '—'}</small></td>
                         <td>${p.cantidad}</td>
                         <td>${formatearMoneda(p.precio_unitario)}</td>
                         <td>${formatearMoneda(p.subtotal)}</td>
@@ -660,6 +672,89 @@ function limpiarFiltros() {
     document.getElementById('filterEstado').value = '';
     document.getElementById('filterProveedor').value = '';
     cargarCompras();
+}
+
+function imprimirCompra() {
+    if (!compraActual) return;
+    const c = compraActual;
+    const filas = c.productos.map(p => `
+        <tr>
+            <td>${p.producto_nombre}</td>
+            <td>${p.sku || '—'}</td>
+            <td>${p.codigo_barras || '—'}</td>
+            <td style="text-align:center">${p.cantidad}</td>
+            <td style="text-align:right">${formatearMoneda(p.precio_unitario)}</td>
+            <td style="text-align:right">${formatearMoneda(p.subtotal)}</td>
+        </tr>
+    `).join('');
+
+    const html = `
+        <div style="font-family: Arial, sans-serif; font-size: 12px; max-width: 900px; margin: 0 auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #333; padding-bottom:10px; margin-bottom:16px;">
+                <div>
+                    <h2 style="margin:0; font-size:18px;">${currentEmpresa.nombre || 'KORE Inventory'}</h2>
+                    <div style="color:#666;">Orden de Compra</div>
+                </div>
+                <div style="text-align:right;">
+                    <strong>N° ${c.numero_compra}</strong><br>
+                    Fecha: ${formatearFecha(c.fecha_compra)}<br>
+                    Estado: ${c.estado.toUpperCase()}
+                </div>
+            </div>
+
+            <div style="display:flex; gap:40px; margin-bottom:16px;">
+                <div>
+                    <strong>Proveedor:</strong> ${c.proveedor_nombre}<br>
+                    <strong>Tipo:</strong> ${c.tipo_compra}<br>
+                    <strong>Registrado por:</strong> ${c.usuario_nombre} ${c.usuario_apellido}
+                </div>
+                ${c.notas ? `<div><strong>Notas:</strong> ${c.notas}</div>` : ''}
+            </div>
+
+            <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+                <thead>
+                    <tr style="background:#f0f0f0;">
+                        <th style="border:1px solid #ddd; padding:6px; text-align:left;">Producto</th>
+                        <th style="border:1px solid #ddd; padding:6px; text-align:left;">SKU</th>
+                        <th style=\"border:1px solid #ddd; padding:6px; text-align:left;\">Cód. Barras</th>
+                        <th style="border:1px solid #ddd; padding:6px; text-align:center;">Cant.</th>
+                        <th style="border:1px solid #ddd; padding:6px; text-align:right;">Precio Unit.</th>
+                        <th style="border:1px solid #ddd; padding:6px; text-align:right;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filas}
+                </tbody>
+            </table>
+
+            <div style="display:flex; justify-content:flex-end;">
+                <table style="border-collapse:collapse; min-width:260px;">
+                    <tr><td style="padding:4px 12px;">Subtotal:</td><td style="text-align:right; padding:4px 12px;">${formatearMoneda(c.subtotal)}</td></tr>
+                    <tr><td style="padding:4px 12px;">Impuestos:</td><td style="text-align:right; padding:4px 12px;">${formatearMoneda(c.impuestos)}</td></tr>
+                    <tr><td style="padding:4px 12px;">Descuento:</td><td style="text-align:right; padding:4px 12px;">${formatearMoneda(c.descuento)}</td></tr>
+                    <tr style="background:#e8f4e8; font-weight:bold;">
+                        <td style="padding:6px 12px; border-top:2px solid #333;">TOTAL:</td>
+                        <td style="text-align:right; padding:6px 12px; border-top:2px solid #333;">${formatearMoneda(c.total)}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="margin-top:40px; display:flex; justify-content:space-between;">
+                <div style="text-align:center; border-top:1px solid #333; width:200px; padding-top:6px;">Firma Proveedor</div>
+                <div style="text-align:center; border-top:1px solid #333; width:200px; padding-top:6px;">Firma Recibido</div>
+            </div>
+
+            <div style="margin-top:20px; color:#aaa; font-size:10px; text-align:center;">
+                Generado por KORE Inventory &bull; ${new Date().toLocaleString('es-CO')}
+            </div>
+        </div>
+    `;
+
+    const printDiv = document.getElementById('print-compra');
+    printDiv.innerHTML = html;
+    printDiv.style.display = 'block';
+    window.print();
+    printDiv.style.display = 'none';
 }
 
 function formatearFecha(fecha) {
