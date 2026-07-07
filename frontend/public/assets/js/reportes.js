@@ -30,19 +30,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             localStorage.setItem('usuario', JSON.stringify(usuario));
         }
         currentUsuario = usuario;
+        cargarInfoUsuario(usuario);
 
-        // Empresa activa
-        const empresaActivaId = localStorage.getItem('empresaActiva');
-        if (empresaActivaId) {
-            const re = await fetch(`${API_URL}/empresas/${empresaActivaId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-            const de = await re.json();
-            if (de.success) currentEmpresa = de.data;
-        }
-        if (!currentEmpresa) {
-            const re2 = await fetch(`${API_URL}/usuarios/${usuario.id}/empresa-activa`, { headers: { 'Authorization': `Bearer ${token}` } });
-            const de2 = await re2.json();
-            if (de2.success) currentEmpresa = de2.data;
-        }
+        // Empresa activa — carga empresas del usuario y actualiza UI del selector
+        await cargarEmpresas(usuario.id);
 
         if (!currentEmpresa?.id) {
             document.getElementById('mainContent').innerHTML = '<div class="alert alert-warning m-4">No hay empresa configurada.</div>';
@@ -57,6 +48,96 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error inicialización reportes:', err);
     }
 });
+
+// ─── INFO USUARIO ──────────────────────────────────────────────────────────────
+function cargarInfoUsuario(usuario) {
+    const userName = document.getElementById('userName');
+    const userRole = document.getElementById('userRole');
+    if (userName) {
+        userName.textContent = `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim() || 'Usuario';
+    }
+    if (userRole) {
+        const tipos = {
+            'super_admin': 'Super Administrador',
+            'admin_empresa': 'Administrador',
+            'usuario': 'Usuario',
+            'soporte': 'Soporte'
+        };
+        userRole.textContent = tipos[usuario.tipo_usuario] || usuario.tipo_usuario || '-';
+    }
+}
+
+// ─── EMPRESAS DEL USUARIO ──────────────────────────────────────────────────────
+async function cargarEmpresas(usuarioId) {
+    const token = localStorage.getItem('token');
+    const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+    const companySelector = document.getElementById('companySelector');
+    const companyText = document.getElementById('companyText');
+    const companyNameText = document.getElementById('companyNameText');
+
+    try {
+        const response = await fetch(`${API_URL}/empresas/usuario/${usuarioId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (data.success && data.data.length > 0) {
+            const esUsuarioRegular = usuario.tipo_usuario === 'usuario';
+            const tieneSoloUnaEmpresa = data.data.length === 1;
+
+            if (esUsuarioRegular || tieneSoloUnaEmpresa) {
+                if (companySelector) companySelector.style.display = 'none';
+                if (companyText) companyText.style.display = 'block';
+                if (companyNameText) companyNameText.textContent = data.data[0].nombre;
+                localStorage.setItem('empresaActiva', data.data[0].id.toString());
+                currentEmpresa = data.data[0];
+            } else {
+                if (companySelector) {
+                    companySelector.style.display = 'block';
+                    companySelector.innerHTML = '';
+                    data.data.forEach(emp => {
+                        const opt = document.createElement('option');
+                        opt.value = emp.id;
+                        opt.textContent = emp.nombre;
+                        companySelector.appendChild(opt);
+                    });
+                    const empresaGuardadaId = localStorage.getItem('empresaActiva');
+                    const empresaExiste = empresaGuardadaId && data.data.find(e => e.id == empresaGuardadaId);
+                    if (empresaExiste) {
+                        companySelector.value = empresaGuardadaId;
+                        currentEmpresa = empresaExiste;
+                    } else {
+                        companySelector.value = data.data[0].id;
+                        localStorage.setItem('empresaActiva', data.data[0].id.toString());
+                        currentEmpresa = data.data[0];
+                    }
+                    if (companyText) companyText.style.display = 'none';
+                    companySelector.addEventListener('change', async (e) => {
+                        const emp = data.data.find(x => x.id == e.target.value);
+                        localStorage.setItem('empresaActiva', e.target.value);
+                        currentEmpresa = emp;
+                        await cargarTodo();
+                    });
+                }
+            }
+        } else {
+            // Fallback: intentar con empresa-activa endpoint
+            const empresaActivaId = localStorage.getItem('empresaActiva');
+            if (empresaActivaId) {
+                const re = await fetch(`${API_URL}/empresas/${empresaActivaId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const de = await re.json();
+                if (de.success) {
+                    currentEmpresa = de.data;
+                    if (companyText) companyText.style.display = 'block';
+                    if (companyNameText) companyNameText.textContent = de.data.nombre;
+                    if (companySelector) companySelector.style.display = 'none';
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Error al cargar empresas:', err);
+    }
+}
 
 function inicializarFiltros() {
     const hoy = new Date();
