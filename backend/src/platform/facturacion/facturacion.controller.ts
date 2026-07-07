@@ -25,12 +25,20 @@ export const getConfiguracionFacturacion = async (req: Request, res: Response): 
     );
 
     if (configuracion.length === 0) {
-      return errorResponse(
-        res,
-        'Configuración de facturación no encontrada',
-        null,
-        CONSTANTS.HTTP_STATUS.NOT_FOUND
-      );
+      // Retornar configuración por defecto en lugar de 404
+      const defaultConfig = {
+        empresa_id: parseInt(empresaId),
+        plantilla_id: 1,
+        color_primario: '#1E40AF',
+        color_secundario: '#6c757d',
+        fuente: 'Arial',
+        mostrar_logo: true,
+        mostrar_qr: true,
+        mostrar_cufe: true,
+        mostrar_badges: true,
+        logo_posicion: 'center'
+      };
+      return successResponse(res, 'Configuración por defecto', defaultConfig, CONSTANTS.HTTP_STATUS.OK);
     }
 
     logger.info(`Configuración de facturación obtenida para empresa: ${empresaId}`);
