@@ -32,6 +32,9 @@ const MODULE_MAP = {
   // FINANZAS
   'cuentas-por-cobrar.html': 'finanzas',
   
+  // REPORTES
+  'reportes.html': 'reportes',
+  
   // ADMINISTRACIÓN (módulos del dashboard)
   'usuarios': 'usuarios',
   'roles': 'roles',
