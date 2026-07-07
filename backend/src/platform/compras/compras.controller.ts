@@ -236,21 +236,43 @@ export const recibirCompra = async (req: Request, res: Response) => {
             [empresaId]
         );
 
-        // Actualizar inventario de cada producto
+        // Actualizar inventario de cada producto con Costo Promedio Ponderado (CPP)
         for (const prod of productos as any[]) {
-            // Obtener stock actual
+            // Obtener datos actuales del producto
             const [producto]: any = await query(
-                'SELECT stock_actual FROM productos WHERE id = ?',
+                'SELECT stock_actual, precio_compra, maneja_inventario FROM productos WHERE id = ?',
                 [prod.producto_id]
             );
 
-            const stockAnterior = producto.stock_actual;
-            const stockNuevo = stockAnterior + prod.cantidad;
+            if (!producto) {
+                logger.info(`Producto ${prod.producto_id} no encontrado, saltando`);
+                continue;
+            }
 
-            // Actualizar stock global
+            const stockAnterior = producto.stock_actual || 0;
+            const stockNuevo = stockAnterior + prod.cantidad;
+            const precioAnterior = parseFloat(producto.precio_compra) || 0;
+            const precioNuevo = parseFloat(prod.precio_unitario);
+
+            // ── Costo Promedio Ponderado (CPP) ──────────────────────────────
+            // Si hay stock existente: promediamos ponderado
+            // Si no hay stock (o es 0): el nuevo precio reemplaza directamente
+            let nuevoPrecioCompra: number;
+            if (stockAnterior > 0 && precioAnterior > 0) {
+                nuevoPrecioCompra = Math.round(
+                    ((stockAnterior * precioAnterior) + (prod.cantidad * precioNuevo))
+                    / stockNuevo * 100
+                ) / 100;
+            } else {
+                // Sin stock previo o sin precio anterior → precio nuevo directo
+                nuevoPrecioCompra = Math.round(precioNuevo * 100) / 100;
+            }
+            // ────────────────────────────────────────────────────────────────
+
+            // Actualizar stock y precio_compra (CPP) en la tabla productos
             await query(
-                'UPDATE productos SET stock_actual = ? WHERE id = ?',
-                [stockNuevo, prod.producto_id]
+                'UPDATE productos SET stock_actual = ?, precio_compra = ? WHERE id = ?',
+                [stockNuevo, nuevoPrecioCompra, prod.producto_id]
             );
 
             // Actualizar stock en bodega principal
@@ -263,17 +285,48 @@ export const recibirCompra = async (req: Request, res: Response) => {
                 );
             }
 
-            // Registrar movimiento en inventario
-            await query(
-                `INSERT INTO inventario_movimientos (
-                    producto_id, tipo_movimiento, cantidad, stock_anterior, 
-                    stock_nuevo, motivo, referencia_tipo, referencia_id, 
-                    usuario_id, fecha
-                ) VALUES (?, 'entrada', ?, ?, ?, 'compra', 'compra', ?, ?, ?)`,
-                [
-                    prod.producto_id, prod.cantidad, stockAnterior, stockNuevo,
-                    id, usuarioId, fechaRecepcion || new Date()
-                ]
+            // Construir nota con detalle del CPP para trazabilidad
+            const notaCPP = stockAnterior > 0 && precioAnterior > 0
+                ? `CPP: (${stockAnterior} u × $${precioAnterior} + ${prod.cantidad} u × $${precioNuevo}) / ${stockNuevo} u = $${nuevoPrecioCompra}`
+                : `Precio directo (sin stock previo): $${nuevoPrecioCompra}`;
+
+            // Registrar movimiento con costo unitario CPP
+            try {
+                await query(
+                    `INSERT INTO inventario_movimientos (
+                        producto_id, tipo_movimiento, cantidad, stock_anterior,
+                        stock_nuevo, costo_unitario, precio_costo_anterior,
+                        motivo, referencia_tipo, referencia_id,
+                        usuario_id, fecha, notas
+                    ) VALUES (?, 'entrada', ?, ?, ?, ?, ?, 'compra', 'compra', ?, ?, ?, ?)`,
+                    [
+                        prod.producto_id, prod.cantidad, stockAnterior, stockNuevo,
+                        nuevoPrecioCompra, precioAnterior > 0 ? precioAnterior : null,
+                        id, usuarioId, fechaRecepcion || new Date(), notaCPP
+                    ]
+                );
+            } catch (movErr: any) {
+                // Si las columnas CPP no existen aún (migración pendiente), insertar sin ellas
+                if (movErr.code === 'ER_BAD_FIELD_ERROR') {
+                    await query(
+                        `INSERT INTO inventario_movimientos (
+                            producto_id, tipo_movimiento, cantidad, stock_anterior,
+                            stock_nuevo, motivo, referencia_tipo, referencia_id,
+                            usuario_id, fecha, notas
+                        ) VALUES (?, 'entrada', ?, ?, ?, 'compra', 'compra', ?, ?, ?, ?)`,
+                        [
+                            prod.producto_id, prod.cantidad, stockAnterior, stockNuevo,
+                            id, usuarioId, fechaRecepcion || new Date(), notaCPP
+                        ]
+                    );
+                } else {
+                    throw movErr;
+                }
+            }
+
+            logger.info(
+                `Producto ${prod.producto_id}: stock ${stockAnterior}→${stockNuevo}, ` +
+                `precio_compra $${precioAnterior}→$${nuevoPrecioCompra} (CPP)`
             );
         }
 
