@@ -834,7 +834,7 @@ async function editarProducto(id) {
     try {
         // Leer desde el API para obtener p.stock_actual directo (no desde bodegas)
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/productos/${id}`, {
+        const response = await fetch(`${API_URL}/productos/${id}?empresaId=${currentEmpresa.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('No se pudo cargar el producto');
