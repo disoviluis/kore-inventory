@@ -24,13 +24,19 @@ export const getDashboardKPIs = async (req: Request, res: Response) => {
         // Ventas del período actual
         const [ventasActual]: any = await query(`
             SELECT 
-                COUNT(*) as total_transacciones,
-                COALESCE(SUM(total), 0) as total_ventas,
-                COALESCE(SUM(ganancia_bruta), 0) as ganancia_bruta,
-                COALESCE(AVG(total), 0) as ticket_promedio
-            FROM ventas
-            WHERE empresa_id = ? AND estado = 'completada'
-            AND DATE(fecha_venta) BETWEEN ? AND ?
+                COUNT(v.id) as total_transacciones,
+                COALESCE(SUM(v.total), 0) as total_ventas,
+                COALESCE(SUM(vg.ganancia), 0) as ganancia_bruta,
+                COALESCE(AVG(v.total), 0) as ticket_promedio
+            FROM ventas v
+            LEFT JOIN (
+                SELECT vd.venta_id, SUM(vd.subtotal - (vd.cantidad * COALESCE(p.precio_compra, 0))) as ganancia
+                FROM venta_detalle vd
+                JOIN productos p ON vd.producto_id = p.id
+                GROUP BY vd.venta_id
+            ) vg ON v.id = vg.venta_id
+            WHERE v.empresa_id = ? AND v.estado = 'pagada'
+            AND DATE(v.fecha_venta) BETWEEN ? AND ?
         `, [empresaId, fi, ff]);
 
         // Período anterior (misma duración)
@@ -41,7 +47,7 @@ export const getDashboardKPIs = async (req: Request, res: Response) => {
         const [ventasAnterior]: any = await query(`
             SELECT COALESCE(SUM(total), 0) as total_ventas, COUNT(*) as total_transacciones
             FROM ventas
-            WHERE empresa_id = ? AND estado = 'completada'
+            WHERE empresa_id = ? AND estado = 'pagada'
             AND DATE(fecha_venta) BETWEEN ? AND ?
         `, [empresaId, fiAnterior, ffAnterior]);
 
@@ -56,7 +62,7 @@ export const getDashboardKPIs = async (req: Request, res: Response) => {
         const [clientesActivos]: any = await query(`
             SELECT COUNT(DISTINCT cliente_id) as total
             FROM ventas
-            WHERE empresa_id = ? AND estado = 'completada'
+            WHERE empresa_id = ? AND estado = 'pagada'
             AND DATE(fecha_venta) BETWEEN ? AND ?
             AND cliente_id IS NOT NULL
         `, [empresaId, fi, ff]);
@@ -124,16 +130,22 @@ export const getVentasPorTiempo = async (req: Request, res: Response) => {
 
         const datos = await query(`
             SELECT 
-                DATE_FORMAT(fecha_venta, ?) as periodo,
-                COUNT(*) as transacciones,
-                COALESCE(SUM(total), 0) as total_ventas,
-                COALESCE(SUM(ganancia_bruta), 0) as ganancia,
-                COALESCE(AVG(total), 0) as ticket_promedio
-            FROM ventas
-            WHERE empresa_id = ? AND estado = 'completada'
-            AND DATE(fecha_venta) BETWEEN ? AND ?
+                DATE_FORMAT(v.fecha_venta, ?) as periodo,
+                COUNT(v.id) as transacciones,
+                COALESCE(SUM(v.total), 0) as total_ventas,
+                COALESCE(SUM(vg.ganancia), 0) as ganancia,
+                COALESCE(AVG(v.total), 0) as ticket_promedio
+            FROM ventas v
+            LEFT JOIN (
+                SELECT vd.venta_id, SUM(vd.subtotal - (vd.cantidad * COALESCE(p.precio_compra, 0))) as ganancia
+                FROM venta_detalle vd
+                JOIN productos p ON vd.producto_id = p.id
+                GROUP BY vd.venta_id
+            ) vg ON v.id = vg.venta_id
+            WHERE v.empresa_id = ? AND v.estado = 'pagada'
+            AND DATE(v.fecha_venta) BETWEEN ? AND ?
             GROUP BY periodo
-            ORDER BY MIN(fecha_venta)
+            ORDER BY MIN(v.fecha_venta)
         `, [dateFormat, empresaId, fi, ff]);
 
         return successResponse(res, 'Ventas por tiempo', datos);
@@ -160,12 +172,18 @@ export const getTopVendedores = async (req: Request, res: Response) => {
                 CONCAT(u.nombre, ' ', COALESCE(u.apellido,'')) as vendedor,
                 COUNT(v.id) as transacciones,
                 COALESCE(SUM(v.total), 0) as total_ventas,
-                COALESCE(SUM(v.ganancia_bruta), 0) as ganancia,
+                COALESCE(SUM(vg.ganancia), 0) as ganancia,
                 COALESCE(AVG(v.total), 0) as ticket_promedio,
-                COALESCE(SUM(v.ganancia_bruta) / NULLIF(SUM(v.total), 0) * 100, 0) as margen_pct
+                COALESCE(SUM(vg.ganancia) / NULLIF(SUM(v.total), 0) * 100, 0) as margen_pct
             FROM ventas v
-            JOIN usuarios u ON v.usuario_id = u.id
-            WHERE v.empresa_id = ? AND v.estado = 'completada'
+            JOIN usuarios u ON v.vendedor_id = u.id
+            LEFT JOIN (
+                SELECT vd.venta_id, SUM(vd.subtotal - (vd.cantidad * COALESCE(p.precio_compra, 0))) as ganancia
+                FROM venta_detalle vd
+                JOIN productos p ON vd.producto_id = p.id
+                GROUP BY vd.venta_id
+            ) vg ON v.id = vg.venta_id
+            WHERE v.empresa_id = ? AND v.estado = 'pagada'
             AND DATE(v.fecha_venta) BETWEEN ? AND ?
             GROUP BY u.id, u.nombre, u.apellido
             ORDER BY total_ventas DESC
@@ -202,11 +220,11 @@ export const getTopProductos = async (req: Request, res: Response) => {
                 COALESCE(SUM(vd.subtotal), 0) as total_ventas,
                 COALESCE(SUM(vd.subtotal - (vd.cantidad * p.precio_compra)), 0) as ganancia,
                 COALESCE(SUM(vd.subtotal - (vd.cantidad * p.precio_compra)) / NULLIF(SUM(vd.subtotal), 0) * 100, 0) as margen_pct
-            FROM ventas_detalle vd
+            FROM venta_detalle vd
             JOIN productos p ON vd.producto_id = p.id
             JOIN ventas v ON vd.venta_id = v.id
             LEFT JOIN categorias c ON p.categoria_id = c.id
-            WHERE v.empresa_id = ? AND v.estado = 'completada'
+            WHERE v.empresa_id = ? AND v.estado = 'pagada'
             AND DATE(v.fecha_venta) BETWEEN ? AND ?
             GROUP BY p.id, p.nombre, p.sku, c.nombre
             ORDER BY ${orderCol}
@@ -234,18 +252,25 @@ export const getAnalisisBodegas = async (req: Request, res: Response) => {
         // Ventas por bodega/caja
         const porBodega = await query(`
             SELECT 
-                COALESCE(v.caja_id, 0) as caja_id,
-                COALESCE(ca.nombre, 'Sin caja') as caja_nombre,
+                COALESCE(b.id, 0) as caja_id,
+                COALESCE(b.nombre, 'Sin bodega') as caja_nombre,
                 COUNT(v.id) as transacciones,
                 COALESCE(SUM(v.total), 0) as total_ventas,
-                COALESCE(SUM(v.ganancia_bruta), 0) as ganancia,
+                COALESCE(SUM(vg.ganancia), 0) as ganancia,
                 COALESCE(AVG(v.total), 0) as ticket_promedio,
-                COALESCE(SUM(v.ganancia_bruta) / NULLIF(SUM(v.total), 0) * 100, 0) as margen_pct
+                COALESCE(SUM(vg.ganancia) / NULLIF(SUM(v.total), 0) * 100, 0) as margen_pct
             FROM ventas v
-            LEFT JOIN cajas ca ON v.caja_id = ca.id
-            WHERE v.empresa_id = ? AND v.estado = 'completada'
+            LEFT JOIN turnos_caja tc ON v.turno_id = tc.id
+            LEFT JOIN bodegas b ON tc.bodega_id = b.id
+            LEFT JOIN (
+                SELECT vd.venta_id, SUM(vd.subtotal - (vd.cantidad * COALESCE(p.precio_compra, 0))) as ganancia
+                FROM venta_detalle vd
+                JOIN productos p ON vd.producto_id = p.id
+                GROUP BY vd.venta_id
+            ) vg ON v.id = vg.venta_id
+            WHERE v.empresa_id = ? AND v.estado = 'pagada'
             AND DATE(v.fecha_venta) BETWEEN ? AND ?
-            GROUP BY v.caja_id, ca.nombre
+            GROUP BY b.id, b.nombre
             ORDER BY total_ventas DESC
         `, [empresaId, fi, ff]);
 
@@ -291,11 +316,11 @@ export const getVentasCategorias = async (req: Request, res: Response) => {
                 COALESCE(SUM(vd.subtotal), 0) as total_ventas,
                 COALESCE(SUM(vd.subtotal - (vd.cantidad * p.precio_compra)), 0) as ganancia,
                 COUNT(DISTINCT p.id) as productos_distintos
-            FROM ventas_detalle vd
+            FROM venta_detalle vd
             JOIN productos p ON vd.producto_id = p.id
             JOIN ventas v ON vd.venta_id = v.id
             LEFT JOIN categorias c ON p.categoria_id = c.id
-            WHERE v.empresa_id = ? AND v.estado = 'completada'
+            WHERE v.empresa_id = ? AND v.estado = 'pagada'
             AND DATE(v.fecha_venta) BETWEEN ? AND ?
             GROUP BY c.nombre
             ORDER BY total_ventas DESC
