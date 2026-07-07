@@ -54,7 +54,7 @@ export const getDashboardKPIs = async (req: Request, res: Response) => {
         // Productos con stock bajo
         const [stockBajo]: any = await query(`
             SELECT COUNT(*) as total FROM productos
-            WHERE empresa_id = ? AND maneja_inventario = 1 AND activo = 1
+            WHERE empresa_id = ? AND maneja_inventario = 1 AND estado = 'activo'
             AND stock_actual <= COALESCE(stock_minimo, 0)
         `, [empresaId]);
 
@@ -166,6 +166,7 @@ export const getTopVendedores = async (req: Request, res: Response) => {
         const fi = fechaInicio || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
         const ff = fechaFin || new Date().toISOString().split('T')[0];
 
+        const limiteVendedores = Math.max(1, parseInt(limite as string) || 10);
         const datos = await query(`
             SELECT 
                 u.id,
@@ -187,8 +188,8 @@ export const getTopVendedores = async (req: Request, res: Response) => {
             AND DATE(v.fecha_venta) BETWEEN ? AND ?
             GROUP BY u.id, u.nombre, u.apellido
             ORDER BY total_ventas DESC
-            LIMIT ?
-        `, [empresaId, fi, ff, parseInt(limite as string)]);
+            LIMIT ${limiteVendedores}
+        `, [empresaId, fi, ff]);
 
         return successResponse(res, 'Top vendedores', datos);
     } catch (error: any) {
@@ -208,6 +209,7 @@ export const getTopProductos = async (req: Request, res: Response) => {
         const fi = fechaInicio || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
         const ff = fechaFin || new Date().toISOString().split('T')[0];
 
+        const limiteProductos = Math.max(1, parseInt(limite as string) || 10);
         const orderCol = orden === 'ganancia' ? 'ganancia DESC' : orden === 'cantidad' ? 'cantidad_vendida DESC' : 'total_ventas DESC';
 
         const datos = await query(`
@@ -228,8 +230,8 @@ export const getTopProductos = async (req: Request, res: Response) => {
             AND DATE(v.fecha_venta) BETWEEN ? AND ?
             GROUP BY p.id, p.nombre, p.sku, c.nombre
             ORDER BY ${orderCol}
-            LIMIT ?
-        `, [empresaId, fi, ff, parseInt(limite as string)]);
+            LIMIT ${limiteProductos}
+        `, [empresaId, fi, ff]);
 
         return successResponse(res, 'Top productos', datos);
     } catch (error: any) {
@@ -349,7 +351,7 @@ export const getInventarioRiesgo = async (req: Request, res: Response) => {
                    (p.stock_actual * p.precio_compra) as valor_en_riesgo
             FROM productos p
             LEFT JOIN categorias c ON p.categoria_id = c.id
-            WHERE p.empresa_id = ? AND p.maneja_inventario = 1 AND p.activo = 1
+            WHERE p.empresa_id = ? AND p.maneja_inventario = 1 AND p.estado = 'activo'
             AND p.stock_actual <= COALESCE(p.stock_minimo, 0)
             ORDER BY p.stock_actual ASC
             LIMIT 20
@@ -364,7 +366,7 @@ export const getInventarioRiesgo = async (req: Request, res: Response) => {
             FROM productos p
             LEFT JOIN categorias c ON p.categoria_id = c.id
             LEFT JOIN inventario_movimientos im ON p.id = im.producto_id
-            WHERE p.empresa_id = ? AND p.maneja_inventario = 1 AND p.activo = 1
+            WHERE p.empresa_id = ? AND p.maneja_inventario = 1 AND p.estado = 'activo'
             AND p.stock_actual > 0
             GROUP BY p.id, p.nombre, p.sku, p.stock_actual, c.nombre, p.precio_compra
             HAVING ultimo_movimiento IS NULL OR ultimo_movimiento < DATE_SUB(NOW(), INTERVAL 30 DAY)
