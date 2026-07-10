@@ -619,13 +619,29 @@
                     
                     <!-- Columna Principal: Cliente y Productos -->
                     <div class="col-lg-8 pos-col-left">
-                        
+
+                        <!-- Banner: Sin Turno Activo -->
+                        <div id="bannerSinTurno" class="d-none" role="alert">
+                            <div class="alert alert-warning border-warning border-2 mb-4 shadow-sm" style="border-radius: 12px;">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3" style="font-size: 2.2rem; line-height:1;">🔒</div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="alert-heading mb-1 fw-bold">POS Bloqueado — Sin Turno de Caja Activo</h6>
+                                        <p class="mb-0 small text-dark">Debes abrir un turno de caja para registrar ventas, abrir cuentas o seleccionar clientes.</p>
+                                    </div>
+                                    <button class="btn btn-warning fw-bold ms-3 shadow-sm" onclick="abrirModalTurno()">
+                                        <i class="bi bi-unlock-fill me-1"></i>Abrir Turno
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Sección Cliente -->
                         <div class="card mb-4">
                             <div class="card-header bg-primary text-white">
                                 <h6 class="mb-0"><i class="bi bi-person-circle me-2"></i>Cliente</h6>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body" id="cardBodyCliente">
                                 
                                 <!-- Búsqueda de Cliente -->
                                 <div id="busquedaCliente">
@@ -1539,7 +1555,7 @@
     <script src="assets/js/fecha-utils.js"></script>
     <!-- Custom JS -->
     <script src="assets/js/impuestos-utils.js"></script>
-    <script src="assets/js/ventas.js?v=6.7"></script>
+    <script src="assets/js/ventas.js?v=7.0"></script>
     <!-- Sidebar Navigation (Common) -->
     <script src="assets/js/sidebar-navigation.js"></script>
 

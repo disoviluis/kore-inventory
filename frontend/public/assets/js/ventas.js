@@ -191,6 +191,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         initEventListeners();
         deshabilitarSeccionProductos();
 
+        // Verificar si hay turno activo y ajustar UI del POS en consecuencia
+        await verificarTurnoActivo();
+
         // ============================================
         // DETECTAR PARÁMETRO DE IMPRESIÓN EN URL
         // ============================================
@@ -358,6 +361,9 @@ async function cargarEmpresas(usuarioId) {
                     
                     // Recargar todos los datos de la nueva empresa
                     await recargarDatosEmpresa();
+
+                    // Verificar turno activo para la nueva empresa
+                    await verificarTurnoActivo();
                 });
             }
             
@@ -706,6 +712,22 @@ function seleccionarClientePorIndice(index) {
 }
 
 function seleccionarCliente(cliente) {
+    // Guardia: se requiere turno activo para iniciar una venta
+    if (!turnoActivo) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Turno de caja requerido',
+            html: 'Debes <strong>abrir un turno de caja</strong> antes de registrar ventas.',
+            confirmButtonText: 'Abrir turno',
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#f59e0b'
+        }).then(result => {
+            if (result.isConfirmed) abrirModalTurno();
+        });
+        return;
+    }
+
     console.log('=== seleccionarCliente called ===');
     console.log('Tipo de cliente:', typeof cliente);
     console.log('cliente recibido:', cliente);
@@ -3588,6 +3610,22 @@ function agregarListenerTeclado() {
  * Seleccionar cliente "Público General" automáticamente
  */
 async function seleccionarPublicoGeneral() {
+    // Guardia: se requiere turno activo para iniciar una venta
+    if (!turnoActivo) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Turno de caja requerido',
+            html: 'Debes <strong>abrir un turno de caja</strong> antes de registrar ventas.',
+            confirmButtonText: 'Abrir turno',
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#f59e0b'
+        }).then(result => {
+            if (result.isConfirmed) abrirModalTurno();
+        });
+        return;
+    }
+
     try {
         // Buscar o crear cliente público general
         const token = localStorage.getItem('token');
@@ -3952,6 +3990,73 @@ async function reimprimirFactura(numeroFactura) {
 // ============================================
 
 /**
+ * Verificar turno activo desde el backend y actualizar UI del POS
+ */
+async function verificarTurnoActivo() {
+    if (!currentEmpresa || !currentEmpresa.id) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/ventas/turno/actual?empresaId=${currentEmpresa.id}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+
+        if (!response.ok) {
+            turnoActivo = null;
+            actualizarUISegunTurno();
+            return;
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            turnoActivo = data.data;
+        } else {
+            turnoActivo = null;
+        }
+    } catch (error) {
+        console.error('Error al verificar turno activo:', error);
+        turnoActivo = null;
+    }
+
+    actualizarUISegunTurno();
+}
+
+/**
+ * Actualizar la UI del POS según el estado del turno activo
+ */
+function actualizarUISegunTurno() {
+    const bannerSinTurno = document.getElementById('bannerSinTurno');
+    const cardBodyCliente = document.getElementById('cardBodyCliente');
+    const btnTurnoCaja = document.getElementById('btnTurnoCaja');
+
+    if (turnoActivo) {
+        // ── Turno ABIERTO: habilitar POS ──────────────────────────
+        if (bannerSinTurno) bannerSinTurno.classList.add('d-none');
+        if (cardBodyCliente) cardBodyCliente.classList.remove('section-disabled');
+
+        if (btnTurnoCaja) {
+            btnTurnoCaja.className = 'btn btn-success btn-sm';
+            btnTurnoCaja.innerHTML =
+                '<i class="bi bi-cash-stack me-1"></i>Turno' +
+                ' <span class="badge bg-white text-success ms-1" title="Turno activo">\u25cf</span>';
+        }
+    } else {
+        // ── Sin turno: BLOQUEAR POS ───────────────────────────────
+        if (bannerSinTurno) bannerSinTurno.classList.remove('d-none');
+        if (cardBodyCliente) cardBodyCliente.classList.add('section-disabled');
+        deshabilitarSeccionProductos();
+
+        if (btnTurnoCaja) {
+            btnTurnoCaja.className = 'btn btn-warning btn-sm';
+            btnTurnoCaja.innerHTML =
+                '<i class="bi bi-lock me-1"></i>Abrir Turno';
+        }
+    }
+}
+
+/**
  * Abrir modal de turno de caja
  */
 // ============================================
@@ -4090,6 +4195,8 @@ async function abrirTurno() {
             mostrarAlerta('Turno abierto exitosamente', 'success');
             reproducirSonido('success');
             bootstrap.Modal.getInstance(document.getElementById('turnoCajaModal')).hide();
+            // Verificar turno y desbloquear POS
+            await verificarTurnoActivo();
             setTimeout(() => abrirModalTurno(), 500);
         } else {
             mostrarAlerta(data.message || 'Error al abrir turno', 'error');
@@ -4334,6 +4441,10 @@ async function cerrarTurno() {
             reproducirSonido('success');
             bootstrap.Modal.getInstance(document.getElementById('turnoCajaModal')).hide();
             turnoActivo = null;
+            
+            // Limpiar venta en curso y bloquear POS
+            limpiarVentaSinConfirmar();
+            actualizarUISegunTurno();
             
             // Preguntar si desea imprimir el cierre
             if (confirm('¿Desea imprimir el cierre de caja?')) {
