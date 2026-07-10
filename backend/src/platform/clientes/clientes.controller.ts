@@ -34,6 +34,7 @@ export const getClientes = async (req: Request, res: Response): Promise<Response
         empresa_id,
         tipo_documento,
         numero_documento,
+        digito_verificacion,
         nombre,
         apellido,
         razon_social,
@@ -105,6 +106,7 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
       empresa_id,
       tipo_documento,
       numero_documento,
+      digito_verificacion,
       nombre,
       apellido,
       razon_social,
@@ -149,6 +151,7 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         empresa_id,
         tipo_documento,
         numero_documento,
+        digito_verificacion,
         nombre,
         apellido,
         razon_social,
@@ -162,11 +165,12 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         limite_credito,
         estado,
         creado_por
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         tipo_documento || 'CC',
         numero_documento,
+        (tipo_documento === 'NIT' && digito_verificacion) ? digito_verificacion : null,
         nombre,
         apellido || null,
         razon_social || null,
@@ -214,6 +218,7 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
     const {
       tipo_documento,
       numero_documento,
+      digito_verificacion,
       nombre,
       apellido,
       razon_social,
@@ -268,6 +273,14 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
     if (numero_documento !== undefined) {
       updates.push('numero_documento = ?');
       values.push(numero_documento);
+    }
+    // digito_verificacion: solo aplica para NIT; limpiar si cambia a otro tipo
+    if (digito_verificacion !== undefined) {
+      updates.push('digito_verificacion = ?');
+      values.push(digito_verificacion || null);
+    } else if (tipo_documento !== undefined && tipo_documento !== 'NIT') {
+      updates.push('digito_verificacion = ?');
+      values.push(null);
     }
     if (nombre !== undefined) {
       updates.push('nombre = ?');

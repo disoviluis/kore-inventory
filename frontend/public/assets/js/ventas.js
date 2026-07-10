@@ -476,6 +476,20 @@ function initEventListeners() {
     document.getElementById('btnCambiarCliente').addEventListener('click', cambiarCliente);
     document.getElementById('btnPublicoGeneral').addEventListener('click', seleccionarPublicoGeneral);
 
+    // DV del modal cliente en POS
+    const clienteTipoDocEl = document.getElementById('clienteTipoDocumento');
+    const clienteNumDocEl = document.getElementById('clienteNumeroDocumento');
+    if (clienteTipoDocEl) clienteTipoDocEl.addEventListener('change', toggleDVVentas);
+    if (clienteNumDocEl) {
+        clienteNumDocEl.addEventListener('input', () => {
+            if (document.getElementById('clienteTipoDocumento')?.value === 'NIT') {
+                const nit = clienteNumDocEl.value.trim();
+                const dvInput = document.getElementById('clienteDigitoVerificacion');
+                if (dvInput) dvInput.value = nit.length >= 6 ? String(calcularDigitoVerificacion(nit)) : '';
+            }
+        });
+    }
+
     // Búsqueda de productos
     const buscarProductoInput = document.getElementById('buscarProducto');
     const debouncedBuscarProductos = debounce(buscarProductos, 300);
@@ -1894,9 +1908,40 @@ function abrirModalCliente() {
     document.getElementById('clienteForm').reset();
     document.getElementById('clienteTipoDocumento').value = document.getElementById('tipoDocumento').value;
     document.getElementById('clienteNumeroDocumento').value = document.getElementById('numeroDocumento').value;
+
+    // Mostrar/ocultar DV según tipo de documento
+    toggleDVVentas();
     
     const modal = new bootstrap.Modal(document.getElementById('clienteModal'));
     modal.show();
+}
+
+/**
+ * Muestra u oculta el campo DV en el modal de cliente del POS.
+ */
+function toggleDVVentas() {
+    const tipoDoc = document.getElementById('clienteTipoDocumento')?.value;
+    const dvContainer = document.getElementById('clienteDigitoVerificacionContainer');
+    const numContainer = document.getElementById('clienteNumeroDocumentoContainer');
+    if (!dvContainer || !numContainer) return;
+
+    if (tipoDoc === 'NIT') {
+        dvContainer.style.display = 'block';
+        numContainer.classList.remove('col-md-4');
+        numContainer.classList.add('col-md-3');
+        // Auto-calcular si ya hay un número
+        const nit = document.getElementById('clienteNumeroDocumento').value.trim();
+        if (nit.length >= 6) {
+            document.getElementById('clienteDigitoVerificacion').value =
+                String(calcularDigitoVerificacion(nit));
+        }
+    } else {
+        dvContainer.style.display = 'none';
+        numContainer.classList.remove('col-md-3');
+        numContainer.classList.add('col-md-4');
+        const dvInput = document.getElementById('clienteDigitoVerificacion');
+        if (dvInput) dvInput.value = '';
+    }
 }
 
 async function guardarClienteRapido() {
@@ -1965,6 +2010,9 @@ async function guardarClienteRapido() {
             empresa_id: currentEmpresa.id,
             tipo_documento: tipo_documento,
             numero_documento: numero_documento,
+            digito_verificacion: tipo_documento === 'NIT'
+                ? (document.getElementById('clienteDigitoVerificacion')?.value.trim() || null)
+                : null,
             nombre: nombre,
             apellido: apellido || null,
             telefono: telefono || null,

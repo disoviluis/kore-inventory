@@ -342,6 +342,13 @@ function initEventListeners() {
     // Formulario cliente
     document.getElementById('clienteForm').addEventListener('submit', guardarCliente);
     
+    // Tipo de documento → mostrar/ocultar DV
+    document.getElementById('clienteTipoDocumento').addEventListener('change', toggleDVCliente);
+
+    // Auto-calcular DV al escribir el NIT
+    document.getElementById('clienteNumeroDocumento').addEventListener('input', autoCalcularDVCliente);
+    document.getElementById('clienteNumeroDocumento').addEventListener('blur', autoCalcularDVCliente);
+
     // Validaciones en tiempo real
     agregarValidacionesCliente();
 
@@ -438,6 +445,72 @@ function validarEmail(email) {
 }
 
 // ============================================
+// DÍGITO DE VERIFICACIÓN (DIAN) — NIT
+// ============================================
+
+/**
+ * Muestra u oculta el campo DV según el tipo de documento seleccionado.
+ * Reajusta el ancho del campo número de documento.
+ */
+function toggleDVCliente() {
+    const tipoDoc = document.getElementById('clienteTipoDocumento').value;
+    const dvContainer = document.getElementById('clienteDigitoVerificacionContainer');
+    const numContainer = document.getElementById('clienteNumeroDocumentoContainer');
+
+    if (tipoDoc === 'NIT') {
+        dvContainer.style.display = 'block';
+        numContainer.classList.remove('col-md-4');
+        numContainer.classList.add('col-md-3');
+        autoCalcularDVCliente();
+    } else {
+        dvContainer.style.display = 'none';
+        numContainer.classList.remove('col-md-3');
+        numContainer.classList.add('col-md-4');
+        document.getElementById('clienteDigitoVerificacion').value = '';
+    }
+}
+
+/**
+ * Auto-calcula el DV al escribir el NIT.
+ */
+function autoCalcularDVCliente() {
+    const tipoDoc = document.getElementById('clienteTipoDocumento').value;
+    if (tipoDoc !== 'NIT') return;
+
+    const nit = document.getElementById('clienteNumeroDocumento').value.trim();
+    if (!nit || nit.length < 6) {
+        document.getElementById('clienteDigitoVerificacion').value = '';
+        return;
+    }
+
+    const dv = calcularDigitoVerificacionDIAN(nit);
+    document.getElementById('clienteDigitoVerificacion').value = dv;
+}
+
+/**
+ * Calcula el dígito de verificación según el algoritmo oficial DIAN Colombia.
+ * @param {string} nit - NIT sin DV
+ * @returns {string} Dígito de verificación (0-9)
+ */
+function calcularDigitoVerificacionDIAN(nit) {
+    const nitLimpio = nit.replace(/\D/g, '');
+    if (!nitLimpio) return '';
+
+    const pesos = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+    let suma = 0;
+    let pesoIndex = 0;
+
+    for (let i = nitLimpio.length - 1; i >= 0; i--) {
+        if (pesoIndex >= pesos.length) break;
+        suma += parseInt(nitLimpio[i]) * pesos[pesoIndex];
+        pesoIndex++;
+    }
+
+    const residuo = suma % 11;
+    return (residuo === 0 || residuo === 1) ? '0' : String(11 - residuo);
+}
+
+// ============================================
 // MODAL CLIENTE
 // ============================================
 
@@ -452,6 +525,9 @@ function abrirModalNuevo() {
     document.getElementById('clienteLimiteCredito').value = '0';
     document.getElementById('clienteDiasCredito').value = '0';
     document.getElementById('clienteEstado').value = 'activo';
+
+    // Resetear campo DV (ocultar por defecto, CC no tiene DV)
+    toggleDVCliente();
     
     // Limpiar validaciones visuales si existen
     document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
@@ -486,6 +562,12 @@ async function editarCliente(id) {
         document.getElementById('clienteLimiteCredito').value = cliente.limite_credito || 0;
         document.getElementById('clienteDiasCredito').value = cliente.dias_credito || 0;
         document.getElementById('clienteEstado').value = cliente.estado;
+
+        // Mostrar/ocultar DV y cargar su valor
+        toggleDVCliente();
+        if (cliente.tipo_documento === 'NIT') {
+            document.getElementById('clienteDigitoVerificacion').value = cliente.digito_verificacion || '';
+        }
 
         const modal = new bootstrap.Modal(document.getElementById('clienteModal'));
         modal.show();
@@ -530,10 +612,14 @@ async function guardarCliente(e) {
         return;
     }
 
+    const tipoDocumentoSeleccionado = document.getElementById('clienteTipoDocumento').value;
     const clienteData = {
         empresa_id: currentEmpresa.id,
-        tipo_documento: document.getElementById('clienteTipoDocumento').value,
+        tipo_documento: tipoDocumentoSeleccionado,
         numero_documento: numeroDocumento,
+        digito_verificacion: tipoDocumentoSeleccionado === 'NIT'
+            ? (document.getElementById('clienteDigitoVerificacion').value.trim() || null)
+            : null,
         nombre: nombre,
         apellido: document.getElementById('clienteApellido').value.trim() || null,
         razon_social: document.getElementById('clienteRazonSocial').value.trim() || null,

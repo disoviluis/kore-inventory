@@ -541,9 +541,21 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-4" id="clienteNumeroDocumentoContainer">
                                 <label class="form-label">Número Documento <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="clienteNumeroDocumento" required>
+                            </div>
+
+                            <!-- Dígito de Verificación (solo visible cuando tipo = NIT) -->
+                            <div class="col-md-1" id="clienteDigitoVerificacionContainer" style="display: none;">
+                                <label class="form-label">
+                                    DV
+                                    <i class="bi bi-info-circle-fill text-info"
+                                       data-bs-toggle="tooltip"
+                                       data-bs-placement="top"
+                                       title="Dígito de verificación calculado automáticamente según DIAN. Editable si es necesario."></i>
+                                </label>
+                                <input type="text" class="form-control" id="clienteDigitoVerificacion" maxlength="1" placeholder="0-9">
                             </div>
 
                             <div class="col-md-4">
