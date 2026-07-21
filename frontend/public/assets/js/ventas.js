@@ -1822,6 +1822,11 @@ async function guardarVenta() {
         // Limpiar formulario SIN confirmación (ya guardamos la venta)
         limpiarVentaSinConfirmar();
         
+        // En móvil: cerrar overlay del carrito para volver al catálogo
+        if (window.innerWidth <= 991) {
+            cerrarCarritoMobile();
+        }
+        
         // Mostrar factura después de limpiar
         mostrarFactura(ultimaVentaGuardada, ultimaVentaData);
         
@@ -6134,28 +6139,16 @@ function actualizarCarritoFlotante() {
 
 /**
  * Abrir vista carrito móvil
+ * Muestra la columna real del carrito como overlay full-screen
+ * (sin clonar, conservando todos los event listeners)
  */
 function abrirCarritoMobile() {
-    const vista = document.getElementById('vistaCarritoMobile');
-    const body = document.getElementById('bodyCarritoMobile');
-    const footerTotal = document.getElementById('totalCarritoMobileFooter');
-    
-    if (!vista || !body) return;
-    
-    // Copiar contenido del resumen de venta desktop
-    const carritoDesktop = document.querySelector('.col-lg-4 .card-body');
-    if (carritoDesktop) {
-        body.innerHTML = carritoDesktop.cloneNode(true).innerHTML;
+    const colRight = document.querySelector('.col-lg-4.pos-col-right');
+    if (colRight) {
+        colRight.classList.add('mobile-cart-visible');
+        // Hacer scroll al tope del overlay
+        colRight.scrollTop = 0;
     }
-    
-    // Actualizar total en footer
-    if (footerTotal) {
-        footerTotal.textContent = `$${formatearNumero(totalVentaActual)}`;
-    }
-    
-    vista.classList.add('active');
-    
-    // Deshabilitar scroll del body
     document.body.style.overflow = 'hidden';
 }
 
@@ -6163,22 +6156,18 @@ function abrirCarritoMobile() {
  * Cerrar vista carrito móvil
  */
 function cerrarCarritoMobile() {
-    const vista = document.getElementById('vistaCarritoMobile');
-    if (vista) {
-        vista.classList.remove('active');
+    const colRight = document.querySelector('.col-lg-4.pos-col-right');
+    if (colRight) {
+        colRight.classList.remove('mobile-cart-visible');
     }
-    
-    // Rehabilitar scroll del body
     document.body.style.overflow = '';
 }
 
 /**
- * Ir a pago desde vista móvil
+ * Ir a pago desde vista móvil — scroll a la sección de pago en el overlay
  */
 function irAPagoMobile() {
-    // Mantenerse en el carrito móvil ya que tiene toda la info de pago
-    // El usuario ya puede ver y usar las formas de pago dentro del carrito móvil
-    const formaPago = document.querySelector('#vistaCarritoMobile #formaPago');
+    const formaPago = document.getElementById('formaPago');
     if (formaPago) {
         formaPago.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }

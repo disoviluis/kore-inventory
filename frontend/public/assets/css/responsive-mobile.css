@@ -767,4 +767,92 @@
     }
 }
 
+/* ==============================================
+   17. POS PUNTO DE VENTA - MOBILE FIX
+   ============================================== */
+
+@media (max-width: 991px) {
+    /* Eliminar altura fija del layout POS — permite scroll natural */
+    .pos-row {
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .pos-col-left,
+    .pos-col-right {
+        height: auto !important;
+        overflow-y: visible !important;
+    }
+
+    /* Catálogo de productos: altura razonable en móvil */
+    #gridProductos {
+        max-height: 50vh !important;
+        min-height: 200px !important;
+    }
+
+    /* Lista del carrito: altura automática */
+    .pos-cart-body {
+        max-height: none !important;
+    }
+
+    /* ─── Columna lateral del carrito: overlay full-screen ─── */
+    /* Oculto en flujo normal (sobreescribe la regla .col-lg-4 del bloque 2) */
+    .col-lg-4.pos-col-right {
+        display: none !important;
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 9998 !important;
+        background: white;
+        overflow-y: auto !important;
+        padding: 0 !important;
+    }
+
+    /* Visible cuando se abre el carrito */
+    .col-lg-4.pos-col-right.mobile-cart-visible {
+        display: block !important;
+    }
+
+    /* Header fijo del carrito móvil */
+    .pos-mobile-cart-header {
+        background: #1E40AF;
+        color: white;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .pos-mobile-cart-header .btn-back-mobile {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 22px;
+        padding: 0;
+        min-width: 44px;
+        min-height: 44px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .pos-mobile-cart-header h5 {
+        margin: 0;
+        color: white;
+        font-size: 18px;
+    }
+
+    /* Espaciado de las cards dentro del overlay */
+    .col-lg-4.pos-col-right .card {
+        margin: 12px;
+    }
+}
+
 /* Fin de estilos responsive */

@@ -765,6 +765,14 @@
                     <!-- Columna Lateral: Carrito + Resumen + Pago -->
                     <div class="col-lg-4 pos-col-right">
 
+                        <!-- Header móvil (solo visible en pantallas < lg) -->
+                        <div class="pos-mobile-cart-header d-block d-lg-none">
+                            <button class="btn-back-mobile" onclick="cerrarCarritoMobile()">
+                                <i class="bi bi-arrow-left"></i>
+                            </button>
+                            <h5>Carrito de Compra</h5>
+                        </div>
+
                         <!-- Artículos en la venta -->
                         <div class="card mb-2">
                             <div class="card-header bg-secondary text-white pos-card-header d-flex justify-content-between align-items-center">
