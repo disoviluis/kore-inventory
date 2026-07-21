@@ -12,7 +12,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/dashboard.css">
     <!-- Responsive Mobile CSS -->
-    <link rel="stylesheet" href="assets/css/responsive-mobile.css?v=2.0">
+    <link rel="stylesheet" href="assets/css/responsive-mobile.css?v=3.0">
     <style>
         .cliente-card {
             border-left: 4px solid #1E40AF;
@@ -584,32 +584,7 @@
             </div>
         </div>
 
-        <!-- Vista Carrito Móvil -->
-        <div class="vista-carrito-mobile" id="vistaCarritoMobile">
-            <div class="header-carrito">
-                <button class="btn-back" onclick="cerrarCarritoMobile()">
-                    <i class="bi bi-arrow-left"></i>
-                </button>
-                <h5 class="m-0">Carrito de Compra</h5>
-            </div>
-            <div class="body-carrito" id="bodyCarritoMobile">
-                <!-- Contenido se copia del carrito desktop -->
-            </div>
-            <div class="footer-carrito">
-                <div class="d-flex justify-content-between mb-3">
-                    <h5 class="m-0">TOTAL:</h5>
-                    <h5 class="m-0 text-primary" id="totalCarritoMobileFooter">$0</h5>
-                </div>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-success btn-lg" onclick="irAPagoMobile()">
-                        <i class="bi bi-credit-card me-2"></i>Proceder al Pago
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="cerrarCarritoMobile()">
-                        <i class="bi bi-arrow-left me-2"></i>Seguir Comprando
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- Vista Carrito Móvil - ELIMINADA: el carrito móvil ahora es la columna real (.col-lg-4.pos-col-right) -->
 
         <!-- Page Content -->
         <div class="page-content">
@@ -1573,7 +1548,7 @@
     <script src="assets/js/fecha-utils.js"></script>
     <!-- Custom JS -->
     <script src="assets/js/impuestos-utils.js"></script>
-    <script src="assets/js/ventas.js?v=7.0"></script>
+    <script src="assets/js/ventas.js?v=8.0"></script>
     <!-- Sidebar Navigation (Common) -->
     <script src="assets/js/sidebar-navigation.js"></script>
 

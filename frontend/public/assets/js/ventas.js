@@ -6164,13 +6164,23 @@ function cerrarCarritoMobile() {
 }
 
 /**
- * Ir a pago desde vista móvil — scroll a la sección de pago en el overlay
+ * Ir a pago desde vista móvil — abre el overlay real del carrito y hace scroll al pago
+ * Compatible con cualquier estado previo del carrito móvil
  */
 function irAPagoMobile() {
-    const formaPago = document.getElementById('formaPago');
-    if (formaPago) {
-        formaPago.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Asegurar que el overlay real está abierto
+    const colRight = document.querySelector('.col-lg-4.pos-col-right');
+    if (colRight && !colRight.classList.contains('mobile-cart-visible')) {
+        colRight.classList.add('mobile-cart-visible');
+        document.body.style.overflow = 'hidden';
     }
+    // Scroll a la sección de forma de pago
+    setTimeout(() => {
+        const formaPago = document.getElementById('formaPago');
+        if (formaPago) {
+            formaPago.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 150);
 }
 
 /**
