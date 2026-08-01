@@ -1208,6 +1208,41 @@
                                             </div>
                                         </div>
 
+                                        <!-- Orden de categorías y productos visibles en el catálogo -->
+                                        <div class="card border-0 bg-light mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title mb-3"><i class="bi bi-sort-alpha-down me-1"></i>Orden de categorías en el catálogo</h6>
+                                                <p class="text-muted small mb-3">Solo se listan categorías activas con productos. Define el orden en que aparecerán como secciones en la página pública.</p>
+                                                <div id="paginaOrdenCategoriasList" class="list-group mb-2">
+                                                    <div class="text-center text-muted py-3">
+                                                        <i class="bi bi-hourglass-split"></i> Cargando categorías...
+                                                    </div>
+                                                </div>
+
+                                                <hr class="my-4">
+
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <h6 class="card-title mb-0"><i class="bi bi-check2-square me-1"></i>Productos visibles en el catálogo</h6>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="marcarTodosProductosPagina(true)">Marcar todos</button>
+                                                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="marcarTodosProductosPagina(false)">Desmarcar todos</button>
+                                                    </div>
+                                                </div>
+                                                <p class="text-muted small mb-3">Elige qué productos activos se muestran en tu página pública. Los que no marques no aparecerán en el catálogo web (sí seguirán disponibles en el POS/inventario).</p>
+                                                <input type="text" class="form-control form-control-sm mb-2" id="paginaProductosBuscar" placeholder="Buscar producto..." oninput="renderProductosPagina()">
+                                                <div id="paginaProductosList" class="border rounded p-2" style="max-height: 340px; overflow-y: auto;">
+                                                    <div class="text-center text-muted py-3">
+                                                        <i class="bi bi-hourglass-split"></i> Cargando productos...
+                                                    </div>
+                                                </div>
+                                                <div class="text-end mt-2">
+                                                    <button class="btn btn-sm btn-primary" type="button" onclick="guardarCategoriasYProductosPagina()">
+                                                        <i class="bi bi-save me-1"></i>Guardar orden y selección
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <!-- Vista previa -->
                                         <div class="card border-primary mb-3">
                                             <div class="card-body">

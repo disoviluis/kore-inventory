@@ -562,6 +562,7 @@ function initPaginaTab() {
     paginaTab.addEventListener('shown.bs.tab', () => {
         cargarConfiguracionPagina();
         cargarImagenesPaginaS3();
+        cargarCategoriasYProductosPagina();
     });
 
     document.getElementById('paginaBannerFile')?.addEventListener('change', (event) => {
@@ -733,6 +734,196 @@ function copiarEnlacePagina() {
     });
 }
 
+// ============================================================================
+// ORDEN DE CATEGORÍAS Y VISIBILIDAD DE PRODUCTOS EN LA PÁGINA PÚBLICA
+// ============================================================================
+let paginaCategoriaOrdenGuardada = []; // ids en el orden guardado en configuracion_factura (pagina_categoria_orden)
+let paginaCategoriasOrdenadas = [];    // [{ id, nombre, count }] en el orden actual mostrado en pantalla
+let paginaProductosTodos = [];         // productos activos de la empresa con su categoría y visibilidad
+
+async function cargarCategoriasYProductosPagina() {
+    const empresaId = localStorage.getItem('empresaActiva');
+    if (!empresaId) return;
+
+    const token = localStorage.getItem('token');
+    const listCategorias = document.getElementById('paginaOrdenCategoriasList');
+    const listProductos = document.getElementById('paginaProductosList');
+
+    try {
+        const [resCategorias, resProductos] = await Promise.all([
+            fetch(`${API_URL}/categorias?empresaId=${empresaId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(`${API_URL}/productos?empresaId=${empresaId}`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        const dataCategorias = await resCategorias.json();
+        const dataProductos = await resProductos.json();
+
+        const categoriasActivas = (dataCategorias.data || []);
+        const productosActivos = (dataProductos.data || []).filter(p => p.estado === 'activo');
+
+        paginaProductosTodos = productosActivos.map(p => ({
+            id: p.id,
+            nombre: p.nombre,
+            categoria_id: p.categoria_id,
+            categoria_nombre: p.categoria_nombre || 'Sin categoría',
+            mostrar_en_pagina_publica: p.mostrar_en_pagina_publica !== 0
+        }));
+
+        // Solo categorías con al menos un producto activo
+        const conteoPorCategoria = new Map();
+        paginaProductosTodos.forEach(p => {
+            const key = p.categoria_id || 'sin-categoria';
+            conteoPorCategoria.set(key, (conteoPorCategoria.get(key) || 0) + 1);
+        });
+
+        const categoriasConProductos = categoriasActivas
+            .filter(c => conteoPorCategoria.has(c.id))
+            .map(c => ({ id: c.id, nombre: c.nombre, count: conteoPorCategoria.get(c.id) }));
+
+        if (conteoPorCategoria.has('sin-categoria')) {
+            categoriasConProductos.push({ id: null, nombre: 'Sin categoría', count: conteoPorCategoria.get('sin-categoria') });
+        }
+
+        // Aplicar el orden guardado; las categorías nuevas que no estaban guardadas van al final (alfabético)
+        const porId = new Map(categoriasConProductos.map(c => [c.id, c]));
+        const ordenadas = [];
+        paginaCategoriaOrdenGuardada.forEach(id => {
+            if (porId.has(id)) {
+                ordenadas.push(porId.get(id));
+                porId.delete(id);
+            }
+        });
+        const restantes = Array.from(porId.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+        paginaCategoriasOrdenadas = [...ordenadas, ...restantes];
+
+        renderOrdenCategoriasPagina();
+        renderProductosPagina();
+    } catch (error) {
+        console.error('Error al cargar categorías/productos para la página pública:', error);
+        if (listCategorias) listCategorias.innerHTML = '<div class="text-danger small">Error al cargar categorías</div>';
+        if (listProductos) listProductos.innerHTML = '<div class="text-danger small">Error al cargar productos</div>';
+    }
+}
+
+function renderOrdenCategoriasPagina() {
+    const cont = document.getElementById('paginaOrdenCategoriasList');
+    if (!cont) return;
+
+    if (paginaCategoriasOrdenadas.length === 0) {
+        cont.innerHTML = '<div class="text-center text-muted py-3">No hay categorías con productos activos todavía.</div>';
+        return;
+    }
+
+    cont.innerHTML = paginaCategoriasOrdenadas.map((c, i) => `
+        <div class="list-group-item d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-grip-vertical text-muted me-2"></i>${c.nombre} <span class="badge bg-secondary ms-1">${c.count}</span></span>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary" type="button" ${i === 0 ? 'disabled' : ''} onclick="moverCategoriaPagina(${i}, -1)" title="Subir"><i class="bi bi-arrow-up"></i></button>
+                <button class="btn btn-outline-secondary" type="button" ${i === paginaCategoriasOrdenadas.length - 1 ? 'disabled' : ''} onclick="moverCategoriaPagina(${i}, 1)" title="Bajar"><i class="bi bi-arrow-down"></i></button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function moverCategoriaPagina(index, direccion) {
+    const nuevoIndex = index + direccion;
+    if (nuevoIndex < 0 || nuevoIndex >= paginaCategoriasOrdenadas.length) return;
+    const temp = paginaCategoriasOrdenadas[index];
+    paginaCategoriasOrdenadas[index] = paginaCategoriasOrdenadas[nuevoIndex];
+    paginaCategoriasOrdenadas[nuevoIndex] = temp;
+    renderOrdenCategoriasPagina();
+    renderProductosPagina();
+}
+
+function renderProductosPagina() {
+    const cont = document.getElementById('paginaProductosList');
+    if (!cont) return;
+
+    const termino = (document.getElementById('paginaProductosBuscar')?.value || '').trim().toLowerCase();
+    const filtrados = termino
+        ? paginaProductosTodos.filter(p => p.nombre.toLowerCase().includes(termino))
+        : paginaProductosTodos;
+
+    if (filtrados.length === 0) {
+        cont.innerHTML = '<div class="text-center text-muted py-3">No se encontraron productos.</div>';
+        return;
+    }
+
+    const ordenCategorias = paginaCategoriasOrdenadas.map(c => c.id);
+    const grupos = new Map();
+    filtrados.forEach(p => {
+        const key = p.categoria_id || null;
+        if (!grupos.has(key)) grupos.set(key, []);
+        grupos.get(key).push(p);
+    });
+
+    const keysOrdenadas = Array.from(grupos.keys()).sort((a, b) => {
+        const ia = ordenCategorias.indexOf(a);
+        const ib = ordenCategorias.indexOf(b);
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+
+    cont.innerHTML = keysOrdenadas.map(key => {
+        const productos = grupos.get(key);
+        const nombreCategoria = productos[0].categoria_nombre;
+        return `
+            <div class="mb-2">
+                <div class="fw-semibold text-muted small text-uppercase mt-2 mb-1">${nombreCategoria}</div>
+                ${productos.map(p => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="paginaProd_${p.id}" data-producto-id="${p.id}" ${p.mostrar_en_pagina_publica ? 'checked' : ''} onchange="toggleProductoPagina(${p.id}, this.checked)">
+                        <label class="form-check-label" for="paginaProd_${p.id}">${p.nombre}</label>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleProductoPagina(productoId, valor) {
+    const producto = paginaProductosTodos.find(p => p.id === productoId);
+    if (producto) producto.mostrar_en_pagina_publica = valor;
+}
+
+function marcarTodosProductosPagina(valor) {
+    paginaProductosTodos.forEach(p => p.mostrar_en_pagina_publica = valor);
+    renderProductosPagina();
+}
+
+async function guardarCategoriasYProductosPagina() {
+    const empresaId = localStorage.getItem('empresaActiva');
+    if (!empresaId) {
+        showNotification('No hay empresa seleccionada', 'warning');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const cambios = paginaProductosTodos.map(p => ({ id: p.id, mostrar_en_pagina_publica: p.mostrar_en_pagina_publica ? 1 : 0 }));
+
+        const response = await fetch(`${API_URL}/productos/pagina-publica/visibilidad`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ empresa_id: empresaId, cambios })
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Error al guardar la selección de productos');
+        }
+
+        // El orden de categorías se persiste junto con el resto de la configuración de la página
+        await guardarConfiguracionPagina();
+        showNotification('Orden de categorías y productos visibles guardados', 'success');
+    } catch (error) {
+        console.error('Error al guardar categorías/productos de la página pública:', error);
+        showNotification(error.message || 'Error al guardar los cambios', 'danger');
+    }
+}
+
 async function cargarConfiguracionPagina() {
     const empresaActivaId = localStorage.getItem('empresaActiva');
     if (!empresaActivaId) return;
@@ -780,6 +971,7 @@ async function cargarConfiguracionPagina() {
         document.getElementById('paginaFacebook').value = config.pagina_facebook || '';
         document.getElementById('paginaTiktok').value = config.pagina_tiktok || '';
         document.getElementById('paginaColorPrimario').value = config.pagina_color_primario || '#0d6efd';
+        paginaCategoriaOrdenGuardada = Array.isArray(config.pagina_categoria_orden) ? config.pagina_categoria_orden : [];
 
         actualizarPreviewPagina();
         cargarImagenesPaginaS3();
@@ -838,7 +1030,8 @@ async function guardarConfiguracionPagina() {
         pagina_color_primario: document.getElementById('paginaColorPrimario').value || '#0d6efd',
         pagina_hero_mostrar_nombre: document.getElementById('paginaHeroMostrarNombre').checked ? 1 : 0,
         pagina_hero_mostrar_logo: document.getElementById('paginaHeroMostrarLogo').checked ? 1 : 0,
-        pagina_hero_mostrar_whatsapp: document.getElementById('paginaHeroMostrarWhatsapp').checked ? 1 : 0
+        pagina_hero_mostrar_whatsapp: document.getElementById('paginaHeroMostrarWhatsapp').checked ? 1 : 0,
+        pagina_categoria_orden: paginaCategoriasOrdenadas.map(c => c.id)
     };
 
     if (!config.pagina_slug) {

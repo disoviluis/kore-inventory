@@ -131,19 +131,21 @@ export const getEmpresaPublica = async (req: Request, res: Response): Promise<Re
     const productos: any[] = [];
     if (paginaConfig.pagina_mostrar_productos) {
       const [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT id, nombre, descripcion, precio_minorista AS precio_venta, imagen_url, estado,
-                en_promocion, precio_promocion, promocion_inicio, promocion_fin,
+        `SELECT p.id, p.nombre, p.descripcion, p.precio_minorista AS precio_venta, p.imagen_url, p.estado,
+                p.categoria_id, c.nombre AS categoria_nombre,
+                p.en_promocion, p.precio_promocion, p.promocion_inicio, p.promocion_fin,
                 CASE
-                  WHEN en_promocion = 1
-                    AND precio_promocion IS NOT NULL
-                    AND (promocion_inicio IS NULL OR promocion_inicio <= NOW())
-                    AND (promocion_fin IS NULL OR promocion_fin >= NOW())
+                  WHEN p.en_promocion = 1
+                    AND p.precio_promocion IS NOT NULL
+                    AND (p.promocion_inicio IS NULL OR p.promocion_inicio <= NOW())
+                    AND (p.promocion_fin IS NULL OR p.promocion_fin >= NOW())
                   THEN 1 ELSE 0
                 END AS en_promocion_activa
-         FROM productos
-         WHERE empresa_id = ? AND estado = 'activo'
-         ORDER BY en_promocion_activa DESC, nombre ASC
-         LIMIT 50`,
+         FROM productos p
+         LEFT JOIN categorias c ON p.categoria_id = c.id AND c.activo = 1
+         WHERE p.empresa_id = ? AND p.estado = 'activo' AND p.mostrar_en_pagina_publica = 1
+         ORDER BY en_promocion_activa DESC, c.nombre ASC, p.nombre ASC
+         LIMIT 300`,
         [empresa.id]
       );
       productos.push(...rows);

@@ -81,6 +81,7 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
         p.permite_venta_sin_stock,
         p.imagen_url,
         p.estado,
+        p.mostrar_en_pagina_publica,
         p.cuenta_ingreso,
         p.cuenta_costo,
         p.cuenta_inventario,
@@ -124,6 +125,47 @@ export const getProductos = async (req: Request, res: Response): Promise<Respons
   } catch (error) {
     logger.error('Error al obtener productos:', error);
     return errorResponse(res, 'Error al obtener productos', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
+  }
+};
+
+/**
+ * Actualizar en lote la visibilidad de productos en la página pública
+ * PUT /api/productos/pagina-publica/visibilidad
+ * body: { empresa_id, cambios: [{ id, mostrar_en_pagina_publica }] }
+ */
+export const updateVisibilidadPaginaPublica = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { empresa_id, cambios } = req.body;
+
+    if (!empresa_id || !Array.isArray(cambios)) {
+      return errorResponse(
+        res,
+        'Campos requeridos: empresa_id, cambios (array)',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    for (const cambio of cambios) {
+      if (!cambio || cambio.id === undefined) continue;
+      await query(
+        'UPDATE productos SET mostrar_en_pagina_publica = ? WHERE id = ? AND empresa_id = ?',
+        [cambio.mostrar_en_pagina_publica ? 1 : 0, cambio.id, empresa_id]
+      );
+    }
+
+    logger.info(`Visibilidad en página pública actualizada para ${cambios.length} producto(s) de empresa ${empresa_id}`);
+
+    return successResponse(
+      res,
+      'Visibilidad actualizada exitosamente',
+      { actualizados: cambios.length },
+      CONSTANTS.HTTP_STATUS.OK
+    );
+
+  } catch (error) {
+    logger.error('Error al actualizar visibilidad en página pública:', error);
+    return errorResponse(res, 'Error al actualizar visibilidad', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
 
@@ -522,6 +564,10 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
     if (estado !== undefined) {
       updates.push('estado = ?');
       values.push(estado);
+    }
+    if (req.body.mostrar_en_pagina_publica !== undefined) {
+      updates.push('mostrar_en_pagina_publica = ?');
+      values.push(req.body.mostrar_en_pagina_publica ? 1 : 0);
     }
     if (cuenta_ingreso !== undefined) {
       updates.push('cuenta_ingreso = ?');

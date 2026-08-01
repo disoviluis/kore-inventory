@@ -121,6 +121,24 @@ function renderHero(empresa, pagina) {
 // ── Catálogo ─────────────────────────────────────────────
 let todosProductos = [];
 
+function ordenarCategorias(nombres, pagina) {
+  const idsOrden = Array.isArray(pagina.pagina_categoria_orden) ? pagina.pagina_categoria_orden : [];
+  // El orden guardado es por categoria_id; mapeamos nombres a su posición usando los productos ya cargados
+  const posicionPorNombre = new Map();
+  todosProductos.forEach(p => {
+    if (p.categoria_nombre && !posicionPorNombre.has(p.categoria_nombre)) {
+      const idx = idsOrden.indexOf(p.categoria_id);
+      posicionPorNombre.set(p.categoria_nombre, idx === -1 ? 999 : idx);
+    }
+  });
+  return [...nombres].sort((a, b) => {
+    const pa = posicionPorNombre.get(a) ?? 999;
+    const pb = posicionPorNombre.get(b) ?? 999;
+    if (pa !== pb) return pa - pb;
+    return a.localeCompare(b);
+  });
+}
+
 function renderCatalogo(productos, pagina) {
   todosProductos = productos || [];
   const grid = document.getElementById('productosGrid');
@@ -143,22 +161,25 @@ function renderCatalogo(productos, pagina) {
     promoBanner.style.display = '';
   }
 
-  const categorias = [...new Set(todosProductos.map(p => p.categoria_nombre).filter(Boolean))];
+  const categoriasSinOrdenar = [...new Set(todosProductos.map(p => p.categoria_nombre).filter(Boolean))];
+  const categorias = ordenarCategorias(categoriasSinOrdenar, pagina);
   const filtros = document.getElementById('filtrosCatalogo');
   if (categorias.length > 1) {
     filtros.innerHTML = `<button class="btn btn-sm btn-primary rounded-pill" onclick="filtrarCatalogo('all')">Todos</button>` +
       categorias.map(c => `<button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="filtrarCatalogo('${c}')">${c}</button>`).join('');
   }
 
-  renderGrid(todosProductos, mostrarPrecios, mostrarPromos);
+  renderGrid(todosProductos, mostrarPrecios, mostrarPromos, categorias);
 }
 
 window.filtrarCatalogo = function(categoria) {
   const pagina = window._paginaConfig || {};
   const mostrarPrecios = pagina.pagina_mostrar_precios !== 0;
   const mostrarPromos = pagina.pagina_mostrar_promociones !== 0;
+  const categoriasSinOrdenar = [...new Set(todosProductos.map(p => p.categoria_nombre).filter(Boolean))];
+  const categorias = ordenarCategorias(categoriasSinOrdenar, pagina);
   const filtrados = categoria === 'all' ? todosProductos : todosProductos.filter(p => p.categoria_nombre === categoria);
-  renderGrid(filtrados, mostrarPrecios, mostrarPromos);
+  renderGrid(filtrados, mostrarPrecios, mostrarPromos, categoria === 'all' ? categorias : [categoria]);
   document.querySelectorAll('#filtrosCatalogo button').forEach(b => {
     const esActivo = b.textContent === 'Todos' ? categoria === 'all' : b.textContent === categoria;
     b.classList.toggle('btn-primary', esActivo);
@@ -166,35 +187,74 @@ window.filtrarCatalogo = function(categoria) {
   });
 };
 
-function renderGrid(productos, mostrarPrecios, mostrarPromos) {
-  const grid = document.getElementById('productosGrid');
-  grid.innerHTML = productos.map(p => {
-    const enPromo = mostrarPromos && p.en_promocion_activa == 1 && p.precio_promocion;
-    const imgHtml = p.imagen_url
-      ? `<img src="${p.imagen_url}" class="card-img-top" alt="${p.nombre}" onerror="this.style.display='none;this.parentElement.innerHTML='<div class=card-img-top d-flex align-items-center justify-content-center bg-light text-secondary style=height:190px><i class=bi bi-image style=font-size:2rem></i></div>'">`
-      : `<div class="card-img-top d-flex align-items-center justify-content-center bg-light text-secondary" style="height:190px"><i class="bi bi-image" style="font-size:2rem"></i></div>`;
+function tarjetaProducto(p, mostrarPrecios, mostrarPromos) {
+  const enPromo = mostrarPromos && p.en_promocion_activa == 1 && p.precio_promocion;
+  const imgHtml = p.imagen_url
+    ? `<img src="${p.imagen_url}" class="card-img-top" alt="${p.nombre}" onerror="this.style.display='none;this.parentElement.innerHTML='<div class=card-img-top d-flex align-items-center justify-content-center bg-light text-secondary style=height:190px><i class=bi bi-image style=font-size:2rem></i></div>'">`
+    : `<div class="card-img-top d-flex align-items-center justify-content-center bg-light text-secondary" style="height:190px"><i class="bi bi-image" style="font-size:2rem"></i></div>`;
 
-    let precioHtml = '';
-    if (mostrarPrecios && p.precio_venta != null) {
-      precioHtml = enPromo
-        ? `<div class="mt-2"><span class="precio-tachado">$${fmt(p.precio_venta)}</span> <span class="precio-promo ms-1 fs-5">$${fmt(p.precio_promocion)}</span></div>`
-        : `<p class="fw-bold fs-6 mt-2 mb-0">$${fmt(p.precio_venta)}</p>`;
-    }
+  let precioHtml = '';
+  if (mostrarPrecios && p.precio_venta != null) {
+    precioHtml = enPromo
+      ? `<div class="mt-2"><span class="precio-tachado">$${fmt(p.precio_venta)}</span> <span class="precio-promo ms-1 fs-5">$${fmt(p.precio_promocion)}</span></div>`
+      : `<p class="fw-bold fs-6 mt-2 mb-0">$${fmt(p.precio_venta)}</p>`;
+  }
 
-    const promoBadge = enPromo ? `<span class="position-absolute top-0 end-0 m-2 badge promo-badge"><i class="bi bi-tag-fill me-1"></i>PROMO</span>` : '';
+  const promoBadge = enPromo ? `<span class="position-absolute top-0 end-0 m-2 badge promo-badge"><i class="bi bi-tag-fill me-1"></i>PROMO</span>` : '';
 
-    return `
-      <div class="col-sm-6 col-lg-4">
-        <div class="card h-100 shadow-sm card-producto">
-          <div class="position-relative">${imgHtml}${promoBadge}</div>
-          <div class="card-body">
-            <h6 class="card-title fw-semibold mb-1">${p.nombre}</h6>
-            <p class="card-text text-muted small mb-0">${p.descripcion || ''}</p>
-            ${precioHtml}
-          </div>
+  return `
+    <div class="col-sm-6 col-lg-4">
+      <div class="card h-100 shadow-sm card-producto">
+        <div class="position-relative">${imgHtml}${promoBadge}</div>
+        <div class="card-body">
+          <h6 class="card-title fw-semibold mb-1">${p.nombre}</h6>
+          <p class="card-text text-muted small mb-0">${p.descripcion || ''}</p>
+          ${precioHtml}
         </div>
-      </div>`;
-  }).join('');
+      </div>
+    </div>`;
+}
+
+function slugCategoria(nombre) {
+  return 'cat-' + nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-');
+}
+
+function renderGrid(productos, mostrarPrecios, mostrarPromos, categoriasOrdenadas) {
+  const grid = document.getElementById('productosGrid');
+
+  // Sin categorías (o filtro de una sola categoría): grid simple, como antes
+  if (!categoriasOrdenadas || categoriasOrdenadas.length <= 1) {
+    grid.innerHTML = productos.map(p => tarjetaProducto(p, mostrarPrecios, mostrarPromos)).join('');
+    return;
+  }
+
+  // Agrupar por categoría respetando el orden configurado; productos sin categoría van al final
+  const grupos = new Map();
+  productos.forEach(p => {
+    const key = p.categoria_nombre || null;
+    if (!grupos.has(key)) grupos.set(key, []);
+    grupos.get(key).push(p);
+  });
+
+  const secciones = [];
+  categoriasOrdenadas.forEach(cat => {
+    if (grupos.has(cat)) {
+      secciones.push({ nombre: cat, productos: grupos.get(cat) });
+      grupos.delete(cat);
+    }
+  });
+  if (grupos.has(null)) {
+    secciones.push({ nombre: 'Otros productos', productos: grupos.get(null) });
+  }
+
+  grid.innerHTML = secciones.map(sec => `
+    <div class="col-12 ep-categoria-seccion" id="${slugCategoria(sec.nombre)}">
+      <h4 class="ep-categoria-titulo mb-3 mt-2">${sec.nombre}</h4>
+      <div class="row g-4">
+        ${sec.productos.map(p => tarjetaProducto(p, mostrarPrecios, mostrarPromos)).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
 // ── Horario ───────────────────────────────────────────────

@@ -14,7 +14,8 @@ import {
   deleteProducto,
   getDisponibilidadProducto,
   getDisponibilidadBodegas,
-  getProductoImagenPresignedUrl
+  getProductoImagenPresignedUrl,
+  updateVisibilidadPaginaPublica
 } from './productos.controller';
 import { authMiddleware } from '../../core/middleware/auth.middleware';
 
@@ -28,6 +29,9 @@ router.get('/', getProductos);
 
 // POST /api/productos/upload-url - Generar URL presignada S3 para subir imagen
 router.post('/upload-url', getProductoImagenPresignedUrl);
+
+// PUT /api/productos/pagina-publica/visibilidad - Actualizar en lote qué productos se muestran en la página pública
+router.put('/pagina-publica/visibilidad', updateVisibilidadPaginaPublica);
 
 // GET /api/productos/:id - Obtener producto por ID
 router.get('/:id/disponibilidad-bodegas', getDisponibilidadBodegas);

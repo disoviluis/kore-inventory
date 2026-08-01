@@ -27,6 +27,10 @@
         .horario-linea { padding:.25rem 0; border-bottom:1px dashed #e0e0e0; }
         .horario-linea:last-child { border-bottom:none; }
         section { scroll-margin-top: 70px; }
+        .ep-categoria-seccion { scroll-margin-top: 90px; margin-bottom: 2.5rem; }
+        .ep-categoria-titulo { font-weight:700; font-size:1.15rem; color:var(--color-primario); position:relative; padding-bottom:.5rem; }
+        .ep-categoria-titulo::after { content:''; display:block; width:42px; height:3px; background:var(--color-primario); border-radius:2px; margin-top:.4rem; }
+        #filtrosCatalogo button.active-cat { box-shadow:0 0 0 2px rgba(var(--color-primario-rgb),.25); }
 
         /* ── Navbar ── */
         .ep-navbar { position:sticky; top:0; z-index:1030; }
