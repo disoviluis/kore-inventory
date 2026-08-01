@@ -1815,6 +1815,8 @@ async function guardarVenta() {
         
         // Guardar datos de venta en variables globales para la impresión
         ultimaVentaGuardada = data.data;
+        // La bodega/punto de venta no viene en la respuesta de creación, se toma del turno activo del cajero
+        ultimaVentaGuardada.bodega_nombre = turnoActivo?.bodega_nombre || null;
         
         // Agregar nombres a los impuestos para la factura
         const impuestosConNombres = ventaData.impuestos.map(impVenta => {
@@ -2360,6 +2362,11 @@ async function descargarPDF() {
         doc.text(`Fecha: ${fecha}`, col2 + 2, y + 10);
         doc.text(`Forma de Pago: Contado`, col2 + 2, y + 15);
         doc.text(`Método: ${ventaData.metodo_pago || 'Efectivo'}`, col2 + 2, y + 20);
+        if (venta.bodega_nombre) {
+            doc.setFontSize(7);
+            doc.text(`P. Venta: ${venta.bodega_nombre}`, col2 + 2, y + 24, { maxWidth: pageWidth / 2 - margin - 9 });
+            doc.setFontSize(8);
+        }
         y += 30;
 
         // TABLA DE PRODUCTOS
@@ -2969,6 +2976,7 @@ function generarPlantillaTirilla(venta, ventaData, config) {
     <div class="center bold" style="font-size: 10pt;">${tipoFactura}</div>
     <div class="center bold" style="font-size: 10pt;">${numeroFactura}</div>
     <div class="center" style="font-size: 8pt;">${fecha}</div>
+    ${venta.bodega_nombre ? `<div class="center" style="font-size: 8pt;">Punto de Venta: ${venta.bodega_nombre}</div>` : ''}
     <div class="line"></div>
     <div style="font-size: 8pt;">
         <div><strong>Cliente:</strong></div>

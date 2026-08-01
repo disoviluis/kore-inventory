@@ -118,6 +118,12 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                         <strong>Dirección</strong><br>
                         ${currentEmpresa?.direccion || '-'}
                     </div>
+                    ${venta.bodega_nombre ? `
+                    <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: ${cardPad}; background: #fff;">
+                        <strong>Punto de Venta</strong><br>
+                        ${venta.bodega_nombre}
+                    </div>
+                    ` : ''}
                 </div>
 
                 <div style="margin-top: ${sectionMt};">
