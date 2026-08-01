@@ -7,7 +7,7 @@
 
 -- 1. Agregar columna bodega_id a ventas
 ALTER TABLE ventas
-ADD COLUMN IF NOT EXISTS bodega_id INT NULL DEFAULT NULL
+ADD COLUMN bodega_id INT NULL DEFAULT NULL
 AFTER vendedor_id;
 
 -- 2. Agregar FK (no bloquea si la bodega se elimina, solo queda NULL)
