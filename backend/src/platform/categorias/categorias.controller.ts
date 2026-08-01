@@ -30,16 +30,17 @@ export const getCategorias = async (req: Request, res: Response): Promise<Respon
 
     const categorias = await query(
       `SELECT 
-        id,
-        empresa_id,
-        nombre,
-        descripcion,
-        activo,
-        created_at,
-        updated_at
-      FROM categorias
-      WHERE empresa_id = ? AND activo = 1
-      ORDER BY nombre ASC`,
+        c.id,
+        c.empresa_id,
+        c.nombre,
+        c.descripcion,
+        c.activo,
+        c.created_at,
+        c.updated_at,
+        (SELECT COUNT(*) FROM productos p WHERE p.categoria_id = c.id) AS productos_count
+      FROM categorias c
+      WHERE c.empresa_id = ? AND c.activo = 1
+      ORDER BY c.nombre ASC`,
       [empresaId]
     );
 

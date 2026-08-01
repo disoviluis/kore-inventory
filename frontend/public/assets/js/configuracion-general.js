@@ -335,7 +335,7 @@ async function guardarCategoria(event) {
             await loadCategorias();
         } else {
             const error = await response.json();
-            throw new Error(error.error || 'Error al guardar categoría');
+            throw new Error(error.message || error.error || 'Error al guardar categoría');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -370,7 +370,7 @@ async function eliminarCategoria(id, nombre, productosCount) {
             await loadCategorias();
         } else {
             const error = await response.json();
-            throw new Error(error.error || 'Error al eliminar categoría');
+            throw new Error(error.message || error.error || 'Error al eliminar categoría');
         }
     } catch (error) {
         console.error('Error:', error);

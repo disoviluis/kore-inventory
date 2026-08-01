@@ -842,7 +842,7 @@ function actualizarTopProductos(productos) {
 function actualizarUltimasVentas(ventas) {
   console.log('🛒 Últimas ventas:', ventas);
   
-  const tbody = document.querySelector('.table tbody');
+  const tbody = document.getElementById('ultimasVentasTableBody');
   if (!tbody) return;
   
   if (!ventas || ventas.length === 0) {
