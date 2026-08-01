@@ -6,7 +6,7 @@
  */
 
 import { Request, Response } from 'express';
-import { query } from '../../shared/database';
+import { query, withTransaction } from '../../shared/database';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
@@ -135,7 +135,7 @@ export const buscarProducto = async (req: Request, res: Response): Promise<Respo
  */
 export const getVentas = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { empresaId, fecha_desde, fecha_hasta, fechaInicio, fechaFin, estado, search } = req.query;
+    const { empresaId, fecha_desde, fecha_hasta, fechaInicio, fechaFin, estado, search, bodegaId } = req.query;
 
     if (!empresaId) {
       return errorResponse(
@@ -155,12 +155,14 @@ export const getVentas = async (req: Request, res: Response): Promise<Response> 
         v.id, v.numero_factura, v.fecha_venta, v.subtotal, v.descuento,
         v.impuesto, v.impuestos_adicionales, v.total, v.estado, v.metodo_pago,
         v.observaciones, v.propina_valor, v.propina_porcentaje,
+        v.bodega_id, b.nombre as bodega_nombre, b.tipo as bodega_tipo,
         c.nombre as cliente_nombre, c.apellido as cliente_apellido,
         c.razon_social, c.numero_documento, c.tipo_documento as cliente_tipo_documento,
         u.nombre as vendedor_nombre, u.apellido as vendedor_apellido
       FROM ventas v
       INNER JOIN clientes c ON v.cliente_id = c.id
       LEFT JOIN usuarios u ON v.vendedor_id = u.id
+      LEFT JOIN bodegas b ON v.bodega_id = b.id
       WHERE v.empresa_id = ?
     `;
 
@@ -179,6 +181,11 @@ export const getVentas = async (req: Request, res: Response): Promise<Response> 
     if (estado) {
       sqlQuery += ' AND v.estado = ?';
       params.push(estado);
+    }
+
+    if (bodegaId) {
+      sqlQuery += ' AND v.bodega_id = ?';
+      params.push(bodegaId);
     }
 
     if (search) {
@@ -226,6 +233,7 @@ export const getVentaById = async (req: Request, res: Response): Promise<Respons
     const ventas = await query(
       `SELECT 
         v.*, 
+        b.nombre as bodega_nombre, b.tipo as bodega_tipo,
         c.nombre as cliente_nombre, c.apellido as cliente_apellido,
         c.razon_social, c.numero_documento, c.tipo_documento as cliente_tipo_documento,
         c.email, c.telefono, c.direccion, c.ciudad,
@@ -233,6 +241,7 @@ export const getVentaById = async (req: Request, res: Response): Promise<Respons
       FROM ventas v
       INNER JOIN clientes c ON v.cliente_id = c.id
       LEFT JOIN usuarios u ON v.vendedor_id = u.id
+      LEFT JOIN bodegas b ON v.bodega_id = b.id
       WHERE ${whereClause}`,
       [id, empresaId]
     );
@@ -309,6 +318,7 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       pagos,
       notas,
       vendedor_id,
+      bodega_id,
         impuestos,
         // Propina
         propina_habilitada,
@@ -339,20 +349,43 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       }
     }
 
-    // Obtener configuración de empresa para generar número de factura
-    const empresaResult = await query(
-      `SELECT prefijo_factura, numeracion_actual, software_id, pin_software, ambiente, nit
-       FROM empresas WHERE id = ?`,
-      [empresa_id]
-    );
+    // Obtener configuración de empresa para generar número de factura.
+    // Se bloquea la fila (FOR UPDATE) y se incrementa la numeración dentro de
+    // una transacción corta para evitar que dos ventas concurrentes generen
+    // el mismo número de factura (condición de carrera lectura->+1->escritura).
+    let empresa: any = null;
+    try {
+      empresa = await withTransaction(async (txQuery) => {
+        const empresaResult = await txQuery(
+          `SELECT prefijo_factura, numeracion_actual, software_id, pin_software, ambiente, nit
+           FROM empresas WHERE id = ? FOR UPDATE`,
+          [empresa_id]
+        );
 
-    if (empresaResult.length === 0) {
+        if (empresaResult.length === 0) {
+          throw new Error('EMPRESA_NO_ENCONTRADA');
+        }
+
+        const emp = empresaResult[0];
+        const nuevoConsecutivo = (emp.numeracion_actual || 0) + 1;
+
+        await txQuery(
+          'UPDATE empresas SET numeracion_actual = ? WHERE id = ?',
+          [nuevoConsecutivo, empresa_id]
+        );
+
+        return { ...emp, numeracion_actual: nuevoConsecutivo };
+      });
+    } catch (err: any) {
+      if (err.message !== 'EMPRESA_NO_ENCONTRADA') throw err;
+    }
+
+    if (!empresa) {
       return errorResponse(res, 'Empresa no encontrada', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
     }
 
-    const empresa = empresaResult[0];
     const prefijo = empresa.prefijo_factura || 'FAC';
-    const consecutivo = (empresa.numeracion_actual || 0) + 1;
+    const consecutivo = empresa.numeracion_actual;
     const numeroFactura = generarNumeroFactura(prefijo, consecutivo);
 
     // Obtener datos del cliente para CUFE
@@ -437,165 +470,191 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
       }
     }
 
-    // Insertar venta
-    const resultVenta = await query(
-      `INSERT INTO ventas (
-        empresa_id, numero_factura, cliente_id, fecha_venta,
-        subtotal, descuento, impuesto, total, 
-        retenciones,
-        estado, metodo_pago, forma_pago, fecha_vencimiento, notas, vendedor_id,
-        cufe, qr_code,
-        propina_habilitada, propina_porcentaje, propina_valor, propina_base,
-        turno_id
-        ) VALUES (?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        empresa_id,
-        numeroFactura,
-        cliente_id,
-        subtotal || 0,
-        descuento || 0,
-        impuesto || 0,
-        totalFinal,
-        totalRetenciones,
-        estadoVenta,
-        metodo_pago || 'efectivo',
-        forma_pago || 'contado',
-        forma_pago === 'credito' ? fecha_vencimiento : null,
-        notas || null,
-        vendedor_id || null,
-        cufe,
-        qrCode,
-        // Propina
-        propina_habilitada || false,
-        propina_porcentaje || 0,
-        propina_valor || 0,
-        propina_base || 0,
-        turnoId
-        ]
+    // Determinar la bodega/tienda que realiza la venta: se usa la enviada por
+    // el frontend o, si no llega, la bodega asignada al usuario que factura.
+    // Esto permite luego filtrar y exportar las ventas por punto de venta.
+    let bodegaId = bodega_id || null;
+    if (!bodegaId && usuario?.id) {
+      const usuarioBodegaResult = await query(
+        'SELECT bodega_id FROM usuarios WHERE id = ?',
+        [usuario.id]
       );
-
-    const ventaId = resultVenta.insertId;
-
-    // Actualizar numeración en empresa
-    await query(
-      'UPDATE empresas SET numeracion_actual = ? WHERE id = ?',
-      [consecutivo, empresa_id]
-    );
-
-    // Insertar detalles y actualizar stock
-    for (const producto of productos) {
-      // Insertar detalle con nuevos campos para ventas contra pedido
-      await query(
-        `INSERT INTO venta_detalle (
-          venta_id, producto_id, cantidad, precio_unitario, descuento, subtotal,
-          tipo_venta, estado_entrega, fecha_entrega_estimada, notas_entrega
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          ventaId,
-          producto.producto_id,
-          producto.cantidad,
-          producto.precio_unitario,
-          producto.descuento || 0,
-          producto.subtotal,
-          producto.tipo_venta || 'inmediata',
-          producto.estado_entrega || null,
-          producto.fecha_entrega_estimada || null,
-          producto.notas_entrega || null
-        ]
-      );
-
-      // Actualizar stock solo si NO es venta contra pedido
-      if (producto.tipo_venta !== 'contra_pedido') {
-        await query(
-          'UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?',
-          [producto.cantidad, producto.producto_id]
-        );
-      }
+      bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
     }
 
-    // Insertar impuestos adicionales si existen
-    if (impuestos && Array.isArray(impuestos) && impuestos.length > 0) {
-      for (const impuesto of impuestos) {
-        await query(
-          `INSERT INTO venta_impuestos (
-            venta_id, impuesto_id, codigo_impuesto, nombre_impuesto, 
-            base_gravable, tasa, valor, tipo_afectacion
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            ventaId,
-            impuesto.impuesto_id,
-            impuesto.codigo || '',
-            impuesto.nombre || '',
-            impuesto.base_calculo || 0,
-            impuesto.tasa || 0,
-            impuesto.valor || 0,
-            impuesto.afecta_total || 'suma'
-          ]
-        );
-      }
-      logger.info(`${impuestos.length} impuestos adicionales registrados para venta ${ventaId}`);
-    }
-
-    // Insertar pagos múltiples
-    if (pagos && Array.isArray(pagos) && pagos.length > 0) {
-      for (const pago of pagos) {
-        await query(
-          `INSERT INTO venta_pagos (
-            venta_id, metodo_pago, monto, referencia, banco, notas
-          ) VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            ventaId,
-            pago.metodo_pago,
-            pago.monto,
-            pago.referencia || null,
-            pago.banco || null,
-            pago.notas || null
-          ]
-        );
-      }
-      logger.info(`${pagos.length} métodos de pago registrados para venta ${ventaId}`);
-    }
-
-    // Crear Cuenta por Cobrar si es venta a crédito
-    if (forma_pago === 'credito') {
-      // Calcular días de vencimiento
-      const fechaActual = new Date();
-      const fechaVenc = new Date(fecha_vencimiento);
-      const diasVencimiento = Math.floor((fechaVenc.getTime() - fechaActual.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Determinar rango de vencimiento
-      let rangoVencimiento = 'al_dia';
-      if (diasVencimiento < 0) {
-        const diasNegativo = Math.abs(diasVencimiento);
-        if (diasNegativo <= 30) rangoVencimiento = '1-30';
-        else if (diasNegativo <= 60) rangoVencimiento = '31-60';
-        else if (diasNegativo <= 90) rangoVencimiento = '61-90';
-        else rangoVencimiento = 'mas_90';
-      }
-
-      // Determinar estado de la CxC
-      const estadoCxC = diasVencimiento < 0 ? 'vencida' : 'vigente';
-
-      await query(
-        `INSERT INTO cuentas_por_cobrar (
-          empresa_id, venta_id, cliente_id, fecha_emision, fecha_vencimiento,
-          valor_original, saldo_pendiente, estado, dias_vencimiento, rango_vencimiento
-        ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)`,
+    // Insertar venta, detalles, stock, impuestos, pagos y CxC en una única
+    // transacción: si algo falla a mitad de camino (ej. un producto inválido,
+    // un error de red con la BD, etc.) se hace ROLLBACK de TODO, incluyendo
+    // los descuentos de stock ya aplicados. Antes esto se ejecutaba con
+    // queries sueltas y un error a mitad del loop de productos dejaba el
+    // stock descontado solo parcialmente (ej. factura de 4 productos que
+    // solo alcanzaba a descontar 2 antes de fallar).
+    const ventaId = await withTransaction(async (txQuery) => {
+      const resultVenta = await txQuery(
+        `INSERT INTO ventas (
+          empresa_id, numero_factura, cliente_id, fecha_venta,
+          subtotal, descuento, impuesto, total, 
+          retenciones,
+          estado, metodo_pago, forma_pago, fecha_vencimiento, notas, vendedor_id,
+          bodega_id,
+          cufe, qr_code,
+          propina_habilitada, propina_porcentaje, propina_valor, propina_base,
+          turno_id
+          ) VALUES (?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresa_id,
-          ventaId,
+          numeroFactura,
           cliente_id,
-          fecha_vencimiento,
+          subtotal || 0,
+          descuento || 0,
+          impuesto || 0,
           totalFinal,
-          totalFinal,
-          estadoCxC,
-          diasVencimiento,
-          rangoVencimiento
-        ]
-      );
+          totalRetenciones,
+          estadoVenta,
+          metodo_pago || 'efectivo',
+          forma_pago || 'contado',
+          forma_pago === 'credito' ? fecha_vencimiento : null,
+          notas || null,
+          vendedor_id || null,
+          bodegaId,
+          cufe,
+          qrCode,
+          // Propina
+          propina_habilitada || false,
+          propina_porcentaje || 0,
+          propina_valor || 0,
+          propina_base || 0,
+          turnoId
+          ]
+        );
 
-      logger.info(`Cuenta por cobrar creada para venta ${numeroFactura} - Vence: ${fecha_vencimiento}`);
-    }
+      const nuevaVentaId = resultVenta.insertId;
+
+      // Insertar detalles y actualizar stock
+      for (const producto of productos) {
+        // Insertar detalle con nuevos campos para ventas contra pedido
+        await txQuery(
+          `INSERT INTO venta_detalle (
+            venta_id, producto_id, cantidad, precio_unitario, descuento, subtotal,
+            tipo_venta, estado_entrega, fecha_entrega_estimada, notas_entrega
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            nuevaVentaId,
+            producto.producto_id,
+            producto.cantidad,
+            producto.precio_unitario,
+            producto.descuento || 0,
+            producto.subtotal,
+            producto.tipo_venta || 'inmediata',
+            producto.estado_entrega || null,
+            producto.fecha_entrega_estimada || null,
+            producto.notas_entrega || null
+          ]
+        );
+
+        // Actualizar stock solo si NO es venta contra pedido
+        if (producto.tipo_venta !== 'contra_pedido') {
+          await txQuery(
+            'UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?',
+            [producto.cantidad, producto.producto_id]
+          );
+
+          // Descontar también del stock de la bodega/tienda que factura
+          if (bodegaId) {
+            await txQuery(
+              'UPDATE productos_bodegas SET stock_actual = stock_actual - ? WHERE producto_id = ? AND bodega_id = ?',
+              [producto.cantidad, producto.producto_id, bodegaId]
+            );
+          }
+        }
+      }
+
+      // Insertar impuestos adicionales si existen
+      if (impuestos && Array.isArray(impuestos) && impuestos.length > 0) {
+        for (const impuesto of impuestos) {
+          await txQuery(
+            `INSERT INTO venta_impuestos (
+              venta_id, impuesto_id, codigo_impuesto, nombre_impuesto, 
+              base_gravable, tasa, valor, tipo_afectacion
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              nuevaVentaId,
+              impuesto.impuesto_id,
+              impuesto.codigo || '',
+              impuesto.nombre || '',
+              impuesto.base_calculo || 0,
+              impuesto.tasa || 0,
+              impuesto.valor || 0,
+              impuesto.afecta_total || 'suma'
+            ]
+          );
+        }
+        logger.info(`${impuestos.length} impuestos adicionales registrados para venta ${nuevaVentaId}`);
+      }
+
+      // Insertar pagos múltiples
+      if (pagos && Array.isArray(pagos) && pagos.length > 0) {
+        for (const pago of pagos) {
+          await txQuery(
+            `INSERT INTO venta_pagos (
+              venta_id, metodo_pago, monto, referencia, banco, notas
+            ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              nuevaVentaId,
+              pago.metodo_pago,
+              pago.monto,
+              pago.referencia || null,
+              pago.banco || null,
+              pago.notas || null
+            ]
+          );
+        }
+        logger.info(`${pagos.length} métodos de pago registrados para venta ${nuevaVentaId}`);
+      }
+
+      // Crear Cuenta por Cobrar si es venta a crédito
+      if (forma_pago === 'credito') {
+        // Calcular días de vencimiento
+        const fechaActual = new Date();
+        const fechaVenc = new Date(fecha_vencimiento);
+        const diasVencimiento = Math.floor((fechaVenc.getTime() - fechaActual.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Determinar rango de vencimiento
+        let rangoVencimiento = 'al_dia';
+        if (diasVencimiento < 0) {
+          const diasNegativo = Math.abs(diasVencimiento);
+          if (diasNegativo <= 30) rangoVencimiento = '1-30';
+          else if (diasNegativo <= 60) rangoVencimiento = '31-60';
+          else if (diasNegativo <= 90) rangoVencimiento = '61-90';
+          else rangoVencimiento = 'mas_90';
+        }
+
+        // Determinar estado de la CxC
+        const estadoCxC = diasVencimiento < 0 ? 'vencida' : 'vigente';
+
+        await txQuery(
+          `INSERT INTO cuentas_por_cobrar (
+            empresa_id, venta_id, cliente_id, fecha_emision, fecha_vencimiento,
+            valor_original, saldo_pendiente, estado, dias_vencimiento, rango_vencimiento
+          ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?)`,
+          [
+            empresa_id,
+            nuevaVentaId,
+            cliente_id,
+            fecha_vencimiento,
+            totalFinal,
+            totalFinal,
+            estadoCxC,
+            diasVencimiento,
+            rangoVencimiento
+          ]
+        );
+
+        logger.info(`Cuenta por cobrar creada para venta ${numeroFactura} - Vence: ${fecha_vencimiento}`);
+      }
+
+      return nuevaVentaId;
+    });
 
     logger.info(`Venta creada: ${numeroFactura} (ID: ${ventaId})`);
 
@@ -651,23 +710,36 @@ export const anularVenta = async (req: Request, res: Response): Promise<Response
 
     // Obtener detalles de la venta para restaurar stock
     const detalles = await query(
-      'SELECT producto_id, cantidad FROM venta_detalle WHERE venta_id = ?',
+      'SELECT producto_id, cantidad, tipo_venta FROM venta_detalle WHERE venta_id = ?',
       [id]
     );
 
-    // Restaurar stock de cada producto
-    for (const detalle of detalles) {
-      await query(
-        'UPDATE productos SET stock_actual = stock_actual + ? WHERE id = ?',
-        [detalle.cantidad, detalle.producto_id]
-      );
-    }
+    // Restaurar stock y anular la venta en una sola transacción, para que un
+    // fallo a mitad del loop no deje el stock parcialmente restaurado.
+    await withTransaction(async (txQuery) => {
+      for (const detalle of detalles) {
+        // Las ventas contra pedido nunca descontaron stock al facturar,
+        // por lo que tampoco se debe restaurar al anular.
+        if (detalle.tipo_venta === 'contra_pedido') continue;
 
-    // Anular la venta
-    await query(
-      `UPDATE ventas SET estado = 'anulada', notas = CONCAT(IFNULL(notas, ''), '\n[ANULADA] ', ?) WHERE id = ?`,
-      [motivo || 'Sin motivo especificado', id]
-    );
+        await txQuery(
+          'UPDATE productos SET stock_actual = stock_actual + ? WHERE id = ?',
+          [detalle.cantidad, detalle.producto_id]
+        );
+
+        if (venta.bodega_id) {
+          await txQuery(
+            'UPDATE productos_bodegas SET stock_actual = stock_actual + ? WHERE producto_id = ? AND bodega_id = ?',
+            [detalle.cantidad, detalle.producto_id, venta.bodega_id]
+          );
+        }
+      }
+
+      await txQuery(
+        `UPDATE ventas SET estado = 'anulada', notas = CONCAT(IFNULL(notas, ''), '\n[ANULADA] ', ?) WHERE id = ?`,
+        [motivo || 'Sin motivo especificado', id]
+      );
+    });
 
     logger.info(`Venta anulada: ${venta.numero_factura} (ID: ${id})`);
 

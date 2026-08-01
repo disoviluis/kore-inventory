@@ -947,13 +947,23 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
       }
     }
 
+    // Bodega/tienda que cierra la cuenta (para poder filtrar ventas por punto de venta)
+    let bodegaId = null;
+    if (usuarioId) {
+      const usuarioBodegaResult = await query(
+        `SELECT bodega_id FROM usuarios WHERE id = ?`,
+        [usuarioId]
+      );
+      bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
+    }
+
     // Crear venta
     const ventaResult = await query(
       `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, vendedor_id,
         fecha_venta, subtotal, impuesto, total, metodo_pago,
-        observaciones, estado, forma_pago, turno_id
-      ) VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, 'pagada', 'contado', ?)`,
+        observaciones, estado, forma_pago, turno_id, bodega_id
+      ) VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, 'pagada', 'contado', ?, ?)`,
       [
         cuenta.empresa_id,
         numero_factura,
@@ -964,7 +974,8 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
         cuenta.total,
         metodoPagoResumen,
         observacionesVenta,
-        turnoId
+        turnoId,
+        bodegaId
       ]
     );
 

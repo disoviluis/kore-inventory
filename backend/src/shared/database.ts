@@ -53,4 +53,39 @@ export const query = async (sql: string, params?: any[]): Promise<any> => {
   }
 };
 
+/**
+ * Ejecuta un conjunto de operaciones dentro de una transacción real de MySQL.
+ * Todas las queries hechas con el `query` que recibe el callback usan la MISMA
+ * conexión, y se hace COMMIT solo si todo el callback termina sin errores.
+ * Si algo falla, se hace ROLLBACK automáticamente (evita estados parciales,
+ * por ejemplo: stock descontado sin que la venta/detalle se haya guardado).
+ */
+export const withTransaction = async <T>(
+  callback: (query: (sql: string, params?: any[]) => Promise<any>) => Promise<T>
+): Promise<T> => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const txQuery = async (sql: string, params?: any[]): Promise<any> => {
+      const [results] = await connection.execute(sql, params);
+      return results;
+    };
+
+    const result = await callback(txQuery);
+
+    await connection.commit();
+    return result;
+  } catch (error) {
+    try {
+      await connection.rollback();
+    } catch (rollbackError) {
+      console.error('Error al hacer rollback:', rollbackError);
+    }
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+
 export default pool;

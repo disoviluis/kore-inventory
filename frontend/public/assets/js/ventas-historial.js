@@ -74,6 +74,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Cargar configuración de plantilla de facturación de la empresa activa
         await cargarConfiguracionPlantilla();
 
+        // Cargar bodegas/tiendas para el filtro
+        await cargarBodegasFiltro();
+
         // Cargar ventas
         await cargarVentas();
 
@@ -101,6 +104,7 @@ function setupEventListeners() {
 
     // Filtros
     document.getElementById('filterEstado').addEventListener('change', cargarVentas);
+    document.getElementById('filterBodega').addEventListener('change', cargarVentas);
     document.getElementById('fechaInicio').addEventListener('change', cargarVentas);
     document.getElementById('fechaFin').addEventListener('change', cargarVentas);
 
@@ -397,12 +401,14 @@ async function cargarVentas() {
 
         const searchTerm = document.getElementById('searchInput').value || '';
         const estado = document.getElementById('filterEstado').value || '';
+        const bodegaId = document.getElementById('filterBodega').value || '';
         const fechaInicio = document.getElementById('fechaInicio').value || '';
         const fechaFin = document.getElementById('fechaFin').value || '';
 
         let url = `${API_URL}/ventas?empresaId=${currentEmpresa.id}`;
         if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
         if (estado) url += `&estado=${estado}`;
+        if (bodegaId) url += `&bodegaId=${bodegaId}`;
         if (fechaInicio) url += `&fechaInicio=${fechaInicio}`;
         if (fechaFin) url += `&fechaFin=${fechaFin}`;
 
@@ -461,7 +467,7 @@ async function cargarVentas() {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" class="text-center py-5">
+                    <td colspan="9" class="text-center py-5">
                         <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
                         <p class="mt-3 mb-0">${mensaje}</p>
                         <button class="btn btn-primary mt-3" onclick="cargarVentas()">
@@ -484,7 +490,7 @@ function renderVentas() {
     if (ventasData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-4">
+                <td colspan="9" class="text-center py-4">
                     <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
                     <p class="text-muted mt-2">No se encontraron ventas</p>
                 </td>
@@ -524,6 +530,7 @@ function renderVentas() {
                     ${detalleCliente ? `<small class="text-primary">${detalleCliente}</small><br>` : ''}
                     ${mostrarDocumento ? `<small class="text-muted">${venta.numero_documento || 'N/A'}</small>` : ''}
                 </td>
+                <td>${venta.bodega_nombre || '<span class="text-muted">-</span>'}</td>
                 <td><strong>$${formatearNumero((parseFloat(venta.subtotal) || 0) - (parseFloat(venta.descuento) || 0) + (parseFloat(venta.impuesto) || 0) + (parseFloat(venta.impuestos_adicionales) || 0))}</strong></td>
                 <td><span class="badge bg-secondary">${venta.metodo_pago}</span></td>
                 <td>${estadoBadge}</td>
@@ -635,6 +642,7 @@ function mostrarDetalleVenta(venta, detalle) {
                     <table class="table table-sm table-borderless mb-0">
                         <tr><td class="text-muted ps-0" style="width:40%">Factura:</td><td><strong>${venta.numero_factura}</strong></td></tr>
                         <tr><td class="text-muted ps-0">Fecha:</td><td>${fechaFormateada}</td></tr>
+                        <tr><td class="text-muted ps-0">Bodega/Tienda:</td><td>${venta.bodega_nombre || '-'}</td></tr>
                         <tr><td class="text-muted ps-0">Estado:</td><td>${estadoBadge}</td></tr>
                         <tr><td class="text-muted ps-0">Vendedor:</td><td>${venta.vendedor_nombre || '-'} ${venta.vendedor_apellido || ''}</td></tr>
                         ${venta.notas ? `<tr><td class="text-muted ps-0">Notas:</td><td><small>${venta.notas}</small></td></tr>` : ''}
@@ -856,9 +864,33 @@ function getEstadoBadge(estado) {
 function limpiarFiltros() {
     document.getElementById('searchInput').value = '';
     document.getElementById('filterEstado').value = '';
+    document.getElementById('filterBodega').value = '';
     document.getElementById('fechaInicio').value = '';
     document.getElementById('fechaFin').value = '';
     cargarVentas();
+}
+
+// Carga las bodegas/tiendas de la empresa activa para el selector de filtro
+async function cargarBodegasFiltro() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/bodegas?empresa_id=${currentEmpresa.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const bodegas = Array.isArray(data.data) ? data.data : [];
+        const select = document.getElementById('filterBodega');
+        if (!select) return;
+        bodegas.forEach(b => {
+            const option = document.createElement('option');
+            option.value = b.id;
+            option.textContent = b.nombre;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error al cargar bodegas para el filtro:', error);
+    }
 }
 
 async function exportarVentas() {
@@ -876,6 +908,7 @@ async function exportarVentas() {
                 'Fecha': formatFechaColombia(v.fecha_venta),
                 'Cliente': v.cliente_nombre,
                 'Documento': v.cliente_documento,
+                'Bodega/Tienda': v.bodega_nombre || '',
                 'Subtotal': v.subtotal,
                 'Descuento': v.descuento || 0,
                 'Impuesto': v.impuesto,
@@ -898,6 +931,7 @@ async function exportarVentas() {
             { wch: 20 },  // Fecha
             { wch: 30 },  // Cliente
             { wch: 15 },  // Documento
+            { wch: 20 },  // Bodega/Tienda
             { wch: 12 },  // Subtotal
             { wch: 12 },  // Descuento
             { wch: 12 },  // Impuesto
@@ -932,7 +966,7 @@ function mostrarCargando(show) {
     if (show) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-4">
+                <td colspan="9" class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Cargando...</span>
                     </div>

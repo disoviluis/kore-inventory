@@ -11,6 +11,7 @@ let currentEmpresa = null;
 let currentUsuario = null;
 let clienteSeleccionado = null;
 let productosVenta = [];
+let guardandoVenta = false; // Evita doble envío de la venta (doble clic/tap)
 let productosBusqueda = []; // Resultados del buscador para selección rápida
 let clientesEncontrados = []; // Para evitar pasar objetos por HTML
 let ultimaVentaGuardada = null; // Guardar última venta para impresión
@@ -1629,7 +1630,8 @@ function actualizarEstadoPago() {
     console.log('  - btnAbrirCuenta.disabled será:', !tieneProductos);
     
     // Guardar Venta requiere: cliente, productos y pago completo
-    btnGuardar.disabled = !tieneCliente || !tieneProductos || !pagoCompleto;
+    // (y que no haya una venta en proceso de guardado, para evitar doble envío)
+    btnGuardar.disabled = !tieneCliente || !tieneProductos || !pagoCompleto || guardandoVenta;
     
     // Abrir Cuenta solo requiere: productos (el cliente es opcional)
     if (btnAbrirCuenta) {
@@ -1642,6 +1644,12 @@ function actualizarEstadoPago() {
 // ============================================
 
 async function guardarVenta() {
+    // Evitar doble envío (doble clic / doble tap) que crearía dos ventas
+    // duplicadas y podría descontar el stock de forma inconsistente.
+    if (guardandoVenta) {
+        return;
+    }
+
     console.log('=== Iniciando guardarVenta ===');
     console.log('clienteSeleccionado:', clienteSeleccionado);
     console.log('productosVenta:', productosVenta);
@@ -1652,6 +1660,10 @@ async function guardarVenta() {
         mostrarAlerta('Debes seleccionar un cliente y agregar productos', 'warning');
         return;
     }
+
+    guardandoVenta = true;
+    const btnGuardarVentaEl = document.getElementById('btnGuardarVenta');
+    if (btnGuardarVentaEl) btnGuardarVentaEl.disabled = true;
 
     const subtotal = productosVenta.reduce((sum, p) => sum + p.subtotal, 0);
     const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
@@ -1730,6 +1742,7 @@ async function guardarVenta() {
         empresa_id: currentEmpresa?.id,
         cliente_id: clienteSeleccionado?.id,
         vendedor_id: currentUsuario?.id,
+        bodega_id: currentUsuario?.bodega_id || null,
         subtotal: subtotal,
         descuento: descuento,
         impuesto: impuesto,
@@ -1845,6 +1858,9 @@ async function guardarVenta() {
         console.error('Error:', error);
         mostrarAlerta(error.message || 'Error al guardar venta', 'danger');
         reproducirSonido('error');
+    } finally {
+        guardandoVenta = false;
+        if (btnGuardarVentaEl) btnGuardarVentaEl.disabled = false;
     }
 }
 
@@ -3794,7 +3810,8 @@ function actualizarEstadoPago() {
     const tieneProductos = productosVenta.length > 0;
     
     // Guardar Venta requiere: cliente, productos y pago completo
-    btnGuardar.disabled = !tieneCliente || !tieneProductos || !pagoCompleto;
+    // (y que no haya una venta en proceso de guardado, para evitar doble envío)
+    btnGuardar.disabled = !tieneCliente || !tieneProductos || !pagoCompleto || guardandoVenta;
     
     // Abrir Cuenta solo requiere: productos (el cliente es opcional)
     if (btnAbrirCuenta) {
