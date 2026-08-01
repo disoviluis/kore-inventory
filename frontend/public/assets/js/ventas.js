@@ -26,7 +26,7 @@ let todosCatalogo = []; // Todos los productos del catálogo
 let categoriasCatalogo = []; // Categorías disponibles
 let categoriaFiltroActual = null; // Categoría filtrada actual
 let productoSeleccionadoCatalogo = null; // Producto seleccionado en el catálogo
-let vistaActual = 'grid'; // Vista actual del catálogo (grid o list)
+let vistaActual = localStorage.getItem('posVistaProductos') || 'grid'; // Vista actual del catálogo (grid o list), persistida en localStorage
 let modoRapido = false; // Modo rápido activado
 let turnoActivo = null; // Turno de caja actual
 let gastosDelTurno = []; // Gastos del turno activo
@@ -3369,6 +3369,7 @@ async function cargarCatalogoProductos() {
         categoriasCatalogo = [...new Set(todosCatalogo.map(p => p.categoria_nombre).filter(Boolean))];
         
         renderizarCategoriasFilter();
+        sincronizarBotonesVista();
         renderizarCatalogo();
 
     } catch (error) {
@@ -3423,14 +3424,21 @@ function filtrarPorCategoria(categoria) {
  */
 function cambiarVistaProductos(vista) {
     vistaActual = vista;
+    localStorage.setItem('posVistaProductos', vista);
     
-    // Actualizar botones
-    document.querySelectorAll('#catalogoProductos .btn-group button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.closest('button').classList.add('active');
+    sincronizarBotonesVista();
     
     renderizarCatalogo();
+}
+
+/**
+ * Sincronizar el estado "active" de los botones grid/list según vistaActual
+ */
+function sincronizarBotonesVista() {
+    document.querySelectorAll('#catalogoProductos .btn-group button').forEach(btn => {
+        const esBotonVistaActual = btn.getAttribute('onclick')?.includes(`cambiarVistaProductos('${vistaActual}')`);
+        btn.classList.toggle('active', !!esBotonVistaActual);
+    });
 }
 
 /**
@@ -3521,48 +3529,47 @@ function renderizarCatalogoGrid(productos, container) {
 function renderizarCatalogoList(productos, container) {
     container.innerHTML = `
         <div class="col-12">
-            ${productos.map(p => {
-                const stockClass = p.stock_actual > 10 ? 'stock-alto' : 
-                                  p.stock_actual > 5 ? 'stock-medio' : 
-                                  p.stock_actual > 0 ? 'stock-bajo' : 'stock-sin';
-                
-                const stockText = p.stock_actual > 0 ? p.stock_actual : 'Sin stock';
-                
-                return `
-                    <div class="producto-card-list" 
-                         onclick="seleccionarProductoCatalogo(${p.id})"
-                         ondblclick="agregarProductoDesdeCatalogo(${p.id})"
-                         data-producto-id="${p.id}">
-                        ${p.imagen_url ? 
-                            `<img src="${p.imagen_url}" class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;" alt="${p.nombre}">` :
-                            `<div class="rounded me-3" style="width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white;">
-                                <i class="bi bi-box-seam" style="font-size: 1.5rem;"></i>
-                             </div>`
-                        }
-                        <div class="flex-grow-1">
-                            <strong>${p.nombre}</strong>
-                            ${p.aplica_iva ? '<span class="badge bg-info text-white ms-2">IVA</span>' : ''}
-                            ${p.en_promocion_activa ? '<span class="badge bg-warning text-dark ms-1"><i class="bi bi-tag-fill me-1"></i>PROMO</span>' : ''}
-                            <br>
-                            <small class="text-muted">SKU: ${p.sku}</small>
-                        </div>
-                        <div class="text-center me-3">
-                            <span class="badge ${stockClass}">${stockText}</span>
-                        </div>
-                        <div class="text-end me-2">
-                            ${p.en_promocion_activa ? `<small class="text-muted text-decoration-line-through d-block" style="font-size:0.75rem;">$${formatearNumero(p.precio_minorista)}</small>` : ''}
-                            <strong class="${p.en_promocion_activa ? 'text-danger' : 'text-success'}" style="font-size: 1.2rem;">$${formatearNumero(p.en_promocion_activa ? p.precio_promocion : p.precio_minorista)}</strong>
-                        </div>
-                        <div>
-                            <button class="btn btn-sm btn-success" 
+            <div class="producto-list-grid">
+                ${productos.map(p => {
+                    const stockClass = p.stock_actual > 10 ? 'stock-alto' : 
+                                      p.stock_actual > 5 ? 'stock-medio' : 
+                                      p.stock_actual > 0 ? 'stock-bajo' : 'stock-sin';
+                    
+                    const stockText = p.stock_actual > 0 ? p.stock_actual : 'Sin stock';
+                    
+                    return `
+                        <div class="producto-card-list" 
+                             onclick="seleccionarProductoCatalogo(${p.id})"
+                             ondblclick="agregarProductoDesdeCatalogo(${p.id})"
+                             data-producto-id="${p.id}">
+                            ${p.imagen_url ? 
+                                `<img src="${p.imagen_url}" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover; flex-shrink: 0;" alt="${p.nombre}">` :
+                                `<div class="rounded me-2" style="width: 40px; height: 40px; flex-shrink: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i class="bi bi-box-seam" style="font-size: 1rem;"></i>
+                                 </div>`
+                            }
+                            <div class="flex-grow-1 min-w-0">
+                                <strong class="d-block text-truncate" style="font-size: 0.85rem;">${p.nombre}</strong>
+                                <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">SKU: ${p.sku}</small>
+                                <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                                    <span class="badge ${stockClass}" style="font-size: 0.65rem;">${stockText}</span>
+                                    ${p.aplica_iva ? '<span class="badge bg-info text-white" style="font-size: 0.65rem;">IVA</span>' : ''}
+                                    ${p.en_promocion_activa ? '<span class="badge bg-warning text-dark" style="font-size: 0.65rem;"><i class="bi bi-tag-fill me-1"></i>PROMO</span>' : ''}
+                                </div>
+                            </div>
+                            <div class="text-end ms-2 flex-shrink-0">
+                                ${p.en_promocion_activa ? `<small class="text-muted text-decoration-line-through d-block" style="font-size:0.68rem;">$${formatearNumero(p.precio_minorista)}</small>` : ''}
+                                <strong class="${p.en_promocion_activa ? 'text-danger' : 'text-success'} d-block" style="font-size: 0.95rem;">$${formatearNumero(p.en_promocion_activa ? p.precio_promocion : p.precio_minorista)}</strong>
+                            </div>
+                            <button class="btn btn-sm btn-success ms-2 flex-shrink-0" 
                                     onclick="event.stopPropagation(); agregarProductoDesdeCatalogo(${p.id});"
                                     title="Agregar producto">
                                 <i class="bi bi-plus-lg"></i>
                             </button>
                         </div>
-                    </div>
-                `;
-            }).join('')}
+                    `;
+                }).join('')}
+            </div>
         </div>
     `;
     

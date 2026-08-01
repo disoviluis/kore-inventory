@@ -126,16 +126,28 @@
         .producto-card-list {
             display: flex;
             align-items: center;
-            padding: 12px;
+            padding: 8px 10px;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
-            margin-bottom: 8px;
+            min-width: 0;
         }
         .producto-card-list:hover {
             box-shadow: 0 2px 8px rgba(30, 64, 175, 0.15);
             border-color: #1E40AF;
+        }
+        .producto-list-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .producto-list-grid .min-w-0 { min-width: 0; }
+        @media (max-width: 1199px) {
+            .producto-list-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 767px) {
+            .producto-list-grid { grid-template-columns: 1fr; }
         }
         #catalogoProductos {
             background: #fafafa;
