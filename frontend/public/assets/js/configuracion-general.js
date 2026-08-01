@@ -358,7 +358,7 @@ async function eliminarCategoria(id, nombre, productosCount) {
 
     try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/categorias/${id}`, {
+        const response = await fetch(`${API_URL}/categorias/${id}?empresaId=${currentEmpresa}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`
