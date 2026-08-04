@@ -1742,7 +1742,7 @@ async function guardarVenta() {
         empresa_id: currentEmpresa?.id,
         cliente_id: clienteSeleccionado?.id,
         vendedor_id: currentUsuario?.id,
-        bodega_id: currentUsuario?.bodega_id || null,
+        bodega_id: turnoActivo?.bodega_id || currentUsuario?.bodega_id || null,
         subtotal: subtotal,
         descuento: descuento,
         impuesto: impuesto,
@@ -4226,6 +4226,59 @@ function mostrarFormularioNuevoTurno() {
     
     document.getElementById('baseInicialTurno').value = '50000';
     document.getElementById('notasAperturaTurno').value = '';
+
+    cargarBodegasDisponiblesTurno();
+}
+
+/**
+ * Carga las bodegas asignadas al usuario actual (usuarios_bodegas) para la empresa activa.
+ * Si no tiene ninguna asignada, cae a todas las bodegas de la empresa (acceso total).
+ * Si solo hay una opción, se preselecciona y se oculta el selector.
+ */
+async function cargarBodegasDisponiblesTurno() {
+    const container = document.getElementById('turnoBodegaContainer');
+    const select = document.getElementById('bodegaTurnoSelect');
+    select.innerHTML = '<option value="">Cargando...</option>';
+    container.style.display = 'none';
+
+    try {
+        const token = localStorage.getItem('token');
+        let bodegas = [];
+
+        const resUsuario = await fetch(`${API_URL}/usuarios/${currentUsuario.id}?empresa_id=${currentEmpresa.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const dataUsuario = await resUsuario.json();
+        if (dataUsuario.success && Array.isArray(dataUsuario.data?.bodegas) && dataUsuario.data.bodegas.length > 0) {
+            bodegas = dataUsuario.data.bodegas;
+        } else {
+            // Sin bodegas asignadas específicas = acceso a toda la empresa
+            const resBodegas = await fetch(`${API_URL}/bodegas?empresa_id=${currentEmpresa.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const dataBodegas = await resBodegas.json();
+            bodegas = dataBodegas.success ? (dataBodegas.data || []) : [];
+        }
+
+        if (bodegas.length === 0) {
+            select.innerHTML = '<option value="">No hay bodegas configuradas</option>';
+            container.style.display = 'block';
+            return;
+        }
+
+        select.innerHTML = bodegas.map(b => `<option value="${b.id}">${b.nombre}</option>`).join('');
+
+        // Preseleccionar la principal si existe entre las opciones
+        const principal = bodegas.find(b => b.es_principal);
+        if (principal) select.value = principal.id;
+
+        // Solo mostrar el selector si hay más de una opción; si es una sola, queda preseleccionada oculta
+        container.style.display = bodegas.length > 1 ? 'block' : 'none';
+    } catch (error) {
+        console.error('Error al cargar bodegas para el turno:', error);
+        select.innerHTML = '<option value="">Error al cargar bodegas</option>';
+        container.style.display = 'block';
+    }
 }
 
 /**
@@ -4252,11 +4305,11 @@ async function abrirTurno() {
             return;
         }
         
-        // Obtener bodega del usuario (si tiene asignada)
-        const bodegaId = currentUsuario.bodega_id || null;
+        // Obtener bodega seleccionada en el modal (asignada al usuario o de la empresa)
+        const bodegaId = document.getElementById('bodegaTurnoSelect').value || null;
         
         if (!bodegaId) {
-            mostrarAlerta('Error: Usuario sin bodega asignada. Contacte al administrador.', 'error');
+            mostrarAlerta('Error: No hay una bodega seleccionada para el turno. Contacte al administrador.', 'error');
             return;
         }
         
