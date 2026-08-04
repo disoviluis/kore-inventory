@@ -165,26 +165,27 @@ function renderCatalogo(productos, pagina) {
   const categorias = ordenarCategorias(categoriasSinOrdenar, pagina);
   const filtros = document.getElementById('filtrosCatalogo');
   if (categorias.length > 1) {
-    filtros.innerHTML = `<button class="btn btn-sm btn-primary rounded-pill" onclick="filtrarCatalogo('all')">Todos</button>` +
+    filtros.innerHTML = `<button class="btn btn-sm btn-primary rounded-pill active-cat" onclick="filtrarCatalogo('all')">Todos</button>` +
       categorias.map(c => `<button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="filtrarCatalogo('${c}')">${c}</button>`).join('');
   }
 
+  // El catálogo siempre se muestra agrupado por secciones de categoría
   renderGrid(todosProductos, mostrarPrecios, mostrarPromos, categorias);
 }
 
+// Los botones de categoría desplazan la vista hasta la sección correspondiente;
+// el catálogo siempre permanece agrupado por secciones (no oculta categorías).
 window.filtrarCatalogo = function(categoria) {
-  const pagina = window._paginaConfig || {};
-  const mostrarPrecios = pagina.pagina_mostrar_precios !== 0;
-  const mostrarPromos = pagina.pagina_mostrar_promociones !== 0;
-  const categoriasSinOrdenar = [...new Set(todosProductos.map(p => p.categoria_nombre).filter(Boolean))];
-  const categorias = ordenarCategorias(categoriasSinOrdenar, pagina);
-  const filtrados = categoria === 'all' ? todosProductos : todosProductos.filter(p => p.categoria_nombre === categoria);
-  renderGrid(filtrados, mostrarPrecios, mostrarPromos, categoria === 'all' ? categorias : [categoria]);
   document.querySelectorAll('#filtrosCatalogo button').forEach(b => {
     const esActivo = b.textContent === 'Todos' ? categoria === 'all' : b.textContent === categoria;
     b.classList.toggle('btn-primary', esActivo);
     b.classList.toggle('btn-outline-secondary', !esActivo);
   });
+
+  const destino = categoria === 'all'
+    ? document.getElementById('catalogo')
+    : document.getElementById(slugCategoria(categoria));
+  if (destino) destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 function tarjetaProducto(p, mostrarPrecios, mostrarPromos) {
