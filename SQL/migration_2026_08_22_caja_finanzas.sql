@@ -71,5 +71,5 @@ FROM acciones a
 WHERE a.nombre IN ('view', 'create', 'update', 'export', 'print')
   AND NOT EXISTS (
     SELECT 1 FROM permisos p
-    WHERE p.codigo = CONCAT('FINANZAS.CAJA.', UPPER(a.nombre))
+    WHERE p.modulo_id = @modulo_caja_id AND p.accion_id = a.id
   );
