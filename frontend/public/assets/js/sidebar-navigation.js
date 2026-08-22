@@ -32,6 +32,7 @@ const MODULE_MAP = {
   // FINANZAS
   'cuentas-por-cobrar.html': 'finanzas',
   'cuentas-por-pagar.html': 'cuentas_por_pagar',
+  'caja.html': 'caja',
   
   // REPORTES
   'reportes.html': 'reportes',
@@ -263,6 +264,16 @@ function ocultarSeccionesVacias() {
   });
 }
 
+function habilitarEnlaceCaja() {
+  document.querySelectorAll('.sidebar-nav .nav-link.disabled').forEach(link => {
+    if (link.textContent.trim().startsWith('Caja')) {
+      link.classList.remove('disabled');
+      link.setAttribute('href', 'caja.html');
+      link.removeAttribute('aria-disabled');
+    }
+  });
+}
+
 /**
  * Mostrar/ocultar sección de PLATAFORMA para super admin
  */
@@ -313,6 +324,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 1. Cargar módulos permitidos desde la API
   await cargarModulosPermitidos();
   
+  habilitarEnlaceCaja();
+
   // 2. Filtrar sidebar según permisos
   await filtrarSidebarPorPermisos();
   

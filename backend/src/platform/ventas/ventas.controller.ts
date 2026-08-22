@@ -761,11 +761,27 @@ export const anularVenta = async (req: Request, res: Response): Promise<Response
  */
 export const abrirTurno = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { empresaId, bodegaId, baseInicial } = req.body;
+    const { empresaId, bodegaId, cajaId, baseInicial } = req.body;
     const usuario = (req as any).user;
 
     if (!empresaId || !bodegaId || baseInicial === undefined) {
       return errorResponse(res, 'Faltan parámetros: empresaId, bodegaId, baseInicial', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    }
+
+    const accesoBodega = await query(
+      `SELECT b.id
+       FROM bodegas b
+       LEFT JOIN usuarios_bodegas ub ON ub.bodega_id = b.id
+         AND ub.usuario_id = ? AND ub.empresa_id = ?
+       WHERE b.id = ? AND b.empresa_id = ?
+         AND (ub.id IS NOT NULL OR EXISTS (
+           SELECT 1 FROM usuarios u WHERE u.id = ? AND u.bodega_id = b.id
+         ))
+       LIMIT 1`,
+      [usuario.id, empresaId, bodegaId, empresaId, usuario.id]
+    );
+    if (accesoBodega.length === 0 && usuario.tipo_usuario !== 'super_admin') {
+      return errorResponse(res, 'No tienes acceso a la tienda seleccionada', null, CONSTANTS.HTTP_STATUS.FORBIDDEN);
     }
 
     // Verificar si el usuario ya tiene un turno abierto
@@ -778,11 +794,31 @@ export const abrirTurno = async (req: Request, res: Response): Promise<Response>
       return errorResponse(res, 'Ya tienes un turno abierto. Ciérralo antes de abrir uno nuevo.', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
     }
 
+    let cajaSeleccionada = cajaId;
+    if (cajaSeleccionada) {
+      const cajas = await query(
+        'SELECT id FROM cajas WHERE id = ? AND empresa_id = ? AND bodega_id = ? AND activo = 1 LIMIT 1',
+        [cajaSeleccionada, empresaId, bodegaId]
+      );
+      if (cajas.length === 0) {
+        return errorResponse(res, 'La caja seleccionada no pertenece a la tienda', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+      }
+    } else {
+      const cajas = await query(
+        'SELECT id FROM cajas WHERE empresa_id = ? AND bodega_id = ? AND activo = 1 ORDER BY id LIMIT 1',
+        [empresaId, bodegaId]
+      );
+      if (cajas.length === 0) {
+        return errorResponse(res, 'La tienda no tiene una caja activa configurada', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+      }
+      cajaSeleccionada = cajas[0].id;
+    }
+
     // Crear nuevo turno con fecha_apertura explícita en zona horaria de Colombia
     const result = await query(
-      `INSERT INTO turnos_caja (empresa_id, usuario_id, bodega_id, base_inicial, estado, fecha_apertura)
-       VALUES (?, ?, ?, ?, 'abierto', CONVERT_TZ(NOW(), '+00:00', '-05:00'))`,
-      [empresaId, usuario.id, bodegaId, baseInicial]
+      `INSERT INTO turnos_caja (empresa_id, usuario_id, bodega_id, caja_id, base_inicial, estado, fecha_apertura)
+       VALUES (?, ?, ?, ?, ?, 'abierto', CONVERT_TZ(NOW(), '+00:00', '-05:00'))`,
+      [empresaId, usuario.id, bodegaId, cajaSeleccionada, baseInicial]
     );
 
     const turnoId = result.insertId;
@@ -811,9 +847,11 @@ export const getTurnoActual = async (req: Request, res: Response): Promise<Respo
     }
 
     const turnos = await query(
-      `SELECT t.*, b.nombre as bodega_nombre, u.nombre as usuario_nombre, u.apellido as usuario_apellido
+      `SELECT t.*, b.nombre as bodega_nombre, c.nombre as caja_nombre,
+          u.nombre as usuario_nombre, u.apellido as usuario_apellido
        FROM turnos_caja t
        LEFT JOIN bodegas b ON t.bodega_id = b.id
+       LEFT JOIN cajas c ON t.caja_id = c.id
        LEFT JOIN usuarios u ON t.usuario_id = u.id
        WHERE t.usuario_id = ? AND t.empresa_id = ? AND t.estado = 'abierto'
        LIMIT 1`,
@@ -842,11 +880,12 @@ export const getResumenTurno = async (req: Request, res: Response): Promise<Resp
 
     // Obtener datos del turno con nombre de bodega y usuario
     const turnos = await query(
-      `SELECT t.*, 
+      `SELECT t.*, c.nombre as caja_nombre,
               b.nombre as bodega_nombre,
               u.nombre as usuario_nombre,
               u.apellido as usuario_apellido
-       FROM turnos_caja t
+      FROM turnos_caja t
+      LEFT JOIN cajas c ON t.caja_id = c.id
        LEFT JOIN bodegas b ON t.bodega_id = b.id
        LEFT JOIN usuarios u ON t.usuario_id = u.id
        WHERE t.id = ?`,
