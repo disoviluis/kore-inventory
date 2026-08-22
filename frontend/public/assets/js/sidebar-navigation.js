@@ -31,6 +31,7 @@ const MODULE_MAP = {
   
   // FINANZAS
   'cuentas-por-cobrar.html': 'finanzas',
+  'cuentas-por-pagar.html': 'cuentas_por_pagar',
   
   // REPORTES
   'reportes.html': 'reportes',

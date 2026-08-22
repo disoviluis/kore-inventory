@@ -24,6 +24,14 @@ import {
   getReciboCajaById,
   anularReciboCaja
 } from './recibos-caja.controller';
+import {
+  crearComprobanteEgreso,
+  getCuentaPorPagarById,
+  getCuentasPorPagar,
+  getCuentasPorProveedor,
+  getResumenCuentasPorPagar
+} from './cuentas-por-pagar.controller';
+import { requirePermission } from '../../core/middleware/permissions.middleware';
 
 const router = Router();
 
@@ -68,5 +76,16 @@ router.get('/recibos-caja/:id', getReciboCajaById);
 
 // Anular un recibo de caja
 router.delete('/recibos-caja/:id', anularReciboCaja);
+
+/**
+ * =================================
+ * RUTAS DE CUENTAS POR PAGAR (CxP)
+ * =================================
+ */
+router.get('/cuentas-por-pagar', requirePermission('cuentas_por_pagar', 'view'), getCuentasPorPagar);
+router.get('/cuentas-por-pagar/dashboard/resumen', requirePermission('cuentas_por_pagar', 'view'), getResumenCuentasPorPagar);
+router.get('/cuentas-por-pagar/proveedor/:proveedorId', requirePermission('cuentas_por_pagar', 'view'), getCuentasPorProveedor);
+router.get('/cuentas-por-pagar/:id', requirePermission('cuentas_por_pagar', 'view'), getCuentaPorPagarById);
+router.post('/comprobantes-egreso', requirePermission('cuentas_por_pagar', 'create'), crearComprobanteEgreso);
 
 export default router;
