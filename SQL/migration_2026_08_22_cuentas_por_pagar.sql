@@ -61,46 +61,9 @@ CREATE TABLE IF NOT EXISTS comprobantes_egreso_detalle (
   CONSTRAINT fk_egreso_detalle_cxp FOREIGN KEY (cuenta_por_pagar_id) REFERENCES cuentas_por_pagar(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-DELIMITER $$
-DROP TRIGGER IF EXISTS after_compra_insert_crear_cxp$$
-CREATE TRIGGER after_compra_insert_crear_cxp
-AFTER INSERT ON compras
-FOR EACH ROW
-BEGIN
-  IF NEW.tipo_compra = 'credito' THEN
-    INSERT INTO cuentas_por_pagar (
-      empresa_id, proveedor_id, compra_id, numero_documento, fecha_emision,
-      fecha_vencimiento, valor_original, saldo_pendiente, estado
-    )
-    SELECT NEW.empresa_id, NEW.proveedor_id, NEW.id, NEW.numero_compra, NEW.fecha_compra,
-      DATE_ADD(NEW.fecha_compra, INTERVAL COALESCE(NULLIF(p.dias_credito, 0), 30) DAY),
-      NEW.total, NEW.total,
-      CASE WHEN DATE_ADD(NEW.fecha_compra, INTERVAL COALESCE(NULLIF(p.dias_credito, 0), 30) DAY) < CURDATE()
-        THEN 'vencida' ELSE 'vigente' END
-    FROM proveedores p
-    WHERE p.id = NEW.proveedor_id AND p.empresa_id = NEW.empresa_id;
-  END IF;
-END$$
-
-DROP TRIGGER IF EXISTS after_compra_update_estado_cxp$$
-CREATE TRIGGER after_compra_update_estado_cxp
-AFTER UPDATE ON compras
-FOR EACH ROW
-BEGIN
-  IF NEW.estado = 'anulada' AND OLD.estado <> 'anulada' THEN
-    UPDATE cuentas_por_pagar SET estado = 'anulada' WHERE compra_id = NEW.id;
-  END IF;
-END$$
-
-DROP EVENT IF EXISTS actualizar_vencimientos_cxp$$
-CREATE EVENT actualizar_vencimientos_cxp
-ON SCHEDULE EVERY 1 DAY
-STARTS CURRENT_DATE + INTERVAL 1 DAY
-DO
-  UPDATE cuentas_por_pagar
-  SET estado = CASE WHEN fecha_vencimiento < CURDATE() THEN 'vencida' ELSE 'vigente' END
-  WHERE estado IN ('vigente', 'vencida')$$
-DELIMITER ;
+-- Nota: en RDS no se permiten triggers ni eventos con la cuenta de aplicación.
+-- La generación automática de cuentas por pagar se hace desde la lógica de negocio del backend.
+-- Este archivo deja la estructura base y carga los registros existentes de compras a crédito.
 
 INSERT INTO cuentas_por_pagar (
   empresa_id, proveedor_id, compra_id, numero_documento, fecha_emision,
