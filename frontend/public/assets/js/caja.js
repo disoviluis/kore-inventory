@@ -3,14 +3,25 @@ let empresaActual = null;
 let turnoActual = null;
 const dinero = valor => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(valor || 0));
 const fecha = valor => valor ? new Date(valor).toLocaleString('es-CO') : '-';
-function empresa() {
-	const guardada = localStorage.getItem('empresaActual');
-	const objeto = localStorage.getItem('empresaActualObjeto') || localStorage.getItem('currentEmpresa');
-	if (objeto) {
-		try { return JSON.parse(objeto); } catch (_) { /* usar el ID guardado */ }
-	}
-	return guardada ? { id: Number(guardada) } : {};
+async function cargarEmpresaActiva() {
+	const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+	if (!usuario.id) throw new Error('Sesión de usuario no válida');
+	const result = await api(`/empresas/usuario/${usuario.id}`);
+	const empresas = result.data || [];
+	if (!empresas.length) throw new Error('No tienes empresas asignadas. Contacta al administrador.');
+	const guardada = localStorage.getItem('empresaActiva');
+	empresaActual = empresas.find(item => String(item.id) === String(guardada)) || empresas[0];
+	localStorage.setItem('empresaActiva', String(empresaActual.id));
+	const selector = document.getElementById('empresaSelector');
+	selector.innerHTML = empresas.map(item => `<option value="${item.id}">${item.nombre}</option>`).join('');
+	selector.value = String(empresaActual.id);
+	selector.addEventListener('change', async event => {
+		empresaActual = empresas.find(item => String(item.id) === event.target.value);
+		localStorage.setItem('empresaActiva', String(empresaActual.id));
+		await cargarDatos();
+	});
 }
+async function cargarDatos() { await cargarBodegas(); await cargarTurno(); await cargarHistorial(); }
 async function api(path, options = {}) { const token = localStorage.getItem('token'); const response = await fetch(`${API_CAJA}${path}`, { ...options, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(options.headers || {}) } }); const body = await response.json().catch(() => ({})); if (!response.ok || body.success === false) throw new Error(body.message || 'No fue posible completar la operación'); return body; }
 function aviso(mensaje, tipo = 'success') { document.getElementById('alerta').innerHTML = `<div class="alert alert-${tipo} alert-dismissible fade show">${mensaje}<button class="btn-close" data-bs-dismiss="alert"></button></div>`; }
 async function cargarBodegas() { const result = await api(`/bodegas?empresaId=${empresaActual.id}`); const bodegas = result.data || []; document.getElementById('bodegaId').innerHTML = bodegas.map(b => `<option value="${b.id}">${b.nombre}</option>`).join('') || '<option value="">No hay tiendas disponibles</option>'; }
@@ -21,4 +32,4 @@ document.getElementById('formAbrir').addEventListener('submit', async event => {
 document.getElementById('formGasto').addEventListener('submit', async event => { event.preventDefault(); try { await api(`/ventas/turno/${turnoActual.id}/gastos`, { method: 'POST', body: JSON.stringify({ descripcion: document.getElementById('gastoDescripcion').value, monto: Number(document.getElementById('gastoMonto').value) }) }); bootstrap.Modal.getInstance(document.getElementById('modalGasto')).hide(); event.target.reset(); await cargarResumen(); aviso('Gasto registrado correctamente'); } catch (error) { aviso(error.message, 'danger'); } });
 document.getElementById('formCierre').addEventListener('submit', async event => { event.preventDefault(); try { await api(`/ventas/turno/${turnoActual.id}/cerrar`, { method: 'POST', body: JSON.stringify({ efectivoContado: Number(document.getElementById('efectivoContado').value), notas: document.getElementById('notasCierre').value }) }); bootstrap.Modal.getInstance(document.getElementById('modalCierre')).hide(); aviso('Caja cerrada correctamente'); await cargarTurno(); await cargarHistorial(); } catch (error) { aviso(error.message, 'danger'); } });
 document.getElementById('btnActualizar').addEventListener('click', () => Promise.all([cargarTurno(), cargarHistorial()]));
-(async function iniciar() { empresaActual = empresa(); if (!empresaActual.id) { aviso('No hay una empresa activa seleccionada', 'danger'); return; } try { await cargarBodegas(); await cargarTurno(); await cargarHistorial(); } catch (error) { aviso(error.message, 'danger'); } })();
+(async function iniciar() { try { await cargarEmpresaActiva(); await cargarDatos(); } catch (error) { aviso(error.message, 'danger'); } })();
