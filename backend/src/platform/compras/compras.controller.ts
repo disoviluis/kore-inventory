@@ -6,7 +6,7 @@
  */
 
 import { Request, Response } from 'express';
-import { query } from '../../shared/database';
+import { query, withTransaction } from '../../shared/database';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import logger from '../../shared/logger';
 
@@ -162,32 +162,58 @@ export const crearCompra = async (req: Request, res: Response) => {
 
         const total = subtotal + (impuestos || 0) - (descuento || 0);
 
-        // Insertar compra
-        const resultado: any = await query(
-            `INSERT INTO compras (
-                empresa_id, proveedor_id, numero_compra, fecha_compra, 
-                tipo_compra, subtotal, impuestos, descuento, total, 
-                estado, notas, usuario_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, ?)`,
-            [
-                empresaId, proveedorId, numeroCompra, fechaCompra,
-                tipoCompra || 'contado', subtotal, impuestos || 0, descuento || 0, total,
-                notas, usuarioId
-            ]
-        );
+        const tipoCompraFinal = tipoCompra || 'contado';
+        const resultado: any = await withTransaction(async (txQuery) => {
+            const compra: any = await txQuery(
+                `INSERT INTO compras (
+                    empresa_id, proveedor_id, numero_compra, fecha_compra,
+                    tipo_compra, subtotal, impuestos, descuento, total,
+                    estado, notas, usuario_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, ?)`,
+                [
+                    empresaId, proveedorId, numeroCompra, fechaCompra,
+                    tipoCompraFinal, subtotal, impuestos || 0, descuento || 0, total,
+                    notas, usuarioId
+                ]
+            );
+
+            const compraId = compra.insertId;
+            for (const producto of productos) {
+                const subtotalProducto = producto.cantidad * producto.precio_unitario;
+                await txQuery(
+                    `INSERT INTO compras_detalle (
+                        compra_id, producto_id, cantidad, precio_unitario, subtotal
+                    ) VALUES (?, ?, ?, ?, ?)`,
+                    [compraId, producto.producto_id, producto.cantidad, producto.precio_unitario, subtotalProducto]
+                );
+            }
+
+            if (tipoCompraFinal === 'credito') {
+                await txQuery(
+                    `INSERT INTO cuentas_por_pagar (
+                        empresa_id, proveedor_id, compra_id, numero_documento, fecha_emision,
+                        fecha_vencimiento, valor_original, saldo_pendiente, estado
+                    )
+                    SELECT ?, ?, ?, ?, ?,
+                        DATE_ADD(?, INTERVAL COALESCE(NULLIF(p.dias_credito, 0), 30) DAY),
+                        ?, ?, CASE WHEN DATE_ADD(?, INTERVAL COALESCE(NULLIF(p.dias_credito, 0), 30) DAY) < CURDATE()
+                            THEN 'vencida' ELSE 'vigente' END
+                    FROM proveedores p
+                    WHERE p.id = ? AND p.empresa_id = ?
+                      AND NOT EXISTS (
+                          SELECT 1 FROM cuentas_por_pagar cxp WHERE cxp.compra_id = ?
+                      )`,
+                    [
+                        empresaId, proveedorId, compraId, numeroCompra, fechaCompra,
+                        fechaCompra, total, total, fechaCompra, proveedorId, empresaId, compraId
+                    ]
+                );
+            }
+
+            return compra;
+        });
 
         const compraId = resultado.insertId;
-
-        // Insertar detalle de productos
-        for (const producto of productos) {
-            const subtotalProducto = producto.cantidad * producto.precio_unitario;
-            await query(
-                `INSERT INTO compras_detalle (
-                    compra_id, producto_id, cantidad, precio_unitario, subtotal
-                ) VALUES (?, ?, ?, ?, ?)`,
-                [compraId, producto.producto_id, producto.cantidad, producto.precio_unitario, subtotalProducto]
-            );
-        }
 
         return successResponse(res, 'Compra creada exitosamente', { id: compraId }, 201);
 
@@ -377,11 +403,16 @@ export const anularCompra = async (req: Request, res: Response) => {
             return errorResponse(res, 'No se puede anular una compra recibida. Debe hacer un ajuste de inventario.', 400);
         }
 
-        // Anular compra
-        await query(
-            'UPDATE compras SET estado = "anulada" WHERE id = ?',
-            [id]
-        );
+        await withTransaction(async (txQuery) => {
+            await txQuery(
+                'UPDATE compras SET estado = "anulada" WHERE id = ? AND empresa_id = ?',
+                [id, empresaId]
+            );
+            await txQuery(
+                'UPDATE cuentas_por_pagar SET estado = "anulada" WHERE compra_id = ? AND empresa_id = ?',
+                [id, empresaId]
+            );
+        });
 
         return successResponse(res, 'Compra anulada exitosamente', null);
 
