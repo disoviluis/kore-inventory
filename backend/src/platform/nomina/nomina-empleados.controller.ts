@@ -1,6 +1,36 @@
 import { Request, Response } from 'express';
+import nodemailer from 'nodemailer';
 import pool from '../../shared/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+
+const obtenerConfiguracionSmtp = async (empresaId: number): Promise<any | null> => {
+  const [filas] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM configuracion_nomina WHERE empresa_id = ? LIMIT 1',
+    [empresaId]
+  );
+  return filas[0] || null;
+};
+
+const crearTransporterSmtp = (config: any) => {
+  const host = String(config?.smtp_host || '').trim();
+  const user = String(config?.smtp_user || '').trim();
+  const pass = String(config?.smtp_pass || '');
+  const port = Number(config?.smtp_port || 587);
+  const secure = Number(config?.smtp_secure ?? 1) === 1;
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass }
+  });
+};
+
+const validEmail = (email?: string | null): boolean => Boolean((email || '').trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim()));
 
 const obtenerEmpresaId = (req: Request): number => Number(req.query.empresa_id || req.body.empresa_id);
 
@@ -428,7 +458,7 @@ export const listarLiquidaciones = async (req: Request, res: Response): Promise<
   }
   try {
     const [liquidaciones] = await pool.execute<RowDataPacket[]>(
-      `SELECT l.*, e.nombres, e.apellidos, e.numero_documento
+      `SELECT l.*, e.nombres, e.apellidos, e.numero_documento, e.email
        FROM liquidaciones_nomina l INNER JOIN empleados e ON e.id = l.empleado_id
        WHERE l.empresa_id = ? AND l.periodo_id = ? ORDER BY e.apellidos, e.nombres`,
       [empresaId, req.params.periodoId]
@@ -741,11 +771,164 @@ export const obtenerConfiguracionNomina = async (req: Request, res: Response): P
   }
   try {
     const [filas] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM configuracion_nomina WHERE empresa_id = ? LIMIT 1', [empresaId]
+      `SELECT id, empresa_id, salud_empleado_pct, pension_empleado_pct, retencion_fuente_activa, auxilio_transporte_valor,
+              smtp_host, smtp_port, smtp_secure, smtp_user, smtp_from_name, smtp_from_email, smtp_activar,
+              CASE WHEN smtp_pass IS NOT NULL AND smtp_pass <> '' THEN 1 ELSE 0 END AS smtp_pass_configurado,
+              created_at, updated_at
+       FROM configuracion_nomina WHERE empresa_id = ? LIMIT 1`, [empresaId]
     );
     res.json({ success: true, data: filas[0] || null });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Error al obtener configuración', error: error.message });
+  }
+};
+
+export const enviarComprobanteLiquidacion = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id || req.body.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+
+  try {
+    const [liquidaciones] = await pool.execute<RowDataPacket[]>(
+      `SELECT l.*, e.nombres, e.apellidos, e.email, p.nombre AS periodo_nombre, p.fecha_inicio, p.fecha_fin
+       FROM liquidaciones_nomina l
+       INNER JOIN empleados e ON e.id = l.empleado_id
+       INNER JOIN periodos_nomina p ON p.id = l.periodo_id
+       WHERE l.id = ? AND l.empresa_id = ? LIMIT 1`,
+      [req.params.liquidacionId, empresaId]
+    );
+
+    if (!liquidaciones.length) {
+      res.status(404).json({ success: false, message: 'La liquidación no existe' });
+      return;
+    }
+
+    const liquidacion = liquidaciones[0];
+    const destino = String(liquidacion.email || '').trim();
+    if (!validEmail(destino)) {
+      res.status(400).json({ success: false, message: 'El empleado no tiene un correo electrónico válido asociado' });
+      return;
+    }
+
+    const configuracion = await obtenerConfiguracionSmtp(empresaId);
+    if (!configuracion || !Number(configuracion.smtp_activar)) {
+      res.status(400).json({ success: false, message: 'La configuración SMTP de la empresa no está habilitada' });
+      return;
+    }
+
+    const transporter = crearTransporterSmtp(configuracion);
+    if (!transporter) {
+      res.status(400).json({ success: false, message: 'Falta la configuración del correo saliente (SMTP)' });
+      return;
+    }
+
+    const fromName = String(configuracion.smtp_from_name || 'KORE Payroll').trim();
+    const fromEmail = String(configuracion.smtp_from_email || configuracion.smtp_user || 'noreply@localhost').trim();
+    const asunto = `Comprobante de nómina - ${liquidacion.periodo_nombre}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
+        <h2 style="margin-bottom: 16px; color: #111827;">Comprobante de nómina</h2>
+        <p><strong>Empleado:</strong> ${liquidacion.nombres} ${liquidacion.apellidos}</p>
+        <p><strong>Periodo:</strong> ${liquidacion.periodo_nombre} (${liquidacion.fecha_inicio} - ${liquidacion.fecha_fin})</p>
+        <p><strong>Salario base:</strong> $${Number(liquidacion.salario_base || 0).toLocaleString('es-CO')}</p>
+        <p><strong>Total devengado:</strong> $${Number(liquidacion.total_devengado || 0).toLocaleString('es-CO')}</p>
+        <p><strong>Total deducciones:</strong> $${Number(liquidacion.total_deducciones || 0).toLocaleString('es-CO')}</p>
+        <p><strong>Neto a pagar:</strong> <strong>$${Number(liquidacion.neto_pagar || 0).toLocaleString('es-CO')}</strong></p>
+        <p>Este correo se envió automáticamente desde KORE Inventory.</p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: destino,
+      subject: asunto,
+      html
+    });
+
+    res.json({ success: true, message: 'Comprobante enviado correctamente', data: { destinatario: destino } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al enviar el comprobante por correo', error: error.message });
+  }
+};
+
+export const enviarComprobantesPeriodo = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id || req.body.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+
+  try {
+    const configuracion = await obtenerConfiguracionSmtp(empresaId);
+    if (!configuracion || !Number(configuracion.smtp_activar)) {
+      res.status(400).json({ success: false, message: 'La configuración SMTP no está habilitada para esta empresa' });
+      return;
+    }
+
+    const transporter = crearTransporterSmtp(configuracion);
+    if (!transporter) {
+      res.status(400).json({ success: false, message: 'Falta la configuración del correo saliente (SMTP)' });
+      return;
+    }
+
+    const [liquidaciones] = await pool.execute<RowDataPacket[]>(
+      `SELECT l.*, e.nombres, e.apellidos, e.email, p.nombre AS periodo_nombre, p.fecha_inicio, p.fecha_fin
+       FROM liquidaciones_nomina l
+       INNER JOIN empleados e ON e.id = l.empleado_id
+       INNER JOIN periodos_nomina p ON p.id = l.periodo_id
+       WHERE l.empresa_id = ? AND l.periodo_id = ? ORDER BY e.apellidos, e.nombres`,
+      [empresaId, req.params.periodoId]
+    );
+
+    const empleadosConEmail = liquidaciones.filter(liquidacion => validEmail(liquidacion.email));
+    if (!empleadosConEmail.length) {
+      res.status(400).json({ success: false, message: 'No hay empleados con correo electrónico asociado para enviar' });
+      return;
+    }
+
+    const fromName = String(configuracion.smtp_from_name || 'KORE Payroll').trim();
+    const fromEmail = String(configuracion.smtp_from_email || configuracion.smtp_user || 'noreply@localhost').trim();
+    let enviados = 0;
+    let fallidos = 0;
+
+    for (const liquidacion of empleadosConEmail) {
+      const destino = String(liquidacion.email || '').trim();
+      const asunto = `Comprobante de nómina - ${liquidacion.periodo_nombre}`;
+      const html = `
+        <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
+          <h2 style="margin-bottom: 16px; color: #111827;">Comprobante de nómina</h2>
+          <p><strong>Empleado:</strong> ${liquidacion.nombres} ${liquidacion.apellidos}</p>
+          <p><strong>Periodo:</strong> ${liquidacion.periodo_nombre} (${liquidacion.fecha_inicio} - ${liquidacion.fecha_fin})</p>
+          <p><strong>Salario base:</strong> $${Number(liquidacion.salario_base || 0).toLocaleString('es-CO')}</p>
+          <p><strong>Total devengado:</strong> $${Number(liquidacion.total_devengado || 0).toLocaleString('es-CO')}</p>
+          <p><strong>Total deducciones:</strong> $${Number(liquidacion.total_deducciones || 0).toLocaleString('es-CO')}</p>
+          <p><strong>Neto a pagar:</strong> <strong>$${Number(liquidacion.neto_pagar || 0).toLocaleString('es-CO')}</strong></p>
+          <p>Este correo se envió automáticamente desde KORE Inventory.</p>
+        </div>
+      `;
+
+      try {
+        await transporter.sendMail({
+          from: `"${fromName}" <${fromEmail}>`,
+          to: destino,
+          subject: asunto,
+          html
+        });
+        enviados += 1;
+      } catch (error: any) {
+        fallidos += 1;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: fallidos ? `Se enviaron ${enviados} comprobantes y hubo ${fallidos} fallos` : `Se enviaron ${enviados} comprobantes correctamente`,
+      data: { enviados, fallidos, total: empleadosConEmail.length }
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al enviar los comprobantes por correo', error: error.message });
   }
 };
 
@@ -759,15 +942,38 @@ export const actualizarConfiguracionNomina = async (req: Request, res: Response)
   const pension = Number(req.body.pension_empleado_pct);
   const auxilio = Number(req.body.auxilio_transporte_valor || 0);
   const retencion = req.body.retencion_fuente_activa ? 1 : 0;
+  const smtpHost = String(req.body.smtp_host || '').trim();
+  const smtpPort = Number(req.body.smtp_port || 587);
+  const smtpSecure = Number(req.body.smtp_secure ?? 1);
+  const smtpUser = String(req.body.smtp_user || '').trim();
+  const smtpPass = String(req.body.smtp_pass || '');
+  const smtpFromName = String(req.body.smtp_from_name || '').trim();
+  const smtpFromEmail = String(req.body.smtp_from_email || '').trim();
+  const smtpActivar = req.body.smtp_activar ? 1 : 0;
   if (![salud, pension, auxilio].every(Number.isFinite) || salud < 0 || salud > 100 || pension < 0 || pension > 100 || auxilio < 0) {
     res.status(400).json({ success: false, message: 'Los porcentajes y el auxilio deben ser valores válidos' });
     return;
   }
   try {
     await pool.execute(
-      `INSERT INTO configuracion_nomina (empresa_id, salud_empleado_pct, pension_empleado_pct, retencion_fuente_activa, auxilio_transporte_valor)
-       VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE salud_empleado_pct = VALUES(salud_empleado_pct), pension_empleado_pct = VALUES(pension_empleado_pct), retencion_fuente_activa = VALUES(retencion_fuente_activa), auxilio_transporte_valor = VALUES(auxilio_transporte_valor)`,
-      [empresaId, salud, pension, retencion, auxilio]
+      `INSERT INTO configuracion_nomina (
+        empresa_id, salud_empleado_pct, pension_empleado_pct, retencion_fuente_activa, auxilio_transporte_valor,
+        smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_name, smtp_from_email, smtp_activar
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         salud_empleado_pct = VALUES(salud_empleado_pct),
+         pension_empleado_pct = VALUES(pension_empleado_pct),
+         retencion_fuente_activa = VALUES(retencion_fuente_activa),
+         auxilio_transporte_valor = VALUES(auxilio_transporte_valor),
+         smtp_host = VALUES(smtp_host),
+         smtp_port = VALUES(smtp_port),
+         smtp_secure = VALUES(smtp_secure),
+         smtp_user = VALUES(smtp_user),
+         smtp_pass = IF(VALUES(smtp_pass) = '', smtp_pass, VALUES(smtp_pass)),
+         smtp_from_name = VALUES(smtp_from_name),
+         smtp_from_email = VALUES(smtp_from_email),
+         smtp_activar = VALUES(smtp_activar)`,
+      [empresaId, salud, pension, retencion, auxilio, smtpHost || null, smtpPort || 587, smtpSecure, smtpUser || null, smtpPass || '', smtpFromName || null, smtpFromEmail || null, smtpActivar]
     );
     res.json({ success: true, message: 'Configuración actualizada exitosamente' });
   } catch (error: any) {

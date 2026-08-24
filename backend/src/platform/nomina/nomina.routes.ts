@@ -25,8 +25,10 @@ import {
     obtenerConfiguracionNomina,
     actualizarConfiguracionNomina,
     aprobarPeriodo,
-    pagarLiquidacion
-} from './nomina-empleados.controller';
+    pagarLiquidacion,
+    enviarComprobanteLiquidacion,
+    enviarComprobantesPeriodo
+  } from './nomina-empleados.controller';
 
 const router = Router();
 router.use(authMiddleware);
@@ -55,5 +57,7 @@ router.post('/prestamos', requirePermission('nomina_empleados', 'create'), crear
 router.post('/prestamos/:prestamoId/anular', requirePermission('nomina_empleados', 'edit'), anularPrestamo);
 router.get('/configuracion', requirePermission('nomina_periodos', 'view'), obtenerConfiguracionNomina);
 router.put('/configuracion', requirePermission('nomina_periodos', 'edit'), actualizarConfiguracionNomina);
+router.post('/liquidaciones/:liquidacionId/enviar-email', requirePermission('nomina_periodos', 'approve'), enviarComprobanteLiquidacion);
+router.post('/periodos/:periodoId/enviar-comprobantes', requirePermission('nomina_periodos', 'approve'), enviarComprobantesPeriodo);
 
 export default router;
