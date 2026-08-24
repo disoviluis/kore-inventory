@@ -231,6 +231,7 @@ function ocultarSeccionesVacias() {
     { id: 'operacionesCollapse', parentSelector: '[href="#operacionesCollapse"]' },
     { id: 'logisticaCollapse', parentSelector: '[href="#logisticaCollapse"]' },
     { id: 'finanzasCollapse', parentSelector: '[href="#finanzasCollapse"]' },
+    { id: 'nominaCollapse', parentSelector: '[href="#nominaCollapse"]' },
     { id: 'reportesCollapse', parentSelector: '[href="#reportesCollapse"]' }
   ];
   
