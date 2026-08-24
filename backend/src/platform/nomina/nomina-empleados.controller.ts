@@ -1,0 +1,239 @@
+import { Request, Response } from 'express';
+import pool from '../../shared/database';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
+
+const obtenerEmpresaId = (req: Request): number => Number(req.query.empresa_id || req.body.empresa_id);
+
+async function validarEmpresa(req: Request, empresaId: number): Promise<boolean> {
+  const usuario = (req as any).user;
+  if (!usuario || !Number.isInteger(empresaId) || empresaId <= 0) return false;
+  if (usuario.tipo_usuario === 'super_admin') return true;
+  const [empresas] = await pool.execute<RowDataPacket[]>(
+    'SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ? AND activo = 1 LIMIT 1',
+    [usuario.id, empresaId]
+  );
+  return empresas.length > 0;
+}
+
+export const listarEmpleados = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+
+  try {
+    const [empleados] = await pool.execute<RowDataPacket[]>(
+      `SELECT e.*, u.id AS usuario_id, u.email AS usuario_email, u.activo AS usuario_activo,
+              GROUP_CONCAT(DISTINCT b.nombre ORDER BY b.nombre SEPARATOR ', ') AS tiendas
+       FROM empleados e
+       LEFT JOIN usuarios u ON u.empleado_id = e.id
+       LEFT JOIN empleados_bodegas eb ON eb.empleado_id = e.id AND eb.activo = 1
+       LEFT JOIN bodegas b ON b.id = eb.bodega_id
+       WHERE e.empresa_id = ?
+       GROUP BY e.id
+       ORDER BY e.apellidos, e.nombres`,
+      [empresaId]
+    );
+    res.json({ success: true, data: empleados });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener empleados', error: error.message });
+  }
+};
+
+export const obtenerEmpleado = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+
+  try {
+    const [empleados] = await pool.execute<RowDataPacket[]>(
+      `SELECT e.*, u.id AS usuario_id, u.email AS usuario_email, u.activo AS usuario_activo
+       FROM empleados e LEFT JOIN usuarios u ON u.empleado_id = e.id
+       WHERE e.id = ? AND e.empresa_id = ?`,
+      [req.params.id, empresaId]
+    );
+    if (!empleados.length) {
+      res.status(404).json({ success: false, message: 'Empleado no encontrado' });
+      return;
+    }
+    const [tiendas] = await pool.execute<RowDataPacket[]>(
+      `SELECT eb.*, b.nombre, b.tipo FROM empleados_bodegas eb
+       INNER JOIN bodegas b ON b.id = eb.bodega_id
+       WHERE eb.empleado_id = ? AND eb.empresa_id = ? ORDER BY b.nombre`,
+      [req.params.id, empresaId]
+    );
+    const [contratos] = await pool.execute<RowDataPacket[]>(
+      'SELECT * FROM empleados_contratos WHERE empleado_id = ? AND empresa_id = ? ORDER BY fecha_inicio DESC, id DESC',
+      [req.params.id, empresaId]
+    );
+    res.json({ success: true, data: { ...empleados[0], tiendas, contratos } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener empleado', error: error.message });
+  }
+};
+
+export const crearEmpleado = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  const {
+    tipo_documento = 'CC', numero_documento, nombres, apellidos, email, telefono, cargo,
+    fecha_ingreso, salario_base = 0, periodicidad_pago = 'mensual', tipo_vinculacion = 'contrato_indefinido',
+    porcentaje_comision = 0, auxilio_transporte = false, observaciones, bodega_ids = [], fecha_fin_contrato
+  } = req.body;
+  if (!numero_documento || !nombres || !apellidos || !fecha_ingreso) {
+    res.status(400).json({ success: false, message: 'Documento, nombres, apellidos y fecha de ingreso son obligatorios' });
+    return;
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [resultado] = await connection.execute<ResultSetHeader>(
+      `INSERT INTO empleados
+       (empresa_id, tipo_documento, numero_documento, nombres, apellidos, email, telefono, cargo,
+        fecha_ingreso, salario_base, periodicidad_pago, tipo_vinculacion, porcentaje_comision,
+        auxilio_transporte, observaciones)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [empresaId, tipo_documento, numero_documento, nombres, apellidos, email || null, telefono || null,
+        cargo || null, fecha_ingreso, salario_base, periodicidad_pago, tipo_vinculacion,
+        porcentaje_comision, auxilio_transporte ? 1 : 0, observaciones || null]
+    );
+    const empleadoId = resultado.insertId;
+    await connection.execute(
+      `INSERT INTO empleados_contratos
+       (empleado_id, empresa_id, tipo_contrato, cargo, salario_base, porcentaje_comision, fecha_inicio, fecha_fin)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [empleadoId, empresaId, tipo_vinculacion.replace('contrato_', ''), cargo || null, salario_base, porcentaje_comision, fecha_ingreso, fecha_fin_contrato || null]
+    );
+    if (Array.isArray(bodega_ids)) {
+      for (const bodegaId of bodega_ids) {
+        await connection.execute(
+          `INSERT INTO empleados_bodegas (empleado_id, empresa_id, bodega_id, es_principal, fecha_inicio)
+           SELECT ?, ?, b.id, ?, ? FROM bodegas b WHERE b.id = ? AND b.empresa_id = ?`,
+          [empleadoId, empresaId, bodegaId === bodega_ids[0] ? 1 : 0, fecha_ingreso, bodegaId, empresaId]
+        );
+      }
+    }
+    await connection.commit();
+    res.status(201).json({ success: true, message: 'Empleado creado exitosamente', data: { id: empleadoId } });
+  } catch (error: any) {
+    await connection.rollback();
+    const duplicate = error.code === 'ER_DUP_ENTRY';
+    res.status(duplicate ? 400 : 500).json({ success: false, message: duplicate ? 'El documento ya está registrado en esta empresa' : 'Error al crear empleado', error: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+export const actualizarEmpleado = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  const campos = ['nombres', 'apellidos', 'email', 'telefono', 'cargo', 'fecha_ingreso', 'fecha_retiro', 'estado', 'salario_base', 'periodicidad_pago', 'tipo_vinculacion', 'porcentaje_comision', 'auxilio_transporte', 'observaciones'];
+  const updates: string[] = [];
+  const valores: any[] = [];
+  for (const campo of campos) {
+    if (req.body[campo] !== undefined) {
+      updates.push(`${campo} = ?`);
+      valores.push(req.body[campo] === '' ? null : req.body[campo]);
+    }
+  }
+  if (!updates.length) {
+    res.status(400).json({ success: false, message: 'No hay cambios para guardar' });
+    return;
+  }
+  try {
+    valores.push(req.params.id, empresaId);
+    const [resultado] = await pool.execute<ResultSetHeader>(`UPDATE empleados SET ${updates.join(', ')} WHERE id = ? AND empresa_id = ?`, valores);
+    if (!resultado.affectedRows) {
+      res.status(404).json({ success: false, message: 'Empleado no encontrado' });
+      return;
+    }
+    res.json({ success: true, message: 'Empleado actualizado exitosamente' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al actualizar empleado', error: error.message });
+  }
+};
+
+export const vincularUsuario = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  const { usuario_id } = req.body;
+  if (!usuario_id) {
+    res.status(400).json({ success: false, message: 'El usuario_id es obligatorio' });
+    return;
+  }
+  try {
+    const [empleados] = await pool.execute<RowDataPacket[]>('SELECT id FROM empleados WHERE id = ? AND empresa_id = ?', [req.params.id, empresaId]);
+    const [usuarios] = await pool.execute<RowDataPacket[]>(
+      `SELECT u.id FROM usuarios u INNER JOIN usuario_empresa ue ON ue.usuario_id = u.id
+       WHERE u.id = ? AND ue.empresa_id = ? AND ue.activo = 1`, [usuario_id, empresaId]
+    );
+    const [vinculados] = await pool.execute<RowDataPacket[]>('SELECT id FROM usuarios WHERE empleado_id = ? AND id <> ?', [req.params.id, usuario_id]);
+    if (!empleados.length || !usuarios.length) {
+      res.status(404).json({ success: false, message: 'Empleado o usuario no pertenece a la empresa' });
+      return;
+    }
+    if (vinculados.length) {
+      res.status(400).json({ success: false, message: 'El empleado ya tiene otra cuenta vinculada' });
+      return;
+    }
+    const [ocupado] = await pool.execute<RowDataPacket[]>('SELECT id FROM usuarios WHERE empleado_id = ? AND id <> ?', [req.params.id, usuario_id]);
+    if (ocupado.length) {
+      res.status(400).json({ success: false, message: 'El empleado ya tiene una cuenta vinculada' });
+      return;
+    }
+    await pool.execute('UPDATE usuarios SET empleado_id = ? WHERE id = ?', [req.params.id, usuario_id]);
+    res.json({ success: true, message: 'Usuario vinculado al empleado exitosamente' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al vincular usuario', error: error.message });
+  }
+};
+
+export const desvincularUsuario = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [resultado] = await pool.execute<ResultSetHeader>(
+      `UPDATE usuarios u INNER JOIN empleados e ON e.id = u.empleado_id
+       SET u.empleado_id = NULL WHERE u.empleado_id = ? AND e.empresa_id = ?`,
+      [req.params.id, empresaId]
+    );
+    res.json({ success: true, message: resultado.affectedRows ? 'Usuario desvinculado' : 'No había usuario vinculado' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al desvincular usuario', error: error.message });
+  }
+};
+
+export const listarUsuariosDisponibles = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [usuarios] = await pool.execute<RowDataPacket[]>(
+      `SELECT u.id, u.nombre, u.apellido, u.email FROM usuarios u
+       INNER JOIN usuario_empresa ue ON ue.usuario_id = u.id AND ue.empresa_id = ? AND ue.activo = 1
+       WHERE u.activo = 1 AND u.tipo_usuario <> 'super_admin' AND u.empleado_id IS NULL
+       ORDER BY u.nombre, u.apellido`, [empresaId]
+    );
+    res.json({ success: true, data: usuarios });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener usuarios disponibles', error: error.message });
+  }
+};
