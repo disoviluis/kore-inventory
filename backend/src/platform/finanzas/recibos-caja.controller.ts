@@ -27,6 +27,7 @@ export const crearReciboCaja = async (req: Request, res: Response): Promise<Resp
       metodo_pago,
       referencia,
       observaciones,
+      cuenta_bancaria_id,
       detallePagos // Array de { cuenta_por_cobrar_id, valor_aplicado }
     } = req.body;
 
@@ -73,9 +74,10 @@ export const crearReciboCaja = async (req: Request, res: Response): Promise<Resp
         valor_total,
         referencia,
         observaciones,
-        usuario_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [empresaId, clienteId, numeroRecibo, metodo_pago, valor_total, referencia || null, observaciones || null, usuarioId]
+        usuario_id,
+        cuenta_bancaria_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [empresaId, clienteId, numeroRecibo, metodo_pago, valor_total, referencia || null, observaciones || null, usuarioId, cuenta_bancaria_id || null]
     );
 
     const reciboCajaId = reciboResult.insertId;
@@ -150,6 +152,26 @@ export const crearReciboCaja = async (req: Request, res: Response): Promise<Resp
           [cuenta_por_cobrar_id]
         );
       }
+    }
+
+    if (cuenta_bancaria_id && metodo_pago !== 'efectivo') {
+      const cuentasBancarias = await query(
+        'SELECT id, saldo_actual FROM cuentas_bancarias WHERE id = ? AND empresa_id = ? AND activo = 1 FOR UPDATE',
+        [cuenta_bancaria_id, empresaId]
+      );
+      if (cuentasBancarias.length === 0) {
+        await query('ROLLBACK');
+        return errorResponse(res, 'La cuenta bancaria no existe o está inactiva', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+      }
+      const saldoAnterior = Number(cuentasBancarias[0].saldo_actual);
+      const saldoNuevo = saldoAnterior + valor_total;
+      await query(
+        `INSERT INTO movimientos_bancarios
+         (empresa_id, cuenta_bancaria_id, tipo, origen, referencia, descripcion, valor, saldo_anterior, saldo_nuevo, created_by)
+         VALUES (?, ?, 'deposito', 'recibo_caja', ?, ?, ?, ?, ?, ?)`,
+        [empresaId, cuenta_bancaria_id, numeroRecibo, `Cobro a cliente ${clienteId}`, valor_total, saldoAnterior, saldoNuevo, usuarioId]
+      );
+      await query('UPDATE cuentas_bancarias SET saldo_actual = ? WHERE id = ? AND empresa_id = ?', [saldoNuevo, cuenta_bancaria_id, empresaId]);
     }
 
     await query('COMMIT');

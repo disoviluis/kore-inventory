@@ -74,7 +74,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         await Promise.all([
             cargarResumenCartera(),
             cargarCuentasPorCobrar(),
-            cargarClientes()
+            cargarClientes(),
+            cargarCuentasBancarias()
         ]);
 
         // Configurar event listeners
@@ -85,6 +86,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarError('Error al inicializar el módulo');
     }
 });
+
+async function cargarCuentasBancarias() {
+    const selector = document.getElementById('modalCuentaBancaria');
+    if (!selector || !currentEmpresa?.id) return;
+    const response = await fetch(`${API_URL}/finanzas/bancos/cuentas?empresa_id=${currentEmpresa.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) return;
+    const result = await response.json();
+    selector.innerHTML = '<option value="">No aplica / efectivo</option>' +
+        (result.data || []).filter(cuenta => cuenta.activo).map(cuenta =>
+            `<option value="${cuenta.id}">${cuenta.banco} - ${cuenta.nombre}</option>`
+        ).join('');
+}
 
 /**
  * Cargar información del usuario
@@ -732,6 +747,7 @@ async function guardarRecibo() {
     const metodoPago = document.getElementById('modalMetodoPago').value;
     const referencia = document.getElementById('modalReferencia').value;
     const observaciones = document.getElementById('modalObservaciones').value;
+    const cuentaBancariaId = Number(document.getElementById('modalCuentaBancaria')?.value) || null;
 
     if (!clienteId) {
         mostrarError('Debe seleccionar un cliente');
@@ -771,6 +787,7 @@ async function guardarRecibo() {
                 metodo_pago: metodoPago,
                 referencia: referencia || null,
                 observaciones: observaciones || null,
+                cuenta_bancaria_id: cuentaBancariaId,
                 detallePagos: detallePagos
             })
         });

@@ -55,6 +55,17 @@ PREPARE stmt_egreso_cuenta FROM @sql_egreso_cuenta;
 EXECUTE stmt_egreso_cuenta;
 DEALLOCATE PREPARE stmt_egreso_cuenta;
 
+SET @recibo_cuenta_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'recibos_caja' AND COLUMN_NAME = 'cuenta_bancaria_id'
+);
+SET @sql_recibo_cuenta := IF(@recibo_cuenta_exists = 0,
+  'ALTER TABLE recibos_caja ADD COLUMN cuenta_bancaria_id INT NULL AFTER usuario_id',
+  'SELECT 1');
+PREPARE stmt_recibo_cuenta FROM @sql_recibo_cuenta;
+EXECUTE stmt_recibo_cuenta;
+DEALLOCATE PREPARE stmt_recibo_cuenta;
+
 SET @bancos_id := (SELECT id FROM modulos WHERE nombre = 'bancos' LIMIT 1);
 INSERT INTO permisos (modulo_id, accion_id, codigo, descripcion, activo)
 SELECT @bancos_id, a.id, CONCAT('FINANZAS.BANCOS.', UPPER(a.nombre)), CONCAT(a.nombre_mostrar, ' bancos'), 1
