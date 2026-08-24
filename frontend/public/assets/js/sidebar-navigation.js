@@ -38,6 +38,7 @@ const MODULE_MAP = {
   'nomina-periodos.html': 'nomina_periodos',
   'nomina-novedades.html': 'nomina_novedades',
   'nomina-metas.html': 'nomina_metas',
+  'nomina-prestamos.html': 'nomina_empleados',
   
   // REPORTES
   'reportes.html': 'reportes',
@@ -54,6 +55,96 @@ const MODULE_MAP = {
   'licencias': 'licencias',
   'auditoria': 'auditoria'
 };
+
+function isActiveSidebarLink(href) {
+  const currentFile = window.location.pathname.split('/').pop() || 'dashboard.html';
+  const targetFile = String(href || '').split('/').pop().split('#')[0].split('?')[0];
+  return currentFile === targetFile;
+}
+
+function sidebarLink(href, icon, text, extra = '') {
+  const active = isActiveSidebarLink(href) ? ' active' : '';
+  const disabled = href === '#' ? ' disabled' : '';
+  return `<li class="nav-item"><a class="nav-link${active}${disabled}" href="${href}"><i class="bi ${icon}"></i><span>${text}</span>${extra}</a></li>`;
+}
+
+function sidebarSection(id, icon, title, links) {
+  const isOpen = links.some(link => isActiveSidebarLink(link.href));
+  return `
+    <li class="nav-item">
+      <a class="nav-link nav-section" data-bs-toggle="collapse" href="#${id}" role="button" aria-expanded="${isOpen ? 'true' : 'false'}">
+        <i class="bi ${icon}"></i><span>${title}</span><i class="bi bi-chevron-down ms-auto"></i>
+      </a>
+      <div class="collapse${isOpen ? ' show' : ''}" id="${id}">
+        <ul class="nav flex-column submenu">
+          ${links.map(link => sidebarLink(link.href, link.icon, link.text, link.extra || '')).join('')}
+        </ul>
+      </div>
+    </li>`;
+}
+
+function construirSidebarEstandarSiIncompleto() {
+  const sidebarNav = document.querySelector('.sidebar-nav');
+  if (!sidebarNav) return;
+
+  const tieneMenuAgrupado = document.getElementById('operacionesCollapse') && document.getElementById('finanzasCollapse') && document.getElementById('nominaCollapse');
+  if (tieneMenuAgrupado) return;
+
+  sidebarNav.innerHTML = `
+    <ul class="nav flex-column">
+      ${sidebarLink('dashboard.html', 'bi-speedometer2', 'Dashboard')}
+      ${sidebarSection('operacionesCollapse', 'bi-shop', 'OPERACIONES', [
+        { href: 'ventas.html', icon: 'bi-cart-check', text: 'Punto de Venta', extra: '<span class="badge bg-success">POS</span>' },
+        { href: 'ventas-historial.html', icon: 'bi-receipt', text: 'Ventas' },
+        { href: 'clientes.html', icon: 'bi-people', text: 'Clientes' },
+        { href: 'inventario.html', icon: 'bi-box-seam', text: 'Inventario' },
+        { href: 'productos.html', icon: 'bi-tags', text: 'Productos' },
+        { href: 'proveedores.html', icon: 'bi-truck', text: 'Proveedores' },
+        { href: 'compras.html', icon: 'bi-bag-check', text: 'Compras' }
+      ])}
+      ${sidebarSection('logisticaCollapse', 'bi-diagram-3', 'LOGÍSTICA', [
+        { href: 'bodegas.html', icon: 'bi-building', text: 'Bodegas' },
+        { href: 'traslados.html', icon: 'bi-arrow-left-right', text: 'Traslados' },
+        { href: 'mensajeros-dashboard.html', icon: 'bi-truck', text: 'Control Mensajeros' }
+      ])}
+      ${sidebarSection('finanzasCollapse', 'bi-cash-coin', 'FINANZAS', [
+        { href: 'cuentas-por-cobrar.html', icon: 'bi-file-earmark-text', text: 'Cuentas por Cobrar' },
+        { href: 'cuentas-por-pagar.html', icon: 'bi-credit-card', text: 'Cuentas por Pagar' },
+        { href: 'caja.html', icon: 'bi-cash-stack', text: 'Caja' },
+        { href: 'bancos.html', icon: 'bi-bank', text: 'Bancos' },
+        { href: '#', icon: 'bi-receipt-cutoff', text: 'Gastos', extra: '<span class="badge bg-secondary">Próximamente</span>' }
+      ])}
+      ${sidebarSection('nominaCollapse', 'bi-people', 'NÓMINA', [
+        { href: 'nomina-empleados.html', icon: 'bi-person-badge', text: 'Empleados' },
+        { href: 'nomina-periodos.html', icon: 'bi-calendar3', text: 'Periodos y liquidación' },
+        { href: 'nomina-novedades.html', icon: 'bi-clipboard-check', text: 'Novedades' },
+        { href: 'nomina-metas.html', icon: 'bi-bullseye', text: 'Metas y bonos' },
+        { href: 'nomina-prestamos.html', icon: 'bi-cash-coin', text: 'Préstamos y configuración' }
+      ])}
+      ${sidebarSection('reportesCollapse', 'bi-graph-up', 'REPORTES', [
+        { href: 'reportes.html', icon: 'bi-bar-chart', text: 'Reportes' }
+      ])}
+      ${sidebarSection('administracionCollapse', 'bi-gear', 'ADMINISTRACIÓN', [
+        { href: 'dashboard.html#usuarios', icon: 'bi-people-fill', text: 'Usuarios' },
+        { href: 'dashboard.html#roles', icon: 'bi-shield-lock', text: 'Roles' },
+        { href: 'dashboard.html#impuestos', icon: 'bi-percent', text: 'Impuestos' },
+        { href: 'configuracion-general.html', icon: 'bi-building-gear', text: 'Empresa' }
+      ])}
+      <li class="nav-item" id="plataformaSection" style="display: none;">
+        <a class="nav-link nav-section" data-bs-toggle="collapse" href="#plataformaCollapse" role="button" aria-expanded="false">
+          <i class="bi bi-cloud"></i><span>PLATAFORMA</span><i class="bi bi-chevron-down ms-auto"></i>
+        </a>
+        <div class="collapse" id="plataformaCollapse">
+          <ul class="nav flex-column submenu">
+            ${sidebarLink('dashboard.html#empresas', 'bi-building', 'Empresas')}
+            ${sidebarLink('dashboard.html#usuarios', 'bi-person-lines-fill', 'Usuarios Globales')}
+            ${sidebarLink('dashboard.html#planes', 'bi-card-checklist', 'Planes')}
+            <li class="nav-item"><a class="nav-link disabled" href="#"><i class="bi bi-sliders"></i><span>Configuración Global</span></a></li>
+          </ul>
+        </div>
+      </li>
+    </ul>`;
+}
 
 /**
  * Cargar módulos permitidos desde la API
@@ -192,7 +283,7 @@ async function filtrarSidebarPorPermisos() {
     
     if (href && href !== '#') {
       // Extraer nombre de archivo del href
-      const fileName = href.split('/').pop();
+      const fileName = href.split('/').pop().split('#')[0].split('?')[0];
       moduloNombre = MODULE_MAP[fileName];
     } else if (onclick) {
       // Extraer módulo de cambiarModulo('xxx')
@@ -326,6 +417,8 @@ function configurarSidebarAdministracion() {
  */
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🔧 Sidebar Navigation inicializado');
+
+  construirSidebarEstandarSiIncompleto();
   
   // 1. Cargar módulos permitidos desde la API
   await cargarModulosPermitidos();
