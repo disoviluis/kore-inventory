@@ -541,10 +541,12 @@ function initEventListeners() {
     // Event listeners para cambios en configuración de IVA
     const aplicaIVA = document.getElementById('productoAplicaIVA');
     const porcentajeIVA = document.getElementById('productoPorcentajeIVA');
+    const tipoImpuesto = document.getElementById('productoTipoImpuesto');
     const ivaIncluidoSi = document.getElementById('ivaIncluidoSi');
     const ivaIncluidoNo = document.getElementById('ivaIncluidoNo');
     
-    if (aplicaIVA) aplicaIVA.addEventListener('change', calcularMargenes);
+    if (aplicaIVA) aplicaIVA.addEventListener('change', () => { sincronizarCamposIVA(); calcularMargenes(); });
+    if (tipoImpuesto) tipoImpuesto.addEventListener('change', () => { sincronizarCamposIVA(); calcularMargenes(); });
     if (porcentajeIVA) porcentajeIVA.addEventListener('change', calcularMargenes);
     if (ivaIncluidoSi) ivaIncluidoSi.addEventListener('change', calcularMargenes);
     if (ivaIncluidoNo) ivaIncluidoNo.addEventListener('change', calcularMargenes);
@@ -664,6 +666,28 @@ function initEventListeners() {
     });
 }
 
+function sincronizarCamposIVA() {
+    const aplicaIVA = document.getElementById('productoAplicaIVA');
+    const porcentajeIVA = document.getElementById('productoPorcentajeIVA');
+    const tipoImpuesto = document.getElementById('productoTipoImpuesto');
+    const ivaIncluidoNo = document.getElementById('ivaIncluidoNo');
+
+    if (!aplicaIVA || !porcentajeIVA || !tipoImpuesto) return;
+
+    if (['exento', 'excluido'].includes(tipoImpuesto.value)) {
+        aplicaIVA.checked = false;
+    }
+
+    if (!aplicaIVA.checked) {
+        porcentajeIVA.value = '0';
+        if (tipoImpuesto.value === 'gravado') tipoImpuesto.value = 'excluido';
+        if (ivaIncluidoNo) ivaIncluidoNo.checked = true;
+    } else if (tipoImpuesto.value !== 'gravado') {
+        tipoImpuesto.value = 'gravado';
+        if (porcentajeIVA.value === '0') porcentajeIVA.value = '19';
+    }
+}
+
 // ============================================
 // CÁLCULOS DE PRECIOS Y MÁRGENES
 // ============================================
@@ -779,8 +803,9 @@ function abrirModalNuevo() {
     document.getElementById('productoTipo').value = 'producto';
     document.getElementById('productoManejaInventario').value = '1';
     document.getElementById('productoAplicaIVA').checked = false;
-    document.getElementById('productoPorcentajeIVA').value = '19';
-    document.getElementById('productoTipoImpuesto').value = 'IVA';
+    document.getElementById('productoPorcentajeIVA').value = '0';
+    document.getElementById('productoTipoImpuesto').value = 'excluido';
+    document.getElementById('ivaIncluidoNo').checked = true;
     
     // Mostrar sección de inventario
     const seccionInventario = document.getElementById('seccionInventario');
@@ -872,9 +897,10 @@ async function editarProducto(id) {
         document.getElementById('productoPrecioMaximo').value = producto.precio_maximo || '';
         
         // IVA
-        document.getElementById('productoAplicaIVA').checked = producto.aplica_iva === 1;
-        document.getElementById('productoPorcentajeIVA').value = producto.porcentaje_iva || '19';
-        document.getElementById('productoTipoImpuesto').value = producto.tipo_impuesto || 'gravado';
+        const aplicaIvaProducto = producto.aplica_iva === 1 || producto.aplica_iva === true;
+        document.getElementById('productoAplicaIVA').checked = aplicaIvaProducto;
+        document.getElementById('productoPorcentajeIVA').value = aplicaIvaProducto ? (producto.porcentaje_iva || '19') : '0';
+        document.getElementById('productoTipoImpuesto').value = aplicaIvaProducto ? (producto.tipo_impuesto || 'gravado') : (producto.tipo_impuesto || 'excluido');
         
         // IVA Incluido en Precio
         const ivaIncluido = producto.iva_incluido_en_precio === 1 || producto.iva_incluido_en_precio === true;
@@ -942,6 +968,8 @@ async function guardarProducto(e) {
 
     const productoId = document.getElementById('productoId').value;
     const token = localStorage.getItem('token');
+    sincronizarCamposIVA();
+    const aplicaIVAProducto = document.getElementById('productoAplicaIVA').checked;
 
     // NOTA: Se eliminaron las validaciones de jerarquía de precios
     // El administrador tiene libertad total para establecer precios
@@ -968,12 +996,12 @@ async function guardarProducto(e) {
         precio_maximo: parseFloat(document.getElementById('productoPrecioMaximo').value) || null,
         
         // IVA
-        aplica_iva: document.getElementById('productoAplicaIVA').checked ? 1 : 0,
-        porcentaje_iva: document.getElementById('productoAplicaIVA').checked ? 
-            parseFloat(document.getElementById('productoPorcentajeIVA').value) : null,
-        tipo_impuesto: document.getElementById('productoAplicaIVA').checked ? 
-            document.getElementById('productoTipoImpuesto').value : null,
-        iva_incluido_en_precio: document.querySelector('input[name="ivaIncluido"]:checked').value === 'true',
+        aplica_iva: aplicaIVAProducto ? 1 : 0,
+        porcentaje_iva: aplicaIVAProducto ? 
+            parseFloat(document.getElementById('productoPorcentajeIVA').value) : 0,
+        tipo_impuesto: aplicaIVAProducto ? 
+            document.getElementById('productoTipoImpuesto').value : 'excluido',
+        iva_incluido_en_precio: aplicaIVAProducto && document.querySelector('input[name="ivaIncluido"]:checked').value === 'true',
         
         // Inventario
         stock_actual: parseInt(document.getElementById('productoStockActual').value) || 0,
@@ -1361,9 +1389,9 @@ function exportarProductos() {
             'Precio Mínimo': p.precio_minimo || '',
             'Precio Máximo': p.precio_maximo || '',
             'Aplica IVA': p.aplica_iva ? 'Sí' : 'No',
-            'Porcentaje IVA': p.porcentaje_iva || 0,
-            'Tipo Impuesto': p.tipo_impuesto,
-            'IVA Incluido': p.iva_incluido_en_precio ? 'Sí' : 'No',
+            'Porcentaje IVA': p.aplica_iva ? (p.porcentaje_iva || 19) : 0,
+            'Tipo Impuesto': p.aplica_iva ? (p.tipo_impuesto || 'gravado') : (p.tipo_impuesto || 'excluido'),
+            'IVA Incluido': p.aplica_iva && p.iva_incluido_en_precio ? 'Sí' : 'No',
             'Stock Actual': p.stock_actual,
             'Stock Mínimo': p.stock_minimo,
             'Stock Máximo': p.stock_maximo || '',
@@ -1651,11 +1679,19 @@ async function validarProductosImportados(datos) {
             erroresFila.push('Tipo debe ser "producto" o "servicio"');
         }
 
+        let aplicaIVAImport = convertirBoolean(fila['Aplica IVA'], true);
+
         // Validar tipo de impuesto
-        const tipoImpuesto = (fila['Tipo Impuesto'] || 'gravado').toLowerCase();
+        let tipoImpuesto = (fila['Tipo Impuesto'] || (aplicaIVAImport ? 'gravado' : 'excluido')).toString().toLowerCase().trim();
         if (!['gravado', 'exento', 'excluido'].includes(tipoImpuesto)) {
             erroresFila.push('Tipo Impuesto debe ser "gravado", "exento" o "excluido"');
         }
+        if (['exento', 'excluido'].includes(tipoImpuesto)) {
+            aplicaIVAImport = 0;
+        } else if (!aplicaIVAImport) {
+            tipoImpuesto = 'excluido';
+        }
+        const porcentajeIVAImport = aplicaIVAImport ? (parseFloat(fila['Porcentaje IVA']) || 19) : 0;
 
         // Validar estado
         const estado = (fila['Estado'] || 'activo').toLowerCase();
@@ -1703,10 +1739,10 @@ async function validarProductosImportados(datos) {
             precio_distribuidor: parseFloat(fila['Precio Distribuidor']) || null,
             precio_minimo: parseFloat(fila['Precio Mínimo']) || null,
             precio_maximo: parseFloat(fila['Precio Máximo']) || null,
-            aplica_iva: convertirBoolean(fila['Aplica IVA'], true),
-            porcentaje_iva: parseFloat(fila['Porcentaje IVA']) || 19,
+            aplica_iva: aplicaIVAImport,
+            porcentaje_iva: porcentajeIVAImport,
             tipo_impuesto: tipoImpuesto,
-            iva_incluido_en_precio: convertirBoolean(fila['IVA Incluido'], false),
+            iva_incluido_en_precio: aplicaIVAImport ? convertirBoolean(fila['IVA Incluido'], false) : 0,
             stock_actual: parseInt(fila['Stock Actual']) || 0,
             stock_minimo: parseInt(fila['Stock Mínimo']) || 0,
             stock_maximo: parseInt(fila['Stock Máximo']) || null,
@@ -1715,6 +1751,14 @@ async function validarProductosImportados(datos) {
             permite_venta_sin_stock: convertirBoolean(fila['Permite Venta Sin Stock'], false),
             imagen_url: fila['Imagen URL']?.toString().trim() || null,
             estado: estado,
+            cuenta_ingreso: fila['Cuenta Ingreso']?.toString().trim() || null,
+            cuenta_costo: fila['Cuenta Costo']?.toString().trim() || null,
+            cuenta_inventario: fila['Cuenta Inventario']?.toString().trim() || null,
+            cuenta_gasto: fila['Cuenta Gasto']?.toString().trim() || null,
+            en_promocion: convertirBoolean(fila['En Promoción'], false),
+            precio_promocion: parseFloat(fila['Precio Promoción']) || null,
+            promocion_inicio: fila['Promo Inicio']?.toString().trim() || null,
+            promocion_fin: fila['Promo Fin']?.toString().trim() || null,
             empresa_id: currentEmpresa.id,
             _esActualizacion: esActualizacion  // Flag interno para saber si es actualización
         };

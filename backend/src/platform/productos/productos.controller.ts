@@ -12,6 +12,16 @@ import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
 import { createS3PresignedUploadUrl, getS3PublicUrl } from '../../shared/s3';
 
+const toBooleanFlag = (value: any, defaultValue = false): boolean => {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'si', 'sí', 'yes'].includes(normalized)) return true;
+  if (['0', 'false', 'no'].includes(normalized)) return false;
+  return defaultValue;
+};
+
 /**
  * Obtener todos los productos de una empresa
  * GET /api/productos?empresaId=X
@@ -259,7 +269,8 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
     // El administrador tiene libertad total para establecer los precios
 
     // Validación: IVA válido para Colombia
-    const porcIVA = porcentaje_iva !== undefined ? porcentaje_iva : 19.00;
+    const aplicaIvaFlag = toBooleanFlag(aplica_iva, false);
+    const porcIVA = aplicaIvaFlag ? Number(porcentaje_iva ?? 19) : 0;
     if (![0, 5, 19].includes(porcIVA) && porcIVA !== null) {
       logger.info(`IVA no estándar: ${porcIVA}%. Se recomienda 0%, 5% o 19%`);
     }
@@ -332,10 +343,10 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         precio_distribuidor || null,
         precio_minimo || null,
         precio_maximo || null,
-        aplica_iva !== false,
+        aplicaIvaFlag ? 1 : 0,
         porcIVA,
-        tipo_impuesto || 'gravado',
-        req.body.iva_incluido_en_precio || false,
+        aplicaIvaFlag ? (tipo_impuesto || 'gravado') : (tipo_impuesto || 'excluido'),
+        aplicaIvaFlag ? (toBooleanFlag(req.body.iva_incluido_en_precio, false) ? 1 : 0) : 0,
         manejaInv ? (stock_actual || 0) : null,
         manejaInv ? (stock_minimo || 0) : null,
         manejaInv ? (stock_maximo || null) : null,
