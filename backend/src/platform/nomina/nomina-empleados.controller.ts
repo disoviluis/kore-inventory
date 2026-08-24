@@ -319,7 +319,23 @@ export const calcularPeriodo = async (req: Request, res: Response): Promise<void
       const ventasComisionables = Number(ventas[0]?.total || 0);
       const porcentaje = Number(empleado.comision_vigente || 0);
       const comision = Math.round(ventasComisionables * porcentaje) / 100;
-      const totalDevengado = base + comision;
+      const [metas] = await connection.execute<RowDataPacket[]>(
+        `SELECT meta_valor, bono_tipo, bono_valor, porcentaje_minimo
+         FROM metas_nomina
+         WHERE empleado_id = ? AND periodo_id = ? AND tipo = 'ventas' AND estado = 'activa'
+         LIMIT 1`,
+        [empleado.id, periodo.id]
+      );
+      let bonoMeta = 0;
+      if (metas.length && Number(metas[0].meta_valor) > 0) {
+        const cumplimiento = ventasComisionables / Number(metas[0].meta_valor) * 100;
+        if (cumplimiento >= Number(metas[0].porcentaje_minimo || 100)) {
+          bonoMeta = metas[0].bono_tipo === 'porcentaje'
+            ? Math.round(base * Number(metas[0].bono_valor)) / 100
+            : Number(metas[0].bono_valor || 0);
+        }
+      }
+      const totalDevengado = base + comision + bonoMeta;
       const [liquidacion] = await connection.execute<ResultSetHeader>(
         `INSERT INTO liquidaciones_nomina
          (empresa_id, periodo_id, empleado_id, salario_base, total_devengado, neto_pagar,
@@ -329,7 +345,8 @@ export const calcularPeriodo = async (req: Request, res: Response): Promise<void
       );
       const detalle = [
         [liquidacion.insertId, null, 'SALARIO_BASE', 'Salario base', 'devengado', 1, base, 0, base, 'contrato'],
-        [liquidacion.insertId, null, 'COMISION_VENTAS', 'Comision por ventas', 'devengado', ventasComisionables, ventasComisionables, porcentaje, comision, 'ventas']
+        [liquidacion.insertId, null, 'COMISION_VENTAS', 'Comision por ventas', 'devengado', ventasComisionables, ventasComisionables, porcentaje, comision, 'ventas'],
+        ...(bonoMeta > 0 ? [[liquidacion.insertId, null, 'BONO_META', 'Bono por cumplimiento de meta', 'devengado', 1, ventasComisionables, 0, bonoMeta, 'meta']] : [])
       ];
       await connection.query(
         `INSERT INTO liquidaciones_nomina_detalle
@@ -364,5 +381,57 @@ export const listarLiquidaciones = async (req: Request, res: Response): Promise<
     res.json({ success: true, data: liquidaciones });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Error al obtener liquidaciones', error: error.message });
+  }
+};
+
+export const listarMetas = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [metas] = await pool.execute<RowDataPacket[]>(
+      `SELECT m.*, e.nombres, e.apellidos, p.nombre AS periodo_nombre
+       FROM metas_nomina m
+       INNER JOIN empleados e ON e.id = m.empleado_id
+       INNER JOIN periodos_nomina p ON p.id = m.periodo_id
+       WHERE m.empresa_id = ? ORDER BY p.fecha_inicio DESC, e.apellidos, e.nombres`,
+      [empresaId]
+    );
+    res.json({ success: true, data: metas });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener metas', error: error.message });
+  }
+};
+
+export const crearMeta = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  const usuario = (req as any).user;
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  const { empleado_id, periodo_id, tipo = 'ventas', meta_valor, bono_tipo = 'valor', bono_valor = 0, porcentaje_minimo = 100 } = req.body;
+  if (!empleado_id || !periodo_id || !Number(meta_valor) || Number(meta_valor) <= 0) {
+    res.status(400).json({ success: false, message: 'Empleado, periodo y meta válida son obligatorios' });
+    return;
+  }
+  try {
+    const [result] = await pool.execute<ResultSetHeader>(
+      `INSERT INTO metas_nomina (empresa_id, empleado_id, periodo_id, tipo, meta_valor, bono_tipo, bono_valor, porcentaje_minimo, created_by)
+       SELECT ?, e.id, p.id, ?, ?, ?, ?, ?, ?
+       FROM empleados e INNER JOIN periodos_nomina p ON p.id = ? AND p.empresa_id = ?
+       WHERE e.id = ? AND e.empresa_id = ?`,
+      [empresaId, tipo, meta_valor, bono_tipo, bono_valor, porcentaje_minimo, usuario.id, periodo_id, empresaId, empleado_id, empresaId]
+    );
+    if (!result.affectedRows) {
+      res.status(400).json({ success: false, message: 'Empleado o periodo no pertenece a la empresa' });
+      return;
+    }
+    res.status(201).json({ success: true, message: 'Meta creada exitosamente', data: { id: result.insertId } });
+  } catch (error: any) {
+    const duplicate = error.code === 'ER_DUP_ENTRY';
+    res.status(duplicate ? 400 : 500).json({ success: false, message: duplicate ? 'Ya existe una meta de este tipo para el empleado y periodo' : 'Error al crear meta', error: error.message });
   }
 };

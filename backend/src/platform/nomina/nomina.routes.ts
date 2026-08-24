@@ -13,6 +13,8 @@ import {
   crearPeriodo,
   calcularPeriodo,
   listarLiquidaciones
+  ,listarMetas,
+  crearMeta
 } from './nomina-empleados.controller';
 
 const router = Router();
@@ -29,5 +31,7 @@ router.get('/periodos', requirePermission('nomina_periodos', 'view'), listarPeri
 router.post('/periodos', requirePermission('nomina_periodos', 'create'), crearPeriodo);
 router.post('/periodos/:periodoId/calcular', requirePermission('nomina_periodos', 'approve'), calcularPeriodo);
 router.get('/periodos/:periodoId/liquidaciones', requirePermission('nomina_periodos', 'view'), listarLiquidaciones);
+router.get('/metas', requirePermission('nomina_metas', 'view'), listarMetas);
+router.post('/metas', requirePermission('nomina_metas', 'create'), crearMeta);
 
 export default router;
