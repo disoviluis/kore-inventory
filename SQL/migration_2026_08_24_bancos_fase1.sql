@@ -44,6 +44,17 @@ CREATE TABLE IF NOT EXISTS movimientos_bancarios (
   CONSTRAINT fk_movimiento_conciliado_por FOREIGN KEY (conciliado_por) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+SET @egreso_cuenta_exists := (
+  SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'comprobantes_egreso' AND COLUMN_NAME = 'cuenta_bancaria_id'
+);
+SET @sql_egreso_cuenta := IF(@egreso_cuenta_exists = 0,
+  'ALTER TABLE comprobantes_egreso ADD COLUMN cuenta_bancaria_id INT NULL AFTER usuario_id',
+  'SELECT 1');
+PREPARE stmt_egreso_cuenta FROM @sql_egreso_cuenta;
+EXECUTE stmt_egreso_cuenta;
+DEALLOCATE PREPARE stmt_egreso_cuenta;
+
 SET @bancos_id := (SELECT id FROM modulos WHERE nombre = 'bancos' LIMIT 1);
 INSERT INTO permisos (modulo_id, accion_id, codigo, descripcion, activo)
 SELECT @bancos_id, a.id, CONCAT('FINANZAS.BANCOS.', UPPER(a.nombre)), CONCAT(a.nombre_mostrar, ' bancos'), 1

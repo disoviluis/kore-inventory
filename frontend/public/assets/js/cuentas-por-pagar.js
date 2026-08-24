@@ -87,7 +87,17 @@ async function cargarEmpresas() {
 }
 
 async function recargarModulo() {
-    await Promise.all([cargarResumen(), cargarCuentas(), cargarProveedores()]);
+    await Promise.all([cargarResumen(), cargarCuentas(), cargarProveedores(), cargarCuentasBancarias()]);
+}
+
+async function cargarCuentasBancarias() {
+    const result = await apiFetch(`/finanzas/bancos/cuentas?empresa_id=${currentEmpresa.id}`);
+    const selector = document.getElementById('pagoCuentaBancaria');
+    if (!selector) return;
+    selector.innerHTML = '<option value="">No aplica / efectivo</option>' +
+        (result.data || []).filter(cuenta => cuenta.activo).map(cuenta =>
+            `<option value="${cuenta.id}">${escapeHtml(cuenta.banco)} - ${escapeHtml(cuenta.nombre)} (${formatearMoneda(cuenta.saldo_actual)})</option>`
+        ).join('');
 }
 
 async function cargarResumen() {
@@ -236,7 +246,7 @@ async function guardarPago() {
     try {
         const result = await apiFetch('/finanzas/comprobantes-egreso', {
             method: 'POST',
-            body: JSON.stringify({ empresaId: currentEmpresa.id, proveedorId, metodo_pago: document.getElementById('pagoMetodo').value, referencia: document.getElementById('pagoReferencia').value.trim(), observaciones: document.getElementById('pagoObservaciones').value.trim(), detallePagos })
+            body: JSON.stringify({ empresaId: currentEmpresa.id, proveedorId, metodo_pago: document.getElementById('pagoMetodo').value, cuenta_bancaria_id: Number(document.getElementById('pagoCuentaBancaria').value) || null, referencia: document.getElementById('pagoReferencia').value.trim(), observaciones: document.getElementById('pagoObservaciones').value.trim(), detallePagos })
         });
         modalPago.hide();
         mostrarAlerta(`Pago registrado: ${result.data.numero_comprobante}`, 'success');

@@ -186,7 +186,7 @@ export const crearComprobanteEgreso = async (req: Request, res: Response): Promi
     const empresaId = await responderAccesoEmpresa(req, res);
     if (typeof empresaId !== 'number') return empresaId;
 
-    const { proveedorId, metodo_pago, referencia, observaciones, detallePagos } = req.body;
+    const { proveedorId, metodo_pago, referencia, observaciones, detallePagos, cuenta_bancaria_id } = req.body;
     const usuarioId = (req as any).user?.id;
     if (!Number.isInteger(Number(proveedorId)) || !metodo_pago || !Array.isArray(detallePagos) || detallePagos.length === 0) {
       return errorResponse(res, 'Datos incompletos para registrar el pago', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
@@ -226,10 +226,28 @@ export const crearComprobanteEgreso = async (req: Request, res: Response): Promi
       const comprobante = await txQuery(
         `INSERT INTO comprobantes_egreso
           (empresa_id, proveedor_id, numero_comprobante, fecha_pago, valor_total,
-           metodo_pago, referencia, observaciones, usuario_id)
-         VALUES (?, ?, ?, CURDATE(), ?, ?, ?, ?, ?)`,
-        [empresaId, proveedorId, numeroComprobante, valorTotal, metodo_pago, referencia || null, observaciones || null, usuarioId]
+           metodo_pago, referencia, observaciones, usuario_id, cuenta_bancaria_id)
+         VALUES (?, ?, ?, CURDATE(), ?, ?, ?, ?, ?, ?)`,
+        [empresaId, proveedorId, numeroComprobante, valorTotal, metodo_pago, referencia || null, observaciones || null, usuarioId, cuenta_bancaria_id || null]
       );
+
+      if (cuenta_bancaria_id && metodo_pago !== 'efectivo') {
+        const cuentasBancarias = await txQuery(
+          'SELECT id, saldo_actual FROM cuentas_bancarias WHERE id = ? AND empresa_id = ? AND activo = 1 FOR UPDATE',
+          [cuenta_bancaria_id, empresaId]
+        );
+        if (cuentasBancarias.length === 0) throw new Error('La cuenta bancaria no existe o está inactiva');
+        const saldoAnterior = Number(cuentasBancarias[0].saldo_actual);
+        const saldoNuevo = saldoAnterior - valorTotal;
+        if (saldoNuevo < 0) throw new Error('El pago dejaría la cuenta bancaria en saldo negativo');
+        await txQuery(
+          `INSERT INTO movimientos_bancarios
+           (empresa_id, cuenta_bancaria_id, tipo, origen, referencia, descripcion, valor, saldo_anterior, saldo_nuevo, created_by)
+           VALUES (?, ?, 'retiro', 'pago_proveedor', ?, ?, ?, ?, ?, ?)`,
+          [empresaId, cuenta_bancaria_id, numeroComprobante, `Pago a proveedor ${proveedorId}`, valorTotal, saldoAnterior, saldoNuevo, usuarioId]
+        );
+        await txQuery('UPDATE cuentas_bancarias SET saldo_actual = ? WHERE id = ? AND empresa_id = ?', [saldoNuevo, cuenta_bancaria_id, empresaId]);
+      }
 
       for (const aplicacion of aplicaciones) {
         await txQuery(
