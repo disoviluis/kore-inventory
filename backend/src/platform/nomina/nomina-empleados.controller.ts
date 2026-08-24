@@ -435,3 +435,71 @@ export const crearMeta = async (req: Request, res: Response): Promise<void> => {
     res.status(duplicate ? 400 : 500).json({ success: false, message: duplicate ? 'Ya existe una meta de este tipo para el empleado y periodo' : 'Error al crear meta', error: error.message });
   }
 };
+
+export const listarConceptos = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [conceptos] = await pool.execute<RowDataPacket[]>(
+      `SELECT * FROM conceptos_nomina WHERE activo = 1 AND (empresa_id = ? OR empresa_id IS NULL)
+       ORDER BY empresa_id IS NULL DESC, nombre`, [empresaId]
+    );
+    res.json({ success: true, data: conceptos });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener conceptos', error: error.message });
+  }
+};
+
+export const listarNovedades = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [novedades] = await pool.execute<RowDataPacket[]>(
+      `SELECT n.*, e.nombres, e.apellidos, c.nombre AS concepto_nombre, c.tipo AS concepto_tipo,
+              p.nombre AS periodo_nombre
+       FROM novedades_nomina n INNER JOIN empleados e ON e.id = n.empleado_id
+       INNER JOIN conceptos_nomina c ON c.id = n.concepto_id
+       LEFT JOIN periodos_nomina p ON p.id = n.periodo_id
+       WHERE n.empresa_id = ? ORDER BY n.fecha DESC, n.id DESC`, [empresaId]
+    );
+    res.json({ success: true, data: novedades });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener novedades', error: error.message });
+  }
+};
+
+export const crearNovedad = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  const usuario = (req as any).user;
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  const { empleado_id, periodo_id, concepto_id, fecha, cantidad = 1, valor = 0, descripcion } = req.body;
+  if (!empleado_id || !concepto_id || !fecha || Number(valor) <= 0) {
+    res.status(400).json({ success: false, message: 'Empleado, concepto, fecha y valor positivo son obligatorios' });
+    return;
+  }
+  try {
+    const [result] = await pool.execute<ResultSetHeader>(
+      `INSERT INTO novedades_nomina (empresa_id, empleado_id, periodo_id, concepto_id, fecha, cantidad, valor, descripcion, created_by)
+       SELECT ?, e.id, ?, c.id, ?, ?, ?, ?, ?
+       FROM empleados e INNER JOIN conceptos_nomina c ON c.id = ? AND (c.empresa_id = ? OR c.empresa_id IS NULL)
+       WHERE e.id = ? AND e.empresa_id = ?`,
+      [empresaId, periodo_id || null, fecha, cantidad, valor, descripcion || null, usuario.id, concepto_id, empresaId, empleado_id, empresaId]
+    );
+    if (!result.affectedRows) {
+      res.status(400).json({ success: false, message: 'Empleado o concepto no pertenece a la empresa' });
+      return;
+    }
+    res.status(201).json({ success: true, message: 'Novedad registrada exitosamente', data: { id: result.insertId } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al registrar novedad', error: error.message });
+  }
+};

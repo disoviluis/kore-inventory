@@ -14,7 +14,10 @@ import {
   calcularPeriodo,
   listarLiquidaciones
   ,listarMetas,
-  crearMeta
+    crearMeta,
+    listarConceptos,
+    listarNovedades,
+    crearNovedad
 } from './nomina-empleados.controller';
 
 const router = Router();
@@ -33,5 +36,8 @@ router.post('/periodos/:periodoId/calcular', requirePermission('nomina_periodos'
 router.get('/periodos/:periodoId/liquidaciones', requirePermission('nomina_periodos', 'view'), listarLiquidaciones);
 router.get('/metas', requirePermission('nomina_metas', 'view'), listarMetas);
 router.post('/metas', requirePermission('nomina_metas', 'create'), crearMeta);
+router.get('/conceptos', requirePermission('nomina_novedades', 'view'), listarConceptos);
+router.get('/novedades', requirePermission('nomina_novedades', 'view'), listarNovedades);
+router.post('/novedades', requirePermission('nomina_novedades', 'create'), crearNovedad);
 
 export default router;

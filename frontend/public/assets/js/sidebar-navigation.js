@@ -35,6 +35,7 @@ const MODULE_MAP = {
   'caja.html': 'caja',
   'nomina-empleados.html': 'nomina_empleados',
   'nomina-periodos.html': 'nomina_periodos',
+  'nomina-novedades.html': 'nomina_novedades',
   
   // REPORTES
   'reportes.html': 'reportes',
