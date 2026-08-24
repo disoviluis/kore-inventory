@@ -87,23 +87,6 @@ function construirSidebarEstandarSiIncompleto() {
   const sidebarNav = document.querySelector('.sidebar-nav');
   if (!sidebarNav) return;
 
-  const enlacesEsperados = [
-    'ventas.html',
-    'ventas-historial.html',
-    'cuentas-por-cobrar.html',
-    'cuentas-por-pagar.html',
-    'caja.html',
-    'bancos.html',
-    'nomina-empleados.html',
-    'nomina-periodos.html',
-    'nomina-novedades.html',
-    'nomina-metas.html',
-    'nomina-prestamos.html'
-  ];
-  const tieneTodasLasOpciones = enlacesEsperados.every(href => sidebarNav.querySelector(`a[href="${href}"]`));
-  const tieneSeccionesBase = document.getElementById('operacionesCollapse') && document.getElementById('finanzasCollapse') && document.getElementById('nominaCollapse');
-  if (tieneSeccionesBase && tieneTodasLasOpciones) return;
-
   sidebarNav.innerHTML = `
     <ul class="nav flex-column">
       ${sidebarLink('dashboard.html', 'bi-speedometer2', 'Dashboard')}
