@@ -237,3 +237,132 @@ export const listarUsuariosDisponibles = async (req: Request, res: Response): Pr
     res.status(500).json({ success: false, message: 'Error al obtener usuarios disponibles', error: error.message });
   }
 };
+
+export const listarPeriodos = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [periodos] = await pool.execute<RowDataPacket[]>(
+      `SELECT p.*, COUNT(l.id) AS liquidaciones
+       FROM periodos_nomina p
+       LEFT JOIN liquidaciones_nomina l ON l.periodo_id = p.id
+       WHERE p.empresa_id = ? GROUP BY p.id ORDER BY p.fecha_inicio DESC`,
+      [empresaId]
+    );
+    res.json({ success: true, data: periodos });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener periodos', error: error.message });
+  }
+};
+
+export const crearPeriodo = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  const usuario = (req as any).user;
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  const { nombre, fecha_inicio, fecha_fin, fecha_pago, periodicidad = 'mensual' } = req.body;
+  if (!nombre || !fecha_inicio || !fecha_fin || fecha_inicio > fecha_fin) {
+    res.status(400).json({ success: false, message: 'Nombre y fechas válidas son obligatorios' });
+    return;
+  }
+  try {
+    const [result] = await pool.execute<ResultSetHeader>(
+      `INSERT INTO periodos_nomina (empresa_id, nombre, fecha_inicio, fecha_fin, fecha_pago, periodicidad, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [empresaId, nombre, fecha_inicio, fecha_fin, fecha_pago || null, periodicidad, usuario.id]
+    );
+    res.status(201).json({ success: true, message: 'Periodo creado exitosamente', data: { id: result.insertId } });
+  } catch (error: any) {
+    const duplicate = error.code === 'ER_DUP_ENTRY';
+    res.status(duplicate ? 400 : 500).json({ success: false, message: duplicate ? 'Ya existe un periodo con esas fechas' : 'Error al crear periodo', error: error.message });
+  }
+};
+
+export const calcularPeriodo = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  const usuario = (req as any).user;
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [periodos] = await connection.execute<RowDataPacket[]>(
+      'SELECT * FROM periodos_nomina WHERE id = ? AND empresa_id = ? FOR UPDATE',
+      [req.params.periodoId, empresaId]
+    );
+    if (!periodos.length) throw new Error('Periodo no encontrado');
+    if (['aprobado', 'pagado', 'cerrado'].includes(periodos[0].estado)) throw new Error('El periodo ya no se puede recalcular');
+    const periodo = periodos[0];
+    const [empleados] = await connection.execute<RowDataPacket[]>(
+      `SELECT e.*, COALESCE(c.salario_base, e.salario_base) AS salario_vigente,
+              COALESCE(c.porcentaje_comision, e.porcentaje_comision) AS comision_vigente
+       FROM empleados e LEFT JOIN empleados_contratos c ON c.empleado_id = e.id AND c.estado = 'activo'
+       WHERE e.empresa_id = ? AND e.estado = 'activo' GROUP BY e.id`, [empresaId]
+    );
+    await connection.execute('DELETE FROM liquidaciones_nomina_detalle WHERE liquidacion_id IN (SELECT id FROM liquidaciones_nomina WHERE periodo_id = ?)', [periodo.id]);
+    await connection.execute('DELETE FROM liquidaciones_nomina WHERE periodo_id = ?', [periodo.id]);
+    for (const empleado of empleados) {
+      const [ventas] = await connection.execute<RowDataPacket[]>(
+        `SELECT COALESCE(SUM(v.total), 0) AS total
+         FROM ventas v INNER JOIN usuarios u ON u.id = v.vendedor_id AND u.empleado_id = ?
+         WHERE v.empresa_id = ? AND DATE(v.fecha_venta) BETWEEN ? AND ? AND v.estado <> 'anulada'`,
+        [empleado.id, empresaId, periodo.fecha_inicio, periodo.fecha_fin]
+      );
+      const base = Number(empleado.salario_vigente || 0) * (periodo.periodicidad === 'quincenal' ? 0.5 : periodo.periodicidad === 'semanal' ? 0.25 : 1);
+      const ventasComisionables = Number(ventas[0]?.total || 0);
+      const porcentaje = Number(empleado.comision_vigente || 0);
+      const comision = Math.round(ventasComisionables * porcentaje) / 100;
+      const totalDevengado = base + comision;
+      const [liquidacion] = await connection.execute<ResultSetHeader>(
+        `INSERT INTO liquidaciones_nomina
+         (empresa_id, periodo_id, empleado_id, salario_base, total_devengado, neto_pagar,
+          ventas_comisionables, porcentaje_comision, calculated_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [empresaId, periodo.id, empleado.id, base, totalDevengado, totalDevengado, ventasComisionables, porcentaje, usuario.id]
+      );
+      const detalle = [
+        [liquidacion.insertId, null, 'SALARIO_BASE', 'Salario base', 'devengado', 1, base, 0, base, 'contrato'],
+        [liquidacion.insertId, null, 'COMISION_VENTAS', 'Comision por ventas', 'devengado', ventasComisionables, ventasComisionables, porcentaje, comision, 'ventas']
+      ];
+      await connection.query(
+        `INSERT INTO liquidaciones_nomina_detalle
+         (liquidacion_id, concepto_id, codigo, nombre, tipo, cantidad, base, tasa, valor, origen) VALUES ?`,
+        [detalle]
+      );
+    }
+    await connection.execute("UPDATE periodos_nomina SET estado = 'calculado' WHERE id = ?", [periodo.id]);
+    await connection.commit();
+    res.json({ success: true, message: 'Periodo calculado exitosamente', data: { empleados: empleados.length } });
+  } catch (error: any) {
+    await connection.rollback();
+    res.status(error.message === 'Periodo no encontrado' ? 404 : 400).json({ success: false, message: error.message || 'Error al calcular periodo' });
+  } finally {
+    connection.release();
+  }
+};
+
+export const listarLiquidaciones = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [liquidaciones] = await pool.execute<RowDataPacket[]>(
+      `SELECT l.*, e.nombres, e.apellidos, e.numero_documento
+       FROM liquidaciones_nomina l INNER JOIN empleados e ON e.id = l.empleado_id
+       WHERE l.empresa_id = ? AND l.periodo_id = ? ORDER BY e.apellidos, e.nombres`,
+      [empresaId, req.params.periodoId]
+    );
+    res.json({ success: true, data: liquidaciones });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener liquidaciones', error: error.message });
+  }
+};
