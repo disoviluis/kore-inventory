@@ -300,6 +300,16 @@ export const calcularPeriodo = async (req: Request, res: Response): Promise<void
     if (!periodos.length) throw new Error('Periodo no encontrado');
     if (['aprobado', 'pagado', 'cerrado'].includes(periodos[0].estado)) throw new Error('El periodo ya no se puede recalcular');
     const periodo = periodos[0];
+    const [configuraciones] = await connection.execute<RowDataPacket[]>(
+      `SELECT salud_empleado_pct, pension_empleado_pct, retencion_fuente_activa
+       FROM configuracion_nomina WHERE empresa_id = ? LIMIT 1`,
+      [empresaId]
+    );
+    const configuracion = configuraciones[0] || {
+      salud_empleado_pct: 4,
+      pension_empleado_pct: 4,
+      retencion_fuente_activa: 0
+    };
     const [empleados] = await connection.execute<RowDataPacket[]>(
       `SELECT e.*, COALESCE(c.salario_base, e.salario_base) AS salario_vigente,
               COALESCE(c.porcentaje_comision, e.porcentaje_comision) AS comision_vigente
@@ -351,13 +361,31 @@ export const calcularPeriodo = async (req: Request, res: Response): Promise<void
       const totalNovedadesDevengadas = novedadesDevengadas.reduce((total, novedad) => total + Number(novedad.valor || 0), 0);
       const totalDeducciones = novedadesDeducciones.reduce((total, novedad) => total + Number(novedad.valor || 0), 0);
       const totalDevengado = base + comision + bonoMeta + totalNovedadesDevengadas;
-      const netoPagar = totalDevengado - totalDeducciones;
+      const aplicaSeguridadSocial = !['prestacion_servicios', 'aprendiz'].includes(empleado.tipo_vinculacion);
+      const salud = aplicaSeguridadSocial ? Math.round(base * Number(configuracion.salud_empleado_pct) / 100) : 0;
+      const pension = aplicaSeguridadSocial ? Math.round(base * Number(configuracion.pension_empleado_pct) / 100) : 0;
+      const retencion = configuracion.retencion_fuente_activa ? 0 : 0;
+      const deduccionesLegales = salud + pension + retencion;
+      const [prestamos] = await connection.execute<RowDataPacket[]>(
+        `SELECT id, tipo, descripcion, saldo_pendiente, cuota_periodica
+         FROM prestamos_empleados
+         WHERE empleado_id = ? AND empresa_id = ? AND estado = 'activo' AND saldo_pendiente > 0
+         ORDER BY id`,
+        [empleado.id, empresaId]
+      );
+      const descuentosPrestamos: Array<any> = prestamos.map((prestamo: any) => ({
+        ...prestamo,
+        valor: Math.min(Number(prestamo.cuota_periodica), Number(prestamo.saldo_pendiente))
+      }));
+      const totalPrestamos = descuentosPrestamos.reduce((total, prestamo) => total + prestamo.valor, 0);
+      const deduccionesTotales = totalDeducciones + deduccionesLegales + totalPrestamos;
+      const netoPagar = totalDevengado - deduccionesTotales;
       const [liquidacion] = await connection.execute<ResultSetHeader>(
         `INSERT INTO liquidaciones_nomina
          (empresa_id, periodo_id, empleado_id, salario_base, total_devengado, total_deducciones, neto_pagar,
           ventas_comisionables, porcentaje_comision, calculated_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
-        [empresaId, periodo.id, empleado.id, base, totalDevengado, totalDeducciones, netoPagar, ventasComisionables, porcentaje, usuario.id]
+        [empresaId, periodo.id, empleado.id, base, totalDevengado, deduccionesTotales, netoPagar, ventasComisionables, porcentaje, usuario.id]
       );
       const detalle = [
         [liquidacion.insertId, null, 'SALARIO_BASE', 'Salario base', 'devengado', 1, base, 0, base, 'contrato'],
@@ -366,6 +394,13 @@ export const calcularPeriodo = async (req: Request, res: Response): Promise<void
         ...novedades.map(novedad => [
           liquidacion.insertId, novedad.concepto_id, novedad.codigo, novedad.nombre,
           novedad.tipo, novedad.cantidad, novedad.valor, 0, novedad.valor, 'novedad'
+        ]),
+        ...(salud > 0 ? [[liquidacion.insertId, null, 'SALUD_EMPLEADO', 'Salud empleado', 'deduccion', 1, base, Number(configuracion.salud_empleado_pct), salud, 'legal']] : []),
+        ...(pension > 0 ? [[liquidacion.insertId, null, 'PENSION_EMPLEADO', 'Pension empleado', 'deduccion', 1, base, Number(configuracion.pension_empleado_pct), pension, 'legal']] : []),
+        ...(retencion > 0 ? [[liquidacion.insertId, null, 'RETENCION_FUENTE', 'Retencion en la fuente', 'deduccion', 1, totalDevengado, 0, retencion, 'legal']] : []),
+        ...descuentosPrestamos.map(prestamo => [
+          liquidacion.insertId, null, prestamo.tipo === 'anticipo' ? 'ANTICIPO_CUOTA' : 'PRESTAMO_CUOTA',
+          prestamo.descripcion, 'deduccion', 1, prestamo.saldo_pendiente, 0, prestamo.valor, 'prestamo'
         ])
       ];
       await connection.query(
