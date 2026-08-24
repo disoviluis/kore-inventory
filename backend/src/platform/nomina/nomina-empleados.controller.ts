@@ -474,6 +474,88 @@ export const listarNovedades = async (req: Request, res: Response): Promise<void
   }
 };
 
+export const aprobarPeriodo = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id || req.body.empresa_id);
+  const usuario = (req as any).user;
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [resultado] = await pool.execute<ResultSetHeader>(
+      `UPDATE periodos_nomina SET estado = 'aprobado', approved_by = ?, approved_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND empresa_id = ? AND estado = 'calculado'`,
+      [usuario.id, req.params.periodoId, empresaId]
+    );
+    if (!resultado.affectedRows) {
+      res.status(400).json({ success: false, message: 'El periodo no está calculado o ya fue aprobado' });
+      return;
+    }
+    await pool.execute(
+      `UPDATE liquidaciones_nomina SET estado = 'aprobada', approved_by = ?, approved_at = CURRENT_TIMESTAMP
+       WHERE periodo_id = ? AND empresa_id = ? AND estado = 'calculada'`,
+      [usuario.id, req.params.periodoId, empresaId]
+    );
+    res.json({ success: true, message: 'Periodo aprobado exitosamente' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al aprobar periodo', error: error.message });
+  }
+};
+
+export const pagarLiquidacion = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id || req.body.empresa_id);
+  const usuario = (req as any).user;
+  const { cuenta_bancaria_id, referencia_pago } = req.body;
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  if (!cuenta_bancaria_id) {
+    res.status(400).json({ success: false, message: 'Selecciona una cuenta bancaria para pagar la liquidación' });
+    return;
+  }
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [liquidaciones] = await connection.execute<RowDataPacket[]>(
+      `SELECT l.*, e.nombres, e.apellidos FROM liquidaciones_nomina l
+       INNER JOIN empleados e ON e.id = l.empleado_id
+       WHERE l.id = ? AND l.empresa_id = ? AND l.estado = 'aprobada' FOR UPDATE`,
+      [req.params.liquidacionId, empresaId]
+    );
+    if (!liquidaciones.length) throw new Error('La liquidación no existe o no está aprobada');
+    const liquidacion = liquidaciones[0];
+    const [cuentas] = await connection.execute<RowDataPacket[]>(
+      'SELECT id, saldo_actual FROM cuentas_bancarias WHERE id = ? AND empresa_id = ? AND activo = 1 FOR UPDATE',
+      [cuenta_bancaria_id, empresaId]
+    );
+    if (!cuentas.length) throw new Error('La cuenta bancaria no existe o está inactiva');
+    const saldoAnterior = Number(cuentas[0].saldo_actual);
+    const saldoNuevo = saldoAnterior - Number(liquidacion.neto_pagar);
+    if (saldoNuevo < 0) throw new Error('El pago dejaría la cuenta bancaria en saldo negativo');
+    const referencia = referencia_pago || `NOM-${liquidacion.id}`;
+    await connection.execute(
+      `INSERT INTO movimientos_bancarios
+       (empresa_id, cuenta_bancaria_id, tipo, origen, referencia, descripcion, valor, saldo_anterior, saldo_nuevo, created_by)
+       VALUES (?, ?, 'retiro', 'nomina', ?, ?, ?, ?, ?, ?)`,
+      [empresaId, cuenta_bancaria_id, referencia, `Pago nómina ${liquidacion.nombres} ${liquidacion.apellidos}`, liquidacion.neto_pagar, saldoAnterior, saldoNuevo, usuario.id]
+    );
+    await connection.execute('UPDATE cuentas_bancarias SET saldo_actual = ? WHERE id = ? AND empresa_id = ?', [saldoNuevo, cuenta_bancaria_id, empresaId]);
+    await connection.execute(
+      `UPDATE liquidaciones_nomina SET estado = 'pagada', cuenta_bancaria_id = ?, referencia_pago = ?, paid_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND empresa_id = ?`,
+      [cuenta_bancaria_id, referencia, liquidacion.id, empresaId]
+    );
+    await connection.commit();
+    res.json({ success: true, message: 'Liquidación pagada exitosamente', data: { saldo_nuevo: saldoNuevo, referencia } });
+  } catch (error: any) {
+    await connection.rollback();
+    res.status(400).json({ success: false, message: error.message || 'Error al pagar liquidación' });
+  } finally {
+    connection.release();
+  }
+};
+
 export const crearNovedad = async (req: Request, res: Response): Promise<void> => {
   const empresaId = obtenerEmpresaId(req);
   const usuario = (req as any).user;
