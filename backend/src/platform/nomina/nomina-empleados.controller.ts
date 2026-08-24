@@ -335,18 +335,38 @@ export const calcularPeriodo = async (req: Request, res: Response): Promise<void
             : Number(metas[0].bono_valor || 0);
         }
       }
-      const totalDevengado = base + comision + bonoMeta;
+      const [novedades] = await connection.execute<RowDataPacket[]>(
+        `SELECT n.id, n.cantidad, n.valor, n.descripcion, c.id AS concepto_id,
+                c.codigo, c.nombre, c.tipo
+         FROM novedades_nomina n
+         INNER JOIN conceptos_nomina c ON c.id = n.concepto_id
+         WHERE n.empleado_id = ? AND n.empresa_id = ?
+           AND (n.periodo_id = ? OR n.periodo_id IS NULL)
+           AND n.fecha BETWEEN ? AND ?
+           AND n.estado IN ('aprobada', 'aplicada')`,
+        [empleado.id, empresaId, periodo.id, periodo.fecha_inicio, periodo.fecha_fin]
+      );
+      const novedadesDevengadas = novedades.filter(novedad => novedad.tipo === 'devengado');
+      const novedadesDeducciones = novedades.filter(novedad => novedad.tipo === 'deduccion');
+      const totalNovedadesDevengadas = novedadesDevengadas.reduce((total, novedad) => total + Number(novedad.valor || 0), 0);
+      const totalDeducciones = novedadesDeducciones.reduce((total, novedad) => total + Number(novedad.valor || 0), 0);
+      const totalDevengado = base + comision + bonoMeta + totalNovedadesDevengadas;
+      const netoPagar = totalDevengado - totalDeducciones;
       const [liquidacion] = await connection.execute<ResultSetHeader>(
         `INSERT INTO liquidaciones_nomina
-         (empresa_id, periodo_id, empleado_id, salario_base, total_devengado, neto_pagar,
+         (empresa_id, periodo_id, empleado_id, salario_base, total_devengado, total_deducciones, neto_pagar,
           ventas_comisionables, porcentaje_comision, calculated_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [empresaId, periodo.id, empleado.id, base, totalDevengado, totalDevengado, ventasComisionables, porcentaje, usuario.id]
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+        [empresaId, periodo.id, empleado.id, base, totalDevengado, totalDeducciones, netoPagar, ventasComisionables, porcentaje, usuario.id]
       );
       const detalle = [
         [liquidacion.insertId, null, 'SALARIO_BASE', 'Salario base', 'devengado', 1, base, 0, base, 'contrato'],
         [liquidacion.insertId, null, 'COMISION_VENTAS', 'Comision por ventas', 'devengado', ventasComisionables, ventasComisionables, porcentaje, comision, 'ventas'],
-        ...(bonoMeta > 0 ? [[liquidacion.insertId, null, 'BONO_META', 'Bono por cumplimiento de meta', 'devengado', 1, ventasComisionables, 0, bonoMeta, 'meta']] : [])
+        ...(bonoMeta > 0 ? [[liquidacion.insertId, null, 'BONO_META', 'Bono por cumplimiento de meta', 'devengado', 1, ventasComisionables, 0, bonoMeta, 'meta']] : []),
+        ...novedades.map(novedad => [
+          liquidacion.insertId, novedad.concepto_id, novedad.codigo, novedad.nombre,
+          novedad.tipo, novedad.cantidad, novedad.valor, 0, novedad.valor, 'novedad'
+        ])
       ];
       await connection.query(
         `INSERT INTO liquidaciones_nomina_detalle
@@ -583,5 +603,28 @@ export const crearNovedad = async (req: Request, res: Response): Promise<void> =
     res.status(201).json({ success: true, message: 'Novedad registrada exitosamente', data: { id: result.insertId } });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Error al registrar novedad', error: error.message });
+  }
+};
+
+export const aprobarNovedad = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id || req.body.empresa_id);
+  const usuario = (req as any).user;
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [resultado] = await pool.execute<ResultSetHeader>(
+      `UPDATE novedades_nomina SET estado = 'aprobada', approved_by = ?
+       WHERE id = ? AND empresa_id = ? AND estado = 'borrador'`,
+      [usuario.id, req.params.novedadId, empresaId]
+    );
+    if (!resultado.affectedRows) {
+      res.status(400).json({ success: false, message: 'La novedad no existe o ya fue procesada' });
+      return;
+    }
+    res.json({ success: true, message: 'Novedad aprobada exitosamente' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al aprobar novedad', error: error.message });
   }
 };

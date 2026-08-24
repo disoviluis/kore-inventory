@@ -18,6 +18,7 @@ import {
     listarConceptos,
     listarNovedades,
     crearNovedad,
+    aprobarNovedad,
     aprobarPeriodo,
     pagarLiquidacion
 } from './nomina-empleados.controller';
@@ -43,5 +44,6 @@ router.post('/metas', requirePermission('nomina_metas', 'create'), crearMeta);
 router.get('/conceptos', requirePermission('nomina_novedades', 'view'), listarConceptos);
 router.get('/novedades', requirePermission('nomina_novedades', 'view'), listarNovedades);
 router.post('/novedades', requirePermission('nomina_novedades', 'create'), crearNovedad);
+router.post('/novedades/:novedadId/aprobar', requirePermission('nomina_novedades', 'approve'), aprobarNovedad);
 
 export default router;
