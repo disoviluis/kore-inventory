@@ -19,6 +19,11 @@ import {
     listarNovedades,
     crearNovedad,
     aprobarNovedad,
+    listarPrestamos,
+    crearPrestamo,
+    anularPrestamo,
+    obtenerConfiguracionNomina,
+    actualizarConfiguracionNomina,
     aprobarPeriodo,
     pagarLiquidacion
 } from './nomina-empleados.controller';
@@ -45,5 +50,10 @@ router.get('/conceptos', requirePermission('nomina_novedades', 'view'), listarCo
 router.get('/novedades', requirePermission('nomina_novedades', 'view'), listarNovedades);
 router.post('/novedades', requirePermission('nomina_novedades', 'create'), crearNovedad);
 router.post('/novedades/:novedadId/aprobar', requirePermission('nomina_novedades', 'approve'), aprobarNovedad);
+router.get('/prestamos', requirePermission('nomina_empleados', 'view'), listarPrestamos);
+router.post('/prestamos', requirePermission('nomina_empleados', 'create'), crearPrestamo);
+router.post('/prestamos/:prestamoId/anular', requirePermission('nomina_empleados', 'edit'), anularPrestamo);
+router.get('/configuracion', requirePermission('nomina_periodos', 'view'), obtenerConfiguracionNomina);
+router.put('/configuracion', requirePermission('nomina_periodos', 'edit'), actualizarConfiguracionNomina);
 
 export default router;

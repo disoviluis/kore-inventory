@@ -663,3 +663,114 @@ export const aprobarNovedad = async (req: Request, res: Response): Promise<void>
     res.status(500).json({ success: false, message: 'Error al aprobar novedad', error: error.message });
   }
 };
+
+export const listarPrestamos = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [prestamos] = await pool.execute<RowDataPacket[]>(
+      `SELECT p.*, e.nombres, e.apellidos
+       FROM prestamos_empleados p INNER JOIN empleados e ON e.id = p.empleado_id
+       WHERE p.empresa_id = ? ORDER BY p.estado, p.fecha_inicio DESC, p.id DESC`, [empresaId]
+    );
+    res.json({ success: true, data: prestamos });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener préstamos', error: error.message });
+  }
+};
+
+export const crearPrestamo = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  const usuario = (req as any).user;
+  const { empleado_id, tipo = 'prestamo', descripcion, valor_original, cuota_periodica, fecha_inicio } = req.body;
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  const valor = Number(valor_original);
+  const cuota = Number(cuota_periodica);
+  if (!empleado_id || !descripcion || !fecha_inicio || !Number.isFinite(valor) || valor <= 0 || !Number.isFinite(cuota) || cuota <= 0 || cuota > valor) {
+    res.status(400).json({ success: false, message: 'Empleado, descripción, fecha, valor y cuota válida son obligatorios' });
+    return;
+  }
+  try {
+    const [resultado] = await pool.execute<ResultSetHeader>(
+      `INSERT INTO prestamos_empleados (empresa_id, empleado_id, tipo, descripcion, valor_original, saldo_pendiente, cuota_periodica, fecha_inicio, created_by)
+       SELECT ?, id, ?, ?, ?, ?, ?, ?, ? FROM empleados WHERE id = ? AND empresa_id = ? AND estado = 'activo'`,
+      [empresaId, tipo, descripcion, valor, valor, cuota, fecha_inicio, usuario.id, empleado_id, empresaId]
+    );
+    if (!resultado.affectedRows) {
+      res.status(400).json({ success: false, message: 'El empleado no pertenece a la empresa o no está activo' });
+      return;
+    }
+    res.status(201).json({ success: true, message: 'Préstamo registrado exitosamente', data: { id: resultado.insertId } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al registrar préstamo', error: error.message });
+  }
+};
+
+export const anularPrestamo = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id || req.body.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [resultado] = await pool.execute<ResultSetHeader>(
+      `UPDATE prestamos_empleados SET estado = 'anulado'
+       WHERE id = ? AND empresa_id = ? AND estado = 'activo'`, [req.params.prestamoId, empresaId]
+    );
+    if (!resultado.affectedRows) {
+      res.status(400).json({ success: false, message: 'El préstamo no existe o ya fue procesado' });
+      return;
+    }
+    res.json({ success: true, message: 'Préstamo anulado exitosamente' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al anular préstamo', error: error.message });
+  }
+};
+
+export const obtenerConfiguracionNomina = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = Number(req.query.empresa_id);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  try {
+    const [filas] = await pool.execute<RowDataPacket[]>(
+      'SELECT * FROM configuracion_nomina WHERE empresa_id = ? LIMIT 1', [empresaId]
+    );
+    res.json({ success: true, data: filas[0] || null });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener configuración', error: error.message });
+  }
+};
+
+export const actualizarConfiguracionNomina = async (req: Request, res: Response): Promise<void> => {
+  const empresaId = obtenerEmpresaId(req);
+  if (!(await validarEmpresa(req, empresaId))) {
+    res.status(403).json({ success: false, message: 'No tienes acceso a esta empresa' });
+    return;
+  }
+  const salud = Number(req.body.salud_empleado_pct);
+  const pension = Number(req.body.pension_empleado_pct);
+  const auxilio = Number(req.body.auxilio_transporte_valor || 0);
+  const retencion = req.body.retencion_fuente_activa ? 1 : 0;
+  if (![salud, pension, auxilio].every(Number.isFinite) || salud < 0 || salud > 100 || pension < 0 || pension > 100 || auxilio < 0) {
+    res.status(400).json({ success: false, message: 'Los porcentajes y el auxilio deben ser valores válidos' });
+    return;
+  }
+  try {
+    await pool.execute(
+      `INSERT INTO configuracion_nomina (empresa_id, salud_empleado_pct, pension_empleado_pct, retencion_fuente_activa, auxilio_transporte_valor)
+       VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE salud_empleado_pct = VALUES(salud_empleado_pct), pension_empleado_pct = VALUES(pension_empleado_pct), retencion_fuente_activa = VALUES(retencion_fuente_activa), auxilio_transporte_valor = VALUES(auxilio_transporte_valor)`,
+      [empresaId, salud, pension, retencion, auxilio]
+    );
+    res.json({ success: true, message: 'Configuración actualizada exitosamente' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al actualizar configuración', error: error.message });
+  }
+};
