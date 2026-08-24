@@ -24,6 +24,15 @@ async function cargarEmpresaActiva() {
 	});
 }
 async function cargarDatos() { await cargarBodegas(); await cargarTurno(); await cargarHistorial(); }
+function activarEnlaceBancos() {
+	document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
+		if (link.textContent.trim().startsWith('Bancos')) {
+			link.classList.remove('disabled');
+			link.href = 'bancos.html';
+			link.querySelector('.badge')?.remove();
+		}
+	});
+}
 async function api(path, options = {}) { const token = localStorage.getItem('token'); const response = await fetch(`${API_CAJA}${path}`, { ...options, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(options.headers || {}) } }); const body = await response.json().catch(() => ({})); if (!response.ok || body.success === false) throw new Error(body.message || 'No fue posible completar la operación'); return body; }
 function aviso(mensaje, tipo = 'success') { document.getElementById('alerta').innerHTML = `<div class="alert alert-${tipo} alert-dismissible fade show">${mensaje}<button class="btn-close" data-bs-dismiss="alert"></button></div>`; }
 async function cargarBodegas() { const result = await api(`/bodegas?empresa_id=${empresaActual.id}`); const bodegas = result.data || []; document.getElementById('bodegaId').innerHTML = bodegas.map(b => `<option value="${b.id}">${b.nombre}</option>`).join('') || '<option value="">No hay tiendas disponibles</option>'; }
@@ -34,4 +43,4 @@ document.getElementById('formAbrir').addEventListener('submit', async event => {
 document.getElementById('formGasto').addEventListener('submit', async event => { event.preventDefault(); try { await api(`/ventas/turno/${turnoActual.id}/gastos`, { method: 'POST', body: JSON.stringify({ descripcion: document.getElementById('gastoDescripcion').value, monto: Number(document.getElementById('gastoMonto').value) }) }); bootstrap.Modal.getInstance(document.getElementById('modalGasto')).hide(); event.target.reset(); await cargarResumen(); aviso('Gasto registrado correctamente'); } catch (error) { aviso(error.message, 'danger'); } });
 document.getElementById('formCierre').addEventListener('submit', async event => { event.preventDefault(); try { await api(`/ventas/turno/${turnoActual.id}/cerrar`, { method: 'POST', body: JSON.stringify({ efectivoContado: Number(document.getElementById('efectivoContado').value), notas: document.getElementById('notasCierre').value }) }); bootstrap.Modal.getInstance(document.getElementById('modalCierre')).hide(); aviso('Caja cerrada correctamente'); await cargarTurno(); await cargarHistorial(); } catch (error) { aviso(error.message, 'danger'); } });
 document.getElementById('btnActualizar').addEventListener('click', () => Promise.all([cargarTurno(), cargarHistorial()]));
-(async function iniciar() { try { await cargarEmpresaActiva(); await cargarDatos(); } catch (error) { aviso(error.message, 'danger'); } })();
+(async function iniciar() { try { activarEnlaceBancos(); await cargarEmpresaActiva(); await cargarDatos(); } catch (error) { aviso(error.message, 'danger'); } })();

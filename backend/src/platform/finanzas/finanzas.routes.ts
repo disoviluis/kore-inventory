@@ -32,6 +32,13 @@ import {
   getResumenCuentasPorPagar
 } from './cuentas-por-pagar.controller';
 import { requirePermission } from '../../core/middleware/permissions.middleware';
+import {
+  listarCuentasBancarias,
+  crearCuentaBancaria,
+  listarMovimientos,
+  crearMovimiento,
+  conciliarMovimiento
+} from './bancos.controller';
 
 const router = Router();
 
@@ -87,5 +94,11 @@ router.get('/cuentas-por-pagar/dashboard/resumen', requirePermission('cuentas_po
 router.get('/cuentas-por-pagar/proveedor/:proveedorId', requirePermission('cuentas_por_pagar', 'view'), getCuentasPorProveedor);
 router.get('/cuentas-por-pagar/:id', requirePermission('cuentas_por_pagar', 'view'), getCuentaPorPagarById);
 router.post('/comprobantes-egreso', requirePermission('cuentas_por_pagar', 'create'), crearComprobanteEgreso);
+
+router.get('/bancos/cuentas', requirePermission('bancos', 'view'), listarCuentasBancarias);
+router.post('/bancos/cuentas', requirePermission('bancos', 'create'), crearCuentaBancaria);
+router.get('/bancos/movimientos', requirePermission('bancos', 'view'), listarMovimientos);
+router.post('/bancos/movimientos', requirePermission('bancos', 'create'), crearMovimiento);
+router.post('/bancos/movimientos/:id/conciliar', requirePermission('bancos', 'approve'), conciliarMovimiento);
 
 export default router;

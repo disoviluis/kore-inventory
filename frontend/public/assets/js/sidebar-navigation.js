@@ -33,6 +33,7 @@ const MODULE_MAP = {
   'cuentas-por-cobrar.html': 'finanzas',
   'cuentas-por-pagar.html': 'cuentas_por_pagar',
   'caja.html': 'caja',
+  'bancos.html': 'bancos',
   'nomina-empleados.html': 'nomina_empleados',
   'nomina-periodos.html': 'nomina_periodos',
   'nomina-novedades.html': 'nomina_novedades',
