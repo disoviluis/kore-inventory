@@ -580,11 +580,12 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
     ]);
 
     // Auditoría
+    const usuario = (req as any).user || (req as any).usuario;
     await connection.query(`
       INSERT INTO auditoria_logs (
         usuario_id, empresa_id, accion, modulo, tabla, registro_id
       ) VALUES (?, ?, ?, ?, ?, ?)
-    `, [req.body.usuario_id || null, id, 'activar_licencia', 'super-admin', 'licencias', licenciaId]);
+    `, [usuario?.id || req.body.usuario_id || null, id, 'activar_licencia', 'super-admin', 'licencias', licenciaId]);
 
     await connection.commit();
 
