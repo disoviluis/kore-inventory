@@ -452,12 +452,12 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
     const { id } = req.params;
     const {
       plan_id,
-      tipo_facturacion = 'mensual', // 'mensual' o 'anual'
-      auto_renovacion = true,
-      monto, // Monto del pago
-      metodo_pago, // 'tarjeta', 'transferencia', etc.
-      referencia_pago, // ID de transacción de la pasarela
-      datos_pago // JSON con datos adicionales
+      tipo_facturacion = 'mensual',
+      auto_renovacion = false,
+      monto,
+      metodo_pago = 'manual',
+      referencia_pago,
+      datos_pago
     } = req.body;
 
     // Validar empresa
@@ -472,6 +472,10 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
 
     const empresa = empresas[0];
 
+    if (!['mensual', 'anual'].includes(tipo_facturacion)) {
+      throw new Error('El tipo de facturación debe ser mensual o anual');
+    }
+
     // Validar plan
     const [planes] = await connection.query<RowDataPacket[]>(
       'SELECT * FROM planes WHERE id = ? AND activo = 1',
@@ -485,7 +489,12 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
     const plan = planes[0];
 
     // Calcular monto si no se especificó
-    const montoFinal = monto || (tipo_facturacion === 'anual' ? plan.precio_anual : plan.precio_mensual);
+    const montoFinal = monto === undefined || monto === null || monto === ''
+      ? (tipo_facturacion === 'anual' ? plan.precio_anual : plan.precio_mensual)
+      : Number(monto);
+    if (!Number.isFinite(Number(montoFinal)) || Number(montoFinal) <= 0) {
+      throw new Error('El monto del pago debe ser mayor que cero');
+    }
 
     // Calcular fechas
     const fechaInicio = new Date();
@@ -518,7 +527,7 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
       fechaFin,
       tipo_facturacion,
       auto_renovacion ? 1 : 0,
-      montoFinal,
+      Number(montoFinal),
       plan.max_usuarios_por_empresa,
       plan.max_productos,
       plan.max_facturas_mes
@@ -537,7 +546,7 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
       ) VALUES (?, ?, ?, ?, 'COP', ?, ?, 'exitoso', ?, ?, ?, ?, NOW(), ?)
     `, [
       licenciaId, id, plan_id,
-      montoFinal,
+      Number(montoFinal),
       tipo_facturacion === 'anual' ? 'anual' : 'mensual',
       metodo_pago || 'manual',
       referencia_pago || null,
@@ -565,7 +574,7 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
       JSON.stringify({
         plan: plan.nombre,
         tipo_facturacion,
-        monto: montoFinal,
+        monto: Number(montoFinal),
         fecha_fin: fechaFin
       })
     ]);
@@ -589,7 +598,7 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
         empresa_id: id,
         plan: plan.nombre,
         tipo_facturacion,
-        monto: montoFinal,
+        monto: Number(montoFinal),
         fecha_inicio: fechaInicio,
         fecha_fin: fechaFin,
         auto_renovacion

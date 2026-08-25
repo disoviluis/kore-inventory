@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../../core/middleware/auth.middleware';
+import { authMiddleware, requireUserType } from '../../core/middleware/auth.middleware';
 import * as superAdminController from './super-admin.controller';
 import * as empresasAdminController from './empresas-admin.controller';
 import * as usuariosAdminController from './usuarios-admin.controller';
@@ -19,6 +19,7 @@ const router = Router();
 
 // Aplicar middleware de autenticación a todas las rutas
 router.use(authMiddleware);
+router.use(requireUserType('super_admin'));
 
 // ========================================
 // DASHBOARD Y MÉTRICAS
@@ -63,16 +64,14 @@ router.delete('/planes/:id', planesAdminController.deletePlan);
 // GESTIÓN DE LICENCIAS
 // ========================================
 router.get('/licencias', planesAdminController.getLicencias);
-router.get('/licencias/:id', planesAdminController.getLicenciaById);
-router.post('/licencias', planesAdminController.createLicencia);
-router.put('/licencias/:id', planesAdminController.updateLicencia);
-router.delete('/licencias/:id', planesAdminController.deleteLicencia);
-
-// Endpoints nuevos para procesamiento automático
 router.post('/licencias/procesar-notificaciones', licenciasAdminController.procesarNotificaciones);
 router.post('/licencias/procesar-renovaciones', licenciasAdminController.procesarRenovaciones);
 router.get('/licencias/estado', licenciasAdminController.getEstadoLicencias);
 router.get('/licencias/:id/historial', licenciasAdminController.getHistorialLicencia);
+router.get('/licencias/:id', planesAdminController.getLicenciaById);
+router.post('/licencias', planesAdminController.createLicencia);
+router.put('/licencias/:id', planesAdminController.updateLicencia);
+router.delete('/licencias/:id', planesAdminController.deleteLicencia);
 
 // ========================================
 // GESTIÓN DE ROLES GLOBALES

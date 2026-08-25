@@ -1587,7 +1587,7 @@ function renderizarTablaLicencias(licencias) {
   if (!tbody) return;
 
   if (!licencias || licencias.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay licencias registradas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay licencias registradas</td></tr>';
     return;
   }
 
@@ -1608,6 +1608,11 @@ function renderizarTablaLicencias(licencias) {
           <span class="badge bg-${estadoBadge}">
             ${diasRestantes < 0 ? 'Vencida' : diasRestantes === 0 ? 'Vence hoy' : `${diasRestantes} días`}
           </span>
+        </td>
+        <td>
+          <button class="btn btn-sm btn-outline-primary" onclick="abrirModalAsignarLicencia(${licencia.empresa_id}, '${String(licencia.empresa_nombre || '').replace(/'/g, "\\'")}')" title="Asignar o cambiar plan">
+            <i class="bi bi-arrow-repeat me-1"></i>Asignar plan
+          </button>
         </td>
       </tr>
     `;
@@ -5251,4 +5256,103 @@ function mostrarAlertaConfigGlobal(mensaje, tipo = 'info') {
   setTimeout(() => {
     container.innerHTML = '';
   }, 5000);
+}
+
+async function abrirModalAsignarLicencia(empresaId, empresaNombre) {
+  const token = localStorage.getItem('token');
+  try {
+    const response = await fetch(`${API_URL}/super-admin/planes`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('No se pudieron cargar los planes');
+    const data = await response.json();
+    const planes = (data.data || []).filter(plan => plan.activo);
+    if (!planes.length) throw new Error('No hay planes activos disponibles');
+
+    const modalAnterior = document.getElementById('modalAsignarLicencia');
+    if (modalAnterior) modalAnterior.remove();
+
+    const opciones = planes.map(plan => `
+      <option value="${plan.id}">${plan.nombre} - $${Number(plan.precio_mensual || 0).toLocaleString('es-CO')}/mes</option>
+    `).join('');
+    const html = `
+      <div class="modal fade" id="modalAsignarLicencia" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title"><i class="bi bi-card-checklist me-2"></i>Asignar o cambiar plan</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <p>Empresa: <strong>${empresaNombre}</strong></p>
+              <input type="hidden" id="licenciaEmpresaId" value="${empresaId}">
+              <label class="form-label">Plan</label>
+              <select class="form-select mb-3" id="licenciaPlanId" required>${opciones}</select>
+              <label class="form-label">Periodo</label>
+              <select class="form-select mb-3" id="licenciaTipoFacturacion">
+                <option value="mensual">Mensual</option>
+                <option value="anual">Anual</option>
+              </select>
+              <label class="form-label">Monto recibido</label>
+              <input class="form-control mb-3" id="licenciaMonto" type="number" min="0.01" step="0.01" placeholder="Usar precio del plan">
+              <label class="form-label">Referencia del pago</label>
+              <input class="form-control mb-3" id="licenciaReferencia" maxlength="100" placeholder="Transferencia, recibo o comprobante">
+              <label class="form-label">Observaciones</label>
+              <textarea class="form-control" id="licenciaNotas" rows="2" placeholder="Pago recibido manualmente"></textarea>
+              <div class="form-check form-switch mt-3">
+                <input class="form-check-input" type="checkbox" id="licenciaAutoRenovacion">
+                <label class="form-check-label" for="licenciaAutoRenovacion">Auto-renovación</label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="button" class="btn btn-primary" onclick="confirmarAsignarLicencia()"><i class="bi bi-check-circle me-1"></i>Confirmar pago y activar</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+    new bootstrap.Modal(document.getElementById('modalAsignarLicencia')).show();
+  } catch (error) {
+    mostrarError(error.message || 'Error al cargar planes');
+  }
+}
+
+async function confirmarAsignarLicencia() {
+  const empresaId = document.getElementById('licenciaEmpresaId').value;
+  const planId = Number(document.getElementById('licenciaPlanId').value);
+  const tipoFacturacion = document.getElementById('licenciaTipoFacturacion').value;
+  const montoTexto = document.getElementById('licenciaMonto').value;
+  const referencia = document.getElementById('licenciaReferencia').value.trim();
+  const notas = document.getElementById('licenciaNotas').value.trim();
+  const autoRenovacion = document.getElementById('licenciaAutoRenovacion').checked;
+  if (!planId) return;
+  if (!confirm('¿Confirmar que el pago fue recibido y activar este plan?')) return;
+
+  try {
+    const response = await fetch(`${API_URL}/super-admin/empresas/${empresaId}/activar-licencia`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        plan_id: planId,
+        tipo_facturacion: tipoFacturacion,
+        auto_renovacion: autoRenovacion,
+        monto: montoTexto ? Number(montoTexto) : undefined,
+        metodo_pago: 'manual',
+        referencia_pago: referencia || undefined,
+        datos_pago: { observaciones: notas }
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.success === false) throw new Error(data.message || 'No se pudo activar la licencia');
+    bootstrap.Modal.getInstance(document.getElementById('modalAsignarLicencia'))?.hide();
+    mostrarExito(data.message || 'Plan asignado y licencia activada');
+    await cargarPlanes();
+    await cargarEmpresasSuperAdmin();
+  } catch (error) {
+    mostrarError(error.message || 'Error al activar licencia');
+  }
 }
