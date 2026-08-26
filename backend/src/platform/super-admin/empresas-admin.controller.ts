@@ -453,6 +453,7 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
     const {
       plan_id,
       tipo_facturacion = 'mensual',
+      meses = 1,
       auto_renovacion = false,
       monto,
       metodo_pago = 'manual',
@@ -476,6 +477,11 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
       throw new Error('El tipo de facturación debe ser mensual o anual');
     }
 
+    const cantidadMeses = tipo_facturacion === 'mensual' ? Number(meses) : 1;
+    if (!Number.isInteger(cantidadMeses) || cantidadMeses < 1 || cantidadMeses > 24) {
+      throw new Error('La cantidad de meses debe ser un número entero entre 1 y 24');
+    }
+
     // Validar plan
     const [planes] = await connection.query<RowDataPacket[]>(
       'SELECT * FROM planes WHERE id = ? AND activo = 1',
@@ -490,7 +496,7 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
 
     // Calcular monto si no se especificó
     const montoFinal = monto === undefined || monto === null || monto === ''
-      ? (tipo_facturacion === 'anual' ? plan.precio_anual : plan.precio_mensual)
+      ? (tipo_facturacion === 'anual' ? plan.precio_anual : Number(plan.precio_mensual) * cantidadMeses)
       : Number(monto);
     if (!Number.isFinite(Number(montoFinal)) || Number(montoFinal) <= 0) {
       throw new Error('El monto del pago debe ser mayor que cero');
@@ -501,7 +507,7 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
     const fechaFin = new Date();
     
     if (tipo_facturacion === 'mensual') {
-      fechaFin.setMonth(fechaFin.getMonth() + 1);
+      fechaFin.setMonth(fechaFin.getMonth() + cantidadMeses);
     } else {
       fechaFin.setFullYear(fechaFin.getFullYear() + 1);
     }
@@ -574,6 +580,7 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
       JSON.stringify({
         plan: plan.nombre,
         tipo_facturacion,
+        meses: cantidadMeses,
         monto: Number(montoFinal),
         fecha_fin: fechaFin
       })
@@ -599,6 +606,7 @@ export const activarLicenciaPagada = async (req: Request, res: Response) => {
         empresa_id: id,
         plan: plan.nombre,
         tipo_facturacion,
+        meses: cantidadMeses,
         monto: Number(montoFinal),
         fecha_inicio: fechaInicio,
         fecha_fin: fechaFin,

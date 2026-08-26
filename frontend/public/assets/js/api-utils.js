@@ -28,23 +28,35 @@ async function apiFetch(url, options = {}) {
     if (response.status === 403) {
       const data = await response.json();
       
-      // Códigos de error de licencia
+      const normalizedLicenseCode = String(data.codigo || data.code || '').trim().toUpperCase();
       const licenseErrorCodes = [
         'LICENCIA_VENCIDA',
         'LICENCIA_SUSPENDIDA',
+        'LICENCIA_INACTIVA',
         'EMPRESA_SUSPENDIDA',
-        'SIN_LICENCIA'
+        'SIN_LICENCIA',
+        'LICENCIA_INACTIVA_PAGO_PENDIENTE'
       ];
+
+      const normalizedError = {
+        ...data,
+        codigo: {
+          'LICENCIA_VENCIDA': 'LICENCIA_INACTIVA_PAGO_PENDIENTE',
+          'LICENCIA_SUSPENDIDA': 'LICENCIA_INACTIVA_PAGO_PENDIENTE',
+          'LICENCIA_INACTIVA': 'LICENCIA_INACTIVA_PAGO_PENDIENTE'
+        }[normalizedLicenseCode] || normalizedLicenseCode
+      };
       
-      if (data.code && licenseErrorCodes.includes(data.code)) {
-        // Guardar mensaje de error para mostrarlo en la página de licencia vencida
-        sessionStorage.setItem('license_error', JSON.stringify(data));
-        
-        // Redirigir a la página de licencia vencida
+      if (normalizedLicenseCode && licenseErrorCodes.includes(normalizedLicenseCode)) {
+        sessionStorage.setItem('license_error', JSON.stringify(normalizedError));
         window.location.href = '/licencia-vencida.html';
-        
-        // Lanzar error para detener ejecución
-        throw new Error('Licencia vencida');
+        throw new Error('Licencia inactiva');
+      }
+
+      if (normalizedError.codigo && licenseErrorCodes.includes(normalizedError.codigo)) {
+        sessionStorage.setItem('license_error', JSON.stringify(normalizedError));
+        window.location.href = '/licencia-vencida.html';
+        throw new Error('Licencia inactiva');
       }
     }
 

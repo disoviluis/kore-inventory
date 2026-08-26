@@ -404,6 +404,46 @@ function cargarDatosUsuario(usuario) {
   cargarEmpresas(usuario.id);
 }
 
+async function cargarEstadoLicenciaEmpresa(empresaId) {
+  const token = localStorage.getItem('token');
+  const status = document.querySelector('.license-status');
+
+  if (!empresaId || !status) return;
+
+  try {
+    const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await response.json();
+    const empresa = data?.data || {};
+    const licenciaEstado = empresa.licencia_estado || empresa.estado || 'inactiva';
+    const diasRestantes = Number(empresa.dias_restantes ?? 0);
+    const tipoLicencia = empresa.plan_nombre || empresa.licencia_tipo || 'Sin plan';
+    const activa = ['activa', 'trial'].includes(licenciaEstado) && diasRestantes >= 0;
+
+    const icon = status.querySelector('i');
+    const text = status.querySelector('small');
+
+    if (icon) {
+      icon.className = activa ? 'bi bi-check-circle-fill text-success' : 'bi bi-exclamation-triangle-fill text-warning';
+    }
+
+    if (text) {
+      text.textContent = activa
+        ? `${licenciaEstado === 'trial' ? 'Prueba' : 'Licencia Activa'} · ${diasRestantes} días`
+        : `Licencia Inactiva · ${tipoLicencia}`;
+    }
+
+    status.title = activa
+      ? `${tipoLicencia} · ${diasRestantes} días restantes`
+      : `Estado: ${licenciaEstado} · ${tipoLicencia}`;
+  } catch (error) {
+    console.warn('No se pudo cargar el estado de licencia del dashboard:', error);
+  }
+}
+
 /**
  * Cargar empresas del usuario
  */
@@ -438,7 +478,8 @@ async function cargarEmpresas(usuarioId) {
         if (companyNameText) companyNameText.textContent = data.data[0].nombre;
         
         // Establecer empresa activa (solo ID)
-        localStorage.setItem('empresaActiva', data.data[0].id);
+        localStorage.setItem('empresaActiva', String(data.data[0].id));
+        await cargarEstadoLicenciaEmpresa(data.data[0].id);
         
         // Cargar estadísticas
         cargarEstadisticas(data.data[0].id);
@@ -459,31 +500,25 @@ async function cargarEmpresas(usuarioId) {
           companySelector.appendChild(option);
         });
         
-        // Seleccionar la primera empresa o la guardada
-        let empresaSeleccionadaId;
+        // Seleccionar la primera empresa activa o la guardada si sigue activa
+        const empresasActivas = data.data.filter(emp => ['activa', 'trial'].includes(emp.estado));
         const empresaGuardadaId = localStorage.getItem('empresaActiva');
-        
-        if (empresaGuardadaId) {
-          // Verificar que la empresa guardada existe en la lista
-          const empresaExiste = data.data.find(emp => emp.id == empresaGuardadaId);
-          if (empresaExiste) {
-            companySelector.value = empresaGuardadaId;
-            empresaSeleccionadaId = empresaGuardadaId;
-          } else {
-            // Si no existe, usar la primera empresa
-            companySelector.value = data.data[0].id;
-            empresaSeleccionadaId = data.data[0].id;
-            localStorage.setItem('empresaActiva', data.data[0].id);
-          }
-        } else {
-          // No hay empresa guardada, usar la primera
-          companySelector.value = data.data[0].id;
-          empresaSeleccionadaId = data.data[0].id;
-          localStorage.setItem('empresaActiva', data.data[0].id);
+        const empresaActivaValida = empresasActivas.find(emp => String(emp.id) === String(empresaGuardadaId));
+        const empresaInicial = empresaActivaValida || empresasActivas[0] || data.data[0];
+        let empresaSeleccionadaId = empresaInicial?.id;
+
+        if (empresaInicial) {
+          companySelector.value = empresaInicial.id;
+          localStorage.setItem('empresaActiva', String(empresaInicial.id));
+        }
+
+        if (!empresaInicial) {
+          localStorage.removeItem('empresaActiva');
         }
         
         // Cargar estadísticas de la empresa seleccionada
         if (empresaSeleccionadaId) {
+          await cargarEstadoLicenciaEmpresa(empresaSeleccionadaId);
           cargarEstadisticas(empresaSeleccionadaId);
           
           // Verificar configuración de facturación después de cargar empresa
@@ -491,11 +526,12 @@ async function cargarEmpresas(usuarioId) {
         }
         
         // Event listener para cambio de empresa
-        companySelector.addEventListener('change', (e) => {
+        companySelector.addEventListener('change', async (e) => {
           const empresaId = e.target.value;
           const empresaSeleccionada = data.data.find(emp => emp.id == empresaId);
           console.log('🔄 Cambio de empresa detectado:', empresaSeleccionada);
           localStorage.setItem('empresaActiva', empresaId);
+          await cargarEstadoLicenciaEmpresa(empresaId);
           cargarEstadisticas(empresaId);
           verificarConfiguracionFacturacion();
           
@@ -1280,6 +1316,116 @@ async function guardarEmpresa() {
   } catch (error) {
     console.error('Error:', error);
     mostrarError(error.message || 'Error al guardar empresa');
+  }
+}
+
+function descargarPlantillaEmpresas() {
+  const columnas = [
+    'Nombre', 'Razon Social', 'Tipo Documento', 'NIT', 'Digito Verificacion',
+    'Representante Legal', 'Tipo Sociedad', 'Matricula Mercantil', 'Camara Comercio',
+    'Fecha Matricula', 'Actividad Economica', 'Email', 'Telefono', 'Direccion',
+    'Ciudad', 'Pais', 'Regimen Tributario', 'Tipo Contribuyente', 'Plan ID'
+  ];
+  const ejemplo = {
+    'Nombre': 'Empresa de Ejemplo',
+    'Razon Social': 'Empresa de Ejemplo S.A.S.',
+    'Tipo Documento': 'NIT',
+    'NIT': '900123456',
+    'Digito Verificacion': '7',
+    'Representante Legal': 'Nombre Apellido',
+    'Tipo Sociedad': 'SAS',
+    'Matricula Mercantil': '123456',
+    'Camara Comercio': 'Bogota',
+    'Fecha Matricula': '2026-01-15',
+    'Actividad Economica': 'Comercio al por menor',
+    'Email': 'contacto@ejemplo.com',
+    'Telefono': '3001234567',
+    'Direccion': 'Calle 1 # 2-3',
+    'Ciudad': 'Bogota',
+    'Pais': 'Colombia',
+    'Regimen Tributario': 'simplificado',
+    'Tipo Contribuyente': 'persona_juridica',
+    'Plan ID': 1
+  };
+  const instrucciones = [
+    { 'Campo': 'Nombre', 'Requerido': 'SI', 'Detalle': 'Nombre comercial de la empresa.' },
+    { 'Campo': 'Email', 'Requerido': 'SI', 'Detalle': 'Email principal, no repetido en otra empresa.' },
+    { 'Campo': 'Tipo Contribuyente', 'Requerido': 'SI', 'Detalle': 'persona_juridica o persona_natural.' },
+    { 'Campo': 'Regimen Tributario', 'Requerido': 'SI', 'Detalle': 'simplificado, comun o especial.' },
+    { 'Campo': 'Plan ID', 'Requerido': 'NO', 'Detalle': '1 por defecto. Usar el ID de un plan activo.' },
+    { 'Campo': 'Resto de campos', 'Requerido': 'NO', 'Detalle': 'Completar cuando aplique. La empresa se crea en trial.' }
+  ];
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.json_to_sheet([ejemplo], { header: columnas });
+  worksheet['!cols'] = columnas.map(columna => ({ wch: Math.max(18, columna.length + 2) }));
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Empresas');
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(instrucciones), 'Instrucciones');
+  XLSX.writeFile(workbook, 'plantilla_creacion_empresas.xlsx');
+}
+
+async function importarEmpresasExcel(event) {
+  const archivo = event.target.files?.[0];
+  event.target.value = '';
+  if (!archivo) return;
+
+  if (!window.XLSX || !/\.(xlsx|xls)$/i.test(archivo.name)) {
+    mostrarError('Selecciona un archivo Excel válido (.xlsx o .xls)');
+    return;
+  }
+
+  try {
+    const workbook = XLSX.read(await archivo.arrayBuffer(), { type: 'array' });
+    const nombreHoja = workbook.SheetNames.includes('Empresas') ? 'Empresas' : workbook.SheetNames[0];
+    const filas = XLSX.utils.sheet_to_json(workbook.Sheets[nombreHoja], { defval: '' });
+    if (!filas.length) throw new Error('El archivo no contiene filas de empresas');
+
+    const token = localStorage.getItem('token');
+    let creadas = 0;
+    const errores = [];
+    for (let indice = 0; indice < filas.length; indice += 1) {
+      const fila = filas[indice];
+      const empresa = {
+        nombre: String(fila.Nombre || '').trim(),
+        razon_social: String(fila['Razon Social'] || '').trim() || null,
+        tipo_documento: String(fila['Tipo Documento'] || 'NIT').trim(),
+        nit: String(fila.NIT || '').trim() || null,
+        digito_verificacion: String(fila['Digito Verificacion'] || '').trim() || null,
+        representante_legal: String(fila['Representante Legal'] || '').trim() || null,
+        tipo_sociedad: String(fila['Tipo Sociedad'] || '').trim() || null,
+        matricula_mercantil: String(fila['Matricula Mercantil'] || '').trim() || null,
+        camara_comercio: String(fila['Camara Comercio'] || '').trim() || null,
+        fecha_matricula: String(fila['Fecha Matricula'] || '').trim() || null,
+        actividad_economica: String(fila['Actividad Economica'] || '').trim() || null,
+        email: String(fila.Email || '').trim(),
+        telefono: String(fila.Telefono || '').trim() || null,
+        direccion: String(fila.Direccion || '').trim() || null,
+        ciudad: String(fila.Ciudad || '').trim() || null,
+        pais: String(fila.Pais || 'Colombia').trim() || 'Colombia',
+        regimen_tributario: String(fila['Regimen Tributario'] || '').trim(),
+        tipo_contribuyente: String(fila['Tipo Contribuyente'] || '').trim(),
+        plan_id: Number(fila['Plan ID'] || 1)
+      };
+
+      try {
+        const response = await fetch(`${API_URL}/super-admin/empresas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(empresa)
+        });
+        const resultado = await response.json();
+        if (!response.ok || !resultado.success) throw new Error(resultado.message || 'No se pudo crear');
+        creadas += 1;
+      } catch (error) {
+        errores.push(`Fila ${indice + 2}: ${error.message}`);
+      }
+    }
+
+    cargarEmpresasSuperAdmin();
+    const detalle = errores.length ? ` Errores: ${errores.join(' | ')}` : '';
+    (creadas ? mostrarExito : mostrarError)(`${creadas} empresa(s) creada(s).${detalle}`);
+  } catch (error) {
+    console.error('Error al importar empresas:', error);
+    mostrarError(error.message || 'Error al leer el archivo Excel');
   }
 }
 

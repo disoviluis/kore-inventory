@@ -760,6 +760,13 @@
                         <button class="btn btn-primary" onclick="abrirModalEmpresa()">
                             <i class="bi bi-plus-circle me-2"></i>Nueva Empresa
                         </button>
+                        <button class="btn btn-outline-success" onclick="descargarPlantillaEmpresas()" title="Descargar plantilla Excel">
+                            <i class="bi bi-file-earmark-excel me-2"></i>Plantilla Excel
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="document.getElementById('archivoEmpresasExcel').click()" title="Cargar empresas desde Excel">
+                            <i class="bi bi-upload me-2"></i>Cargar Excel
+                        </button>
+                        <input type="file" id="archivoEmpresasExcel" accept=".xlsx,.xls" class="d-none" onchange="importarEmpresasExcel(event)">
                     </div>
                 </div>
             </div>

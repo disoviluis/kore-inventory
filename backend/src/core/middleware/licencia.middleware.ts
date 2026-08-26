@@ -113,11 +113,13 @@ export const verificarLicenciaActiva = async (
       if (empresa.estado === 'suspendida') {
         res.status(403).json({
           success: false,
-          codigo: 'LICENCIA_VENCIDA',
-          message: 'Tu licencia ha expirado. Renueva para continuar usando el sistema.',
+          codigo: 'LICENCIA_INACTIVA_PAGO_PENDIENTE',
+          message: 'Su licencia está inactiva por pago pendiente. Para continuar usando Kore Inventory debe regularizar el pago o activar un plan vigente.',
           data: {
             empresa_estado: empresa.estado,
-            accion_requerida: 'renovar_licencia',
+            titulo: 'Licencia pendiente de pago',
+            detalle: 'La empresa quedó temporalmente bloqueada hasta confirmar el pago de la licencia o activar una suscripción vigente.',
+            accion_requerida: 'pagar_y_activar_plan',
             url_renovacion: '/planes',
             soporte_email: 'soporte@koreinventory.com'
           }
@@ -170,11 +172,13 @@ export const verificarLicenciaActiva = async (
     if (licencia.dias_restantes < 0) {
       res.status(403).json({
         success: false,
-        codigo: 'LICENCIA_VENCIDA',
-        message: 'Tu licencia ha expirado',
+        codigo: 'LICENCIA_INACTIVA_PAGO_PENDIENTE',
+        message: 'Su licencia está inactiva por pago pendiente de renovación. Debe regularizar el pago para reactivar el acceso.',
         data: {
+          titulo: 'Licencia pendiente de pago',
+          detalle: 'La empresa quedó bloqueada temporalmente hasta confirmar el pago de la licencia o activar un plan vigente.',
           fecha_vencimiento: licencia.fecha_fin,
-          accion_requerida: 'renovar_licencia',
+          accion_requerida: 'pagar_y_activar_plan',
           url_renovacion: '/planes'
         }
       });

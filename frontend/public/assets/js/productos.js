@@ -117,6 +117,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!currentEmpresa || !currentEmpresa.id) {
             await cargarDatosEmpresa(empresaActivaId);
         }
+
+        if (!currentEmpresa || !['activa', 'trial'].includes(currentEmpresa.estado)) {
+            localStorage.removeItem('empresaActiva');
+            mostrarAlerta('La empresa seleccionada no está activa. Revisa el estado de la licencia o contacta soporte.', 'warning');
+            setTimeout(() => window.location.href = 'dashboard.html', 1800);
+            return;
+        }
         
         console.log(`✅ Empresa activa: ${currentEmpresa.nombre} (ID: ${currentEmpresa.id})`);
 
