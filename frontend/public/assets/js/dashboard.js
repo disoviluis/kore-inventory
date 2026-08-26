@@ -1428,6 +1428,8 @@ async function importarEmpresasExcel(event) {
     mostrarError(error.message || 'Error al leer el archivo Excel');
   }
 }
+  window.descargarPlantillaEmpresas = descargarPlantillaEmpresas;
+  window.importarEmpresasExcel = importarEmpresasExcel;
 
 // Cargar empresas para Super Admin
 async function cargarEmpresasSuperAdmin() {
