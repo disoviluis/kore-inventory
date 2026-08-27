@@ -134,9 +134,9 @@ function construirSidebarEstandarSiIncompleto() {
         <div class="collapse" id="plataformaCollapse">
           <ul class="nav flex-column submenu">
             ${sidebarLink('dashboard.html#empresas', 'bi-building', 'Empresas')}
-            ${sidebarLink('dashboard.html#usuarios', 'bi-person-lines-fill', 'Usuarios Globales')}
+            ${sidebarLink('dashboard.html#usuarios-admin', 'bi-person-lines-fill', 'Usuarios Globales')}
             ${sidebarLink('dashboard.html#planes', 'bi-card-checklist', 'Planes')}
-            <li class="nav-item"><a class="nav-link disabled" href="#"><i class="bi bi-sliders"></i><span>Configuración Global</span></a></li>
+            ${sidebarLink('dashboard.html#configuracion-global', 'bi-sliders', 'Configuración Global')}
           </ul>
         </div>
       </li>

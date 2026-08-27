@@ -1021,6 +1021,15 @@ window.addEventListener('resize', () => {
  * Cambiar entre módulos del dashboard
  */
 function cambiarModulo(nombreModulo) {
+  const usuarioActual = JSON.parse(localStorage.getItem('usuario') || 'null');
+  const moduloSolicitado = nombreModulo === 'usuarios' && usuarioActual?.tipo_usuario === 'super_admin'
+    ? 'usuarios-admin'
+    : nombreModulo;
+
+  if (window.location.hash !== `#${moduloSolicitado}`) {
+    window.history.replaceState(null, '', `#${moduloSolicitado}`);
+  }
+
   // Ocultar todos los módulos
   const modulos = document.querySelectorAll('.module-content');
   modulos.forEach(modulo => {
@@ -1028,12 +1037,12 @@ function cambiarModulo(nombreModulo) {
   });
   
   // Mostrar el módulo seleccionado
-  const moduloActivo = document.getElementById(`${nombreModulo}Module`);
+  const moduloActivo = document.getElementById(`${moduloSolicitado}Module`);
   if (moduloActivo) {
     moduloActivo.style.display = 'block';
     
     // Inicializar el módulo según corresponda
-    switch(nombreModulo) {
+    switch(moduloSolicitado) {
       case 'dashboard':
         // Ya se carga automáticamente
         break;
@@ -1077,7 +1086,7 @@ function cambiarModulo(nombreModulo) {
     }
     
     // Actualizar breadcrumb si existe
-    actualizarBreadcrumb(nombreModulo);
+    actualizarBreadcrumb(moduloSolicitado);
   }
   
   // Cerrar sidebar en móvil al cambiar de módulo
@@ -1140,8 +1149,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // Módulo inicial: dashboard
-  cambiarModulo('dashboard');
+  // Respetar el módulo indicado en la URL; si no existe, mostrar dashboard.
+  const moduloInicial = window.location.hash.replace(/^#/, '') || 'dashboard';
+  cambiarModulo(moduloInicial);
+  window.addEventListener('hashchange', () => {
+    const modulo = window.location.hash.replace(/^#/, '') || 'dashboard';
+    cambiarModulo(modulo);
+  });
   
   // Event listener para formulario de empresa
   const empresaForm = document.getElementById('empresaForm');
@@ -2381,7 +2395,8 @@ async function guardarUsuario() {
     email: document.getElementById('usuarioEmail').value,
     telefono: document.getElementById('usuarioTelefono').value,
     rol_id: rolGlobalId,  // ✓ Enviar rol_id en lugar de tipo_usuario
-    activo: parseInt(document.getElementById('usuarioActivo').value)
+    activo: parseInt(document.getElementById('usuarioActivo').value),
+    empresas_ids: empresasSeleccionadas
   };
   
   // Solo incluir password si se proporcionó
