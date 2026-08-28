@@ -809,9 +809,9 @@ function abrirModalNuevo() {
     // Valores por defecto
     document.getElementById('productoTipo').value = 'producto';
     document.getElementById('productoManejaInventario').value = '1';
-    document.getElementById('productoAplicaIVA').checked = false;
-    document.getElementById('productoPorcentajeIVA').value = '0';
-    document.getElementById('productoTipoImpuesto').value = 'excluido';
+    document.getElementById('productoAplicaIVA').checked = true;
+    document.getElementById('productoPorcentajeIVA').value = '19';
+    document.getElementById('productoTipoImpuesto').value = 'gravado';
     document.getElementById('ivaIncluidoNo').checked = true;
     
     // Mostrar sección de inventario
