@@ -552,7 +552,19 @@ function initEventListeners() {
     const ivaIncluidoSi = document.getElementById('ivaIncluidoSi');
     const ivaIncluidoNo = document.getElementById('ivaIncluidoNo');
     
-    if (aplicaIVA) aplicaIVA.addEventListener('change', () => { sincronizarCamposIVA(); calcularMargenes(); });
+    if (aplicaIVA) aplicaIVA.addEventListener('change', () => {
+        if (aplicaIVA.checked) {
+            const tipoGuardado = aplicaIVA.dataset.tipoImpuesto;
+            const porcentajeGuardado = aplicaIVA.dataset.porcentajeIVA;
+            tipoImpuesto.value = tipoGuardado && tipoGuardado === 'gravado' ? tipoGuardado : 'gravado';
+            porcentajeIVA.value = porcentajeGuardado && Number(porcentajeGuardado) > 0 ? porcentajeGuardado : '19';
+        } else {
+            aplicaIVA.dataset.tipoImpuesto = tipoImpuesto.value;
+            aplicaIVA.dataset.porcentajeIVA = porcentajeIVA.value;
+        }
+        sincronizarCamposIVA();
+        calcularMargenes();
+    });
     if (tipoImpuesto) tipoImpuesto.addEventListener('change', () => { sincronizarCamposIVA(); calcularMargenes(); });
     if (porcentajeIVA) porcentajeIVA.addEventListener('change', calcularMargenes);
     if (ivaIncluidoSi) ivaIncluidoSi.addEventListener('change', calcularMargenes);
@@ -693,6 +705,11 @@ function sincronizarCamposIVA() {
         tipoImpuesto.value = 'gravado';
         if (porcentajeIVA.value === '0') porcentajeIVA.value = '19';
     }
+
+    if (aplicaIVA.checked) {
+        aplicaIVA.dataset.tipoImpuesto = tipoImpuesto.value;
+        aplicaIVA.dataset.porcentajeIVA = porcentajeIVA.value;
+    }
 }
 
 // ============================================
@@ -812,6 +829,8 @@ function abrirModalNuevo() {
     document.getElementById('productoAplicaIVA').checked = true;
     document.getElementById('productoPorcentajeIVA').value = '19';
     document.getElementById('productoTipoImpuesto').value = 'gravado';
+    document.getElementById('productoAplicaIVA').dataset.tipoImpuesto = 'gravado';
+    document.getElementById('productoAplicaIVA').dataset.porcentajeIVA = '19';
     document.getElementById('ivaIncluidoNo').checked = true;
     
     // Mostrar sección de inventario
