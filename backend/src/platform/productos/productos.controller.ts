@@ -22,6 +22,13 @@ const toBooleanFlag = (value: any, defaultValue = false): boolean => {
   return defaultValue;
 };
 
+const normalizeIvaPercentage = (value: any, defaultValue = 19): number => {
+  if (value === undefined || value === null || value === '') return defaultValue;
+  const parsed = Number(String(value).trim().replace('%', '').replace(',', '.'));
+  if (!Number.isFinite(parsed)) return defaultValue;
+  return parsed > 0 && parsed < 1 ? parsed * 100 : Math.min(100, Math.max(0, parsed));
+};
+
 /**
  * Obtener todos los productos de una empresa
  * GET /api/productos?empresaId=X
@@ -270,7 +277,7 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
 
     // Validación: IVA válido para Colombia
     const aplicaIvaFlag = toBooleanFlag(aplica_iva, false);
-    const porcIVA = aplicaIvaFlag ? Number(porcentaje_iva ?? 19) : 0;
+    const porcIVA = aplicaIvaFlag ? normalizeIvaPercentage(porcentaje_iva) : 0;
     if (![0, 5, 19].includes(porcIVA) && porcIVA !== null) {
       logger.info(`IVA no estándar: ${porcIVA}%. Se recomienda 0%, 5% o 19%`);
     }
@@ -534,7 +541,7 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
     }
     if (porcentaje_iva !== undefined) {
       updates.push('porcentaje_iva = ?');
-      values.push(porcentaje_iva);
+      values.push(normalizeIvaPercentage(porcentaje_iva));
     }
     if (tipo_impuesto !== undefined) {
       updates.push('tipo_impuesto = ?');

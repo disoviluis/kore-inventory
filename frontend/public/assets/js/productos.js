@@ -1717,7 +1717,9 @@ async function validarProductosImportados(datos) {
         } else if (!aplicaIVAImport) {
             tipoImpuesto = 'excluido';
         }
-        const porcentajeIVAImport = aplicaIVAImport ? (parseFloat(fila['Porcentaje IVA']) || 19) : 0;
+        const porcentajeIVAImport = aplicaIVAImport
+            ? normalizarPorcentajeIVA(fila['Porcentaje IVA'])
+            : 0;
 
         // Validar estado
         const estado = (fila['Estado'] || 'activo').toLowerCase();
@@ -2023,4 +2025,17 @@ function convertirBoolean(valor, porDefecto) {
     }
     
     return porDefecto ? 1 : 0;
+}
+
+function normalizarPorcentajeIVA(valor) {
+    if (valor === undefined || valor === null || valor === '') return 19;
+
+    const texto = String(valor).trim().replace('%', '').replace(',', '.');
+    let porcentaje = Number(texto);
+    if (!Number.isFinite(porcentaje)) return 19;
+
+    // Excel suele representar 19% como 0.19 cuando la celda tiene formato porcentaje.
+    if (porcentaje > 0 && porcentaje < 1) porcentaje *= 100;
+
+    return Math.min(100, Math.max(0, porcentaje));
 }
