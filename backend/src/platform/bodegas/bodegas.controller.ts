@@ -299,6 +299,13 @@ export const createBodega = async (req: Request, res: Response): Promise<void> =
       ]
     );
 
+    await connection.execute(
+      `INSERT INTO cajas (empresa_id, bodega_id, codigo, nombre, tipo, activo)
+       VALUES (?, ?, ?, ?, 'principal', 1)
+       ON DUPLICATE KEY UPDATE activo = 1`,
+      [empresaIdFinal, result.insertId, `CAJA-${result.insertId}`, `Caja principal - ${nombre}`]
+    );
+
     await connection.commit();
 
     res.status(201).json({

@@ -386,13 +386,21 @@ export const createEmpresaTrial = async (req: Request, res: Response) => {
     logger.info(`${categoriasDefault.length} categorías por defecto creadas para empresa ${empresaId}`);
 
     // Crear bodega principal por defecto
-    await connection.query(`
+    const [bodegaResult] = await connection.query<ResultSetHeader>(`
       INSERT INTO bodegas (
         empresa_id, codigo, nombre, tipo, es_principal, permite_ventas, estado
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [empresaId, 'BOD-PRINCIPAL', 'Bodega Principal', 'bodega', true, true, 'activa']);
 
     logger.info(`Bodega principal creada para empresa ${empresaId}`);
+
+    await connection.query(`
+      INSERT INTO cajas (empresa_id, bodega_id, codigo, nombre, tipo, activo)
+      VALUES (?, ?, ?, ?, 'principal', 1)
+      ON DUPLICATE KEY UPDATE activo = 1
+    `, [empresaId, bodegaResult.insertId, `CAJA-${bodegaResult.insertId}`, `Caja principal - Bodega Principal`]);
+
+    logger.info(`Caja principal creada para empresa ${empresaId}`);
 
     // Crear carpeta S3 para la empresa
     try {

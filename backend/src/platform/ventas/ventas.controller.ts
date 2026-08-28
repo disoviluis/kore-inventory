@@ -804,10 +804,24 @@ export const abrirTurno = async (req: Request, res: Response): Promise<Response>
         return errorResponse(res, 'La caja seleccionada no pertenece a la tienda', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
       }
     } else {
-      const cajas = await query(
+      let cajas = await query(
         'SELECT id FROM cajas WHERE empresa_id = ? AND bodega_id = ? AND activo = 1 ORDER BY id LIMIT 1',
         [empresaId, bodegaId]
       );
+
+      if (cajas.length === 0) {
+        await query(
+          `INSERT INTO cajas (empresa_id, bodega_id, codigo, nombre, tipo, activo)
+           VALUES (?, ?, ?, ?, 'principal', 1)
+           ON DUPLICATE KEY UPDATE activo = 1`,
+          [empresaId, bodegaId, `CAJA-${bodegaId}`, `Caja principal - Tienda ${bodegaId}`]
+        );
+        cajas = await query(
+          'SELECT id FROM cajas WHERE empresa_id = ? AND bodega_id = ? AND activo = 1 ORDER BY id LIMIT 1',
+          [empresaId, bodegaId]
+        );
+      }
+
       if (cajas.length === 0) {
         return errorResponse(res, 'La tienda no tiene una caja activa configurada', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
       }
