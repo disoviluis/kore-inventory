@@ -15,7 +15,7 @@ function showAlert(msg, type = 'warning') {
 
 function fmt(num) {
   const n = parseFloat(num) || 0;
-  return n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Math.round(n).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function whatsappUrl(numero, msg = '') {
