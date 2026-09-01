@@ -188,6 +188,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Cargar datos iniciales de la empresa
         await recargarDatosEmpresa();
+        
+        // Cargar cajas autorizadas del usuario (auto-asigna si hay 1 sola)
+        await cargarCajasUsuario();
 
         initEventListeners();
         deshabilitarSeccionProductos();
@@ -456,6 +459,58 @@ async function recargarDatosEmpresa() {
     }
     
     console.log('🔄 === FIN recargarDatosEmpresa ===');
+}
+
+// ============================================
+// CARGAR CAJAS AUTORIZADAS DEL USUARIO
+// ============================================
+
+async function cargarCajasUsuario() {
+    if (!currentUsuario || !currentUsuario.id) {
+        console.warn('⚠️ Usuario no disponible para cargar cajas');
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/usuarios/${currentUsuario.id}/cajas`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+            console.warn('⚠️ No se pudieron cargar las cajas del usuario');
+            localStorage.removeItem('cajasUsuario');
+            localStorage.removeItem('cajaAsignada');
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.length > 0) {
+            console.log(`✅ Cajas del usuario cargadas: ${data.data.length} caja(s)`);
+            
+            // Guardar todas las cajas en localStorage
+            localStorage.setItem('cajasUsuario', JSON.stringify(data.data));
+            
+            // Si hay exactamente 1 caja, auto-asignarla
+            if (data.data.length === 1) {
+                const cajaAsignada = data.data[0];
+                localStorage.setItem('cajaAsignada', JSON.stringify(cajaAsignada));
+                console.log(`✅ Caja única asignada automáticamente: ${cajaAsignada.nombre} (${cajaAsignada.codigo})`);
+            } else {
+                console.log(`ℹ️ Usuario tiene ${data.data.length} cajas, no se auto-asigna`);
+                localStorage.removeItem('cajaAsignada');
+            }
+        } else {
+            console.log('ℹ️ Usuario no tiene cajas asignadas');
+            localStorage.removeItem('cajasUsuario');
+            localStorage.removeItem('cajaAsignada');
+        }
+    } catch (error) {
+        console.error('❌ Error al cargar cajas del usuario:', error);
+        localStorage.removeItem('cajasUsuario');
+        localStorage.removeItem('cajaAsignada');
+    }
 }
 
 // ============================================
