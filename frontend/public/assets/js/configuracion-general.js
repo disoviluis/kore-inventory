@@ -2223,9 +2223,170 @@ async function eliminarCaja(cajaId) {
     }
 }
 
+let cajaActualParaAsignar = null;
+let usuariosEmpresa = [];
+let usuariosAsignadosACaja = [];
+let cambiosAsignacion = { agregar: [], remover: [] };
+
 async function asignarCajeros(cajaId) {
-    // TODO: Implementar modal de asignación de usuarios a cajas
-    showNotification('Función en desarrollo', 'info');
+    const caja = cajasBodegaActual.find(c => c.id === cajaId);
+    if (!caja) return;
+    
+    cajaActualParaAsignar = cajaId;
+    document.getElementById('asignarCajaInfo').textContent = `${caja.nombre} (${caja.codigo})`;
+    
+    // Cargar usuarios de la empresa
+    await cargarUsuariosEmpresa();
+    
+    // Cargar usuarios ya asignados a esta caja
+    await cargarUsuariosAsignados(cajaId);
+    
+    // Renderizar checkboxes
+    renderUsuariosAsignar();
+    
+    const modal = new bootstrap.Modal(document.getElementById('asignarCajerosModal'));
+    modal.show();
+}
+
+async function cargarUsuariosEmpresa() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/usuarios?empresaId=${currentEmpresa}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar usuarios');
+        
+        const data = await response.json();
+        usuariosEmpresa = data.data || [];
+    } catch (error) {
+        console.error('Error cargando usuarios:', error);
+        showNotification('Error al cargar usuarios', 'danger');
+    }
+}
+
+async function cargarUsuariosAsignados(cajaId) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/cajas/${cajaId}/usuarios`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar usuarios asignados');
+        
+        const data = await response.json();
+        usuariosAsignadosACaja = (data.data || []).map(u => u.usuario_id);
+        cambiosAsignacion = { agregar: [], remover: [] };
+    } catch (error) {
+        console.error('Error cargando usuarios asignados:', error);
+        usuariosAsignadosACaja = [];
+    }
+}
+
+function renderUsuariosAsignar() {
+    const container = document.getElementById('usuariosAsignarContainer');
+    
+    if (usuariosEmpresa.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted py-4">No hay usuarios disponibles en esta empresa</div>';
+        return;
+    }
+    
+    container.innerHTML = usuariosEmpresa.map(usuario => {
+        const estaAsignado = usuariosAsignadosACaja.includes(usuario.id);
+        const esEliminado = cambiosAsignacion.remover.includes(usuario.id);
+        const esAgregado = cambiosAsignacion.agregar.includes(usuario.id);
+        const estadoActual = estaAsignado && !esEliminado || esAgregado && !estaAsignado;
+        
+        return `
+            <div class="form-check mb-2">
+                <input 
+                    class="form-check-input usuario-checkbox" 
+                    type="checkbox" 
+                    id="usuario_${usuario.id}" 
+                    data-usuario-id="${usuario.id}"
+                    ${estadoActual ? 'checked' : ''}
+                    onchange="toggleUsuarioAsignacion(${usuario.id}, this.checked)">
+                <label class="form-check-label" for="usuario_${usuario.id}">
+                    <strong>${usuario.nombre} ${usuario.apellido}</strong>
+                    <span class="text-muted small ms-1">(${usuario.email})</span>
+                    ${usuario.tipo_usuario ? `<span class="badge bg-secondary ms-2">${usuario.tipo_usuario}</span>` : ''}
+                </label>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleUsuarioAsignacion(usuarioId, estaCheckeado) {
+    const estaActualmenteasignado = usuariosAsignadosACaja.includes(usuarioId);
+    
+    if (estaCheckeado && !estaActualmenteasignado) {
+        // Agregar usuario
+        if (!cambiosAsignacion.agregar.includes(usuarioId)) {
+            cambiosAsignacion.agregar.push(usuarioId);
+        }
+        // Remover de la lista de eliminación si estaba
+        cambiosAsignacion.remover = cambiosAsignacion.remover.filter(id => id !== usuarioId);
+    } else if (!estaCheckeado && estaActualmenteasignado) {
+        // Remover usuario
+        if (!cambiosAsignacion.remover.includes(usuarioId)) {
+            cambiosAsignacion.remover.push(usuarioId);
+        }
+        // Remover de la lista de agregación si estaba
+        cambiosAsignacion.agregar = cambiosAsignacion.agregar.filter(id => id !== usuarioId);
+    } else if (!estaCheckeado && !estaActualmenteasignado) {
+        // Descheckear un usuario nuevo - remover de agregación
+        cambiosAsignacion.agregar = cambiosAsignacion.agregar.filter(id => id !== usuarioId);
+    } else if (estaCheckeado && estaActualmenteasignado) {
+        // Checkear uno ya asignado - remover de eliminación
+        cambiosAsignacion.remover = cambiosAsignacion.remover.filter(id => id !== usuarioId);
+    }
+}
+
+async function guardarAsignacionCajeros() {
+    if (!cajaActualParaAsignar) return;
+    
+    const token = localStorage.getItem('token');
+    let exitoso = true;
+    
+    try {
+        // Remover usuarios
+        for (const usuarioId of cambiosAsignacion.remover) {
+            const response = await fetch(`${API_URL}/cajas/${cajaActualParaAsignar}/usuarios/${usuarioId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) exitoso = false;
+        }
+        
+        // Agregar usuarios
+        for (const usuarioId of cambiosAsignacion.agregar) {
+            const response = await fetch(`${API_URL}/cajas/${cajaActualParaAsignar}/usuarios`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ usuario_id: usuarioId })
+            });
+            if (!response.ok) exitoso = false;
+        }
+        
+        if (exitoso) {
+            showNotification('Asignación de cajeros guardada', 'success');
+            
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('asignarCajerosModal'));
+            if (modal) modal.hide();
+            
+            // Recargar cajas
+            await cargarCajasPorBodega(bodegaSeleccionadaId);
+        } else {
+            showNotification('Algunos cambios no se pudieron guardar', 'warning');
+        }
+    } catch (error) {
+        console.error('Error al guardar asignación:', error);
+        showNotification('Error al guardar asignación de cajeros', 'danger');
+    }
 }
 
 function crearModalCaja() {
@@ -2292,3 +2453,5 @@ window.editarCaja = editarCaja;
 window.eliminarCaja = eliminarCaja;
 window.asignarCajeros = asignarCajeros;
 window.guardarCaja = guardarCaja;
+window.toggleUsuarioAsignacion = toggleUsuarioAsignacion;
+window.guardarAsignacionCajeros = guardarAsignacionCajeros;
