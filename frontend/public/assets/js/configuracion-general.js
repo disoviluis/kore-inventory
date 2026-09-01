@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Inicializar event listeners
     initEventListeners();
     initImpuestosTab();
+    initCajasTab();
     if (typeof cargarImpuestos === 'function') {
         cargarImpuestos();
     }
@@ -1980,6 +1981,304 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================================================
+// GESTIÓN DE CAJAS (BLOQUE 2)
+// ============================================================================
+
+let cajasBodegaActual = [];
+let bodegasDisponibles = [];
+let bodegaSeleccionadaId = null;
+
+async function initCajasTab() {
+    const cajasTab = document.getElementById('cajas-tab');
+    if (!cajasTab) return;
+    
+    cajasTab.addEventListener('shown.bs.tab', () => {
+        cargarBodegas();
+    });
+    
+    document.getElementById('cajaBodegaSelect')?.addEventListener('change', (e) => {
+        bodegaSeleccionadaId = e.target.value;
+        if (bodegaSeleccionadaId) {
+            cargarCajasPorBodega(bodegaSeleccionadaId);
+        }
+    });
+    
+    document.getElementById('btnNuevaCaja')?.addEventListener('click', () => {
+        if (!bodegaSeleccionadaId) {
+            showNotification('Selecciona una tienda/bodega primero', 'warning');
+            return;
+        }
+        abrirModalNuevaCaja();
+    });
+}
+
+async function cargarBodegas() {
+    if (!currentEmpresa) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/bodegas?empresa_id=${currentEmpresa}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar bodegas');
+        
+        const data = await response.json();
+        bodegasDisponibles = data.data || [];
+        
+        const select = document.getElementById('cajaBodegaSelect');
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">-- Selecciona una tienda --</option>';
+        bodegasDisponibles.forEach(bodega => {
+            const option = document.createElement('option');
+            option.value = bodega.id;
+            option.textContent = `${bodega.nombre} (${bodega.tipo})`;
+            select.appendChild(option);
+        });
+        
+        // Cargar cajas de la primera bodega si existe
+        if (bodegasDisponibles.length > 0 && !bodegaSeleccionadaId) {
+            bodegaSeleccionadaId = bodegasDisponibles[0].id;
+            select.value = bodegaSeleccionadaId;
+            cargarCajasPorBodega(bodegaSeleccionadaId);
+        }
+    } catch (error) {
+        console.error('Error cargando bodegas:', error);
+        showNotification('Error al cargar tiendas/bodegas', 'danger');
+    }
+}
+
+async function cargarCajasPorBodega(bodegaId) {
+    if (!currentEmpresa) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/cajas?empresa_id=${currentEmpresa}&bodega_id=${bodegaId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al cargar cajas');
+        
+        const data = await response.json();
+        cajasBodegaActual = data.data || [];
+        
+        renderCajasTable();
+    } catch (error) {
+        console.error('Error cargando cajas:', error);
+        showNotification('Error al cargar cajas', 'danger');
+        cajasBodegaActual = [];
+        renderCajasTable();
+    }
+}
+
+function renderCajasTable() {
+    const tbody = document.getElementById('cajasTableBody');
+    if (!tbody) return;
+    
+    if (cajasBodegaActual.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox"></i> No hay cajas registradas en esta tienda
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = cajasBodegaActual.map(caja => `
+        <tr>
+            <td><code>${caja.codigo}</code></td>
+            <td>
+                <strong>${caja.nombre}</strong>
+                ${caja.responsable_id ? `<br><small class="text-muted">Responsable ID: ${caja.responsable_id}</small>` : ''}
+            </td>
+            <td>
+                <span class="badge bg-info">${caja.tipo || 'estándar'}</span>
+            </td>
+            <td>
+                <span class="badge ${caja.usuarios_asignados > 0 ? 'bg-success' : 'bg-warning text-dark'}">
+                    ${caja.usuarios_asignados || 0} cajero(s)
+                </span>
+            </td>
+            <td>
+                <span class="badge ${caja.activo ? 'bg-success' : 'bg-secondary'}">
+                    ${caja.activo ? 'Activa' : 'Inactiva'}
+                </span>
+            </td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="editarCaja(${caja.id})" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-info me-1" onclick="asignarCajeros(${caja.id})" title="Asignar cajeros">
+                    <i class="bi bi-people"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="eliminarCaja(${caja.id})" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function abrirModalNuevaCaja() {
+    const modal = new bootstrap.Modal(document.getElementById('cajaModal') || crearModalCaja());
+    document.getElementById('cajaForm').reset();
+    document.getElementById('cajaId').value = '';
+    document.getElementById('cajaModalTitle').textContent = 'Nueva Caja';
+    modal.show();
+}
+
+async function editarCaja(cajaId) {
+    const caja = cajasBodegaActual.find(c => c.id === cajaId);
+    if (!caja) return;
+    
+    document.getElementById('cajaId').value = caja.id;
+    document.getElementById('cajaCodigo').value = caja.codigo;
+    document.getElementById('cajaNombre').value = caja.nombre;
+    document.getElementById('cajaTipo').value = caja.tipo || 'estándar';
+    document.getElementById('cajaActivo').checked = caja.activo;
+    document.getElementById('cajaModalTitle').textContent = 'Editar Caja';
+    
+    const modal = new bootstrap.Modal(document.getElementById('cajaModal') || crearModalCaja());
+    modal.show();
+}
+
+async function guardarCaja(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('cajaId').value;
+    const codigo = document.getElementById('cajaCodigo').value.trim();
+    const nombre = document.getElementById('cajaNombre').value.trim();
+    const tipo = document.getElementById('cajaTipo').value;
+    const activo = document.getElementById('cajaActivo').checked;
+    
+    if (!codigo || !nombre) {
+        showNotification('Código y nombre son obligatorios', 'warning');
+        return;
+    }
+    
+    if (!bodegaSeleccionadaId) {
+        showNotification('Selecciona una tienda', 'warning');
+        return;
+    }
+    
+    const cajaData = {
+        empresa_id: currentEmpresa,
+        bodega_id: bodegaSeleccionadaId,
+        codigo,
+        nombre,
+        tipo,
+        activo: activo ? 1 : 0
+    };
+    
+    try {
+        const token = localStorage.getItem('token');
+        const url = id ? `${API_URL}/cajas/${id}` : `${API_URL}/cajas`;
+        const method = id ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(cajaData)
+        });
+        
+        if (!response.ok) throw new Error('Error al guardar caja');
+        
+        showNotification(id ? 'Caja actualizada' : 'Caja creada', 'success');
+        
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('cajaModal'));
+        if (modal) modal.hide();
+        
+        // Recargar cajas
+        await cargarCajasPorBodega(bodegaSeleccionadaId);
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification(error.message || 'Error al guardar caja', 'danger');
+    }
+}
+
+async function eliminarCaja(cajaId) {
+    if (!confirm('¿Eliminar esta caja?')) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/cajas/${cajaId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Error al eliminar caja');
+        
+        showNotification('Caja eliminada', 'success');
+        await cargarCajasPorBodega(bodegaSeleccionadaId);
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification(error.message || 'Error al eliminar caja', 'danger');
+    }
+}
+
+async function asignarCajeros(cajaId) {
+    // TODO: Implementar modal de asignación de usuarios a cajas
+    showNotification('Función en desarrollo', 'info');
+}
+
+function crearModalCaja() {
+    const html = `
+        <div class="modal fade" id="cajaModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cajaModalTitle">Nueva Caja</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="cajaForm" onsubmit="guardarCaja(event)">
+                        <div class="modal-body">
+                            <input type="hidden" id="cajaId">
+                            <div class="mb-3">
+                                <label class="form-label">Código <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="cajaCodigo" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="cajaNombre" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Tipo</label>
+                                <select class="form-select" id="cajaTipo">
+                                    <option value="estándar">Estándar</option>
+                                    <option value="principal">Principal</option>
+                                    <option value="secundaria">Secundaria</option>
+                                </select>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cajaActivo" checked>
+                                <label class="form-check-label" for="cajaActivo">Activa</label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const modalElement = document.createElement('div');
+    modalElement.innerHTML = html;
+    document.body.appendChild(modalElement.firstElementChild);
+    
+    return document.getElementById('cajaModal');
+}
+
+// ============================================================================
 // Exponer funciones globales para onclick en HTML
 // ============================================================================
 window.editarCategoria = editarCategoria;
@@ -1989,3 +2288,7 @@ window.previsualizarPlantilla = previsualizarPlantilla;
 window.previsualizarPlantillaActual = previsualizarPlantillaActual;
 window.guardarConfiguracionPlantilla = guardarConfiguracionPlantilla;
 window.seleccionarPlantillaDesdePreview = seleccionarPlantillaDesdePreview;
+window.editarCaja = editarCaja;
+window.eliminarCaja = eliminarCaja;
+window.asignarCajeros = asignarCajeros;
+window.guardarCaja = guardarCaja;
