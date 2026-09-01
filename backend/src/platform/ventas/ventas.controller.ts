@@ -803,6 +803,21 @@ export const abrirTurno = async (req: Request, res: Response): Promise<Response>
       if (cajas.length === 0) {
         return errorResponse(res, 'La caja seleccionada no pertenece a la tienda', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
       }
+
+      // Verificar si hay un turno abierto en esa caja (prevenir simultáneos)
+      const turnoEnCaja = await query(
+        'SELECT id, usuario_id FROM turnos_caja WHERE caja_id = ? AND estado = "abierto" LIMIT 1',
+        [cajaSeleccionada]
+      );
+
+      if (turnoEnCaja.length > 0) {
+        return errorResponse(
+          res,
+          `La caja está en uso. Hay un turno abierto de otro usuario. Selecciona otra caja o espera a que se cierre.`,
+          null,
+          CONSTANTS.HTTP_STATUS.CONFLICT
+        );
+      }
     } else {
       let cajas = await query(
         'SELECT id FROM cajas WHERE empresa_id = ? AND bodega_id = ? AND activo = 1 ORDER BY id LIMIT 1',
