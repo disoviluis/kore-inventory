@@ -4274,9 +4274,73 @@ async function cargarBodegasDisponiblesTurno() {
 
         // Solo mostrar el selector si hay más de una opción; si es una sola, queda preseleccionada oculta
         container.style.display = bodegas.length > 1 ? 'block' : 'none';
+        
+        // Agregar event listener para cargar cajas cuando cambia la bodega
+        select.removeEventListener('change', cargarCajasDisponiblesTurno);
+        select.addEventListener('change', cargarCajasDisponiblesTurno);
+        
+        // Cargar cajas para la bodega preseleccionada
+        await cargarCajasDisponiblesTurno();
     } catch (error) {
         console.error('Error al cargar bodegas para el turno:', error);
         select.innerHTML = '<option value="">Error al cargar bodegas</option>';
+        container.style.display = 'block';
+    }
+}
+
+/**
+ * Cargar cajas disponibles para la bodega seleccionada
+ */
+async function cargarCajasDisponiblesTurno() {
+    const bodegaSelect = document.getElementById('bodegaTurnoSelect');
+    const bodegaId = bodegaSelect.value;
+    const container = document.getElementById('turnoCajaContainer');
+    const select = document.getElementById('cajaTurnoSelect');
+    
+    if (!bodegaId) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    select.innerHTML = '<option value="">Cargando cajas...</option>';
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(
+            `${API_URL}/cajas?empresa_id=${currentEmpresa.id}&bodega_id=${bodegaId}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        
+        const data = await response.json();
+        const cajas = data.data || [];
+        
+        if (cajas.length === 0) {
+            select.innerHTML = '<option value="">No hay cajas configuradas (se creará automáticamente)</option>';
+            container.style.display = 'block';
+            return;
+        }
+        
+        // Filtrar solo cajas activas
+        const cajasActivas = cajas.filter(c => c.activo);
+        
+        if (cajasActivas.length === 0) {
+            select.innerHTML = '<option value="">Todas las cajas están inactivas</option>';
+            container.style.display = 'block';
+            return;
+        }
+        
+        select.innerHTML = cajasActivas.map(c => `<option value="${c.id}">${c.nombre} (${c.codigo})</option>`).join('');
+        
+        // Preseleccionar primera caja si existe
+        if (cajasActivas.length > 0) {
+            select.value = cajasActivas[0].id;
+        }
+        
+        // Mostrar selector solo si hay más de una caja
+        container.style.display = cajasActivas.length > 1 ? 'block' : 'none';
+    } catch (error) {
+        console.error('Error al cargar cajas para el turno:', error);
+        select.innerHTML = '<option value="">Error al cargar cajas</option>';
         container.style.display = 'block';
     }
 }
@@ -4313,6 +4377,9 @@ async function abrirTurno() {
             return;
         }
         
+        // Obtener caja seleccionada (opcional, el backend creará una si no existe)
+        const cajaId = document.getElementById('cajaTurnoSelect').value || null;
+        
         const token = localStorage.getItem('token');
         const response = await fetch(`${API_URL}/ventas/turno/abrir`, {
             method: 'POST',
@@ -4323,6 +4390,7 @@ async function abrirTurno() {
             body: JSON.stringify({
                 empresaId: currentEmpresa.id,
                 bodegaId: bodegaId,
+                cajaId: cajaId,
                 baseInicial
             })
         });
