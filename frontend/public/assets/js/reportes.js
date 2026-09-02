@@ -227,6 +227,7 @@ async function cargarTodo() {
             cargarTopProductos(),
             cargarCategorias(),
             cargarBodegas(),
+            cargarCierresCaja(),
             cargarInventarioRiesgo(),
             cargarReportesGuardados()
         ]);
@@ -484,6 +485,39 @@ async function eliminarReporte(id) {
 
 function cargarReporteGuardado(id) {
     alert('Funcionalidad de cargar configuración guardada — próximamente con más opciones de filtro.');
+}
+
+// ─── CIERRES Y DIFERENCIAS ────────────────────────────────────────────────────
+async function cargarCierresCaja() {
+    const data = await apiGet(`/reportes/cierres-caja?empresaId=${currentEmpresa.id}&fechaInicio=${filtros.fechaInicio}&fechaFin=${filtros.fechaFin}`);
+    const resumen = data?.resumen;
+    const tabla = document.getElementById('tablaCierresCaja');
+    if (!resumen || !tabla) return;
+
+    document.getElementById('cierresTurnos').textContent = resumen.turnos;
+    document.getElementById('cierresDiferencia').textContent = formatMoney(resumen.diferencia);
+    document.getElementById('cierresFaltantes').textContent = resumen.faltantes;
+    document.getElementById('cierresSobrantes').textContent = resumen.sobrantes;
+
+    if (!data.cierres?.length) {
+        tabla.innerHTML = '<tr><td colspan="8" class="text-center text-muted p-3">Sin cierres en el período</td></tr>';
+        return;
+    }
+
+    tabla.innerHTML = data.cierres.map(cierre => {
+        const diferencia = Number(cierre.diferencia);
+        const clase = cierre.diferencia === null ? 'text-muted' : diferencia < 0 ? 'text-danger' : diferencia > 0 ? 'text-success' : 'text-secondary';
+        return `<tr>
+            <td class="ps-3">#${cierre.turno_id}</td>
+            <td><span class="fw-semibold">${cierre.caja_nombre}</span><small class="text-muted d-block">${cierre.bodega_nombre || 'Sin bodega'}</small></td>
+            <td>${cierre.cajero.trim()}</td>
+            <td class="text-end">${formatMoney(cierre.total_ventas)}</td>
+            <td class="text-end">${formatMoney(cierre.efectivo_a_entregar)}</td>
+            <td class="text-end">${cierre.efectivo_contado === null ? '—' : formatMoney(cierre.efectivo_contado)}</td>
+            <td class="text-end fw-semibold ${clase}">${cierre.diferencia === null ? 'Sin conteo' : formatMoney(cierre.diferencia)}</td>
+            <td class="pe-3"><small class="text-muted">${cierre.fecha_cierre ? new Date(cierre.fecha_cierre).toLocaleString('es-CO') : '—'}</small></td>
+        </tr>`;
+    }).join('');
 }
 
 // ─── INSIGHTS AUTOMÁTICOS ─────────────────────────────────────────────────────

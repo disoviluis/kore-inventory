@@ -245,7 +245,6 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
       aplica_iva,
       porcentaje_iva,
       tipo_impuesto,
-      stock_actual,
       stock_minimo,
       stock_maximo,
       unidad_medida,
@@ -317,7 +316,6 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
       porcentaje_iva,
       tipo_impuesto,
       iva_incluido_en_precio,
-      stock_actual,
       stock_minimo,
       stock_maximo,
       unidad_medida,
@@ -354,7 +352,7 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         porcIVA,
         aplicaIvaFlag ? (tipo_impuesto || 'gravado') : (tipo_impuesto || 'excluido'),
         aplicaIvaFlag ? (toBooleanFlag(req.body.iva_incluido_en_precio, false) ? 1 : 0) : 0,
-        manejaInv ? (stock_actual || 0) : null,
+        0,
         manejaInv ? (stock_minimo || 0) : null,
         manejaInv ? (stock_maximo || null) : null,
         unidad_medida || 'unidad',
@@ -375,27 +373,6 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
     );
 
     logger.info(`Producto creado: ${nombre} (ID: ${result.insertId})`);
-
-    // Sincronizar stock_actual con la bodega principal (igual que en updateProducto)
-    if (manejaInv && stock_actual !== undefined && stock_actual !== null) {
-      try {
-        const bodegaPrincipal: any[] = await query(
-          'SELECT id FROM bodegas WHERE empresa_id = ? AND es_principal = TRUE AND estado = "activa" LIMIT 1',
-          [empresa_id]
-        );
-        if (bodegaPrincipal.length > 0) {
-          await query(
-            `INSERT INTO productos_bodegas (producto_id, bodega_id, stock_actual)
-             VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE stock_actual = ?`,
-            [result.insertId, bodegaPrincipal[0].id, stock_actual || 0, stock_actual || 0]
-          );
-          logger.info(`Stock sincronizado con bodega principal ${bodegaPrincipal[0].id} para producto ${result.insertId}`);
-        }
-      } catch (bodegaErr) {
-        logger.info('No se pudo sincronizar stock con bodega (puede no existir aún):', bodegaErr);
-      }
-    }
 
     return successResponse(
       res,
@@ -434,7 +411,6 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
       aplica_iva,
       porcentaje_iva,
       tipo_impuesto,
-      stock_actual,
       stock_minimo,
       stock_maximo,
       unidad_medida,
@@ -550,10 +526,6 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
     if (req.body.iva_incluido_en_precio !== undefined) {
       updates.push('iva_incluido_en_precio = ?');
       values.push(req.body.iva_incluido_en_precio);
-    }
-    if (stock_actual !== undefined) {
-      updates.push('stock_actual = ?');
-      values.push(stock_actual);
     }
     if (stock_minimo !== undefined) {
       updates.push('stock_minimo = ?');
@@ -671,23 +643,6 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
         logger.info(`Historial de promoci\u00f3n registrado para producto ${id}`);
       } catch (histErr) {
         logger.error('No se pudo registrar historial de promo (tabla puede no existir aún):', histErr);
-      }
-    }
-
-    // Si se actualizó stock_actual, sincronizar con bodega principal
-    if (stock_actual !== undefined) {
-      const bodegaPrincipal: any[] = await query(
-        'SELECT id FROM bodegas WHERE empresa_id = ? AND es_principal = TRUE AND estado = "activa" LIMIT 1',
-        [productoExiste[0].empresa_id]
-      );
-
-      if (bodegaPrincipal.length > 0) {
-        await query(
-          `INSERT INTO productos_bodegas (producto_id, bodega_id, stock_actual)
-           VALUES (?, ?, ?)
-           ON DUPLICATE KEY UPDATE stock_actual = ?`,
-          [id, bodegaPrincipal[0].id, stock_actual, stock_actual]
-        );
       }
     }
 

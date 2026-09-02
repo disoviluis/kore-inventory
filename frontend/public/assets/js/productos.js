@@ -932,8 +932,7 @@ async function editarProducto(id) {
         const ivaIncluido = producto.iva_incluido_en_precio === 1 || producto.iva_incluido_en_precio === true;
         document.getElementById(ivaIncluido ? 'ivaIncluidoSi' : 'ivaIncluidoNo').checked = true;
         
-        // Inventario
-        document.getElementById('productoStockActual').value = producto.stock_actual;
+        // Inventario: las existencias se administran desde el módulo Inventario.
         document.getElementById('productoStockMinimo').value = producto.stock_minimo;
         document.getElementById('productoStockMaximo').value = producto.stock_maximo || '';
         document.getElementById('productoUnidadMedida').value = producto.unidad_medida || 'unidad';
@@ -1029,8 +1028,6 @@ async function guardarProducto(e) {
             document.getElementById('productoTipoImpuesto').value : 'excluido',
         iva_incluido_en_precio: aplicaIVAProducto && document.querySelector('input[name="ivaIncluido"]:checked').value === 'true',
         
-        // Inventario
-        stock_actual: parseInt(document.getElementById('productoStockActual').value) || 0,
         stock_minimo: parseInt(document.getElementById('productoStockMinimo').value) || 0,
         stock_maximo: parseInt(document.getElementById('productoStockMaximo').value) || null,
         unidad_medida: document.getElementById('productoUnidadMedida').value,
@@ -1418,7 +1415,6 @@ function exportarProductos() {
             'Porcentaje IVA': p.aplica_iva ? (p.porcentaje_iva || 19) : 0,
             'Tipo Impuesto': p.aplica_iva ? (p.tipo_impuesto || 'gravado') : (p.tipo_impuesto || 'excluido'),
             'IVA Incluido': p.aplica_iva && p.iva_incluido_en_precio ? 'Sí' : 'No',
-            'Stock Actual': p.stock_actual,
             'Stock Mínimo': p.stock_minimo,
             'Stock Máximo': p.stock_maximo || '',
             'Unidad Medida': p.unidad_medida,
@@ -1463,7 +1459,7 @@ function exportarProductos() {
             { wch: 15 },  // Porcentaje IVA
             { wch: 15 },  // Tipo Impuesto
             { wch: 13 },  // IVA Incluido
-            { wch: 12 },  // Stock Actual
+            { wch: 12 },  // Stock Mínimo
             { wch: 12 },  // Stock Mínimo
             { wch: 12 }   // Stock Máximo
         ];
@@ -1511,7 +1507,6 @@ function descargarPlantilla() {
                 'Porcentaje IVA': 19,
                 'Tipo Impuesto': 'gravado',
                 'IVA Incluido': 'No',
-                'Stock Actual': 100,
                 'Stock Mínimo': 10,
                 'Stock Máximo': 500,
                 'Unidad Medida': 'unidad',
@@ -1560,7 +1555,6 @@ function descargarPlantilla() {
             { 'Columna': 'Porcentaje IVA', 'Requerido': 'NO', 'Descripción': '0, 5 o 19 (por defecto: 19)' },
             { 'Columna': 'Tipo Impuesto', 'Requerido': 'NO', 'Descripción': 'gravado, exento o excluido (por defecto: gravado)' },
             { 'Columna': 'IVA Incluido', 'Requerido': 'NO', 'Descripción': 'Sí o No (por defecto: No)' },
-            { 'Columna': 'Stock Actual', 'Requerido': 'NO', 'Descripción': 'Cantidad actual en inventario (por defecto: 0)' },
             { 'Columna': 'Stock Mínimo', 'Requerido': 'NO', 'Descripción': 'Stock mínimo de alerta (por defecto: 0)' },
             { 'Columna': 'Stock Máximo', 'Requerido': 'NO', 'Descripción': 'Stock máximo permitido' },
             { 'Columna': 'Unidad Medida', 'Requerido': 'NO', 'Descripción': 'unidad, kg, litro, etc. (por defecto: unidad)' },
@@ -1771,7 +1765,6 @@ async function validarProductosImportados(datos) {
             porcentaje_iva: porcentajeIVAImport,
             tipo_impuesto: tipoImpuesto,
             iva_incluido_en_precio: aplicaIVAImport ? convertirBoolean(fila['IVA Incluido'], false) : 0,
-            stock_actual: parseInt(fila['Stock Actual']) || 0,
             stock_minimo: parseInt(fila['Stock Mínimo']) || 0,
             stock_maximo: parseInt(fila['Stock Máximo']) || null,
             unidad_medida: fila['Unidad Medida']?.toString().trim() || 'unidad',

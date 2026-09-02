@@ -301,6 +301,59 @@ export const getAnalisisBodegas = async (req: Request, res: Response) => {
 };
 
 // ─────────────────────────────────────────────
+// CIERRES Y DIFERENCIAS POR TURNO
+// ─────────────────────────────────────────────
+export const getCierresCaja = async (req: Request, res: Response) => {
+    try {
+        const { empresaId, fechaInicio, fechaFin, cajaId, usuarioId, turnoId } = req.query;
+        if (!empresaId) return errorResponse(res, 'empresaId requerido', 400);
+
+        const fi = fechaInicio || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        const ff = fechaFin || new Date().toISOString().split('T')[0];
+        let sql = `
+            SELECT t.id as turno_id, t.caja_id, COALESCE(c.nombre, 'Sin caja') as caja_nombre,
+                   t.bodega_id, b.nombre as bodega_nombre, t.usuario_id,
+                   CONCAT(u.nombre, ' ', COALESCE(u.apellido, '')) as cajero,
+                   t.fecha_apertura, t.fecha_cierre, t.base_inicial, t.total_ventas,
+                   t.total_gastos, t.efectivo_a_entregar, t.efectivo_contado, t.diferencia,
+                   t.notas_cierre
+            FROM turnos_caja t
+            LEFT JOIN cajas c ON t.caja_id = c.id
+            LEFT JOIN bodegas b ON t.bodega_id = b.id
+            LEFT JOIN usuarios u ON t.usuario_id = u.id
+            WHERE t.empresa_id = ? AND t.estado = 'cerrado'
+              AND DATE(COALESCE(t.fecha_cierre, t.fecha_apertura)) BETWEEN ? AND ?
+        `;
+        const params: any[] = [empresaId, fi, ff];
+
+        if (cajaId) { sql += ' AND t.caja_id = ?'; params.push(cajaId); }
+        if (usuarioId) { sql += ' AND t.usuario_id = ?'; params.push(usuarioId); }
+        if (turnoId) { sql += ' AND t.id = ?'; params.push(turnoId); }
+        sql += ' ORDER BY t.fecha_cierre DESC';
+
+        const cierres: any[] = await query(sql, params);
+        const resumen = cierres.reduce((totales, cierre) => {
+            totales.turnos += 1;
+            totales.total_ventas += Number(cierre.total_ventas) || 0;
+            totales.total_gastos += Number(cierre.total_gastos) || 0;
+            totales.efectivo_a_entregar += Number(cierre.efectivo_a_entregar) || 0;
+            totales.efectivo_contado += Number(cierre.efectivo_contado) || 0;
+            totales.diferencia += Number(cierre.diferencia) || 0;
+            if (cierre.diferencia !== null) {
+                if (Number(cierre.diferencia) < 0) totales.faltantes += 1;
+                if (Number(cierre.diferencia) > 0) totales.sobrantes += 1;
+            }
+            return totales;
+        }, { turnos: 0, total_ventas: 0, total_gastos: 0, efectivo_a_entregar: 0, efectivo_contado: 0, diferencia: 0, faltantes: 0, sobrantes: 0 });
+
+        return successResponse(res, 'Cierres de caja', { resumen, cierres });
+    } catch (error: any) {
+        logger.error('Error en getCierresCaja:', error);
+        return errorResponse(res, 'Error al obtener cierres de caja', 500);
+    }
+};
+
+// ─────────────────────────────────────────────
 // VENTAS POR CATEGORÍA
 // ─────────────────────────────────────────────
 export const getVentasCategorias = async (req: Request, res: Response) => {
@@ -384,18 +437,37 @@ export const getInventarioRiesgo = async (req: Request, res: Response) => {
 // ─────────────────────────────────────────────
 // REPORTES GUARDADOS (CRUD)
 // ─────────────────────────────────────────────
+const validarAccesoEmpresa = async (req: Request, empresaId: number): Promise<boolean> => {
+    const usuario = (req as any).user;
+    if (!usuario) return false;
+    if (usuario.tipo_usuario === 'super_admin') return true;
+    if (Number(usuario.empresa_id) === empresaId) return true;
+
+    const [empresas]: any = await query(
+        'SELECT 1 FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ? LIMIT 1',
+        [usuario.id, empresaId]
+    );
+    return empresas.length > 0;
+};
+
 export const getReportesGuardados = async (req: Request, res: Response) => {
     try {
         const { empresaId } = req.query;
         if (!empresaId) return errorResponse(res, 'empresaId requerido', 400);
+        const empresa = Number(empresaId);
+        if (!Number.isInteger(empresa) || !(await validarAccesoEmpresa(req, empresa))) {
+            return errorResponse(res, 'No tiene permisos para acceder a esta empresa', 403);
+        }
+        const usuario = (req as any).user;
 
         const datos = await query(`
             SELECT rg.*, CONCAT(u.nombre, ' ', COALESCE(u.apellido,'')) as creado_por
             FROM reportes_guardados rg
             JOIN usuarios u ON rg.usuario_id = u.id
             WHERE rg.empresa_id = ? AND rg.activo = 1
+              AND (rg.es_publico = 1 OR rg.usuario_id = ?)
             ORDER BY rg.updated_at DESC
-        `, [empresaId]);
+        `, [empresa, usuario.id]);
 
         return successResponse(res, 'Reportes guardados', datos);
     } catch (error: any) {
@@ -406,15 +478,20 @@ export const getReportesGuardados = async (req: Request, res: Response) => {
 
 export const crearReporteGuardado = async (req: Request, res: Response) => {
     try {
-        const { empresaId, usuarioId, nombre, descripcion, tipo, configuracion, esPublico } = req.body;
-        if (!empresaId || !usuarioId || !nombre || !configuracion) {
-            return errorResponse(res, 'Datos requeridos: empresaId, usuarioId, nombre, configuracion', 400);
+        const { empresaId, nombre, descripcion, tipo, configuracion, esPublico } = req.body;
+        const usuario = (req as any).user;
+        if (!empresaId || !nombre || !configuracion) {
+            return errorResponse(res, 'Datos requeridos: empresaId, nombre, configuracion', 400);
+        }
+        const empresa = Number(empresaId);
+        if (!Number.isInteger(empresa) || !(await validarAccesoEmpresa(req, empresa))) {
+            return errorResponse(res, 'No tiene permisos para guardar reportes en esta empresa', 403);
         }
 
         const result: any = await query(`
             INSERT INTO reportes_guardados (empresa_id, usuario_id, nombre, descripcion, tipo, configuracion, es_publico)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [empresaId, usuarioId, nombre, descripcion || null, tipo || 'personalizado',
+        `, [empresa, usuario.id, nombre, descripcion || null, tipo || 'personalizado',
             JSON.stringify(configuracion), esPublico ? 1 : 0]);
 
         return successResponse(res, 'Reporte guardado exitosamente', { id: result.insertId }, 201);
@@ -427,15 +504,15 @@ export const crearReporteGuardado = async (req: Request, res: Response) => {
 export const eliminarReporteGuardado = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { empresaId, usuarioId } = req.body;
+        const usuario = (req as any).user;
 
         const [reporte]: any = await query(
-            'SELECT * FROM reportes_guardados WHERE id = ? AND empresa_id = ?',
-            [id, empresaId]
+            'SELECT id FROM reportes_guardados WHERE id = ? AND usuario_id = ? AND activo = 1',
+            [id, usuario.id]
         );
-        if (!reporte) return errorResponse(res, 'Reporte no encontrado', 404);
+        if (reporte.length === 0) return errorResponse(res, 'Reporte no encontrado', 404);
 
-        await query('UPDATE reportes_guardados SET activo = 0 WHERE id = ?', [id]);
+        await query('UPDATE reportes_guardados SET activo = 0 WHERE id = ? AND usuario_id = ?', [id, usuario.id]);
 
         return successResponse(res, 'Reporte eliminado', null);
     } catch (error: any) {

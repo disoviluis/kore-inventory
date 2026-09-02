@@ -399,9 +399,16 @@
                                 <h2 class="page-title mb-1">Inventario</h2>
                                 <p class="text-muted mb-0">Control de movimientos y stock de productos</p>
                             </div>
-                            <button class="btn btn-primary" id="btnAjusteInventario">
-                                <i class="bi bi-arrow-left-right me-2"></i>Ajuste de Inventario
-                            </button>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <select class="form-select" id="selectorBodegaInventario" style="max-width:220px" title="Bodega del inventario">
+                                    <option value="">Seleccione bodega...</option>
+                                </select>
+                                <button class="btn btn-outline-success" id="btnDescargarInventario"><i class="bi bi-file-earmark-excel me-2"></i>Descargar Excel</button>
+                                <button class="btn btn-outline-primary" id="btnSubirInventario"><i class="bi bi-upload me-2"></i>Subir conteo</button>
+                                <button class="btn btn-outline-secondary" id="btnDescargarCambios" disabled><i class="bi bi-download me-2"></i>Cambios</button>
+                                <input type="file" id="archivoInventario" accept=".xlsx,.xls" hidden>
+                                <button class="btn btn-primary" id="btnAjusteInventario"><i class="bi bi-arrow-left-right me-2"></i>Ajuste manual</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -794,8 +801,20 @@
         </div>
     </div>
 
+    <div class="modal fade" id="inventarioExcelModal" tabindex="-1">
+        <div class="modal-dialog modal-xl"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-clipboard-check me-2"></i>Previsualización de inventario físico</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div id="inventarioExcelResumen" class="alert alert-info"></div>
+                <div class="table-responsive"><table class="table table-sm table-hover"><thead><tr><th>Fila</th><th>SKU</th><th>Producto</th><th>Sistema</th><th>Físico</th><th>Diferencia</th><th>Estado</th></tr></thead><tbody id="inventarioExcelTabla"></tbody></table></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" id="btnConfirmarInventarioExcel">Aplicar diferencias</button></div>
+        </div></div>
+    </div>
+
     <!-- Bootstrap 5.3 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="assets/js/fecha-utils.js"></script>
     <!-- Custom JS -->
     <script src="assets/js/inventario.js"></script>

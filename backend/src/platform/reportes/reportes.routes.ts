@@ -18,6 +18,9 @@ router.get('/top-productos', reportesController.getTopProductos);
 // Análisis por bodega / caja
 router.get('/bodegas', reportesController.getAnalisisBodegas);
 
+// Cierres, efectivo esperado y diferencias por turno
+router.get('/cierres-caja', reportesController.getCierresCaja);
+
 // Ventas por categoría
 router.get('/categorias', reportesController.getVentasCategorias);
 

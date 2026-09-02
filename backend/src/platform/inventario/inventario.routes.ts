@@ -24,5 +24,6 @@ router.get('/producto/:id', inventarioController.getHistorialProducto);
 
 // Registrar ajuste de inventario
 router.post('/ajuste', inventarioController.registrarAjuste);
+router.post('/ajuste-masivo', inventarioController.registrarAjusteMasivo);
 
 export default router;

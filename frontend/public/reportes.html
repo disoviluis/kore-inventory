@@ -470,6 +470,38 @@
             </div>
         </div>
 
+        <!-- ─── FILA 6: Cierres y diferencias ─────────────────────────────── -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-safe2 text-success me-1"></i> Cierres y diferencias por caja</h6>
+                <div class="d-flex gap-3 small text-muted">
+                    <span>Turnos: <strong id="cierresTurnos">0</strong></span>
+                    <span>Diferencia: <strong id="cierresDiferencia">$0</strong></span>
+                    <span class="text-danger">Faltantes: <strong id="cierresFaltantes">0</strong></span>
+                    <span class="text-success">Sobrantes: <strong id="cierresSobrantes">0</strong></span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-analytics mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Turno</th>
+                            <th>Caja / Bodega</th>
+                            <th>Cajero</th>
+                            <th class="text-end">Ventas</th>
+                            <th class="text-end">Esperado</th>
+                            <th class="text-end">Contado</th>
+                            <th class="text-end">Diferencia</th>
+                            <th class="pe-3">Cierre</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaCierresCaja">
+                        <tr><td colspan="8" class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- ─── FILA 6: Inventario en Riesgo ─────────────────────────────── -->
         <div class="row g-3 mb-4">
             <div class="col-12 col-lg-6">

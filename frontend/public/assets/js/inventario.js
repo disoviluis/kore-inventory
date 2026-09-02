@@ -10,6 +10,9 @@ let currentEmpresa = null;
 let currentUsuario = null;
 let movimientos = [];
 let productos = [];
+let ajustesExcelPendientes = [];
+let bodegaInventarioId = null;
+let ultimoInformeInventario = [];
 
 // ============================================
 // INICIALIZACIÓN
@@ -77,11 +80,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Guardar usuario actual
         currentUsuario = usuario;
+        await cargarBodegasInventario();
 
         // Event Listeners
         document.getElementById('logoutBtn').addEventListener('click', cerrarSesion);
         document.getElementById('btnAjusteInventario').addEventListener('click', abrirModalAjuste);
         document.getElementById('btnAjusteQuick').addEventListener('click', abrirModalAjuste);
+        document.getElementById('btnDescargarInventario').addEventListener('click', descargarPlantillaInventario);
+        document.getElementById('btnSubirInventario').addEventListener('click', () => document.getElementById('archivoInventario').click());
+        document.getElementById('btnDescargarCambios').addEventListener('click', descargarInformeInventario);
+        document.getElementById('archivoInventario').addEventListener('change', procesarInventarioExcel);
+        document.getElementById('btnConfirmarInventarioExcel').addEventListener('click', confirmarInventarioExcel);
+        document.getElementById('selectorBodegaInventario').addEventListener('change', async (evento) => {
+            bodegaInventarioId = Number(evento.target.value) || null;
+            await cargarProductosParaAjuste();
+        });
         document.getElementById('ajusteForm').addEventListener('submit', guardarAjuste);
         document.getElementById('searchMovimiento').addEventListener('input', filtrarMovimientos);
         document.getElementById('searchProductoInventario').addEventListener('input', filtrarProductosStock);
@@ -360,6 +373,12 @@ async function cargarProductosParaAjuste() {
         
         if (data.success) {
             productos = data.data.filter(p => p.estado === 'activo');
+            if (bodegaInventarioId) {
+                const stockResponse = await fetch(`${API_URL}/bodegas/${bodegaInventarioId}/stock?empresa_id=${currentEmpresa.id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const stockData = await stockResponse.json();
+                const stockPorProducto = new Map((stockData.data || []).map(stock => [Number(stock.producto_id), Number(stock.stock_actual) || 0]));
+                productos = productos.map(producto => ({ ...producto, stock_actual: stockPorProducto.get(Number(producto.id)) || 0 }));
+            }
             const select = document.getElementById('ajusteProducto');
             select.innerHTML = '<option value="">Seleccione un producto...</option>';
             
@@ -376,6 +395,122 @@ async function cargarProductosParaAjuste() {
     } catch (error) {
         console.error('Error al cargar productos:', error);
     }
+}
+
+function obtenerBodegaInventario() {
+    return bodegaInventarioId;
+}
+
+async function cargarBodegasInventario() {
+    const selector = document.getElementById('selectorBodegaInventario');
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/bodegas?empresa_id=${currentEmpresa.id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await response.json();
+    if (!data.success || !Array.isArray(data.data)) return;
+    selector.innerHTML = '<option value="">Seleccione bodega...</option>';
+    data.data.filter(bodega => bodega.estado === 'activa').forEach(bodega => {
+        const option = document.createElement('option');
+        option.value = bodega.id;
+        option.textContent = `${bodega.nombre}${bodega.es_principal ? ' (Principal)' : ''}`;
+        selector.appendChild(option);
+    });
+    bodegaInventarioId = Number(currentUsuario.bodega_id) || Number(data.data.find(bodega => bodega.es_principal)?.id) || Number(data.data[0]?.id) || null;
+    selector.value = bodegaInventarioId || '';
+}
+
+function descargarPlantillaInventario() {
+    const bodegaId = obtenerBodegaInventario();
+    if (!bodegaId) return mostrarAlerta('Asigna una bodega al usuario antes de descargar el inventario.', 'warning');
+    const filas = productos.map(producto => ({
+        'SKU': producto.sku,
+        'Código de Barras': producto.codigo_barras || '',
+        'Producto': producto.nombre,
+        'Stock Sistema': Number(producto.stock_actual) || 0,
+        'Stock Físico': Number(producto.stock_actual) || 0,
+        'Observaciones': ''
+    }));
+    const libro = XLSX.utils.book_new();
+    const hoja = XLSX.utils.json_to_sheet(filas);
+    hoja['!cols'] = [{ wch: 16 }, { wch: 18 }, { wch: 36 }, { wch: 16 }, { wch: 16 }, { wch: 40 }];
+    XLSX.utils.book_append_sheet(libro, hoja, 'Conteo físico');
+    XLSX.writeFile(libro, `inventario_bodega_${bodegaId}.xlsx`);
+}
+
+async function procesarInventarioExcel(evento) {
+    const archivo = evento.target.files[0];
+    evento.target.value = '';
+    if (!archivo) return;
+    if (!obtenerBodegaInventario()) return mostrarAlerta('Asigna una bodega al usuario antes de cargar el inventario.', 'warning');
+    try {
+        const libro = XLSX.read(await archivo.arrayBuffer());
+        const hoja = libro.Sheets['Conteo físico'] || libro.Sheets[libro.SheetNames[0]];
+        const datos = XLSX.utils.sheet_to_json(hoja);
+        const porSku = new Map(productos.map(producto => [String(producto.sku).trim().toLowerCase(), producto]));
+        const vistos = new Set();
+        ajustesExcelPendientes = datos.map((fila, indice) => {
+            const sku = String(fila['SKU'] || '').trim();
+            const producto = porSku.get(sku.toLowerCase());
+            const fisico = Number(fila['Stock Físico']);
+            const valido = !!producto && !vistos.has(sku.toLowerCase()) && Number.isInteger(fisico) && fisico >= 0;
+            if (sku) vistos.add(sku.toLowerCase());
+            return { fila: indice + 2, sku, producto, sistema: Number(producto?.stock_actual) || 0, fisico, diferencia: valido ? fisico - (Number(producto.stock_actual) || 0) : null, observaciones: fila['Observaciones'] || '', valido };
+        });
+        renderizarPrevisualizacionInventario();
+        new bootstrap.Modal(document.getElementById('inventarioExcelModal')).show();
+    } catch (error) {
+        console.error('Error al leer inventario Excel:', error);
+        mostrarAlerta('No se pudo leer el archivo Excel.', 'danger');
+    }
+}
+
+function renderizarPrevisualizacionInventario() {
+    const validos = ajustesExcelPendientes.filter(ajuste => ajuste.valido);
+    const errores = ajustesExcelPendientes.length - validos.length;
+    document.getElementById('inventarioExcelResumen').textContent = `${validos.length} filas válidas, ${errores} con errores. Solo se aplicarán diferencias distintas de cero.`;
+    document.getElementById('inventarioExcelTabla').innerHTML = ajustesExcelPendientes.map(ajuste => `<tr><td>${ajuste.fila}</td><td>${ajuste.sku || '-'}</td><td>${ajuste.producto?.nombre || '-'}</td><td>${ajuste.valido ? ajuste.sistema : '-'}</td><td>${Number.isNaN(ajuste.fisico) ? '-' : ajuste.fisico}</td><td class="${ajuste.valido && ajuste.diferencia < 0 ? 'text-danger' : 'text-success'}">${ajuste.valido ? ajuste.diferencia : '-'}</td><td><span class="badge bg-${ajuste.valido ? 'success' : 'danger'}">${ajuste.valido ? 'Válida' : 'Error'}</span></td></tr>`).join('');
+    document.getElementById('btnConfirmarInventarioExcel').disabled = validos.length === 0 || errores > 0;
+}
+
+async function confirmarInventarioExcel() {
+    const ajustes = ajustesExcelPendientes.filter(ajuste => ajuste.valido && ajuste.diferencia !== 0).map(ajuste => ({ producto_id: ajuste.producto.id, cantidad: ajuste.diferencia, observaciones: ajuste.observaciones }));
+    if (!ajustes.length) return mostrarAlerta('No hay diferencias para aplicar.', 'info');
+    try {
+        const response = await fetch(`${API_URL}/inventario/ajuste-masivo`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ bodega_id: obtenerBodegaInventario(), ajustes, notas: 'Carga de inventario físico desde Excel' }) });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'No se pudo aplicar el inventario');
+        bootstrap.Modal.getInstance(document.getElementById('inventarioExcelModal')).hide();
+        const cambiosConfirmados = data.data.cambios || [];
+        ultimoInformeInventario = ajustesExcelPendientes.filter(ajuste => ajuste.valido && ajuste.diferencia !== 0).map(ajuste => {
+            const confirmado = cambiosConfirmados.find(cambio => Number(cambio.producto_id) === Number(ajuste.producto.id));
+            return {
+            sku: ajuste.sku,
+            producto: ajuste.producto.nombre,
+            stock_anterior: confirmado?.stock_anterior ?? ajuste.sistema,
+            stock_nuevo: confirmado?.stock_nuevo ?? ajuste.fisico,
+            diferencia: confirmado?.diferencia ?? ajuste.diferencia,
+            observaciones: ajuste.observaciones
+            };
+        });
+        document.getElementById('btnDescargarCambios').disabled = false;
+        mostrarAlerta(`${data.data.aplicados} diferencias aplicadas correctamente.`, 'success');
+        descargarInformeInventario();
+        await Promise.all([cargarResumen(), cargarMovimientos(), cargarAlertas(), cargarProductosParaAjuste()]);
+    } catch (error) {
+        mostrarAlerta(error.message, 'danger');
+    }
+}
+
+function descargarInformeInventario() {
+    if (!ultimoInformeInventario.length) return;
+    const filas = ultimoInformeInventario.map(cambio => `<tr style="background-color:${cambio.diferencia < 0 ? '#fde2e1' : '#e2f5e9'}"><td>${cambio.sku}</td><td>${cambio.producto}</td><td>${cambio.stock_anterior}</td><td>${cambio.stock_nuevo}</td><td>${cambio.diferencia}</td><td>${cambio.observaciones || ''}</td></tr>`).join('');
+    const selector = document.getElementById('selectorBodegaInventario');
+    const bodega = selector?.selectedOptions[0]?.textContent || '';
+    const html = `<html><head><meta charset="UTF-8"></head><body><h2>Informe de cambios de inventario</h2><p>Bodega: ${bodega}</p><table border="1"><thead><tr><th>SKU</th><th>Producto</th><th>Stock anterior</th><th>Stock nuevo</th><th>Diferencia</th><th>Observaciones</th></tr></thead><tbody>${filas}</tbody></table></body></html>`;
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(new Blob([html], { type: 'application/vnd.ms-excel' }));
+    enlace.download = `cambios_inventario_${new Date().toISOString().slice(0, 10)}.xls`;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
 }
 
 // ============================================
@@ -590,7 +725,7 @@ async function guardarAjuste(e) {
                 cantidad: cantidadFinal,
                 motivo: motivo,
                 notas: notas,
-                usuario_id: currentUsuario.id
+                bodega_id: currentUsuario.bodega_id || null
             })
         });
 
