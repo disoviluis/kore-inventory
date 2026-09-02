@@ -217,6 +217,23 @@ La validación y la confirmación deben estar separadas. La confirmación debe v
 11. Ejecutar respaldo y migración en staging antes de producción.
 12. Mantener compatibilidad temporal con datos históricos y comparar totales antes de retirar la edición antigua.
 
+## Módulo financiero de gastos ✅ (pendiente ejecutar migración)
+
+Se implementó un módulo independiente para gastos generales de la empresa, separado de `gastos_caja`:
+
+- Tabla y migración: `SQL/migration_20260902_gastos.sql`.
+- API: listar, resumen por período/categoría, registrar y anular gastos.
+- Control de empresa mediante usuario autenticado.
+- Anulación lógica con motivo, usuario y fecha.
+- Pantalla: `frontend/public/gastos.html`.
+- Acceso habilitado desde la sección Finanzas.
+
+Antes de usarlo en producción:
+
+1. Ejecutar la migración en RDS después de realizar backup.
+2. Desplegar backend y frontend.
+3. Validar registro, filtros, resumen y anulación con una cuenta de prueba.
+
 ### Orden recomendado de ejecución
 
 1. Bloquear edición de stock en backend y frontend.

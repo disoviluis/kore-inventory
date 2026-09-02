@@ -109,7 +109,7 @@ function construirSidebarEstandarSiIncompleto() {
         { href: 'cuentas-por-pagar.html', icon: 'bi-credit-card', text: 'Cuentas por Pagar' },
         { href: 'caja.html', icon: 'bi-cash-stack', text: 'Caja' },
         { href: 'bancos.html', icon: 'bi-bank', text: 'Bancos' },
-        { href: '#', icon: 'bi-receipt-cutoff', text: 'Gastos', extra: '<span class="badge bg-secondary">Próximamente</span>' }
+        { href: 'gastos.html', icon: 'bi-receipt-cutoff', text: 'Gastos' }
       ])}
       ${sidebarSection('nominaCollapse', 'bi-people', 'NÓMINA', [
         { href: 'nomina-empleados.html', icon: 'bi-person-badge', text: 'Empleados' },

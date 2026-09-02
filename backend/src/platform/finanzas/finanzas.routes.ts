@@ -39,6 +39,7 @@ import {
   crearMovimiento,
   conciliarMovimiento
 } from './bancos.controller';
+import { listarGastos, resumenGastos, crearGasto, anularGasto } from './gastos.controller';
 
 const router = Router();
 
@@ -100,5 +101,10 @@ router.post('/bancos/cuentas', requirePermission('bancos', 'create'), crearCuent
 router.get('/bancos/movimientos', requirePermission('bancos', 'view'), listarMovimientos);
 router.post('/bancos/movimientos', requirePermission('bancos', 'create'), crearMovimiento);
 router.post('/bancos/movimientos/:id/conciliar', requirePermission('bancos', 'approve'), conciliarMovimiento);
+
+router.get('/gastos', listarGastos);
+router.get('/gastos/resumen', resumenGastos);
+router.post('/gastos', crearGasto);
+router.post('/gastos/:id/anular', anularGasto);
 
 export default router;

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gastos - KORE Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+  <aside class="sidebar" id="sidebar"><div class="sidebar-header"><h5 class="text-white mb-0">KORE<span class="text-warning">.</span>inventory</h5></div><nav class="sidebar-nav p-3" id="sidebarNav"></nav></aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <main class="main-content">
+    <nav class="navbar navbar-light bg-white shadow-sm"><div class="container-fluid"><button class="btn btn-toggle-sidebar" id="toggleSidebar"><i class="bi bi-list"></i></button><span class="fw-semibold">Finanzas / Gastos</span><button class="btn btn-primary ms-auto" id="btnNuevoGasto"><i class="bi bi-plus-lg me-1"></i>Registrar gasto</button></div></nav>
+    <div class="container-fluid py-4">
+      <div class="d-flex justify-content-between align-items-center mb-4"><div><h2 class="h4 mb-1">Gastos generales</h2><p class="text-muted mb-0">Control de egresos financieros de la empresa</p></div><div class="d-flex gap-2"><input type="date" class="form-control" id="fechaDesde"><input type="date" class="form-control" id="fechaHasta"><button class="btn btn-outline-primary" id="btnFiltrar"><i class="bi bi-funnel"></i></button></div></div>
+      <div class="row g-3 mb-4"><div class="col-md-4"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Gastos registrados</small><h3 id="totalGastos">$0</h3></div></div></div><div class="col-md-4"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Cantidad de gastos</small><h3 id="cantidadGastos">0</h3></div></div></div><div class="col-md-4"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Categoría principal</small><h3 class="h5" id="categoriaPrincipal">-</h3></div></div></div></div>
+      <div class="card shadow-sm border-0"><div class="card-body"><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Proveedor</th><th>Método</th><th class="text-end">Monto</th><th>Registró</th><th></th></tr></thead><tbody id="tablaGastos"></tbody></table></div></div></div>
+    </div>
+  </main>
+  <div class="modal fade" id="modalGasto" tabindex="-1"><div class="modal-dialog"><form class="modal-content" id="formGasto"><div class="modal-header"><h5 class="modal-title">Registrar gasto</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-md-6"><label class="form-label">Fecha</label><input type="date" class="form-control" id="gastoFecha" required></div><div class="col-md-6"><label class="form-label">Categoría</label><select class="form-select" id="gastoCategoria" required><option value="">Seleccione...</option><option>Servicios públicos</option><option>Arrendamiento</option><option>Transporte</option><option>Papelería</option><option>Nómina</option><option>Impuestos</option><option>Otros</option></select></div><div class="col-12"><label class="form-label">Descripción</label><input class="form-control" id="gastoDescripcion" maxlength="255" required></div><div class="col-md-6"><label class="form-label">Monto</label><input type="number" class="form-control" id="gastoMonto" min="0.01" step="0.01" required></div><div class="col-md-6"><label class="form-label">Método de pago</label><select class="form-select" id="gastoMetodo"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="tarjeta">Tarjeta</option><option value="otro">Otro</option></select></div><div class="col-12"><label class="form-label">Proveedor (opcional)</label><input class="form-control" id="gastoProveedor" maxlength="180"></div><div class="col-12"><label class="form-label">Observaciones</label><textarea class="form-control" id="gastoObservaciones" rows="2"></textarea></div></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary">Guardar gasto</button></div></form></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script><script src="assets/js/sidebar-navigation.js"></script><script src="assets/js/gastos.js"></script>
+</body></html>

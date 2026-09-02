@@ -1,0 +1,25 @@
+-- Gastos financieros generales, independientes de gastos_caja
+CREATE TABLE IF NOT EXISTS gastos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  empresa_id INT NOT NULL,
+  fecha DATE NOT NULL,
+  categoria VARCHAR(80) NOT NULL,
+  descripcion VARCHAR(255) NOT NULL,
+  proveedor VARCHAR(180) NULL,
+  metodo_pago VARCHAR(40) NOT NULL DEFAULT 'efectivo',
+  monto DECIMAL(15,2) NOT NULL,
+  estado ENUM('registrado','anulado') NOT NULL DEFAULT 'registrado',
+  observaciones TEXT NULL,
+  usuario_id INT NOT NULL,
+  fecha_anulacion DATETIME NULL,
+  usuario_anula_id INT NULL,
+  motivo_anulacion VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_gastos_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+  CONSTRAINT fk_gastos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_gastos_usuario_anula FOREIGN KEY (usuario_anula_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+  INDEX idx_gastos_empresa_fecha (empresa_id, fecha),
+  INDEX idx_gastos_empresa_estado (empresa_id, estado),
+  INDEX idx_gastos_categoria (empresa_id, categoria)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
