@@ -17,6 +17,15 @@ async function cargarEmpresa() {
   const id = Number(localStorage.getItem('empresaActiva')) || Number(empresas?.[0]?.id);
   empresaActiva = empresas.find(empresa => Number(empresa.id) === id) || empresas[0];
   if (!empresaActiva) throw new Error('No hay empresa activa');
+  document.getElementById('userName').textContent = `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim() || 'Usuario';
+  document.getElementById('userRole').textContent = usuario.tipo_usuario || '-';
+  const selector = document.getElementById('companySelector');
+  selector.innerHTML = empresas.map(empresa => `<option value="${empresa.id}" ${Number(empresa.id) === Number(empresaActiva.id) ? 'selected' : ''}>${empresa.nombre}</option>`).join('');
+  selector.addEventListener('change', () => {
+    localStorage.setItem('empresaActiva', selector.value);
+    empresaActiva = empresas.find(empresa => Number(empresa.id) === Number(selector.value));
+    cargarGastos();
+  });
 }
 
 function fechas() {
