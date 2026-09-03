@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conciliación bancaria - KORE Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="d-flex align-items-center">
+        <div class="logo-container-sidebar me-2"><i class="bi bi-boxes"></i></div>
+        <div><h5 class="mb-0 fw-bold text-white">KORE<span class="text-warning">.</span>inventory</h5><small class="text-white-50">ERP SaaS</small></div>
+      </div>
+      <button class="btn-close-sidebar d-lg-none" id="closeSidebar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="sidebar-user">
+      <div class="d-flex align-items-center">
+        <div class="user-avatar me-3"><i class="bi bi-person-circle"></i></div>
+        <div><div class="user-name" id="userName">Cargando...</div><div class="user-role" id="userRole">-</div></div>
+      </div>
+    </div>
+    <div class="company-selector">
+      <label class="form-label text-white-50 small mb-2">Empresa Activa</label>
+      <select class="form-select form-select-sm" id="companySelector"></select>
+    </div>
+    <nav class="sidebar-nav"></nav>
+    <div class="sidebar-footer"><div class="license-status"><i class="bi bi-check-circle-fill text-success"></i><small>Licencia Activa</small></div><small class="text-white-50">v1.0.0 - © Disovi Soft</small></div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="navbar navbar-light bg-white shadow-sm"><div class="container-fluid"><button class="btn btn-toggle-sidebar" id="toggleSidebar"><i class="bi bi-list"></i></button><span class="fw-semibold">Finanzas / Conciliación bancaria</span></div></nav>
+
+    <div class="container-fluid py-4">
+      <div class="mb-4"><h2 class="h4 mb-1">Conciliación bancaria</h2><p class="text-muted mb-0">Compara los movimientos registrados contra el extracto del banco</p></div>
+
+      <div class="card shadow-sm border-0 mb-4"><div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-4"><label class="form-label">Cuenta bancaria</label><select class="form-select" id="selectorCuenta"></select></div>
+          <div class="col-md-2"><label class="form-label">Desde</label><input type="date" class="form-control" id="fechaDesde"></div>
+          <div class="col-md-2"><label class="form-label">Hasta</label><input type="date" class="form-control" id="fechaHasta"></div>
+          <div class="col-md-2"><label class="form-label">Saldo del extracto</label><input type="number" step="0.01" class="form-control" id="saldoExtracto" value="0"></div>
+          <div class="col-md-2 d-grid"><button class="btn btn-outline-primary" id="btnCargarMovimientos"><i class="bi bi-arrow-repeat me-1"></i>Cargar libros</button></div>
+        </div>
+        <hr>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <button class="btn btn-outline-success" id="btnPlantillaExtracto"><i class="bi bi-file-earmark-excel me-1"></i>Plantilla de extracto</button>
+          <button class="btn btn-primary" id="btnSubirExtracto"><i class="bi bi-upload me-1"></i>Subir extracto y cruzar</button>
+          <input type="file" id="archivoExtracto" accept=".xlsx,.xls" hidden>
+          <button class="btn btn-success ms-auto" id="btnCerrarConciliacion" disabled><i class="bi bi-check2-all me-1"></i>Conciliar y cerrar período</button>
+        </div>
+      </div></div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Movimientos en libros</small><h4 id="kpiLibros">0</h4></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Coincidencias</small><h4 class="text-success" id="kpiCoincidencias">0</h4></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Solo en libros</small><h4 class="text-warning" id="kpiSoloLibros">0</h4></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Solo en banco</small><h4 class="text-danger" id="kpiSoloBanco">0</h4></div></div></div>
+      </div>
+
+      <div class="card shadow-sm border-0 mb-4"><div class="card-header bg-white"><strong>Coincidencias encontradas</strong><small class="text-muted ms-2">Se marcarán como conciliadas al cerrar</small></div>
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th></th><th>Fecha libros</th><th>Descripción</th><th>Referencia extracto</th><th class="text-end">Valor</th><th>Estado</th></tr></thead><tbody id="tablaCoincidencias"><tr><td colspan="6" class="text-center text-muted py-4">Sube el extracto para ver el cruce</td></tr></tbody></table></div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-header bg-white"><strong class="text-warning">En libros, no en el banco</strong></div>
+          <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Fecha</th><th>Descripción</th><th class="text-end">Valor</th></tr></thead><tbody id="tablaSoloLibros"><tr><td colspan="3" class="text-center text-muted py-3">-</td></tr></tbody></table></div>
+        </div></div>
+        <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-header bg-white"><strong class="text-danger">En el banco, no en libros</strong></div>
+          <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Fecha</th><th>Descripción</th><th class="text-end">Valor</th></tr></thead><tbody id="tablaSoloBanco"><tr><td colspan="3" class="text-center text-muted py-3">-</td></tr></tbody></table></div>
+        </div></div>
+      </div>
+
+      <div class="card shadow-sm border-0 mt-4"><div class="card-header bg-white"><strong>Conciliaciones cerradas</strong></div>
+        <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Período</th><th>Cuenta</th><th class="text-end">Saldo libros</th><th class="text-end">Saldo extracto</th><th class="text-end">Diferencia</th><th>Responsable</th></tr></thead><tbody id="tablaHistorial"><tr><td colspan="6" class="text-center text-muted py-3">Sin conciliaciones registradas</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="assets/js/sidebar-navigation.js?v=20260903"></script>
+  <script src="assets/js/conciliacion.js?v=20260903"></script>
+</body>
+</html>

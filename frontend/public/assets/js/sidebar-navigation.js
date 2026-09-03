@@ -34,6 +34,7 @@ const MODULE_MAP = {
   'cuentas-por-pagar.html': 'cuentas_por_pagar',
   'caja.html': 'caja',
   'bancos.html': 'bancos',
+  'conciliacion.html': 'bancos',
   'nomina-empleados.html': 'nomina_empleados',
   'nomina-periodos.html': 'nomina_periodos',
   'nomina-novedades.html': 'nomina_novedades',
@@ -42,6 +43,7 @@ const MODULE_MAP = {
   
   // REPORTES
   'reportes.html': 'reportes',
+  'reportes-financieros.html': 'reportes',
   
   // ADMINISTRACIÓN (módulos del dashboard)
   'usuarios': 'usuarios',
@@ -109,6 +111,7 @@ function construirSidebarEstandarSiIncompleto() {
         { href: 'cuentas-por-pagar.html', icon: 'bi-credit-card', text: 'Cuentas por Pagar' },
         { href: 'caja.html', icon: 'bi-cash-stack', text: 'Caja' },
         { href: 'bancos.html', icon: 'bi-bank', text: 'Bancos' },
+        { href: 'conciliacion.html', icon: 'bi-check2-square', text: 'Conciliación' },
         { href: 'gastos.html', icon: 'bi-receipt-cutoff', text: 'Gastos' }
       ])}
       ${sidebarSection('nominaCollapse', 'bi-people', 'NÓMINA', [
@@ -119,7 +122,8 @@ function construirSidebarEstandarSiIncompleto() {
         { href: 'nomina-prestamos.html', icon: 'bi-cash-coin', text: 'Préstamos y configuración' }
       ])}
       ${sidebarSection('reportesCollapse', 'bi-graph-up', 'REPORTES', [
-        { href: 'reportes.html', icon: 'bi-bar-chart', text: 'Reportes' }
+        { href: 'reportes.html', icon: 'bi-bar-chart', text: 'Reportes' },
+        { href: 'reportes-financieros.html', icon: 'bi-calculator', text: 'Financieros' }
       ])}
       ${sidebarSection('administracionCollapse', 'bi-gear', 'ADMINISTRACIÓN', [
         { href: 'dashboard.html#usuarios', icon: 'bi-people-fill', text: 'Usuarios' },

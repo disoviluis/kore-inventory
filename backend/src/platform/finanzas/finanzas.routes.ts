@@ -40,6 +40,13 @@ import {
   conciliarMovimiento
 } from './bancos.controller';
 import { listarGastos, resumenGastos, crearGasto, anularGasto } from './gastos.controller';
+import {
+  movimientosPeriodo,
+  cruzarExtracto,
+  cerrarConciliacion,
+  historialConciliaciones
+} from './conciliacion.controller';
+import { estadoResultados, flujoCaja } from './reportes-financieros.controller';
 
 const router = Router();
 
@@ -106,5 +113,13 @@ router.get('/gastos', listarGastos);
 router.get('/gastos/resumen', resumenGastos);
 router.post('/gastos', crearGasto);
 router.post('/gastos/:id/anular', anularGasto);
+
+router.get('/bancos/conciliacion/movimientos', requirePermission('bancos', 'view'), movimientosPeriodo);
+router.get('/bancos/conciliacion/historial', requirePermission('bancos', 'view'), historialConciliaciones);
+router.post('/bancos/conciliacion/cruzar', requirePermission('bancos', 'view'), cruzarExtracto);
+router.post('/bancos/conciliacion/cerrar', requirePermission('bancos', 'approve'), cerrarConciliacion);
+
+router.get('/reportes/estado-resultados', estadoResultados);
+router.get('/reportes/flujo-caja', flujoCaja);
 
 export default router;

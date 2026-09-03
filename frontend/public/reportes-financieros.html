@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes financieros - KORE Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="d-flex align-items-center">
+        <div class="logo-container-sidebar me-2"><i class="bi bi-boxes"></i></div>
+        <div><h5 class="mb-0 fw-bold text-white">KORE<span class="text-warning">.</span>inventory</h5><small class="text-white-50">ERP SaaS</small></div>
+      </div>
+      <button class="btn-close-sidebar d-lg-none" id="closeSidebar"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="sidebar-user">
+      <div class="d-flex align-items-center">
+        <div class="user-avatar me-3"><i class="bi bi-person-circle"></i></div>
+        <div><div class="user-name" id="userName">Cargando...</div><div class="user-role" id="userRole">-</div></div>
+      </div>
+    </div>
+    <div class="company-selector">
+      <label class="form-label text-white-50 small mb-2">Empresa Activa</label>
+      <select class="form-select form-select-sm" id="companySelector"></select>
+    </div>
+    <nav class="sidebar-nav"></nav>
+    <div class="sidebar-footer"><div class="license-status"><i class="bi bi-check-circle-fill text-success"></i><small>Licencia Activa</small></div><small class="text-white-50">v1.0.0 - © Disovi Soft</small></div>
+  </aside>
+
+  <main class="main-content">
+    <nav class="navbar navbar-light bg-white shadow-sm"><div class="container-fluid"><button class="btn btn-toggle-sidebar" id="toggleSidebar"><i class="bi bi-list"></i></button><span class="fw-semibold">Reportes / Financieros</span></div></nav>
+
+    <div class="container-fluid py-4">
+      <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-4">
+        <div><h2 class="h4 mb-1">Reportes financieros</h2><p class="text-muted mb-0">Estado de resultados y flujo de caja del período</p></div>
+        <div class="d-flex gap-2">
+          <input type="date" class="form-control" id="fechaDesde">
+          <input type="date" class="form-control" id="fechaHasta">
+          <button class="btn btn-primary" id="btnGenerar"><i class="bi bi-funnel me-1"></i>Generar</button>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Ingresos</small><h4 class="text-primary" id="kpiIngresos">$0</h4></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Utilidad bruta</small><h4 class="text-success" id="kpiUtilidadBruta">$0</h4><small class="text-muted" id="kpiMargenBruto">0%</small></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Gastos</small><h4 class="text-danger" id="kpiGastos">$0</h4></div></div></div>
+        <div class="col-md-3"><div class="card shadow-sm border-0"><div class="card-body"><small class="text-muted">Utilidad neta</small><h4 id="kpiUtilidadNeta">$0</h4><small class="text-muted" id="kpiMargenNeto">0%</small></div></div></div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white"><strong>Estado de resultados</strong><small class="text-muted ms-2">Por causación</small></div>
+            <div class="table-responsive"><table class="table mb-0"><tbody id="tablaEstadoResultados"><tr><td class="text-center text-muted py-4">Genera el reporte</td></tr></tbody></table></div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white"><strong>Flujo de caja</strong><small class="text-muted ms-2">Dinero recibido y pagado</small></div>
+            <div class="table-responsive"><table class="table mb-0"><tbody id="tablaFlujoCaja"><tr><td class="text-center text-muted py-4">Genera el reporte</td></tr></tbody></table></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-white"><strong>Gastos por categoría</strong></div>
+        <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Categoría</th><th class="text-end">Total</th><th class="text-end">Participación</th></tr></thead><tbody id="tablaGastosCategoria"><tr><td colspan="3" class="text-center text-muted py-3">-</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/sidebar-navigation.js?v=20260903"></script>
+  <script src="assets/js/reportes-financieros.js?v=20260903"></script>
+</body>
+</html>

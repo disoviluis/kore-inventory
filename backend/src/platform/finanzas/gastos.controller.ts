@@ -60,15 +60,36 @@ export const crearGasto = async (req: Request, res: Response): Promise<Response>
     const empresaId = getEmpresaId(req);
     const usuario = (req as any).user;
     if (!(await validarEmpresa(req, empresaId))) return errorResponse(res, 'No tienes acceso a la empresa seleccionada', null, CONSTANTS.HTTP_STATUS.FORBIDDEN);
-    const { fecha, categoria, descripcion, proveedor, metodo_pago, monto, observaciones } = req.body;
+    const { fecha, categoria, descripcion, proveedor, metodo_pago, monto, observaciones, cuenta_bancaria_id } = req.body;
     const montoNumerico = Number(monto);
     if (!fecha || !categoria || !descripcion || !Number.isFinite(montoNumerico) || montoNumerico <= 0) return errorResponse(res, 'Fecha, categoría, descripción y monto mayor a cero son obligatorios', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
-    const result: any = await query(`INSERT INTO gastos (empresa_id, fecha, categoria, descripcion, proveedor, metodo_pago, monto, observaciones, usuario_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [empresaId, fecha, categoria.trim(), descripcion.trim(), proveedor || null, metodo_pago || 'efectivo', montoNumerico, observaciones || null, usuario.id]);
-    return successResponse(res, 'Gasto registrado exitosamente', { id: result.insertId }, CONSTANTS.HTTP_STATUS.CREATED);
-  } catch (error) {
+    const metodo = metodo_pago || 'efectivo';
+    if (metodo !== 'efectivo' && !cuenta_bancaria_id) return errorResponse(res, 'Debe seleccionar la cuenta bancaria del pago', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+
+    const gastoId = await withTransaction(async (txQuery) => {
+      const result: any = await txQuery(`INSERT INTO gastos (empresa_id, fecha, categoria, descripcion, proveedor, metodo_pago, cuenta_bancaria_id, monto, observaciones, usuario_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [empresaId, fecha, categoria.trim(), descripcion.trim(), proveedor || null, metodo, metodo === 'efectivo' ? null : cuenta_bancaria_id, montoNumerico, observaciones || null, usuario.id]);
+
+      if (metodo !== 'efectivo') {
+        const cuentas = await txQuery('SELECT id, saldo_actual FROM cuentas_bancarias WHERE id = ? AND empresa_id = ? AND activo = 1 FOR UPDATE', [cuenta_bancaria_id, empresaId]);
+        if (cuentas.length === 0) throw new Error('La cuenta bancaria no existe o está inactiva');
+        const saldoAnterior = Number(cuentas[0].saldo_actual);
+        const saldoNuevo = saldoAnterior - montoNumerico;
+        if (saldoNuevo < 0) throw new Error('El gasto dejaría la cuenta bancaria en saldo negativo');
+        await txQuery(`INSERT INTO movimientos_bancarios
+          (empresa_id, cuenta_bancaria_id, tipo, origen, referencia, descripcion, valor, saldo_anterior, saldo_nuevo, created_by)
+          VALUES (?, ?, 'retiro', 'gasto', ?, ?, ?, ?, ?, ?)`,
+          [empresaId, cuenta_bancaria_id, `GASTO-${result.insertId}`, descripcion.trim(), montoNumerico, saldoAnterior, saldoNuevo, usuario.id]);
+        await txQuery('UPDATE cuentas_bancarias SET saldo_actual = ? WHERE id = ? AND empresa_id = ?', [saldoNuevo, cuenta_bancaria_id, empresaId]);
+      }
+
+      return result.insertId;
+    });
+
+    return successResponse(res, 'Gasto registrado exitosamente', { id: gastoId }, CONSTANTS.HTTP_STATUS.CREATED);
+  } catch (error: any) {
     logger.error('Error al crear gasto:', error);
-    return errorResponse(res, 'Error al registrar gasto', error);
+    return errorResponse(res, error?.message || 'Error al registrar gasto', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
   }
 };
 
@@ -80,8 +101,22 @@ export const anularGasto = async (req: Request, res: Response): Promise<Response
     const motivo = String(req.body.motivo || '').trim();
     if (!motivo) return errorResponse(res, 'El motivo de anulación es obligatorio', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
     const resultado = await withTransaction(async (txQuery) => {
-      const gastos = await txQuery('SELECT id FROM gastos WHERE id = ? AND empresa_id = ? AND estado = \'registrado\' FOR UPDATE', [req.params.id, empresaId]);
+      const gastos = await txQuery('SELECT * FROM gastos WHERE id = ? AND empresa_id = ? AND estado = \'registrado\' FOR UPDATE', [req.params.id, empresaId]);
       if (gastos.length === 0) throw new Error('Gasto no encontrado o ya anulado');
+      const gasto = gastos[0];
+
+      if (gasto.metodo_pago !== 'efectivo' && gasto.cuenta_bancaria_id) {
+        const cuentas = await txQuery('SELECT id, saldo_actual FROM cuentas_bancarias WHERE id = ? AND empresa_id = ? FOR UPDATE', [gasto.cuenta_bancaria_id, empresaId]);
+        if (cuentas.length === 0) throw new Error('La cuenta bancaria del gasto no existe');
+        const saldoAnterior = Number(cuentas[0].saldo_actual);
+        const saldoNuevo = saldoAnterior + Number(gasto.monto);
+        await txQuery(`INSERT INTO movimientos_bancarios
+          (empresa_id, cuenta_bancaria_id, tipo, origen, referencia, descripcion, valor, saldo_anterior, saldo_nuevo, created_by)
+          VALUES (?, ?, 'deposito', 'gasto', ?, ?, ?, ?, ?, ?)`,
+          [empresaId, gasto.cuenta_bancaria_id, `GASTO-${gasto.id}`, `Anulación de gasto ${gasto.id}`, gasto.monto, saldoAnterior, saldoNuevo, usuario.id]);
+        await txQuery('UPDATE cuentas_bancarias SET saldo_actual = ? WHERE id = ? AND empresa_id = ?', [saldoNuevo, gasto.cuenta_bancaria_id, empresaId]);
+      }
+
       return txQuery(`UPDATE gastos SET estado = 'anulado', fecha_anulacion = NOW(), usuario_anula_id = ?, motivo_anulacion = ? WHERE id = ? AND empresa_id = ?`, [usuario.id, motivo, req.params.id, empresaId]);
     });
     return successResponse(res, 'Gasto anulado exitosamente', { actualizado: resultado.affectedRows });

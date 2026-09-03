@@ -316,6 +316,7 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
       porcentaje_iva,
       tipo_impuesto,
       iva_incluido_en_precio,
+      stock_actual,
       stock_minimo,
       stock_maximo,
       unidad_medida,

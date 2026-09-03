@@ -1,6 +1,7 @@
 const API_URL = '/api';
 let empresaActiva = null;
 let gastos = [];
+let cuentasBancarias = [];
 const token = () => localStorage.getItem('token');
 const dinero = valor => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(valor) || 0);
 
@@ -44,18 +45,39 @@ async function cargarGastos() {
   document.getElementById('tablaGastos').innerHTML = gastos.length ? gastos.map(gasto => `<tr class="${gasto.estado === 'anulado' ? 'text-decoration-line-through text-muted' : ''}"><td>${gasto.fecha}</td><td>${gasto.categoria}</td><td>${gasto.descripcion}</td><td>${gasto.proveedor || '-'}</td><td>${gasto.metodo_pago}</td><td class="text-end fw-semibold">${dinero(gasto.monto)}</td><td>${gasto.usuario_nombre || '-'}</td><td>${gasto.estado === 'registrado' ? `<button class="btn btn-sm btn-outline-danger" onclick="anularGasto(${gasto.id})" title="Anular"><i class="bi bi-x-circle"></i></button>` : '<span class="badge bg-secondary">Anulado</span>'}</td></tr>`).join('') : '<tr><td colspan="8" class="text-center text-muted py-4">No hay gastos en el período</td></tr>';
 }
 
+async function cargarCuentasBancarias() {
+  try {
+    cuentasBancarias = (await api(`/finanzas/bancos/cuentas?empresa_id=${empresaActiva.id}`)) || [];
+  } catch {
+    cuentasBancarias = [];
+  }
+  const selector = document.getElementById('gastoCuentaBancaria');
+  const activas = cuentasBancarias.filter(cuenta => Number(cuenta.activo) === 1);
+  selector.innerHTML = activas.length
+    ? activas.map(cuenta => `<option value="${cuenta.id}">${cuenta.banco} - ${cuenta.nombre} (${dinero(cuenta.saldo_actual)})</option>`).join('')
+    : '<option value="">No hay cuentas bancarias activas</option>';
+}
+
+function alternarCuentaBancaria() {
+  const esEfectivo = document.getElementById('gastoMetodo').value === 'efectivo';
+  document.getElementById('contenedorCuentaBancaria').classList.toggle('d-none', esEfectivo);
+}
+
 async function guardarGasto(evento) {
   evento.preventDefault();
-  const payload = { empresaId: empresaActiva.id, fecha: document.getElementById('gastoFecha').value, categoria: document.getElementById('gastoCategoria').value, descripcion: document.getElementById('gastoDescripcion').value, monto: document.getElementById('gastoMonto').value, metodo_pago: document.getElementById('gastoMetodo').value, proveedor: document.getElementById('gastoProveedor').value, observaciones: document.getElementById('gastoObservaciones').value };
-  try { await api('/finanzas/gastos', { method: 'POST', body: JSON.stringify(payload) }); bootstrap.Modal.getInstance(document.getElementById('modalGasto')).hide(); evento.target.reset(); await cargarGastos(); alert('Gasto registrado correctamente'); } catch (error) { alert(error.message); }
+  const metodo = document.getElementById('gastoMetodo').value;
+  const cuentaBancariaId = document.getElementById('gastoCuentaBancaria').value;
+  if (metodo !== 'efectivo' && !cuentaBancariaId) { alert('Selecciona la cuenta bancaria del pago'); return; }
+  const payload = { empresaId: empresaActiva.id, fecha: document.getElementById('gastoFecha').value, categoria: document.getElementById('gastoCategoria').value, descripcion: document.getElementById('gastoDescripcion').value, monto: document.getElementById('gastoMonto').value, metodo_pago: metodo, cuenta_bancaria_id: metodo === 'efectivo' ? null : Number(cuentaBancariaId), proveedor: document.getElementById('gastoProveedor').value, observaciones: document.getElementById('gastoObservaciones').value };
+  try { await api('/finanzas/gastos', { method: 'POST', body: JSON.stringify(payload) }); bootstrap.Modal.getInstance(document.getElementById('modalGasto')).hide(); evento.target.reset(); alternarCuentaBancaria(); await Promise.all([cargarGastos(), cargarCuentasBancarias()]); alert('Gasto registrado correctamente'); } catch (error) { alert(error.message); }
 }
 
 async function anularGasto(id) {
   const motivo = prompt('Motivo de anulación:');
   if (!motivo) return;
-  try { await api(`/finanzas/gastos/${id}/anular?empresaId=${empresaActiva.id}`, { method: 'POST', body: JSON.stringify({ motivo }) }); await cargarGastos(); } catch (error) { alert(error.message); }
+  try { await api(`/finanzas/gastos/${id}/anular?empresaId=${empresaActiva.id}`, { method: 'POST', body: JSON.stringify({ motivo }) }); await Promise.all([cargarGastos(), cargarCuentasBancarias()]); } catch (error) { alert(error.message); }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  try { await cargarEmpresa(); const { desde, hasta } = fechas(); document.getElementById('fechaDesde').value = desde; document.getElementById('fechaHasta').value = hasta; document.getElementById('btnNuevoGasto').onclick = () => { document.getElementById('gastoFecha').value = new Date().toISOString().slice(0, 10); new bootstrap.Modal(document.getElementById('modalGasto')).show(); }; document.getElementById('btnFiltrar').onclick = cargarGastos; document.getElementById('formGasto').addEventListener('submit', guardarGasto); await cargarGastos(); } catch (error) { alert(error.message); }
+  try { await cargarEmpresa(); const { desde, hasta } = fechas(); document.getElementById('fechaDesde').value = desde; document.getElementById('fechaHasta').value = hasta; document.getElementById('btnNuevoGasto').onclick = () => { document.getElementById('gastoFecha').value = new Date().toISOString().slice(0, 10); alternarCuentaBancaria(); new bootstrap.Modal(document.getElementById('modalGasto')).show(); }; document.getElementById('btnFiltrar').onclick = cargarGastos; document.getElementById('gastoMetodo').addEventListener('change', alternarCuentaBancaria); document.getElementById('formGasto').addEventListener('submit', guardarGasto); await Promise.all([cargarGastos(), cargarCuentasBancarias()]); } catch (error) { alert(error.message); }
 });
