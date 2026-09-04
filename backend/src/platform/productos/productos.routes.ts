@@ -17,6 +17,7 @@ import {
   getProductoImagenPresignedUrl,
   updateVisibilidadPaginaPublica
 } from './productos.controller';
+import { getInsumos, guardarInsumos } from './insumos.controller';
 import { authMiddleware } from '../../core/middleware/auth.middleware';
 
 const router = Router();
@@ -34,6 +35,8 @@ router.post('/upload-url', getProductoImagenPresignedUrl);
 router.put('/pagina-publica/visibilidad', updateVisibilidadPaginaPublica);
 
 // GET /api/productos/:id - Obtener producto por ID
+router.get('/:id/insumos', getInsumos);
+router.put('/:id/insumos', guardarInsumos);
 router.get('/:id/disponibilidad-bodegas', getDisponibilidadBodegas);
 router.get('/:id/disponibilidad', getDisponibilidadProducto);
 router.get('/:id', getProductoById);

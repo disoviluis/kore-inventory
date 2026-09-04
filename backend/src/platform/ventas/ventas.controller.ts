@@ -12,6 +12,63 @@ import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
 import { generarNumeroFactura, generarCUFE, generarQRCode, calcularRetenciones, numeroATexto } from '../../shared/dian-utils';
 
+type LineaStock = { id: number; cantidad: number };
+
+/** Un producto con insumos consume su composición; el resto descuenta su propio stock. */
+const obtenerLineasStock = async (txQuery: any, productoId: number, cantidad: number): Promise<LineaStock[]> => {
+  const insumos = await txQuery('SELECT insumo_id, cantidad FROM producto_insumos WHERE producto_id = ?', [productoId]);
+  if (insumos.length === 0) return [{ id: Number(productoId), cantidad }];
+  return insumos.map((insumo: any) => ({ id: Number(insumo.insumo_id), cantidad: Number(insumo.cantidad) * cantidad }));
+};
+
+const validarDisponibilidad = async (txQuery: any, lineas: LineaStock[], bodegaId: number | null): Promise<void> => {
+  for (const linea of lineas) {
+    const productos = await txQuery(
+      'SELECT nombre, maneja_inventario, permite_venta_sin_stock, stock_actual FROM productos WHERE id = ?',
+      [linea.id]
+    );
+    if (productos.length === 0) throw new Error('Un producto de la venta no existe');
+
+    const producto = productos[0];
+    if (!Number(producto.maneja_inventario) || Number(producto.permite_venta_sin_stock)) continue;
+
+    let disponible = Number(producto.stock_actual) || 0;
+    if (bodegaId) {
+      const porBodega = await txQuery(
+        'SELECT stock_actual FROM productos_bodegas WHERE producto_id = ? AND bodega_id = ?',
+        [linea.id, bodegaId]
+      );
+      disponible = porBodega.length > 0 ? Number(porBodega[0].stock_actual) : 0;
+    }
+
+    if (disponible < linea.cantidad) {
+      throw new Error(`Stock insuficiente de ${producto.nombre}. Disponible: ${disponible}, requerido: ${linea.cantidad}`);
+    }
+  }
+};
+
+const moverStockVenta = async (
+  txQuery: any,
+  productoId: number,
+  cantidad: number,
+  bodegaId: number | null,
+  signo: number
+): Promise<void> => {
+  const lineas = await obtenerLineasStock(txQuery, productoId, cantidad);
+  if (signo < 0) await validarDisponibilidad(txQuery, lineas, bodegaId);
+
+  for (const linea of lineas) {
+    const delta = signo * linea.cantidad;
+    await txQuery('UPDATE productos SET stock_actual = stock_actual + ? WHERE id = ?', [delta, linea.id]);
+    if (bodegaId) {
+      await txQuery(
+        'UPDATE productos_bodegas SET stock_actual = stock_actual + ? WHERE producto_id = ? AND bodega_id = ?',
+        [delta, linea.id, bodegaId]
+      );
+    }
+  }
+};
+
 /**
  * Buscar clientes por documento o nombre
  * GET /api/ventas/buscar-cliente?empresaId=X&tipo=documento|nombre&valor=123
@@ -554,18 +611,7 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
 
         // Actualizar stock solo si NO es venta contra pedido
         if (producto.tipo_venta !== 'contra_pedido') {
-          await txQuery(
-            'UPDATE productos SET stock_actual = stock_actual - ? WHERE id = ?',
-            [producto.cantidad, producto.producto_id]
-          );
-
-          // Descontar también del stock de la bodega/tienda que factura
-          if (bodegaId) {
-            await txQuery(
-              'UPDATE productos_bodegas SET stock_actual = stock_actual - ? WHERE producto_id = ? AND bodega_id = ?',
-              [producto.cantidad, producto.producto_id, bodegaId]
-            );
-          }
+          await moverStockVenta(txQuery, Number(producto.producto_id), Number(producto.cantidad), bodegaId, -1);
         }
       }
 
@@ -722,17 +768,7 @@ export const anularVenta = async (req: Request, res: Response): Promise<Response
         // por lo que tampoco se debe restaurar al anular.
         if (detalle.tipo_venta === 'contra_pedido') continue;
 
-        await txQuery(
-          'UPDATE productos SET stock_actual = stock_actual + ? WHERE id = ?',
-          [detalle.cantidad, detalle.producto_id]
-        );
-
-        if (venta.bodega_id) {
-          await txQuery(
-            'UPDATE productos_bodegas SET stock_actual = stock_actual + ? WHERE producto_id = ? AND bodega_id = ?',
-            [detalle.cantidad, detalle.producto_id, venta.bodega_id]
-          );
-        }
+        await moverStockVenta(txQuery, Number(detalle.producto_id), Number(detalle.cantidad), venta.bodega_id || null, 1);
       }
 
       await txQuery(

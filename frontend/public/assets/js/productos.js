@@ -482,6 +482,9 @@ function renderizarProductos(items) {
                         <button class="btn btn-outline-primary" onclick="editarProducto(${prod.id})" title="Editar">
                             <i class="bi bi-pencil"></i>
                         </button>
+                        <button class="btn btn-outline-secondary" onclick="abrirModalInsumos(${prod.id})" title="Insumos que lo componen">
+                            <i class="bi bi-diagram-3"></i>
+                        </button>
                         <button class="btn btn-outline-danger" onclick="eliminarProducto(${prod.id})" title="Eliminar">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -496,6 +499,98 @@ function getStockBadgeClass(actual, minimo) {
     if (actual === 0) return 'bg-danger';
     if (actual <= minimo) return 'bg-warning text-dark';
     return 'bg-success';
+}
+
+// ============================================
+// INSUMOS QUE COMPONEN UN PRODUCTO
+// ============================================
+
+let insumosProductoId = null;
+let insumosActuales = [];
+
+async function abrirModalInsumos(productoId) {
+    insumosProductoId = productoId;
+    const producto = productos.find(p => p.id === productoId);
+    document.getElementById('insumosProductoNombre').textContent = producto ? producto.nombre : '';
+
+    const selector = document.getElementById('insumoSelector');
+    selector.innerHTML = productos
+        .filter(p => p.id !== productoId && p.tipo !== 'servicio')
+        .map(p => `<option value="${p.id}">${p.nombre} (${p.unidad_medida || 'unidad'})</option>`)
+        .join('');
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/productos/${productoId}/insumos`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const data = await response.json();
+        insumosActuales = data.success ? data.data.insumos.map(i => ({ insumo_id: i.insumo_id, nombre: i.insumo_nombre, unidad: i.unidad_medida, cantidad: Number(i.cantidad), precio_compra: Number(i.precio_compra) || 0 })) : [];
+    } catch {
+        insumosActuales = [];
+    }
+
+    renderizarInsumos();
+    new bootstrap.Modal(document.getElementById('insumosModal')).show();
+}
+
+function renderizarInsumos() {
+    const cuerpo = document.getElementById('insumosTableBody');
+    cuerpo.innerHTML = insumosActuales.length
+        ? insumosActuales.map((item, indice) => `<tr>
+            <td>${item.nombre}</td>
+            <td class="text-center">${item.unidad || 'unidad'}</td>
+            <td style="width:140px"><input type="number" step="0.0001" min="0.0001" class="form-control form-control-sm" value="${item.cantidad}" onchange="actualizarCantidadInsumo(${indice}, this.value)"></td>
+            <td class="text-end">$${(item.cantidad * item.precio_compra).toLocaleString('es-CO', { maximumFractionDigits: 2 })}</td>
+            <td class="text-center"><button class="btn btn-sm btn-outline-danger" onclick="quitarInsumo(${indice})"><i class="bi bi-x"></i></button></td>
+        </tr>`).join('')
+        : '<tr><td colspan="5" class="text-center text-muted py-3">Sin insumos. Este producto descuenta su propio stock.</td></tr>';
+
+    const costo = insumosActuales.reduce((suma, item) => suma + item.cantidad * item.precio_compra, 0);
+    document.getElementById('insumosCostoTotal').textContent = `$${costo.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`;
+}
+
+function agregarInsumo() {
+    const selector = document.getElementById('insumoSelector');
+    const insumoId = Number(selector.value);
+    const cantidad = Number(document.getElementById('insumoCantidad').value);
+    if (!insumoId || !Number.isFinite(cantidad) || cantidad <= 0) {
+        mostrarAlerta('Selecciona un insumo y una cantidad mayor a cero', 'warning');
+        return;
+    }
+    if (insumosActuales.some(item => item.insumo_id === insumoId)) {
+        mostrarAlerta('Ese insumo ya está en la lista', 'warning');
+        return;
+    }
+    const producto = productos.find(p => p.id === insumoId);
+    insumosActuales.push({ insumo_id: insumoId, nombre: producto.nombre, unidad: producto.unidad_medida, cantidad, precio_compra: Number(producto.precio_compra) || 0 });
+    document.getElementById('insumoCantidad').value = '';
+    renderizarInsumos();
+}
+
+function actualizarCantidadInsumo(indice, valor) {
+    insumosActuales[indice].cantidad = Number(valor) || 0;
+    renderizarInsumos();
+}
+
+function quitarInsumo(indice) {
+    insumosActuales.splice(indice, 1);
+    renderizarInsumos();
+}
+
+async function guardarInsumos() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/productos/${insumosProductoId}/insumos`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ insumos: insumosActuales.map(item => ({ insumo_id: item.insumo_id, cantidad: item.cantidad })) })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+        bootstrap.Modal.getInstance(document.getElementById('insumosModal')).hide();
+        mostrarAlerta('Composición guardada exitosamente', 'success');
+    } catch (error) {
+        mostrarAlerta(error.message || 'Error al guardar la composición', 'danger');
+    }
 }
 
 function getMargenBadgeClass(margen) {
