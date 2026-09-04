@@ -5221,10 +5221,10 @@ function renderizarCuentasAbiertas() {
  * Renderizar un item de cuenta individual
  */
 function renderizarItemCuenta(cuenta, icono, color) {
-    const cuenta_solicitada = cuenta.cuenta_solicitada ? '<span class="badge bg-warning text-dark ms-1" title="Cliente pidió la cuenta">⏰ Cuenta pedida</span>' : '';
+    const cuenta_solicitada = cuenta.cuenta_solicitada ? '<span class="badge bg-warning text-dark ms-1 fw-bold" title="Cliente pidió la cuenta"><i class="bi bi-bell-fill me-1"></i>CUENTA SOLICITADA</span>' : '';
     const esActiva = cuentaActual && cuentaActual.id === cuenta.id;
-    const borderClass = esActiva ? 'border-success border-2' : '';
-    const bgClass = esActiva ? 'bg-light' : '';
+    const borderClass = cuenta.cuenta_solicitada ? 'border-warning border-2' : esActiva ? 'border-success border-2' : '';
+    const bgClass = cuenta.cuenta_solicitada ? 'bg-warning-subtle' : esActiva ? 'bg-light' : '';
     
     const nombreMostrar = cuenta.mesa_numero || cuenta.cliente_nombre || 'Sin identificar';
     const tiempoTranscurrido = calcularTiempoTranscurrido(cuenta.fecha_apertura);

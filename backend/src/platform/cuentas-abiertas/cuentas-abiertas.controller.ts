@@ -962,96 +962,60 @@ export const cancelarCuenta = async (req: Request, res: Response): Promise<Respo
     const { motivo = 'Cancelada por usuario' } = req.body;
     const usuarioId = (req as any).user?.id;
 
-    //Obtener cuenta
-    const cuentaResult = await query(
-      `SELECT * FROM cuentas_abiertas WHERE id = ?`,
-      [id]
-    );
-
-    if (cuentaResult.length === 0) {
-      return errorResponse(
-        res,
-        'Cuenta no encontrada',
-        null,
-        CONSTANTS.HTTP_STATUS.NOT_FOUND
-      );
-    }
-
-    const cuenta = cuentaResult[0];
-
-    if (cuenta.estado !== 'abierta') {
-      return errorResponse(
-        res,
-        'Solo se pueden cancelar cuentas abiertas',
-        null,
-        CONSTANTS.HTTP_STATUS.BAD_REQUEST
-      );
-    }
-
-    // Obtener items para reversar inventario
-    const items = await query(
-      `SELECT * FROM cuenta_abierta_detalle WHERE cuenta_abierta_id = ?`,
-      [id]
-    );
-
-    // Reversar inventario
-    for (const item of items) {
-      // Obtener stock actual antes de reversar
-      const productoResult = await query(
-        `SELECT stock_actual FROM productos WHERE id = ?`,
-        [item.producto_id]
-      );
-      const stockAnterior = productoResult[0]?.stock_actual || 0;
-      const stockNuevo = stockAnterior + item.cantidad;
-
-      // Reversar inventario global
-      await query(
-        `UPDATE productos 
-         SET stock_actual = stock_actual + ?
-         WHERE id = ?`,
-        [item.cantidad, item.producto_id]
+    const resultado = await withTransaction(async (txQuery) => {
+      const cuentaResult = await txQuery(
+        `SELECT * FROM cuentas_abiertas WHERE id = ? FOR UPDATE`,
+        [id]
       );
 
-      // Obtener bodega del usuario que agregó el item
-      const usuarioBodegaResult = await query(
-        `SELECT bodega_id FROM usuarios WHERE id = ?`,
-        [item.usuario_id]
-      );
-      const bodegaIdItem = usuarioBodegaResult[0]?.bodega_id || null;
+      if (cuentaResult.length === 0) throw new Error('Cuenta no encontrada');
+      const cuenta = cuentaResult[0];
+      if (cuenta.estado !== 'abierta') throw new Error('Solo se pueden cancelar cuentas abiertas');
 
-      // Reversar stock en la bodega del cajero (si tenía bodega asignada)
-      if (bodegaIdItem) {
-        await query(
-          `UPDATE productos_bodegas 
-           SET stock_actual = stock_actual + ?
-           WHERE producto_id = ? AND bodega_id = ?`,
-          [item.cantidad, item.producto_id, bodegaIdItem]
-        );
+      const items = await txQuery(
+        `SELECT * FROM cuenta_abierta_detalle WHERE cuenta_abierta_id = ?`,
+        [id]
+      );
+
+      // Evita que cocina siga mostrando pedidos de una cuenta cancelada.
+      await txQuery(
+        `UPDATE comanda_items ci
+         INNER JOIN comandas c ON c.id = ci.comanda_id
+         SET ci.estado = 'cancelado', ci.motivo_cancelacion = ?, ci.usuario_estado_id = ?
+         WHERE c.cuenta_abierta_id = ?
+           AND ci.estado NOT IN ('entregado', 'cancelado')`,
+        [`Cancelación de cuenta ${cuenta.numero_cuenta}: ${motivo}`, usuarioId, id]
+      );
+
+      for (const item of items) {
+        await moverStock(txQuery, {
+          productoId: Number(item.producto_id),
+          cantidad: Number(item.cantidad),
+          bodegaId: (await txQuery('SELECT bodega_id FROM usuarios WHERE id = ?', [item.usuario_id]))[0]?.bodega_id || null,
+          usuarioId,
+          signo: 1,
+          motivo: `Cancelación de cuenta ${cuenta.numero_cuenta}: ${motivo}`,
+          referenciaTipo: 'devolucion',
+          referenciaId: Number(id)
+        });
       }
 
-      // Registrar movimiento
-      await query(
-        `INSERT INTO inventario_movimientos (
-          producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, usuario_id
-        ) VALUES (?, 'entrada', ?, ?, ?, ?, ?)`,
-        [item.producto_id, item.cantidad, stockAnterior, stockNuevo, `Cancelación de cuenta ${cuenta.numero_cuenta}: ${motivo}`, usuarioId]
+      await txQuery(
+        `UPDATE cuentas_abiertas
+         SET estado = 'cancelada', usuario_cierre = ?, fecha_cierre = CONVERT_TZ(NOW(), '+00:00', '-05:00'), notas = CONCAT(COALESCE(notas, ''), '\nMotivo cancelación: ', ?)
+         WHERE id = ?`,
+        [usuarioId, motivo, id]
       );
-    }
 
-    // Marcar cuenta como cancelada
-    await query(
-      `UPDATE cuentas_abiertas
-       SET estado = 'cancelada', usuario_cierre = ?, fecha_cierre = CONVERT_TZ(NOW(), '+00:00', '-05:00'), notas = CONCAT(COALESCE(notas, ''), '\nMotivo cancelación: ', ?)
-       WHERE id = ?`,
-      [usuarioId, motivo, id]
-    );
+      return { itemsReversados: items.length };
+    });
 
-    logger.info(`Cuenta ${cuenta.numero_cuenta} cancelada. Motivo: ${motivo}`);
+    logger.info(`Cuenta ${id} cancelada. Motivo: ${motivo}`);
 
     return successResponse(
       res,
       'Cuenta cancelada exitosamente',
-      { items_reversados: items.length },
+      { items_reversados: resultado.itemsReversados },
       CONSTANTS.HTTP_STATUS.OK
     );
 
