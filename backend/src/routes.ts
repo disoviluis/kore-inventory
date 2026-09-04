@@ -28,6 +28,7 @@ import finanzasRoutes from './platform/finanzas/finanzas.routes';
 import cuentasAbiertasRoutes from './platform/cuentas-abiertas/cuentas-abiertas.routes';
 import cajasRoutes from './platform/cajas/cajas.routes';
 import reportesRoutes from './platform/reportes/reportes.routes';
+import comandasRoutes from './platform/comandas/comandas.routes';
 import nominaRoutes from './platform/nomina/nomina.routes';
 import { verificarEmpresaActiva } from './core/middleware/licencia.middleware';
 import { authMiddleware } from './core/middleware/auth.middleware';
@@ -89,5 +90,6 @@ router.use('/nomina', authMiddleware, verificarEmpresaActiva, nominaRoutes);
 router.use('/cuentas-abiertas', cuentasAbiertasRoutes); // Middlewares aplicados dentro del módulo
 router.use('/cajas', cajasRoutes);
 router.use('/reportes', authMiddleware, verificarEmpresaActiva, reportesRoutes);
+router.use('/comandas', comandasRoutes); // Middlewares aplicados dentro del módulo
 
 export default router;

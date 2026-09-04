@@ -17,6 +17,8 @@ const SIDEBAR_API_URL = typeof API_URL !== 'undefined' ? API_URL : '/api';
 const MODULE_MAP = {
   // OPERACIONES
   'ventas.html': 'pos',  // CORREGIDO: ventas.html es el POS, no gestión de ventas
+  'comandas.html': 'comandas',
+  'cocina.html': 'cocina',
   'ventas-historial.html': 'ventas',  // El historial sí es gestión de ventas
   'clientes.html': 'clientes',
   'inventario.html': 'inventario',
@@ -94,6 +96,8 @@ function construirSidebarEstandarSiIncompleto() {
       ${sidebarLink('dashboard.html', 'bi-speedometer2', 'Dashboard')}
       ${sidebarSection('operacionesCollapse', 'bi-shop', 'OPERACIONES', [
         { href: 'ventas.html', icon: 'bi-cart-check', text: 'Punto de Venta', extra: '<span class="badge bg-success">POS</span>' },
+        { href: 'comandas.html', icon: 'bi-journal-text', text: 'Comandas' },
+        { href: 'cocina.html', icon: 'bi-fire', text: 'Tablero de Cocina' },
         { href: 'ventas-historial.html', icon: 'bi-receipt', text: 'Ventas' },
         { href: 'clientes.html', icon: 'bi-people', text: 'Clientes' },
         { href: 'inventario.html', icon: 'bi-box-seam', text: 'Inventario' },

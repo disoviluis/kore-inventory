@@ -7,10 +7,11 @@
  */
 
 import { Request, Response } from 'express';
-import { query } from '../../shared/database';
+import { query, withTransaction } from '../../shared/database';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
+import { moverStock } from '../../shared/inventario';
 
 /**
  * Función auxiliar para recalcular totales de cuenta
@@ -377,39 +378,6 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
 
     const producto = productoResult[0];
 
-    // Verificar stock según si el cajero tiene bodega asignada o no
-    let stockDisponible = producto.stock_actual;
-
-    if (bodegaId) {
-      // Verificar stock en la bodega específica del cajero
-      const stockBodegaResult = await query(
-        `SELECT stock_disponible FROM productos_bodegas WHERE producto_id = ? AND bodega_id = ?`,
-        [producto_id, bodegaId]
-      );
-      stockDisponible = stockBodegaResult.length > 0 ? stockBodegaResult[0].stock_disponible : 0;
-    }
-
-    // Verificar stock insuficiente
-    if (!producto.permite_venta_sin_stock && stockDisponible < cantidad) {
-      // Obtener disponibilidad en otras bodegas de la empresa
-      const cuentaEmpresaId = cuentaResult[0].empresa_id;
-      const otrasBogegas = await query(
-        `SELECT b.nombre as bodega_nombre, b.tipo, pb.stock_disponible
-         FROM productos_bodegas pb
-         INNER JOIN bodegas b ON pb.bodega_id = b.id
-         WHERE pb.producto_id = ? AND b.empresa_id = ? AND pb.stock_disponible > 0
-         ORDER BY pb.stock_disponible DESC`,
-        [producto_id, cuentaEmpresaId]
-      );
-
-      return errorResponse(
-        res,
-        `Stock insuficiente en esta tienda. Disponible: ${stockDisponible}`,
-        { stock_en_tienda: stockDisponible, disponibilidad_otras_bodegas: otrasBogegas },
-        CONSTANTS.HTTP_STATUS.BAD_REQUEST
-      );
-    }
-
     // Calcular totales
     const subtotal = precio_unitario * cantidad;
     const iva_porcentaje = producto.aplica_iva ? (producto.porcentaje_iva || 19) : 0;
@@ -418,51 +386,35 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     const impoconsumo_valor = 0;
     const total = subtotal + iva_valor + impoconsumo_valor;
 
-    // Insertar item
-    const result = await query(
-      `INSERT INTO cuenta_abierta_detalle (
-        cuenta_abierta_id, producto_id, producto_nombre, producto_sku,
-        cantidad, precio_unitario, subtotal,
-        iva_porcentaje, iva_valor, impoconsumo_porcentaje, impoconsumo_valor,
-        total, usuario_id, notas
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id, producto_id, producto.nombre, producto.sku,
-        cantidad, precio_unitario, subtotal,
-        iva_porcentaje, iva_valor, impoconsumo_porcentaje, impoconsumo_valor,
-        total, usuarioId, notas
-      ]
-    );
-
-    // Obtener stock actual antes de descontar
-    const stockAnterior = producto.stock_actual;
-    const stockNuevo = stockAnterior - cantidad;
-
-    // Descontar del inventario global
-    await query(
-      `UPDATE productos 
-       SET stock_actual = stock_actual - ?
-       WHERE id = ?`,
-      [cantidad, producto_id]
-    );
-
-    // Descontar del inventario de la bodega del cajero (si tiene bodega asignada)
-    if (bodegaId) {
-      await query(
-        `UPDATE productos_bodegas 
-         SET stock_actual = stock_actual - ?
-         WHERE producto_id = ? AND bodega_id = ?`,
-        [cantidad, producto_id, bodegaId]
+    const result = await withTransaction(async (txQuery) => {
+      const insercion = await txQuery(
+        `INSERT INTO cuenta_abierta_detalle (
+          cuenta_abierta_id, producto_id, producto_nombre, producto_sku,
+          cantidad, precio_unitario, subtotal,
+          iva_porcentaje, iva_valor, impoconsumo_porcentaje, impoconsumo_valor,
+          total, usuario_id, notas
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id, producto_id, producto.nombre, producto.sku,
+          cantidad, precio_unitario, subtotal,
+          iva_porcentaje, iva_valor, impoconsumo_porcentaje, impoconsumo_valor,
+          total, usuarioId, notas
+        ]
       );
-    }
 
-    // Registrar movimiento de inventario
-    await query(
-      `INSERT INTO inventario_movimientos (
-        producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, usuario_id
-      ) VALUES (?, 'salida', ?, ?, ?, ?, ?)`,
-      [producto_id, cantidad, stockAnterior, stockNuevo, `Agregado a cuenta abierta #${id}`, usuarioId]
-    );
+      await moverStock(txQuery, {
+        productoId: Number(producto_id),
+        cantidad: Number(cantidad),
+        bodegaId,
+        usuarioId,
+        signo: -1,
+        motivo: `Agregado a cuenta abierta #${id}`,
+        referenciaTipo: 'venta',
+        referenciaId: Number(id)
+      });
+
+      return insercion;
+    });
 
     // Recalcular totales de la cuenta
     await recalcularTotalesCuenta(parseInt(id));
@@ -481,13 +433,13 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
       CONSTANTS.HTTP_STATUS.CREATED
     );
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error al agregar item a cuenta:', error);
     return errorResponse(
       res,
-      'Error al agregar item a cuenta',
-      error,
-      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+      error?.message || 'Error al agregar item a cuenta',
+      null,
+      CONSTANTS.HTTP_STATUS.BAD_REQUEST
     );
   }
 };
@@ -562,74 +514,40 @@ export const actualizarItemCuenta = async (req: Request, res: Response): Promise
     const impoconsumoValor = item.impoconsumo_porcentaje ? (subtotal * item.impoconsumo_porcentaje / 100) : 0;
     const total = subtotal + ivaValor + impoconsumoValor;
 
-    // Actualizar el item
-    await query(
-      `UPDATE cuenta_abierta_detalle 
-       SET cantidad = ?, 
-           precio_unitario = ?,
-           subtotal = ?,
-           iva_valor = ?,
-           impoconsumo_valor = ?,
-           total = ?
-       WHERE id = ?`,
-      [nuevaCantidad, nuevoPrecio, subtotal, ivaValor, impoconsumoValor, total, itemId]
-    );
-
-    // Ajustar inventario si cambió la cantidad
-    if (cantidad !== undefined && nuevaCantidad !== cantidadAnterior) {
-      const diferencia = nuevaCantidad - cantidadAnterior;
-      
-      // Obtener stock actual
-      const productoResult = await query(
-        `SELECT stock_actual FROM productos WHERE id = ?`,
-        [item.producto_id]
-      );
-      const stockAnterior = productoResult[0]?.stock_actual || 0;
-      const stockNuevo = stockAnterior - diferencia; // Si aumentó cantidad, reduce stock
-
-      // Actualizar stock global
-      await query(
-        `UPDATE productos 
-         SET stock_actual = stock_actual - ?
+    await withTransaction(async (txQuery) => {
+      await txQuery(
+        `UPDATE cuenta_abierta_detalle
+         SET cantidad = ?,
+             precio_unitario = ?,
+             subtotal = ?,
+             iva_valor = ?,
+             impoconsumo_valor = ?,
+             total = ?
          WHERE id = ?`,
-        [diferencia, item.producto_id]
+        [nuevaCantidad, nuevoPrecio, subtotal, ivaValor, impoconsumoValor, total, itemId]
       );
 
-      // Obtener bodega del usuario que agregó el item originalmente
-      const usuarioBodegaResult = await query(
-        `SELECT bodega_id FROM usuarios WHERE id = ?`,
-        [item.usuario_id]
-      );
-      const bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
+      if (cantidad !== undefined && nuevaCantidad !== cantidadAnterior) {
+        const diferencia = nuevaCantidad - cantidadAnterior;
 
-      // Actualizar stock en la bodega del cajero (si tenía bodega asignada)
-      if (bodegaId) {
-        await query(
-          `UPDATE productos_bodegas 
-           SET stock_actual = stock_actual - ?
-           WHERE producto_id = ? AND bodega_id = ?`,
-          [diferencia, item.producto_id, bodegaId]
+        const usuarioBodegaResult = await txQuery(
+          `SELECT bodega_id FROM usuarios WHERE id = ?`,
+          [item.usuario_id]
         );
-      }
+        const bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
 
-      // Registrar movimiento de inventario
-      const tipoMovimiento = diferencia > 0 ? 'salida' : 'entrada';
-      const cantidadMovimiento = Math.abs(diferencia);
-      await query(
-        `INSERT INTO inventario_movimientos (
-          producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, usuario_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          item.producto_id, 
-          tipoMovimiento, 
-          cantidadMovimiento, 
-          stockAnterior, 
-          stockNuevo, 
-          `Actualización cantidad en cuenta abierta #${id}`, 
-          usuarioId
-        ]
-      );
-    }
+        await moverStock(txQuery, {
+          productoId: Number(item.producto_id),
+          cantidad: Math.abs(diferencia),
+          bodegaId,
+          usuarioId,
+          signo: diferencia > 0 ? -1 : 1,
+          motivo: `Actualizaci\u00f3n cantidad en cuenta abierta #${id}`,
+          referenciaTipo: 'venta',
+          referenciaId: Number(id)
+        });
+      }
+    });
 
     // Recalcular totales de la cuenta
     await recalcularTotalesCuenta(parseInt(id));
@@ -651,13 +569,13 @@ export const actualizarItemCuenta = async (req: Request, res: Response): Promise
       CONSTANTS.HTTP_STATUS.OK
     );
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error al actualizar item de cuenta:', error);
     return errorResponse(
       res,
-      'Error al actualizar item de cuenta',
-      error,
-      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+      error?.message || 'Error al actualizar item de cuenta',
+      null,
+      CONSTANTS.HTTP_STATUS.BAD_REQUEST
     );
   }
 };
@@ -700,52 +618,26 @@ export const eliminarItemCuenta = async (req: Request, res: Response): Promise<R
       );
     }
 
-    // Eliminar item
-    await query(
-      `DELETE FROM cuenta_abierta_detalle WHERE id = ?`,
-      [itemId]
-    );
+    await withTransaction(async (txQuery) => {
+      await txQuery(`DELETE FROM cuenta_abierta_detalle WHERE id = ?`, [itemId]);
 
-    // Obtener stock actual antes de reversar
-    const productoResult = await query(
-      `SELECT stock_actual FROM productos WHERE id = ?`,
-      [item.producto_id]
-    );
-    const stockAnterior = productoResult[0]?.stock_actual || 0;
-    const stockNuevo = stockAnterior + item.cantidad;
-
-    // Reversar inventario global
-    await query(
-      `UPDATE productos 
-       SET stock_actual = stock_actual + ?
-       WHERE id = ?`,
-      [item.cantidad, item.producto_id]
-    );
-
-    // Obtener bodega del usuario que agregó el item
-    const usuarioBodegaResult = await query(
-      `SELECT bodega_id FROM usuarios WHERE id = ?`,
-      [item.usuario_id]
-    );
-    const bodegaIdItem = usuarioBodegaResult[0]?.bodega_id || null;
-
-    // Reversar stock en la bodega del cajero (si tenía bodega asignada)
-    if (bodegaIdItem) {
-      await query(
-        `UPDATE productos_bodegas 
-         SET stock_actual = stock_actual + ?
-         WHERE producto_id = ? AND bodega_id = ?`,
-        [item.cantidad, item.producto_id, bodegaIdItem]
+      const usuarioBodegaResult = await txQuery(
+        `SELECT bodega_id FROM usuarios WHERE id = ?`,
+        [item.usuario_id]
       );
-    }
+      const bodegaIdItem = usuarioBodegaResult[0]?.bodega_id || null;
 
-    // Registrar movimiento de inventario
-    await query(
-      `INSERT INTO inventario_movimientos (
-        producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, usuario_id
-      ) VALUES (?, 'entrada', ?, ?, ?, ?, ?)`,
-      [item.producto_id, item.cantidad, stockAnterior, stockNuevo, `Eliminado de cuenta abierta #${id}`, usuarioId]
-    );
+      await moverStock(txQuery, {
+        productoId: Number(item.producto_id),
+        cantidad: Number(item.cantidad),
+        bodegaId: bodegaIdItem,
+        usuarioId,
+        signo: 1,
+        motivo: `Eliminado de cuenta abierta #${id}`,
+        referenciaTipo: 'devolucion',
+        referenciaId: Number(id)
+      });
+    });
 
     // Recalcular totales de la cuenta
     await recalcularTotalesCuenta(parseInt(id));
@@ -957,13 +849,18 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
       bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
     }
 
+    // La propina acordada en la mesa viaja a la venta para que el cajero cobre lo informado.
+    const propinaValor = Number(cuenta.propina_valor) || 0;
+    const totalConPropina = (Number(cuenta.total) || 0) + propinaValor;
+
     // Crear venta
     const ventaResult = await query(
       `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, vendedor_id,
         fecha_venta, subtotal, impuesto, total, metodo_pago,
-        observaciones, estado, forma_pago, turno_id, bodega_id
-      ) VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, 'pagada', 'contado', ?, ?)`,
+        observaciones, estado, forma_pago, turno_id, bodega_id,
+        propina_habilitada, propina_porcentaje, propina_valor, propina_base, mesero_id
+      ) VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, 'pagada', 'contado', ?, ?, ?, ?, ?, ?, ?)`,
       [
         cuenta.empresa_id,
         numero_factura,
@@ -971,11 +868,16 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
         usuarioId,
         cuenta.subtotal,
         cuenta.total_impuestos, // En cuentas_abiertas es total_impuestos, en ventas es impuesto
-        cuenta.total,
+        totalConPropina,
         metodoPagoResumen,
         observacionesVenta,
         turnoId,
-        bodegaId
+        bodegaId,
+        Number(cuenta.propina_habilitada) ? 1 : 0,
+        Number(cuenta.propina_porcentaje) || 0,
+        propinaValor,
+        Number(cuenta.subtotal) || 0,
+        cuenta.mesero_id || null
       ]
     );
 

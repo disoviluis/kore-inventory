@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero de Cocina - KORE</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  body { margin:0; background:#1f2430; color:#e9ecef; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
+  .barra { background:#161a22; padding:.75rem 1rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; position:sticky; top:0; z-index:10; }
+  .barra h1 { font-size:1.1rem; margin:0; font-weight:600; }
+  .columnas { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; padding:1rem; align-items:start; }
+  @media (max-width: 900px) { .columnas { grid-template-columns:1fr; } }
+  .columna { background:#272d3a; border-radius:.8rem; padding:.75rem; min-height:120px; }
+  .columna h2 { font-size:.9rem; text-transform:uppercase; letter-spacing:.05em; margin:0 0 .75rem; display:flex; justify-content:space-between; }
+  .ticket { background:#323a4a; border-left:6px solid #6c757d; border-radius:.6rem; padding:.75rem; margin-bottom:.7rem; }
+  .ticket.nuevo { border-left-color:#20c997; }
+  .ticket.preparando { border-left-color:#ffc107; }
+  .ticket.listo { border-left-color:#198754; }
+  .ticket.demorado { border-left-color:#dc3545; background:#3a2a2f; }
+  .ticket .mesa { font-size:.75rem; color:#adb5bd; text-transform:uppercase; letter-spacing:.04em; }
+  .ticket .producto { font-size:1.15rem; font-weight:700; margin:.15rem 0; }
+  .ticket .nota { background:#4a3b12; color:#ffda6a; border-radius:.4rem; padding:.35rem .5rem; font-size:.85rem; margin:.4rem 0; }
+  .ticket .pie { display:flex; justify-content:space-between; align-items:center; margin-top:.6rem; gap:.5rem; }
+  .cronometro { font-size:.85rem; color:#adb5bd; }
+  .cronometro.alerta { color:#ff6b6b; font-weight:700; }
+  .btn-accion { flex:1; padding:.6rem; font-weight:600; }
+  .vacio { text-align:center; color:#6c757d; padding:1.5rem .5rem; font-size:.9rem; }
+</style>
+</head>
+<body>
+
+<div class="barra">
+  <h1><i class="bi bi-fire text-warning me-2"></i>Tablero de Cocina</h1>
+  <select class="form-select form-select-sm bg-dark text-light border-secondary" id="selectorEstacion" style="width:auto">
+    <option value="todas">Todas las estaciones</option>
+    <option value="cocina">Cocina</option>
+    <option value="bar">Bar</option>
+    <option value="postres">Postres</option>
+    <option value="otro">Otros</option>
+  </select>
+  <div class="ms-auto d-flex align-items-center gap-3">
+    <span class="small text-secondary" id="ultimaActualizacion">—</span>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="sonidoActivo" checked>
+      <label class="form-check-label small" for="sonidoActivo">Sonido</label>
+    </div>
+  </div>
+</div>
+
+<div class="columnas">
+  <div class="columna">
+    <h2>Pendientes <span class="badge bg-secondary" id="conteoPendientes">0</span></h2>
+    <div id="columnaPendientes"></div>
+  </div>
+  <div class="columna">
+    <h2>En preparación <span class="badge bg-warning text-dark" id="conteoPreparacion">0</span></h2>
+    <div id="columnaPreparacion"></div>
+  </div>
+  <div class="columna">
+    <h2>Listos para recoger <span class="badge bg-success" id="conteoListos">0</span></h2>
+    <div id="columnaListos"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/cocina.js?v=20260904"></script>
+</body>
+</html>

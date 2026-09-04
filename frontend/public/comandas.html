@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Comandas - KORE</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  :root { --azul:#0d6efd; --verde:#198754; --ambar:#ffc107; --rojo:#dc3545; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f4f6f9; padding-bottom:78px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; overflow-x:hidden; }
+  .cabecera { background:linear-gradient(135deg,#0d6efd,#0a58ca); color:#fff; padding:.85rem 1rem; position:sticky; top:0; z-index:1000; box-shadow:0 2px 10px rgba(0,0,0,.12); }
+  .cabecera h1 { font-size:1.05rem; margin:0; font-weight:600; }
+  .cabecera small { opacity:.85; }
+  .vista { display:none; padding:1rem; }
+  .vista.activa { display:block; }
+  .barra-inferior { position:fixed; bottom:0; left:0; right:0; background:#fff; display:flex; border-top:1px solid #dee2e6; z-index:1000; }
+  .barra-inferior button { flex:1; border:0; background:transparent; padding:.6rem .2rem; font-size:.7rem; color:#6c757d; position:relative; }
+  .barra-inferior button i { display:block; font-size:1.35rem; margin-bottom:.1rem; }
+  .barra-inferior button.activa { color:var(--azul); font-weight:600; }
+  .barra-inferior .contador { position:absolute; top:2px; right:22%; background:var(--rojo); color:#fff; border-radius:10px; font-size:.62rem; padding:0 5px; }
+  .tarjeta-mesa { border:0; border-left:5px solid #adb5bd; border-radius:.7rem; box-shadow:0 1px 6px rgba(0,0,0,.08); margin-bottom:.75rem; }
+  .tarjeta-mesa.ocupada { border-left-color:var(--azul); }
+  .tarjeta-mesa.listo { border-left-color:var(--verde); }
+  .tarjeta-mesa.solicitada { border-left-color:var(--ambar); }
+  .chip { border:1px solid #ced4da; background:#fff; border-radius:999px; padding:.4rem .85rem; font-size:.82rem; white-space:nowrap; }
+  .chip.activa { background:var(--azul); color:#fff; border-color:var(--azul); }
+  .fila-chips { display:flex; gap:.4rem; overflow-x:auto; padding-bottom:.5rem; -webkit-overflow-scrolling:touch; }
+  .fila-chips::-webkit-scrollbar { display:none; }
+  .grid-productos { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.6rem; }
+  .card-producto { border:0; border-radius:.7rem; box-shadow:0 1px 5px rgba(0,0,0,.08); padding:.7rem; background:#fff; text-align:left; width:100%; }
+  .card-producto .nombre { font-weight:600; font-size:.85rem; line-height:1.2; }
+  .card-producto .precio { color:var(--azul); font-weight:700; font-size:.95rem; margin-top:.35rem; }
+  .btn-cantidad { width:46px; height:46px; border-radius:50%; font-size:1.3rem; line-height:1; }
+  .estado-pendiente { border-left-color:#6c757d !important; }
+  .estado-en_preparacion { border-left-color:var(--ambar) !important; }
+  .estado-listo { border-left-color:var(--verde) !important; animation:pulso 1.4s infinite; }
+  @keyframes pulso { 0%,100%{ box-shadow:0 1px 6px rgba(25,135,84,.25);} 50%{ box-shadow:0 0 16px rgba(25,135,84,.65);} }
+  .carrito-flotante { position:fixed; bottom:86px; left:1rem; right:1rem; z-index:999; }
+  .vacio { text-align:center; color:#6c757d; padding:2.5rem 1rem; }
+  .vacio i { font-size:2.6rem; opacity:.35; display:block; margin-bottom:.6rem; }
+</style>
+</head>
+<body>
+
+<div class="cabecera d-flex justify-content-between align-items-center">
+  <div>
+    <h1 id="tituloVista">Mesas</h1>
+    <small id="infoMesero">Cargando...</small>
+  </div>
+  <button class="btn btn-sm btn-light" id="btnRecargar"><i class="bi bi-arrow-clockwise"></i></button>
+</div>
+
+<!-- MESAS -->
+<section class="vista activa" id="vistaMesas">
+  <button class="btn btn-primary w-100 py-3 mb-3 fw-semibold" id="btnNuevaCuenta">
+    <i class="bi bi-plus-circle me-2"></i>Abrir nueva cuenta
+  </button>
+  <div id="listaCuentas"></div>
+</section>
+
+<!-- PEDIDO -->
+<section class="vista" id="vistaPedido">
+  <div class="alert alert-primary py-2 px-3 d-flex justify-content-between align-items-center mb-2">
+    <div><strong id="pedidoMesa">-</strong><small class="d-block" id="pedidoCliente"></small></div>
+    <button class="btn btn-sm btn-outline-primary" onclick="irAVista('mesas')"><i class="bi bi-arrow-left"></i></button>
+  </div>
+  <input type="search" class="form-control form-control-lg mb-2" id="buscadorProducto" placeholder="Buscar por nombre o SKU...">
+  <div class="fila-chips mb-2" id="chipsCategorias"></div>
+  <div class="grid-productos" id="gridProductos"></div>
+  <div class="carrito-flotante" id="carritoFlotante" style="display:none;">
+    <button class="btn btn-success w-100 py-3 shadow fw-semibold" id="btnEnviarCocina">
+      <i class="bi bi-send me-2"></i>Enviar a cocina (<span id="carritoConteo">0</span>)
+    </button>
+  </div>
+</section>
+
+<!-- MIS PEDIDOS -->
+<section class="vista" id="vistaPedidos">
+  <div id="listaMisPedidos"></div>
+</section>
+
+<!-- CUENTA -->
+<section class="vista" id="vistaCuenta">
+  <div id="detalleCuenta"></div>
+</section>
+
+<!-- Barra inferior -->
+<nav class="barra-inferior">
+  <button class="activa" data-vista="mesas"><i class="bi bi-grid-3x3-gap"></i>Mesas</button>
+  <button data-vista="pedido"><i class="bi bi-journal-plus"></i>Pedido</button>
+  <button data-vista="pedidos"><i class="bi bi-hourglass-split"></i>Pedidos<span class="contador" id="contadorListos" style="display:none;">0</span></button>
+  <button data-vista="cuenta"><i class="bi bi-receipt"></i>Cuenta</button>
+</nav>
+
+<!-- Modal agregar producto -->
+<div class="modal fade" id="modalProducto" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title" id="modalProductoNombre"></h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
+          <button class="btn btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(-1)">−</button>
+          <input type="number" class="form-control text-center fw-bold fs-4" id="modalCantidad" value="1" min="1" style="width:90px">
+          <button class="btn btn-outline-secondary btn-cantidad" onclick="cambiarCantidad(1)">+</button>
+        </div>
+        <label class="form-label small fw-semibold">Observaciones</label>
+        <div class="fila-chips mb-2" id="chipsObservaciones"></div>
+        <textarea class="form-control" id="modalObservaciones" rows="2" placeholder="Ej: sin cebolla, término medio..."></textarea>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-primary w-100 py-2" id="btnAgregarProducto">Agregar al pedido</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nueva cuenta -->
+<div class="modal fade" id="modalNuevaCuenta" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="formNuevaCuenta">
+      <div class="modal-header py-2"><h6 class="modal-title">Nueva cuenta</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <label class="form-label small fw-semibold">Tipo</label>
+        <select class="form-select mb-3" id="nuevaTipo">
+          <option value="mesa">Mesa</option>
+          <option value="cliente">Cliente</option>
+          <option value="tab_nombre">Para llevar</option>
+        </select>
+        <div id="campoMesa">
+          <label class="form-label small fw-semibold">Mesa</label>
+          <input class="form-control mb-3" id="nuevaMesa" placeholder="Ej: Mesa 4">
+        </div>
+        <label class="form-label small fw-semibold">Nombre de referencia</label>
+        <input class="form-control" id="nuevaNombre" placeholder="Ej: Mesa 4 - Juan" required>
+      </div>
+      <div class="modal-footer py-2"><button class="btn btn-primary w-100 py-2">Abrir cuenta</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal propina -->
+<div class="modal fade" id="modalPropina" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2"><h6 class="modal-title">Propina voluntaria</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p class="small text-muted">Pregunta al cliente si desea dejar propina. Es voluntaria y puede rechazarla.</p>
+        <div class="fila-chips mb-3" id="chipsPropina"></div>
+        <label class="form-label small fw-semibold">O un valor exacto</label>
+        <input type="number" class="form-control" id="propinaValor" placeholder="0" min="0">
+        <div class="alert alert-secondary mt-3 mb-0 py-2 small" id="previoPropina"></div>
+      </div>
+      <div class="modal-footer py-2 d-flex gap-2">
+        <button class="btn btn-outline-danger flex-fill" id="btnSinPropina">No acepta</button>
+        <button class="btn btn-success flex-fill" id="btnConfirmarPropina">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/comandas.js?v=20260904"></script>
+</body>
+</html>
