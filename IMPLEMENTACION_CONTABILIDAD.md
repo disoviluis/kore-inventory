@@ -1484,4 +1484,194 @@ La contabilidad estará lista cuando:
 
 No se debe considerar terminada la contabilidad hasta probar al menos un caso de comercio, uno de servicios, uno de restaurante y uno de manufactura en staging.
 
+---
+
+## Plan de profesionalización posterior a la base contable
+
+La base contable ya existe, pero para que el ERP pueda ser utilizado por empresas reales se debe convertir la configuración técnica en un proceso guiado, controlado y auditable. El objetivo de esta etapa no es agregar campos sin orden, sino reducir errores de parametrización, impedir operaciones inconsistentes y facilitar la revisión del contador.
+
+### Resultado esperado
+
+Una persona que no sea contadora debe poder seleccionar una empresa, seguir el asistente, entender qué está configurando, completar los datos que le corresponden y saber cuándo debe solicitar aprobación profesional. El sistema debe mostrar qué falta, por qué se necesita y qué operación será afectada.
+
+### Orden oficial de implementación
+
+| Orden | Bloque | Resultado | Dependencias |
+|---:|---|---|---|
+| 1 | Asistente guiado por empresa | Flujo paso a paso con avance, requisitos y retorno entre módulos | Estado contable, selector de empresa y manual |
+| 2 | Validación de datos compartidos | Comprobación de Empresa, Facturación, Bancos, clientes, proveedores y productos sin duplicarlos | APIs de los módulos propietarios |
+| 3 | Plan de cuentas profesional | Consulta, creación, edición, inactivación y jerarquía con permisos | `plan_cuentas` y rol contable |
+| 4 | Asignación de cuentas obligatorias | Mapeo por operación, perfil y excepciones | Plan de cuentas y `configuracion_contable` |
+| 5 | Roles y aprobación | Administrador inicial, contador, auxiliar y aprobación de activación | Roles, permisos y `usuario_empresa` |
+| 6 | Integración automática | Asientos desde ventas, compras, finanzas, inventario y producción | Cuentas válidas y período abierto |
+| 7 | Reportes y auditoría | Libros, estados financieros, trazabilidad y exportaciones | Integraciones contables funcionando |
+| 8 | Pruebas y puesta en marcha | Validación por perfil y aprobación del contador | Todos los bloques anteriores |
+
+### Bloque 1: asistente guiado por empresa
+
+La pantalla de Contabilidad debe evolucionar de una pestaña informativa a un asistente con una lista de requisitos. Cada requisito tendrá estado `completo`, `pendiente`, `no_aplica` o `requiere_revision`.
+
+El asistente debe mostrar:
+
+- Empresa actualmente seleccionada y usuario responsable.
+- Porcentaje de avance por empresa, nunca global para todas las empresas.
+- Paso actual y siguiente acción recomendada.
+- Enlace al módulo propietario cuando el dato no pertenece a Contabilidad.
+- Botón de regreso a Contabilidad después de completar el dato externo.
+- Explicación sencilla de la finalidad y del impacto de cada parámetro.
+- Registro de la última persona que modificó o aprobó cada paso.
+- Estado de activación: `pendiente`, `en_configuracion`, `requiere_revision`, `activa` u `omitida_temporalmente`.
+
+El asistente no debe permitir activar una empresa si existen requisitos obligatorios pendientes. Sí debe permitir guardar como borrador y continuar después.
+
+### Bloque 2: validación de datos compartidos
+
+Contabilidad debe consultar los datos en su módulo propietario y guardar únicamente referencias o estados de validación. No se deben crear copias de NIT, resolución DIAN, cuentas bancarias, clientes, proveedores o productos.
+
+Validaciones mínimas:
+
+1. La empresa seleccionada pertenece al usuario mediante `usuario_empresa`.
+2. La empresa tiene datos fiscales básicos completos.
+3. La configuración de facturación está disponible si la empresa factura.
+4. Existe al menos una caja o cuenta bancaria cuando el perfil recibe dinero.
+5. Los clientes y proveedores usados por las operaciones pertenecen a la empresa.
+6. Los productos e impuestos utilizados tienen referencias válidas.
+7. Al regresar de otro módulo, el asistente vuelve a consultar la fuente y actualiza el estado del requisito.
+
+### Bloque 3: plan de cuentas profesional
+
+La primera API e interfaz de consulta, creación e inactivación ya están disponibles. Para completar este bloque falta:
+
+- Editar nombre, naturaleza y atributos permitidos de cuentas personalizadas.
+- Mostrar la jerarquía como árbol y distinguir cuentas padre de cuentas auxiliares.
+- Impedir movimientos directos en cuentas padre.
+- Impedir cambios incompatibles en cuentas con movimientos o en períodos cerrados.
+- Mostrar si una cuenta está usada por la configuración contable.
+- Permitir búsqueda por código, nombre, tipo, naturaleza y estado.
+- Registrar auditoría de creación, edición e inactivación.
+- Aplicar permisos `contabilidad.view`, `contabilidad.create`, `contabilidad.edit` y `contabilidad.approve`.
+
+Una cuenta con movimientos nunca se elimina físicamente. Si deja de utilizarse, se inactiva y se conserva para consultar históricos.
+
+### Bloque 4: asignación de cuentas obligatorias
+
+La configuración debe presentarse por grupos comprensibles para el usuario:
+
+| Grupo | Cuentas o reglas | Aplica cuando |
+|---|---|---|
+| Dinero | Caja, bancos y medios de pago | La empresa recibe o entrega dinero |
+| Terceros | Clientes y proveedores | Maneja cartera o compras a crédito |
+| Ventas | Ingresos, devoluciones e IVA generado | Vende productos o servicios |
+| Compras | Inventario, IVA descontable y proveedores | Compra inventario o insumos |
+| Costos | Costo de ventas e inventario | Maneja existencias o producción |
+| Gastos | Gastos generales y cuentas por naturaleza | Registra gastos |
+| Producción | Materias primas, proceso y terminados | Tiene producción activa |
+| Propinas | Propinas por pagar | El perfil permite propinas |
+| Cierre | Resultado del ejercicio y apertura | Activa cierres y saldos iniciales |
+
+El sistema debe calcular las cuentas obligatorias según el perfil y los módulos activos. Una empresa de servicios sin inventario no debe quedar bloqueada por cuentas de inventario. Una empresa con propinas no puede activar el módulo sin cuenta de propinas por pagar.
+
+También se deben permitir excepciones controladas por producto, categoría, impuesto, proveedor, bodega o tipo de operación. Las excepciones deben indicar quién las creó, desde cuándo aplican y qué cuenta reemplazan.
+
+### Bloque 5: roles, empresas y aprobación
+
+La regla de usuarios será:
+
+- El administrador de empresa puede parametrizar inicialmente sus empresas asignadas.
+- El contador se crea como `tipo_usuario = 'usuario'` y recibe el rol empresarial **Contador**.
+- El usuario solo opera las empresas relacionadas en `usuario_empresa`.
+- Un mismo contador puede tener varias empresas, pero nunca se mezclan sus planes, estados o saldos.
+- El auxiliar puede preparar borradores, pero no activar parametrización ni cerrar períodos.
+- La activación definitiva debe registrar usuario, fecha, empresa, versión de configuración y aprobación.
+
+Permisos recomendados:
+
+| Permiso | Administrador | Contador | Auxiliar | Operador |
+|---|---:|---:|---:|---:|
+| Ver contabilidad | Sí | Sí | Sí | Según módulo |
+| Crear o editar cuentas | Limitado | Sí | No | No |
+| Asignar cuentas por defecto | Sí | Sí | No | No |
+| Aprobar parametrización | Según política | Sí | No | No |
+| Crear comprobante manual | No o limitado | Sí | Borrador | No |
+| Confirmar comprobante | Según política | Sí | No | No |
+| Cerrar período | No | Sí | No | No |
+| Exportar reportes | Sí | Sí | Según permiso | No |
+
+El permiso `delete` no debe borrar comprobantes confirmados. Las correcciones se hacen con anulación, reverso o ajuste autorizado.
+
+### Bloque 6: activación automática de integraciones
+
+Cada módulo debe llamar al motor contable únicamente después de confirmar su operación y validar la configuración aplicable:
+
+1. Ventas: caja, banco o cartera; ingresos, impuestos, propinas y costo de ventas.
+2. Compras: inventario o gasto; IVA descontable y proveedores o medio de pago.
+3. Recibos: entrada de dinero contra cartera u otro origen autorizado.
+4. Egresos: pago a proveedores u obligaciones contra caja o banco.
+5. Gastos: gasto, impuesto y medio de pago.
+6. Inventario: entradas, salidas, ajustes, mermas, devoluciones y traslados.
+7. Producción: consumo de materias primas, productos en proceso y terminados.
+8. Bancos: movimientos y conciliaciones que tengan efecto contable.
+
+Todas las integraciones deben ser transaccionales e idempotentes. Reintentar una operación no puede crear dos comprobantes. Si falta una cuenta, la operación debe detenerse antes de confirmar o quedar claramente en estado pendiente, sin asiento incompleto.
+
+### Bloque 7: reportes, auditoría y soporte operativo
+
+La aplicación debe incorporar como mínimo:
+
+- Libro diario y mayor.
+- Balance de comprobación.
+- Estado de resultados.
+- Balance general.
+- Cartera y cuentas por pagar.
+- Inventario valorizado y costo de ventas.
+- IVA, retenciones y propinas por pagar.
+- Filtros por empresa, período, bodega, cuenta, tercero y centro de costo.
+- Exportación a Excel y PDF con fecha, usuario y filtros aplicados.
+- Enlace desde cada movimiento al documento origen y desde el documento al comprobante.
+- Historial de cambios, anulaciones, reaperturas y aprobaciones.
+
+Para soporte profesional se debe agregar un diagnóstico que informe: requisitos pendientes, cuentas sin asignar, documentos sin asiento, comprobantes desbalanceados, duplicados por origen, períodos cerrados y diferencias entre operación y contabilidad.
+
+### Bloque 8: pruebas y criterios de aceptación
+
+Antes de declarar una empresa activa se deben ejecutar pruebas en staging:
+
+- Parametrización incompleta: el sistema identifica el requisito faltante.
+- Usuario sin empresa asignada: recibe acceso denegado.
+- Administrador con varias empresas: los datos permanecen aislados.
+- Activación sin cuentas obligatorias: operación rechazada con explicación.
+- Venta, compra, recibo, egreso y gasto: comprobantes balanceados.
+- Reintento de la misma operación: no duplica el asiento.
+- Anulación: genera reverso completo.
+- Período cerrado: bloquea modificaciones.
+- Cuenta padre: no acepta movimientos directos.
+- Cuenta con movimientos: no puede eliminarse.
+- Reportes: coinciden con los comprobantes confirmados.
+- Perfil sin inventario: no exige cuentas de inventario.
+- Restaurante con propina y manufactura: activa solo sus reglas específicas.
+
+### Primera iteración autorizada
+
+La primera versión del asistente guiado ya quedó implementada en Configuración General. Incluye:
+
+- Selección de la empresa asignada desde el selector existente.
+- Checklist por empresa con estados completo, pendiente y revisión.
+- Enlaces a Empresa, Facturación y Bancos sin duplicar datos.
+- Revalidación al abrir Contabilidad, cambiar de empresa o regresar desde otro módulo.
+- Barra de avance de requisitos obligatorios.
+- Bloqueo de `Activar contabilidad` cuando faltan empresa, facturación aplicable, perfil, fechas o plan de cuentas.
+
+La siguiente iteración debe concentrarse exclusivamente en estos elementos:
+
+1. Completar la validación de asignación de cuentas obligatorias según perfil.
+2. Completar edición y visualización jerárquica del plan de cuentas.
+3. Documentar y probar el flujo con el administrador actuando inicialmente como contador.
+4. Agregar permisos y aprobación diferenciada para el rol Contador.
+
+No se deben cargar históricos, modificar saldos ni activar contabilización masiva en esta primera iteración. Esos cambios requieren aprobación del contador, backup y una ventana controlada.
+
+### Criterio de profesionalización
+
+El módulo se considerará profesional cuando una empresa pueda completar su parametrización sin duplicar datos, con instrucciones claras, permisos por responsabilidad, validaciones antes de operar, asientos automáticos trazables, reportes conciliables y evidencia auditable de quién aprobó cada decisión.
+
 **Importante:** este módulo debe implementarse con validación directa del contador. El sistema puede automatizar la mecánica, pero la definición de cuentas, impuestos, retenciones y cierres es una decisión contable y tributaria.

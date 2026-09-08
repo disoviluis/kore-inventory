@@ -10,6 +10,8 @@ let currentEmpresa = null;
 let categorias = [];
 let categoriasOriginal = [];
 let editingCategoriaId = null;
+let checklistContabilidad = [];
+let planCuentasContabilidad = [];
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -499,9 +501,11 @@ function initEventListeners() {
             
             if (data.success && data.data) {
                 currentEmpresa = empresaId;
+                planCuentasContabilidad = [];
                 localStorage.setItem('empresaActiva', empresaId);
                 loadCategorias();
                 cargarEstadoContabilidad();
+                cargarPlanCuentas();
             }
         } catch (error) {
             console.error('Error cambiando empresa:', error);
@@ -695,17 +699,15 @@ function initContabilidadTab() {
     });
 
     document.getElementById('btnActivarContabilidad')?.addEventListener('click', () => {
-        const perfil = document.getElementById('contabilidadPerfil')?.value || 'comercio';
-        const fechaInicio = document.getElementById('contabilidadFechaInicio')?.value;
-        const fechaCorte = document.getElementById('contabilidadFechaCorte')?.value;
-
-        if (!fechaInicio || !fechaCorte || !perfil) {
-            showNotification('Completa la fecha de inicio, la fecha de corte y el perfil antes de activar contabilidad', 'warning');
+        if (!validarChecklistContabilidad()) {
             return;
         }
-
         actualizarEstadoContabilidad('activa');
     });
+
+    document.getElementById('contabilidadFechaInicio')?.addEventListener('change', actualizarChecklistContabilidad);
+    document.getElementById('contabilidadFechaCorte')?.addEventListener('change', actualizarChecklistContabilidad);
+    document.getElementById('contabilidadPerfil')?.addEventListener('change', actualizarChecklistContabilidad);
 
     document.querySelectorAll('[data-return-target]').forEach(button => {
         button.addEventListener('click', () => {
@@ -747,11 +749,92 @@ async function cargarPlanCuentas() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'No se pudo cargar el plan de cuentas');
         const cuentas = data.data || [];
+        planCuentasContabilidad = cuentas;
+        actualizarChecklistContabilidad({ planCuentas: cuentas });
         body.innerHTML = cuentas.length ? cuentas.map(cuenta => `<tr><td>${escaparContabilidad(cuenta.codigo)}</td><td>${escaparContabilidad(cuenta.nombre)}</td><td>${escaparContabilidad(cuenta.tipo)}</td><td>${escaparContabilidad(cuenta.naturaleza)}</td><td>${cuenta.acepta_movimientos ? 'Sí' : 'No'}</td><td><span class="badge ${cuenta.activa ? 'bg-success' : 'bg-secondary'}">${cuenta.activa ? 'Activa' : 'Inactiva'}</span></td><td>${cuenta.activa ? `<button class="btn btn-sm btn-outline-danger" data-inactivar-cuenta="${cuenta.id}" title="Inactivar cuenta"><i class="bi bi-x-circle"></i></button>` : ''}</td></tr>`).join('') : '<tr><td colspan="7" class="text-center text-muted py-3">No hay cuentas configuradas</td></tr>';
         body.querySelectorAll('[data-inactivar-cuenta]').forEach(button => button.addEventListener('click', () => inactivarCuentaContable(button.dataset.inactivarCuenta)));
     } catch (error) {
         body.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3">${escaparContabilidad(error.message)}</td></tr>`;
     }
+}
+
+function pintarChecklistContabilidad() {
+    const checklist = document.getElementById('contabilidadChecklist');
+    const barra = document.getElementById('contabilidadProgresoBarra');
+    const texto = document.getElementById('contabilidadProgresoTexto');
+    const ayuda = document.getElementById('contabilidadActivacionAyuda');
+    const boton = document.getElementById('btnActivarContabilidad');
+    if (!checklist || !barra || !texto || !boton) return;
+
+    const obligatorios = checklistContabilidad.filter(item => item.obligatorio);
+    const completos = obligatorios.filter(item => item.completo).length;
+    const porcentaje = obligatorios.length ? Math.round((completos / obligatorios.length) * 100) : 0;
+    const pendientes = obligatorios.filter(item => !item.completo);
+
+    barra.style.width = `${porcentaje}%`;
+    barra.className = `progress-bar ${porcentaje === 100 ? 'bg-success' : ''}`;
+    texto.textContent = `${completos}/${obligatorios.length} obligatorios completos (${porcentaje}%)`;
+    boton.disabled = pendientes.length > 0;
+    ayuda.textContent = pendientes.length ? `Pendiente: ${pendientes[0].titulo}` : 'Todos los requisitos obligatorios están completos.';
+    ayuda.className = `small mt-3 ${pendientes.length ? 'text-muted' : 'text-success'}`;
+
+    checklist.innerHTML = checklistContabilidad.map(item => {
+        const icono = item.completo ? 'bi-check-circle-fill text-success' : 'bi-exclamation-circle text-warning';
+        const estado = item.completo ? 'Completo' : (item.obligatorio ? 'Pendiente' : 'Revisar');
+        const accion = item.accion ? `<button type="button" class="btn btn-link btn-sm p-0 ms-2" data-return-target="${item.accion}">${item.accionTexto}</button>` : '';
+        return `<div class="list-group-item px-0 d-flex align-items-start gap-2"><i class="bi ${icono} mt-1"></i><div class="flex-grow-1"><strong>${item.titulo}</strong><div class="text-muted">${item.descripcion}</div></div><span class="badge ${item.completo ? 'bg-success' : (item.obligatorio ? 'bg-warning text-dark' : 'bg-secondary')}" >${estado}</span>${accion}</div>`;
+    }).join('');
+
+    checklist.querySelectorAll('[data-return-target]').forEach(button => {
+        button.addEventListener('click', () => document.querySelector(`[data-return-target="${button.dataset.returnTarget}"]`)?.click());
+    });
+}
+
+function construirChecklistContabilidad({ empresa, facturacion, bancos = [], planCuentas = [] } = {}) {
+    const perfil = document.getElementById('contabilidadPerfil')?.value;
+    const fechaInicio = document.getElementById('contabilidadFechaInicio')?.value;
+    const fechaCorte = document.getElementById('contabilidadFechaCorte')?.value;
+    const fechasValidas = Boolean(fechaInicio && fechaCorte && fechaInicio > fechaCorte);
+    const datosEmpresaCompletos = Boolean(empresa && empresa.nombre && empresa.nit);
+    const facturaRequerida = perfil !== 'servicios' || Boolean(facturacion);
+
+    checklistContabilidad = [
+        { titulo: 'Empresa seleccionada', descripcion: datosEmpresaCompletos ? 'La empresa pertenece a tu sesión y tiene datos básicos.' : 'Completa nombre y NIT en Empresa.', completo: datosEmpresaCompletos, obligatorio: true, accion: 'empresa', accionTexto: 'Ir a Empresa' },
+        { titulo: 'Facturación configurada', descripcion: facturaRequerida ? 'La configuración de facturación será usada por las ventas.' : 'No es obligatoria para este perfil.', completo: Boolean(facturacion) || !facturaRequerida, obligatorio: facturaRequerida, accion: 'facturacion', accionTexto: 'Ir a Facturación' },
+        { titulo: 'Medios de dinero revisados', descripcion: bancos.length ? `${bancos.length} cuenta(s) bancaria(s) disponible(s).` : 'Revisa bancos y cajas; puede operar con caja según su configuración.', completo: bancos.length > 0, obligatorio: false, accion: 'bancos', accionTexto: 'Ir a Bancos' },
+        { titulo: 'Perfil operativo', descripcion: perfil ? `Perfil seleccionado: ${perfil}.` : 'Selecciona el tipo de operación de la empresa.', completo: Boolean(perfil), obligatorio: true },
+        { titulo: 'Fechas contables', descripcion: fechasValidas ? 'La fecha de inicio es posterior al corte histórico.' : 'La fecha de inicio debe ser posterior a la fecha de corte.', completo: fechasValidas, obligatorio: true },
+        { titulo: 'Plan de cuentas', descripcion: planCuentas.length ? `${planCuentas.length} cuentas disponibles para la empresa.` : 'La empresa aún no tiene cuentas contables.', completo: planCuentas.length > 0, obligatorio: true }
+    ];
+    pintarChecklistContabilidad();
+}
+
+async function actualizarChecklistContabilidad(datos = {}) {
+    if (!currentEmpresa) return;
+    try {
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        const [empresaResponse, facturaResponse, bancosResponse] = await Promise.all([
+            datos.empresa ? Promise.resolve({ ok: true, json: async () => ({ data: datos.empresa }) }) : fetch(`${API_URL}/empresas/${currentEmpresa}`, { headers }),
+            datos.facturacion !== undefined ? Promise.resolve({ ok: true, json: async () => ({ data: datos.facturacion }) }) : fetch(`${API_URL}/facturacion/configuracion/${currentEmpresa}`, { headers }),
+            datos.bancos !== undefined ? Promise.resolve({ ok: true, json: async () => ({ data: datos.bancos }) }) : fetch(`${API_URL}/finanzas/bancos/cuentas?empresa_id=${currentEmpresa}`, { headers })
+        ]);
+        const empresaData = await empresaResponse.json();
+        const facturaData = facturaResponse.ok ? await facturaResponse.json() : null;
+        const bancosData = bancosResponse.ok ? await bancosResponse.json() : null;
+        construirChecklistContabilidad({ empresa: empresaData.data, facturacion: facturaData?.data, bancos: bancosData?.data, planCuentas: datos.planCuentas || planCuentasContabilidad });
+    } catch (error) {
+        construirChecklistContabilidad({ bancos: [], planCuentas: [] });
+        console.warn('No se pudo actualizar el checklist contable:', error);
+    }
+}
+
+function validarChecklistContabilidad() {
+    const pendientes = checklistContabilidad.filter(item => item.obligatorio && !item.completo);
+    if (!pendientes.length) return true;
+    showNotification(`No se puede activar: ${pendientes[0].titulo}`, 'warning');
+    pintarChecklistContabilidad();
+    return false;
 }
 
 async function cargarPadresCuenta() {

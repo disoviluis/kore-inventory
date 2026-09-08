@@ -658,6 +658,19 @@
                                                                 <li>Cargando resumen contable...</li>
                                                             </ul>
                                                         </div>
+
+                                                        <div class="mt-4" aria-live="polite">
+                                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                <h6 class="mb-0">Requisitos de activación</h6>
+                                                                <span class="small text-muted" id="contabilidadProgresoTexto">Calculando...</span>
+                                                            </div>
+                                                            <div class="progress mb-3" style="height: 8px;" aria-label="Avance de parametrización">
+                                                                <div class="progress-bar" id="contabilidadProgresoBarra" role="progressbar" style="width: 0%;"></div>
+                                                            </div>
+                                                            <div class="list-group list-group-flush small" id="contabilidadChecklist">
+                                                                <div class="list-group-item px-0 text-muted">Cargando requisitos...</div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -683,6 +696,7 @@
                                                             <i class="bi bi-shield-check me-2"></i>
                                                             Política actual: <strong>NO_BLOQUEA_OPERACIONES_EXISTENTES</strong>
                                                         </div>
+                                                        <div class="small text-muted mt-3" id="contabilidadActivacionAyuda">Completa los requisitos obligatorios para activar.</div>
                                                     </div>
                                                 </div>
                                             </div>
