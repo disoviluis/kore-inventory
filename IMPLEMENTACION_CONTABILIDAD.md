@@ -42,8 +42,18 @@ Ya existe una primera entrega funcional de coordinación:
 - Retorno contextual mediante `sessionStorage`: Facturación y Bancos muestran un botón para volver a Configuración General, que abre la pestaña Contabilidad.
 - `GET /api/empresas/:id/contabilidad/estado` para consultar el estado.
 - `PUT /api/empresas/:id/contabilidad/estado` para guardar el estado y sus fechas.
+- Manual HTML accesible desde la pestaña Contabilidad: `frontend/public/manual-contabilidad.html`.
 
 Esta entrega es una **interfaz de preparación segura**. Activar el estado no equivale todavía a haber terminado la configuración de cuentas obligatorias ni habilita por sí solo toda la contabilización automática.
+
+El manual explica para usuarios no contadores:
+
+- El orden recomendado para parametrizar una empresa.
+- Qué datos pertenecen a Empresa, Facturación, Bancos y módulos operativos.
+- Para qué sirve cada parámetro y qué parte de la aplicación afecta.
+- Cómo elegir el perfil de comercio, servicios, restaurante o manufactura.
+- Qué cuentas y fechas deben revisar antes de activar.
+- Qué errores deben evitar y cuándo solicitar revisión del contador.
 
 ### Responsable inicial de la parametrización
 
