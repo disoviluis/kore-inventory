@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             setTimeout(() => {
                 contabilidadTab.click();
                 cargarEstadoContabilidad();
+                cargarRequisitosContabilidad();
             }, 300);
         }
     }
@@ -506,6 +507,7 @@ function initEventListeners() {
                 loadCategorias();
                 cargarEstadoContabilidad();
                 cargarPlanCuentas();
+                cargarRequisitosContabilidad();
             }
         } catch (error) {
             console.error('Error cambiando empresa:', error);
@@ -688,6 +690,7 @@ function initContabilidadTab() {
     contabilidadTab.addEventListener('shown.bs.tab', () => {
         cargarEstadoContabilidad();
         cargarPlanCuentas();
+        cargarRequisitosContabilidad();
     });
 
     document.getElementById('btnIniciarParametrizacionContabilidad')?.addEventListener('click', () => {
@@ -736,6 +739,7 @@ function initContabilidadTab() {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevaCuentaContable')).show();
     });
     document.getElementById('formNuevaCuentaContable')?.addEventListener('submit', guardarCuentaContable);
+    document.getElementById('buscarCuentaContable')?.addEventListener('input', () => renderizarPlanCuentas());
 }
 
 const escaparContabilidad = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
@@ -751,10 +755,71 @@ async function cargarPlanCuentas() {
         const cuentas = data.data || [];
         planCuentasContabilidad = cuentas;
         actualizarChecklistContabilidad({ planCuentas: cuentas });
-        body.innerHTML = cuentas.length ? cuentas.map(cuenta => `<tr><td>${escaparContabilidad(cuenta.codigo)}</td><td>${escaparContabilidad(cuenta.nombre)}</td><td>${escaparContabilidad(cuenta.tipo)}</td><td>${escaparContabilidad(cuenta.naturaleza)}</td><td>${cuenta.acepta_movimientos ? 'Sí' : 'No'}</td><td><span class="badge ${cuenta.activa ? 'bg-success' : 'bg-secondary'}">${cuenta.activa ? 'Activa' : 'Inactiva'}</span></td><td>${cuenta.activa ? `<button class="btn btn-sm btn-outline-danger" data-inactivar-cuenta="${cuenta.id}" title="Inactivar cuenta"><i class="bi bi-x-circle"></i></button>` : ''}</td></tr>`).join('') : '<tr><td colspan="7" class="text-center text-muted py-3">No hay cuentas configuradas</td></tr>';
-        body.querySelectorAll('[data-inactivar-cuenta]').forEach(button => button.addEventListener('click', () => inactivarCuentaContable(button.dataset.inactivarCuenta)));
+        renderizarPlanCuentas();
     } catch (error) {
         body.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3">${escaparContabilidad(error.message)}</td></tr>`;
+    }
+}
+
+function renderizarPlanCuentas() {
+    const body = document.getElementById('planCuentasBody');
+    if (!body) return;
+    const filtro = (document.getElementById('buscarCuentaContable')?.value || '').trim().toLowerCase();
+    const cuentas = planCuentasContabilidad.filter(cuenta => !filtro || `${cuenta.codigo} ${cuenta.nombre}`.toLowerCase().includes(filtro));
+    const niveles = new Map(planCuentasContabilidad.map(cuenta => [cuenta.id, cuenta]));
+    const profundidad = cuenta => {
+        let nivel = 0;
+        let padre = niveles.get(cuenta.cuenta_padre_id);
+        while (padre && nivel < 9) { nivel += 1; padre = niveles.get(padre.cuenta_padre_id); }
+        return nivel;
+    };
+    body.innerHTML = cuentas.length ? cuentas.map(cuenta => {
+        const margen = profundidad(cuenta) * 18;
+        const editar = cuenta.es_personalizada ? `<button class="btn btn-sm btn-outline-primary me-1" data-editar-cuenta="${cuenta.id}" title="Editar cuenta"><i class="bi bi-pencil"></i></button>` : '';
+        const inactivar = cuenta.activa ? `<button class="btn btn-sm btn-outline-danger" data-inactivar-cuenta="${cuenta.id}" title="Inactivar cuenta"><i class="bi bi-x-circle"></i></button>` : '';
+        return `<tr><td>${escaparContabilidad(cuenta.codigo)}</td><td><span style="display:inline-block;margin-left:${margen}px">${margen ? '<i class="bi bi-arrow-return-right me-1 text-muted"></i>' : ''}${escaparContabilidad(cuenta.nombre)}</span></td><td>${escaparContabilidad(cuenta.tipo)}</td><td>${escaparContabilidad(cuenta.naturaleza)}</td><td>${cuenta.acepta_movimientos ? 'Sí' : 'No'}</td><td><span class="badge ${cuenta.activa ? 'bg-success' : 'bg-secondary'}">${cuenta.activa ? 'Activa' : 'Inactiva'}</span>${cuenta.usada_en_configuracion ? ' <span class="badge bg-info text-dark">En uso</span>' : ''}</td><td>${editar}${inactivar}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="text-center text-muted py-3">No hay cuentas que coincidan</td></tr>';
+    body.querySelectorAll('[data-editar-cuenta]').forEach(button => button.addEventListener('click', () => editarCuentaContable(button.dataset.editarCuenta)));
+    body.querySelectorAll('[data-inactivar-cuenta]').forEach(button => button.addEventListener('click', () => inactivarCuentaContable(button.dataset.inactivarCuenta)));
+}
+
+async function editarCuentaContable(id) {
+    const cuenta = planCuentasContabilidad.find(item => String(item.id) === String(id));
+    if (!cuenta) return;
+    const nombre = window.prompt('Nuevo nombre de la cuenta', cuenta.nombre);
+    if (!nombre || nombre.trim() === cuenta.nombre) return;
+    const response = await fetch(`${API_URL}/contabilidad/plan-cuentas/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ empresa_id: currentEmpresa, nombre: nombre.trim() })
+    });
+    const data = await response.json();
+    if (!response.ok) { showNotification(data.message || 'No se pudo editar la cuenta', 'warning'); return; }
+    showNotification('Cuenta contable actualizada', 'success');
+    await cargarPlanCuentas();
+}
+
+async function cargarRequisitosContabilidad() {
+    if (!currentEmpresa) return;
+    try {
+        const response = await fetch(`${API_URL}/contabilidad/requisitos/${currentEmpresa}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'No se pudieron validar los requisitos');
+
+        checklistContabilidad = (data.data?.requisitos || []).map(requisito => ({
+            titulo: requisito.titulo,
+            descripcion: requisito.detalle,
+            completo: requisito.estado === 'completo' || requisito.estado === 'no_aplica',
+            obligatorio: Boolean(requisito.obligatorio),
+            accion: requisito.modulo === 'empresa' ? 'empresa' : requisito.modulo === 'facturacion' ? 'facturacion' : requisito.modulo === 'bancos' ? 'bancos' : null,
+            accionTexto: requisito.modulo === 'empresa' ? 'Ir a Empresa' : requisito.modulo === 'facturacion' ? 'Ir a Facturación' : requisito.modulo === 'bancos' ? 'Ir a Bancos' : null
+        }));
+        pintarChecklistContabilidad();
+    } catch (error) {
+        console.warn('No se pudieron validar requisitos contables:', error);
+        actualizarChecklistContabilidad();
     }
 }
 

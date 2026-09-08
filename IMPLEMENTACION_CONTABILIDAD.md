@@ -1507,6 +1507,193 @@ Una persona que no sea contadora debe poder seleccionar una empresa, seguir el a
 | 7 | Reportes y auditoría | Libros, estados financieros, trazabilidad y exportaciones | Integraciones contables funcionando |
 | 8 | Pruebas y puesta en marcha | Validación por perfil y aprobación del contador | Todos los bloques anteriores |
 
+### Estado de las fases de profesionalización
+
+| Fase | Nombre | Estado | Resultado actual |
+|---:|---|---|---|
+| P0 | Base contable y documentación | ✅ Completada | Motor contable, parametrización inicial, manual HTML y documentación central disponibles |
+| P1 | Asistente guiado por empresa | ✅ Implementada inicialmente | Selector de empresa, checklist, avance, enlaces entre módulos y bloqueo inicial de activación |
+| P2 | Validación de datos compartidos | 🟡 Parcial | Endpoint único y checklist consumiendo Empresa, Facturación, Bancos, cajas, terceros, productos e impuestos; faltan persistencia de validaciones y reglas completas por módulo |
+| P3 | Plan de cuentas profesional | ✅ Implementada inicialmente | Listado, creación, edición segura, inactivación, búsqueda, jerarquía visual, uso en configuración y permisos de API |
+| P4 | Cuentas obligatorias por perfil | ⏳ Pendiente | Falta asignar y validar cuentas por operación, módulo y perfil |
+| P5 | Roles y aprobación contable | ⏳ Pendiente | El administrador puede operar inicialmente; falta flujo completo del rol Contador y aprobación diferenciada |
+| P6 | Integraciones automáticas | 🟡 Estructura disponible | Existen procedimientos SQL; falta activar y probar todos los flujos desde la aplicación |
+| P7 | Reportes y auditoría profesional | ⏳ Pendiente | Faltan reportes completos, exportaciones y diagnóstico operativo |
+| P8 | Pruebas y puesta en marcha | ⏳ Pendiente | Falta validar los perfiles con un contador en staging y aprobar producción |
+
+### Regla de actualización de estados
+
+- `✅ Completada`: todos los entregables de la fase tienen implementación y validación registrada.
+- `✅ Implementada inicialmente`: existe una primera versión funcional, pero aún requiere endurecimiento o cobertura adicional.
+- `🟡 Parcial`: hay componentes funcionando y pendientes identificados.
+- `⏳ Pendiente`: no debe declararse disponible para operación productiva.
+- `🔴 Bloqueada`: existe una dependencia técnica, contable o de datos que impide continuar.
+
+Cada cambio de estado debe registrar: fecha, commit, archivos o migraciones involucrados, validación realizada, responsable y pendientes remanentes.
+
+### Fase P0 - Base contable y documentación
+
+**Estado:** ✅ Completada.
+
+**Entregables realizados:**
+
+- Catálogo PUC base y planes de cuentas por empresa.
+- Configuración contable inicial.
+- Comprobantes, movimientos y validación de partida doble.
+- Procedimientos SQL para ventas, compras, finanzas, producción, libros y cierres.
+- Estado de parametrización por empresa.
+- Manual HTML de parametrización para usuarios no contadores.
+- Documentación funcional y técnica en este archivo.
+
+**Validación:** fases estructurales contables ejecutadas y verificadas en AWS según los registros de las Fases 1 a 9.
+
+**Pendiente de P0:** no quedan tareas de base que bloqueen el asistente; la calidad funcional se continúa en las fases posteriores.
+
+### Fase P1 - Asistente guiado por empresa
+
+**Estado:** ✅ Implementada inicialmente.
+
+**Entregables realizados:**
+
+- Selección de una empresa asignada desde Configuración General.
+- Checklist separado por `empresa_id`.
+- Requisitos de empresa, facturación, perfil, fechas y plan de cuentas.
+- Barra de avance y estados visuales.
+- Enlaces a Empresa, Facturación y Bancos sin duplicar datos.
+- Revalidación al abrir Contabilidad, cambiar de empresa o regresar de otro módulo.
+- Bloqueo de activación cuando faltan requisitos obligatorios.
+
+**Validación realizada:** JavaScript, HTML y documentación sin errores de diagnóstico; flujo publicado en el servidor en el commit `623c074`.
+
+**Pendiente de P1:** mostrar requisitos dinámicos según cada módulo activo, guardar historial de cada paso y usar una validación backend equivalente al checklist visual.
+
+### Fase P2 - Validación de datos compartidos
+
+**Estado:** 🟡 Parcial.
+
+**Implementado:**
+
+- `GET /api/contabilidad/requisitos/:empresaId` protegido por empresa asignada.
+- Consulta de empresa, configuración de facturación, bancos y cajas.
+- Conteo de clientes, proveedores, productos e impuestos sin copiar sus datos.
+- Estados normalizados `completo`, `pendiente`, `no_aplica` y `requiere_revision`.
+- Checklist frontend conectado al endpoint único.
+- Revalidación al abrir Contabilidad, cambiar de empresa y regresar desde módulos externos.
+
+**Pendiente:**
+
+- Validar clientes, proveedores, productos e impuestos utilizados.
+- Distinguir dato faltante, dato no aplicable y dato inválido.
+- Exponer un endpoint único de requisitos por empresa para que frontend y backend compartan la misma regla.
+- Registrar la fecha y usuario de la última validación.
+
+**Validación técnica:** endpoint, rutas y frontend compilados sin errores; la prueba funcional con datos reales de cada empresa queda pendiente.
+
+**Criterio de cierre:** todos los datos requeridos se consultan desde su módulo propietario y el asistente devuelve el estado correcto sin duplicar información.
+
+### Fase P3 - Plan de cuentas profesional
+
+**Estado:** ✅ Implementada inicialmente.
+
+**Implementado:**
+
+- API para listar, crear, editar e inactivar cuentas.
+- Permisos `contabilidad.view`, `contabilidad.create` y `contabilidad.edit` en las rutas.
+- Control de pertenencia del usuario a la empresa.
+- Edición limitada a cuentas personalizadas.
+- Protección de cuentas con movimientos o usadas en `configuracion_contable`.
+- Búsqueda por código y nombre.
+- Visualización jerárquica mediante cuenta padre.
+- Indicador de cuenta usada por la configuración contable.
+
+**Pendiente:** auditoría detallada de cambios, permisos de aprobación diferenciados y edición visual avanzada de tipo, naturaleza y jerarquía.
+
+**Validación técnica:** backend compilado, frontend sin errores de sintaxis y diagnósticos del editor sin errores.
+
+**Criterio de cierre inicial:** el contador puede administrar cuentas personalizadas sin eliminar históricos, alterar cuentas base ni permitir movimientos inválidos.
+
+### Fase P4 - Cuentas obligatorias por perfil
+
+**Estado:** ⏳ Pendiente.
+
+**Alcance:** construir la pantalla de asignación de cuentas y validar automáticamente las reglas de comercio, servicios, restaurante, manufactura y empresas mixtas.
+
+**Entregables:**
+
+- Matriz de cuentas obligatorias por perfil y módulo.
+- Asignación a `configuracion_contable`.
+- Excepciones por producto, categoría, impuesto, proveedor, bodega u operación.
+- Endpoint de validación de configuración.
+- Bloqueo de activación y de confirmación cuando falte una cuenta requerida.
+
+**Criterio de cierre:** el sistema explica exactamente qué cuenta falta y no exige cuentas de módulos desactivados.
+
+### Fase P5 - Roles y aprobación contable
+
+**Estado:** ⏳ Pendiente.
+
+**Alcance:** permitir que el administrador configure inicialmente y pueda crear/asignar un usuario `tipo_usuario = 'usuario'` con rol empresarial **Contador**.
+
+**Entregables:**
+
+- Flujo para asignar contador a una o varias empresas.
+- Permisos `view`, `create`, `edit`, `approve`, `export` y `print` para Contabilidad.
+- Aprobación diferenciada de la parametrización.
+- Registro de usuario, fecha, empresa y versión aprobada.
+- Restricción por `usuario_empresa` en todas las operaciones.
+
+**Criterio de cierre:** ningún contador puede ver o modificar una empresa no asignada y la activación deja evidencia auditable.
+
+### Fase P6 - Integraciones automáticas
+
+**Estado:** 🟡 Estructura disponible.
+
+**Implementado:** procedimientos SQL e idempotencia base para varios tipos de comprobantes.
+
+**Pendiente:** conexión desde la aplicación, validación previa de cuentas, transacciones completas y pruebas de reintento para ventas, compras, recibos, egresos, gastos, bancos, inventario y producción.
+
+**Criterio de cierre:** cada documento confirmado genera un único comprobante balanceado y cada anulación genera su reverso.
+
+### Fase P7 - Reportes y auditoría profesional
+
+**Estado:** ⏳ Pendiente.
+
+**Entregables:** libro diario, mayor, balance de comprobación, estado de resultados, balance general, cartera, proveedores, inventario valorizado, impuestos, exportaciones y diagnóstico de inconsistencias.
+
+**Criterio de cierre:** los reportes concilian con los comprobantes y permiten navegar entre documento origen y asiento.
+
+### Fase P8 - Pruebas y puesta en marcha
+
+**Estado:** ⏳ Pendiente.
+
+**Entregables:** pruebas por perfil, pruebas de permisos, reintentos, anulaciones, períodos cerrados, empresas múltiples, revisión del contador, backup y aprobación de producción.
+
+**Criterio de cierre:** al menos una empresa de cada perfil pasa la matriz de pruebas en staging y el contador aprueba los saldos.
+
+### Registro de fases realizadas
+
+Usar esta plantilla después de cada implementación o deploy:
+
+```text
+Fase:
+Fecha:
+Estado anterior:
+Estado nuevo:
+Commit:
+Archivos o migraciones:
+Objetivo entregado:
+Validaciones ejecutadas:
+Resultado:
+Responsable técnico:
+Responsable contable:
+Pendientes remanentes:
+Riesgos o rollback:
+Deploy realizado:
+Servidor / ambiente:
+```
+
+No se debe cambiar una fase a `Completada` solo porque el código compila. Debe existir una validación funcional y, cuando corresponda, aprobación del contador.
+
 ### Bloque 1: asistente guiado por empresa
 
 La pantalla de Contabilidad debe evolucionar de una pestaña informativa a un asistente con una lista de requisitos. Cada requisito tendrá estado `completo`, `pendiente`, `no_aplica` o `requiere_revision`.
