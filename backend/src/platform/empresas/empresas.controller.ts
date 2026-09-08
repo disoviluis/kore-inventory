@@ -152,6 +152,151 @@ export const getEmpresaById = async (req: Request, res: Response): Promise<Respo
 };
 
 /**
+ * Obtener el estado de parametrizacion contable de una empresa
+ * GET /api/empresas/:id/contabilidad/estado
+ */
+export const getEstadoParametrizacionContable = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+
+    const estados = await query(
+      `SELECT
+        epc.empresa_id,
+        epc.estado,
+        epc.fecha_inicio_contable,
+        epc.fecha_corte_historico,
+        epc.perfil_operativo,
+        epc.contador_usuario_id,
+        epc.observaciones,
+        epc.omitida_at,
+        epc.activada_at
+      FROM estado_parametrizacion_contable epc
+      WHERE epc.empresa_id = ?
+      LIMIT 1`,
+      [id]
+    );
+
+    if (estados.length === 0) {
+      return successResponse(
+        res,
+        'Parametrizacion contable pendiente de inicializar',
+        {
+          empresa_id: Number(id),
+          estado: 'pendiente',
+          fecha_inicio_contable: '2026-09-01',
+          fecha_corte_historico: '2026-08-31'
+        },
+        CONSTANTS.HTTP_STATUS.OK
+      );
+    }
+
+    return successResponse(
+      res,
+      'Estado de parametrizacion contable obtenido exitosamente',
+      estados[0],
+      CONSTANTS.HTTP_STATUS.OK
+    );
+  } catch (error) {
+    logger.error('Error al obtener estado de parametrizacion contable:', error);
+    return errorResponse(
+      res,
+      'Error al obtener estado de parametrizacion contable',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+/**
+ * Actualizar el estado de parametrizacion contable de una empresa
+ * PUT /api/empresas/:id/contabilidad/estado
+ */
+export const updateEstadoParametrizacionContable = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { estado, fecha_inicio_contable, fecha_corte_historico, perfil_operativo, observaciones } = req.body || {};
+
+    const estadosPermitidos = ['pendiente', 'en_configuracion', 'activa', 'omitida_temporalmente'];
+    if (!estado || !estadosPermitidos.includes(estado)) {
+      return errorResponse(
+        res,
+        'Estado contable no válido',
+        null,
+        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const fechaInicio = fecha_inicio_contable || '2026-09-01';
+    const fechaCorte = fecha_corte_historico || '2026-08-31';
+    const perfil = perfil_operativo || 'comercio';
+    const observacion = observaciones || 'Actualizacion del estado de parametrizacion contable';
+
+    const rows = await query(
+      `INSERT INTO estado_parametrizacion_contable
+        (empresa_id, estado, fecha_inicio_contable, fecha_corte_historico, perfil_operativo, observaciones, omitida_at, activada_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        estado = VALUES(estado),
+        fecha_inicio_contable = VALUES(fecha_inicio_contable),
+        fecha_corte_historico = VALUES(fecha_corte_historico),
+        perfil_operativo = VALUES(perfil_operativo),
+        observaciones = VALUES(observaciones),
+        omitida_at = CASE WHEN VALUES(estado) = 'omitida_temporalmente' THEN NOW() ELSE omitida_at END,
+        activada_at = CASE WHEN VALUES(estado) = 'activa' THEN NOW() ELSE activada_at END,
+        updated_at = NOW()`,
+      [
+        Number(id),
+        estado,
+        fechaInicio,
+        fechaCorte,
+        perfil,
+        observacion,
+        estado === 'omitida_temporalmente' ? new Date() : null,
+        estado === 'activa' ? new Date() : null
+      ]
+    );
+
+    const resultado = await query(
+      `SELECT
+        empresa_id,
+        estado,
+        fecha_inicio_contable,
+        fecha_corte_historico,
+        perfil_operativo,
+        observaciones,
+        omitida_at,
+        activada_at
+      FROM estado_parametrizacion_contable
+      WHERE empresa_id = ?
+      LIMIT 1`,
+      [Number(id)]
+    );
+
+    return successResponse(
+      res,
+      'Estado de parametrizacion contable actualizado exitosamente',
+      resultado[0] || {
+        empresa_id: Number(id),
+        estado,
+        fecha_inicio_contable: fechaInicio,
+        fecha_corte_historico: fechaCorte,
+        perfil_operativo: perfil,
+        observaciones: observacion
+      },
+      CONSTANTS.HTTP_STATUS.OK
+    );
+  } catch (error) {
+    logger.error('Error al actualizar estado de parametrizacion contable:', error);
+    return errorResponse(
+      res,
+      'Error al actualizar estado de parametrizacion contable',
+      error,
+      CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+/**
  * Obtener empresas del usuario
  * GET /api/empresas/usuario/:userId
  */

@@ -390,6 +390,12 @@
                                         </button>
                                     </li>
                                     <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="contabilidad-tab" data-bs-toggle="tab" data-bs-target="#contabilidad-panel" type="button" role="tab">
+                                            <i class="bi bi-calculator me-2"></i>Contabilidad
+                                            <span class="badge bg-success ms-2">Fase 9</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
                                         <button class="nav-link" id="plantilla-tab" data-bs-toggle="tab" data-bs-target="#plantilla-panel" type="button" role="tab">
                                             <i class="bi bi-file-earmark-text me-2"></i>Plantilla de Factura
                                             <span class="badge bg-info ms-2">Nuevo</span>
@@ -602,6 +608,159 @@
                                             </div>
                                         </div>
 
+                                    </div>
+
+                                    <!-- Tab: Contabilidad -->
+                                    <div class="tab-pane fade" id="contabilidad-panel" role="tabpanel">
+                                        <div class="d-flex justify-content-between align-items-center mb-4">
+                                            <div>
+                                                <h5 class="mb-1">Parametrización contable por empresa</h5>
+                                                <p class="text-muted small mb-0">La activación contable es segura y no bloquea las operaciones actuales.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-4">
+                                            <div class="col-lg-8">
+                                                <div class="card h-100 border-0 shadow-sm">
+                                                    <div class="card-body">
+                                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                                            <h6 class="card-title mb-0">Estado general</h6>
+                                                            <span class="badge bg-secondary" id="contabilidadEstadoBadge">Cargando...</span>
+                                                        </div>
+
+                                                        <div class="row g-3 mb-3">
+                                                            <div class="col-md-6">
+                                                                <label class="form-label text-muted small">Fecha de inicio contable</label>
+                                                                <input type="date" class="form-control" id="contabilidadFechaInicio" value="2026-09-01">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label text-muted small">Fecha de corte histórico</label>
+                                                                <input type="date" class="form-control" id="contabilidadFechaCorte" value="2026-08-31">
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="mb-3">
+                                                            <label class="form-label text-muted small">Perfil operativo</label>
+                                                            <select class="form-select" id="contabilidadPerfil">
+                                                                <option value="comercio">Comercio</option>
+                                                                <option value="servicios">Servicios</option>
+                                                                <option value="restaurante">Restaurante</option>
+                                                                <option value="manufactura">Manufactura</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="border rounded p-3 bg-light-subtle">
+                                                            <div class="fw-semibold mb-2">Resumen</div>
+                                                            <ul class="mb-0 small text-muted ps-3" id="contabilidadResumen">
+                                                                <li>Cargando resumen contable...</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-lg-4">
+                                                <div class="card h-100 border-0 shadow-sm">
+                                                    <div class="card-body">
+                                                        <h6 class="card-title mb-3">Acciones</h6>
+
+                                                        <button class="btn btn-primary w-100 mb-2" id="btnIniciarParametrizacionContabilidad">
+                                                            <i class="bi bi-play-circle me-2"></i>Iniciar parametrización
+                                                        </button>
+
+                                                        <button class="btn btn-outline-secondary w-100 mb-2" id="btnContinuarDespuesContabilidad">
+                                                            <i class="bi bi-clock-history me-2"></i>Continuar después
+                                                        </button>
+
+                                                        <button class="btn btn-success w-100" id="btnActivarContabilidad">
+                                                            <i class="bi bi-check2-circle me-2"></i>Activar contabilidad
+                                                        </button>
+
+                                                        <div class="alert alert-warning small mt-3 mb-0">
+                                                            <i class="bi bi-shield-check me-2"></i>
+                                                            Política actual: <strong>NO_BLOQUEA_OPERACIONES_EXISTENTES</strong>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="card border-0 shadow-sm mt-4">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h6 class="card-title mb-0">Datos que ya se capturan en otros módulos</h6>
+                                                    <span class="badge bg-info text-dark">Sin duplicar campos</span>
+                                                </div>
+                                                <p class="text-muted small mb-3">Cuando un dato ya fue solicitado en otra pantalla, la contabilidad lo redirige a ese formulario y luego vuelve a esta pantalla sin borrar ni duplicar información.</p>
+
+                                                <div class="d-grid gap-2">
+                                                    <button class="btn btn-outline-primary text-start" type="button" data-return-target="empresa">
+                                                        <i class="bi bi-building me-2"></i>Completar datos básicos de la empresa
+                                                    </button>
+                                                    <button class="btn btn-outline-primary text-start" type="button" data-return-target="facturacion">
+                                                        <i class="bi bi-receipt me-2"></i>Revisar resolución DIAN y configuración de facturación
+                                                    </button>
+                                                    <button class="btn btn-outline-primary text-start" type="button" data-return-target="bancos">
+                                                        <i class="bi bi-bank me-2"></i>Revisar cuentas bancarias y flujo financiero
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="card border-0 shadow-sm mt-4">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <div>
+                                                        <h6 class="card-title mb-1">Plan de cuentas de la empresa</h6>
+                                                        <p class="text-muted small mb-0">Las cuentas base se conservan; aquí puedes agregar auxiliares sin modificar el catálogo global.</p>
+                                                    </div>
+                                                    <button class="btn btn-outline-primary btn-sm" type="button" id="btnNuevaCuentaContable">
+                                                        <i class="bi bi-plus-circle me-1"></i>Nueva cuenta
+                                                    </button>
+                                                </div>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm align-middle mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Código</th>
+                                                                <th>Nombre</th>
+                                                                <th>Tipo</th>
+                                                                <th>Naturaleza</th>
+                                                                <th>Movimientos</th>
+                                                                <th>Estado</th>
+                                                                <th></th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="planCuentasBody">
+                                                            <tr><td colspan="7" class="text-center text-muted py-3">Selecciona la pestaña para cargar las cuentas</td></tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="modal fade" id="modalNuevaCuentaContable" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <form class="modal-content" id="formNuevaCuentaContable">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Nueva cuenta auxiliar</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row g-3">
+                                                            <div class="col-md-6"><label class="form-label">Código</label><input class="form-control" id="cuentaCodigo" required maxlength="30"></div>
+                                                            <div class="col-md-6"><label class="form-label">Nombre</label><input class="form-control" id="cuentaNombre" required maxlength="180"></div>
+                                                            <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" id="cuentaTipo" required><option value="activo">Activo</option><option value="pasivo">Pasivo</option><option value="patrimonio">Patrimonio</option><option value="ingreso">Ingreso</option><option value="costo">Costo</option><option value="gasto">Gasto</option></select></div>
+                                                            <div class="col-md-6"><label class="form-label">Naturaleza</label><select class="form-select" id="cuentaNaturaleza" required><option value="debito">Débito</option><option value="credito">Crédito</option></select></div>
+                                                            <div class="col-md-6"><label class="form-label">Nivel</label><input class="form-control" id="cuentaNivel" type="number" min="1" max="9" value="3" required></div>
+                                                            <div class="col-md-6"><label class="form-label">Cuenta padre</label><select class="form-select" id="cuentaPadre"><option value="">Sin cuenta padre</option></select></div>
+                                                            <div class="col-12"><div class="form-check"><input class="form-check-input" id="cuentaAceptaMovimientos" type="checkbox" checked><label class="form-check-label" for="cuentaAceptaMovimientos">Acepta movimientos</label></div></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Guardar cuenta</button></div>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <!-- Tab: Plantilla de Factura -->

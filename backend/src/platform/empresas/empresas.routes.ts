@@ -17,6 +17,8 @@ router.get('/', empresasController.getEmpresas);
 router.get('/usuario/:userId', empresasController.getEmpresasByUsuario);
 
 // Obtener empresa por ID
+router.get('/:id/contabilidad/estado', empresasController.getEstadoParametrizacionContable);
+router.put('/:id/contabilidad/estado', empresasController.updateEstadoParametrizacionContable);
 router.get('/:id', empresasController.getEmpresaById);
 
 // Obtener configuración de página pública por empresa

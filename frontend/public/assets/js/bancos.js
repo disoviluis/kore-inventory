@@ -5,6 +5,20 @@ const tokenBancos = localStorage.getItem('token');
 const modalCuenta = new bootstrap.Modal(document.getElementById('modalCuenta'));
 const modalMovimiento = new bootstrap.Modal(document.getElementById('modalMovimiento'));
 
+function mostrarRetornoContabilidad() {
+  if (sessionStorage.getItem('koreVolverAContabilidad') !== 'true') return;
+
+  const topBar = document.querySelector('.top-bar');
+  if (!topBar || document.getElementById('btnVolverContabilidad')) return;
+
+  const button = document.createElement('a');
+  button.id = 'btnVolverContabilidad';
+  button.className = 'btn btn-outline-primary btn-sm ms-2';
+  button.href = 'configuracion-general.html';
+  button.innerHTML = '<i class="bi bi-arrow-return-left me-1"></i>Volver a Contabilidad';
+  topBar.appendChild(button);
+}
+
 const escBanco = value => String(value || '').replace(/[&<>\'"]/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
 }[char]));
@@ -82,6 +96,6 @@ document.getElementById('formMovimiento').addEventListener('submit', async event
 
 (async function iniciarBancos() {
   if (!tokenBancos) { window.location.href = 'login.html'; return; }
-  try { await contextoBanco(); await cargarBanco(); }
+  try { mostrarRetornoContabilidad(); await contextoBanco(); await cargarBanco(); }
   catch (error) { alertaBanco(error.message, 'danger'); }
 })();

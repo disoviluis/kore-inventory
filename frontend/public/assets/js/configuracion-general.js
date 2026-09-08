@@ -26,6 +26,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    const volverAContabilidad = sessionStorage.getItem('koreVolverAContabilidad');
+    if (volverAContabilidad === 'true') {
+        sessionStorage.removeItem('koreVolverAContabilidad');
+    }
+
     // Cargar datos iniciales
     await loadUserData();
     await loadCompanies();
@@ -37,11 +42,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Inicializar event listeners
     initEventListeners();
     initImpuestosTab();
+    initContabilidadTab();
     initCajasTab();
     if (typeof cargarImpuestos === 'function') {
         cargarImpuestos();
     }
     initPaginaTab();
+
+    if (volverAContabilidad === 'true') {
+        const contabilidadTab = document.getElementById('contabilidad-tab');
+        if (contabilidadTab) {
+            setTimeout(() => {
+                contabilidadTab.click();
+                cargarEstadoContabilidad();
+            }, 300);
+        }
+    }
 });
 
 // ============================================================================
@@ -485,6 +501,7 @@ function initEventListeners() {
                 currentEmpresa = empresaId;
                 localStorage.setItem('empresaActiva', empresaId);
                 loadCategorias();
+                cargarEstadoContabilidad();
             }
         } catch (error) {
             console.error('Error cambiando empresa:', error);
@@ -554,6 +571,220 @@ function initImpuestosTab() {
             cargarImpuestos();
         }
     });
+}
+
+async function cargarEstadoContabilidad() {
+    if (!currentEmpresa) return;
+
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/empresas/${currentEmpresa}/contabilidad/estado`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('No se pudo consultar el estado contable');
+        }
+
+        const data = await response.json();
+        const estado = data.data || {
+            estado: 'pendiente',
+            fecha_inicio_contable: '2026-09-01',
+            fecha_corte_historico: '2026-08-31',
+            perfil_operativo: 'comercio'
+        };
+
+        const badge = document.getElementById('contabilidadEstadoBadge');
+        if (badge) {
+            const labelMap = {
+                pendiente: 'Pendiente',
+                en_configuracion: 'En configuración',
+                activa: 'Activa',
+                omitida_temporalmente: 'Omitida temporalmente'
+            };
+            const classMap = {
+                pendiente: 'bg-secondary',
+                en_configuracion: 'bg-warning text-dark',
+                activa: 'bg-success',
+                omitida_temporalmente: 'bg-dark'
+            };
+            badge.textContent = labelMap[estado.estado] || 'Pendiente';
+            badge.className = `badge ${classMap[estado.estado] || 'bg-secondary'}`;
+        }
+
+        const fechaInicio = document.getElementById('contabilidadFechaInicio');
+        const fechaCorte = document.getElementById('contabilidadFechaCorte');
+        const perfil = document.getElementById('contabilidadPerfil');
+
+        if (fechaInicio) fechaInicio.value = estado.fecha_inicio_contable || '2026-09-01';
+        if (fechaCorte) fechaCorte.value = estado.fecha_corte_historico || '2026-08-31';
+        if (perfil) perfil.value = estado.perfil_operativo || 'comercio';
+
+        const resumen = document.getElementById('contabilidadResumen');
+        if (resumen) {
+            const estadoTexto = labelMap[estado.estado] || 'Pendiente';
+            resumen.innerHTML = `
+                <li>Estado: <strong>${estadoTexto}</strong></li>
+                <li>Fecha inicio: <strong>${estado.fecha_inicio_contable || '2026-09-01'}</strong></li>
+                <li>Fecha corte: <strong>${estado.fecha_corte_historico || '2026-08-31'}</strong></li>
+                <li>Perfil: <strong>${estado.perfil_operativo || 'comercio'}</strong></li>
+                <li>Política: <strong>NO_BLOQUEA_OPERACIONES_EXISTENTES</strong></li>
+            `;
+        }
+    } catch (error) {
+        console.error('Error cargando estado contable:', error);
+        showNotification('No se pudo cargar el estado contable', 'warning');
+    }
+}
+
+async function actualizarEstadoContabilidad(nuevoEstado) {
+    if (!currentEmpresa) {
+        showNotification('No hay empresa seleccionada', 'warning');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const payload = {
+            estado: nuevoEstado,
+            fecha_inicio_contable: document.getElementById('contabilidadFechaInicio')?.value || '2026-09-01',
+            fecha_corte_historico: document.getElementById('contabilidadFechaCorte')?.value || '2026-08-31',
+            perfil_operativo: document.getElementById('contabilidadPerfil')?.value || 'comercio',
+            observaciones: 'Parametrización contable gestionada desde Configuración General'
+        };
+
+        const response = await fetch(`${API_URL}/empresas/${currentEmpresa}/contabilidad/estado`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Error actualizando estado contable');
+        }
+
+        showNotification('Estado contable actualizado correctamente', 'success');
+        await cargarEstadoContabilidad();
+    } catch (error) {
+        console.error('Error actualizando estado contable:', error);
+        showNotification(error.message || 'Error al actualizar el estado contable', 'error');
+    }
+}
+
+function initContabilidadTab() {
+    const contabilidadTab = document.getElementById('contabilidad-tab');
+    if (!contabilidadTab) return;
+
+    contabilidadTab.addEventListener('shown.bs.tab', () => {
+        cargarEstadoContabilidad();
+        cargarPlanCuentas();
+    });
+
+    document.getElementById('btnIniciarParametrizacionContabilidad')?.addEventListener('click', () => {
+        actualizarEstadoContabilidad('en_configuracion');
+    });
+
+    document.getElementById('btnContinuarDespuesContabilidad')?.addEventListener('click', () => {
+        actualizarEstadoContabilidad('omitida_temporalmente');
+    });
+
+    document.getElementById('btnActivarContabilidad')?.addEventListener('click', () => {
+        const perfil = document.getElementById('contabilidadPerfil')?.value || 'comercio';
+        const fechaInicio = document.getElementById('contabilidadFechaInicio')?.value;
+        const fechaCorte = document.getElementById('contabilidadFechaCorte')?.value;
+
+        if (!fechaInicio || !fechaCorte || !perfil) {
+            showNotification('Completa la fecha de inicio, la fecha de corte y el perfil antes de activar contabilidad', 'warning');
+            return;
+        }
+
+        actualizarEstadoContabilidad('activa');
+    });
+
+    document.querySelectorAll('[data-return-target]').forEach(button => {
+        button.addEventListener('click', () => {
+            const target = button.getAttribute('data-return-target');
+            sessionStorage.setItem('koreVolverAContabilidad', 'true');
+
+            if (target === 'empresa') {
+                document.getElementById('empresa-tab')?.click();
+                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+                return;
+            }
+
+            if (target === 'facturacion') {
+                window.location.href = 'configuracion-facturacion.html';
+                return;
+            }
+
+            if (target === 'bancos') {
+                window.location.href = 'bancos.html';
+            }
+        });
+    });
+
+    document.getElementById('btnNuevaCuentaContable')?.addEventListener('click', () => {
+        cargarPadresCuenta();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevaCuentaContable')).show();
+    });
+    document.getElementById('formNuevaCuentaContable')?.addEventListener('submit', guardarCuentaContable);
+}
+
+const escaparContabilidad = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[character]));
+
+async function cargarPlanCuentas() {
+    if (!currentEmpresa) return;
+    const body = document.getElementById('planCuentasBody');
+    if (!body) return;
+    try {
+        const response = await fetch(`${API_URL}/contabilidad/plan-cuentas?empresa_id=${currentEmpresa}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'No se pudo cargar el plan de cuentas');
+        const cuentas = data.data || [];
+        body.innerHTML = cuentas.length ? cuentas.map(cuenta => `<tr><td>${escaparContabilidad(cuenta.codigo)}</td><td>${escaparContabilidad(cuenta.nombre)}</td><td>${escaparContabilidad(cuenta.tipo)}</td><td>${escaparContabilidad(cuenta.naturaleza)}</td><td>${cuenta.acepta_movimientos ? 'Sí' : 'No'}</td><td><span class="badge ${cuenta.activa ? 'bg-success' : 'bg-secondary'}">${cuenta.activa ? 'Activa' : 'Inactiva'}</span></td><td>${cuenta.activa ? `<button class="btn btn-sm btn-outline-danger" data-inactivar-cuenta="${cuenta.id}" title="Inactivar cuenta"><i class="bi bi-x-circle"></i></button>` : ''}</td></tr>`).join('') : '<tr><td colspan="7" class="text-center text-muted py-3">No hay cuentas configuradas</td></tr>';
+        body.querySelectorAll('[data-inactivar-cuenta]').forEach(button => button.addEventListener('click', () => inactivarCuentaContable(button.dataset.inactivarCuenta)));
+    } catch (error) {
+        body.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-3">${escaparContabilidad(error.message)}</td></tr>`;
+    }
+}
+
+async function cargarPadresCuenta() {
+    const select = document.getElementById('cuentaPadre');
+    if (!select || !currentEmpresa) return;
+    const response = await fetch(`${API_URL}/contabilidad/plan-cuentas?empresa_id=${currentEmpresa}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+    const data = await response.json();
+    if (!response.ok) return;
+    select.innerHTML = '<option value="">Sin cuenta padre</option>' + (data.data || []).filter(cuenta => cuenta.activa && !cuenta.acepta_movimientos).map(cuenta => `<option value="${cuenta.id}">${escaparContabilidad(cuenta.codigo)} - ${escaparContabilidad(cuenta.nombre)}</option>`).join('');
+}
+
+async function guardarCuentaContable(event) {
+    event.preventDefault();
+    try {
+        const response = await fetch(`${API_URL}/contabilidad/plan-cuentas`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ empresa_id: currentEmpresa, codigo: document.getElementById('cuentaCodigo').value, nombre: document.getElementById('cuentaNombre').value, tipo: document.getElementById('cuentaTipo').value, nivel: Number(document.getElementById('cuentaNivel').value), cuenta_padre_id: document.getElementById('cuentaPadre').value || null, naturaleza: document.getElementById('cuentaNaturaleza').value, acepta_movimientos: document.getElementById('cuentaAceptaMovimientos').checked ? 1 : 0 }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'No se pudo crear la cuenta');
+        bootstrap.Modal.getInstance(document.getElementById('modalNuevaCuentaContable'))?.hide();
+        event.target.reset();
+        showNotification('Cuenta contable creada correctamente', 'success');
+        await cargarPlanCuentas();
+    } catch (error) {
+        showNotification(error.message, 'warning');
+    }
+}
+
+async function inactivarCuentaContable(id) {
+    if (!confirm('¿Inactivar esta cuenta contable?')) return;
+    const response = await fetch(`${API_URL}/contabilidad/plan-cuentas/${id}/inactivar?empresa_id=${currentEmpresa}`, { method: 'PATCH', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+    const data = await response.json();
+    if (!response.ok) { showNotification(data.message || 'No se pudo inactivar la cuenta', 'warning'); return; }
+    showNotification('Cuenta contable inactivada', 'success');
+    await cargarPlanCuentas();
 }
 
 function initPaginaTab() {

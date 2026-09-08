@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await cargarDatosUsuario();
     await cargarEmpresas();
     inicializarEventos();
+    mostrarRetornoContabilidad();
     
     // Mostrar sidebar (agregar clase para que sea visible)
     const sidebarNav = document.querySelector('.sidebar-nav');
@@ -36,6 +37,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('sidebarOverlay').classList.remove('active');
     });
 });
+
+function mostrarRetornoContabilidad() {
+    if (sessionStorage.getItem('koreVolverAContabilidad') !== 'true') return;
+
+    const topBar = document.querySelector('.top-bar');
+    if (!topBar || document.getElementById('btnVolverContabilidad')) return;
+
+    const button = document.createElement('a');
+    button.id = 'btnVolverContabilidad';
+    button.className = 'btn btn-outline-primary btn-sm ms-2';
+    button.href = 'configuracion-general.html';
+    button.innerHTML = '<i class="bi bi-arrow-return-left me-1"></i>Volver a Contabilidad';
+    topBar.appendChild(button);
+}
 
 // ============================
 // Autenticación y Usuario
