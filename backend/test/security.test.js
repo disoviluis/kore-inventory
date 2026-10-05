@@ -8,6 +8,7 @@ const { moverStock } = require('../dist/shared/inventario');
 const repuestosController = require('../dist/platform/repuestos/repuestos.controller');
 const inventariosController = require('../dist/platform/inventario/inventarios-fisicos.controller');
 const rolesGlobalesController = require('../dist/platform/super-admin/roles-globales.controller');
+const activosController = require('../dist/platform/activos/activos.controller');
 const {
   isValidPrivateEvidenceKey,
   matchesEvidenceFileSignature
@@ -315,4 +316,30 @@ test('editing level 100 permissions requires a Super Admin at level 100', async 
     }, res));
   assert.equal(result.res.statusCode, 403);
   assert.equal(result.committed, false);
+});
+
+test('asset references use provider razon_social and preserve tenant-scoped reference lists', async () => {
+  const original = pool.execute;
+  try {
+    pool.execute = async (sql, params) => {
+      assert.equal(params[0], 42);
+      if (sql.includes('FROM proveedores')) {
+        assert.match(sql, /razon_social AS nombre/);
+        assert.match(sql, /ORDER BY razon_social/);
+        assert.match(sql, /empresa_id = \?/);
+        return [[{ id: 4, nombre: 'Proveedor QA' }], []];
+      }
+      if (sql.includes('FROM bodegas')) return [[{ id: 1, nombre: 'Bodega QA', estado: 'activa' }], []];
+      assert.deepEqual(params, [42, 42]);
+      return [[{ id: 2, nombre: 'Responsable QA', activo: 1 }], []];
+    };
+    const res = responseMock();
+    await activosController.getAssetReferences({ activosEmpresaId: 42 }, res);
+    assert.equal(res.body.success, true);
+    assert.deepEqual(res.body.data.proveedores, [{ id: 4, nombre: 'Proveedor QA' }]);
+    assert.equal(res.body.data.bodegas.length, 1);
+    assert.equal(res.body.data.usuarios.length, 1);
+  } finally {
+    pool.execute = original;
+  }
 });

@@ -251,10 +251,10 @@ export const getAssetReferences = async (req: Request, res: Response): Promise<R
         [companyId, companyId]
       ),
       pool.execute<RowDataPacket[]>(
-        `SELECT id, nombre
+        `SELECT id, razon_social AS nombre
          FROM proveedores
          WHERE empresa_id = ?
-         ORDER BY nombre`,
+         ORDER BY razon_social`,
         [companyId]
       )
     ]);
