@@ -114,9 +114,7 @@ async function loadInitialData() {
     byId('setupTab').closest('.nav-item').classList.toggle('d-none', !puedeConfigurarActivos);
     byId('exportAssetsButton').classList.toggle('d-none', !puedeAccion('activos', 'export'));
     byId('newAssetButton').classList.toggle('d-none', !puedeAccion('activos', 'create'));
-    byId('newAssetButton').disabled = !puedeAccion('activos', 'create')
-      || !categoriasActivos.some((category) => category.estado === 'activa')
-      || !tiposActivos.some((type) => type.estado === 'activo');
+    byId('newAssetButton').disabled = !puedeAccion('activos', 'create');
     byId('newCategoryButton').classList.toggle('d-none', !puedeAccion('activos_config', 'create'));
     byId('newTypeButton').classList.toggle('d-none', !puedeAccion('activos_config', 'create'));
     byId('newAttributeButton').classList.toggle('d-none', !puedeAccion('activos_config', 'create'));
@@ -348,6 +346,7 @@ function renderTypes() {
 
 function resetAssetForm() {
   byId('assetForm').reset();
+  byId('assetSetupNotice').classList.add('d-none');
   byId('assetId').value = '';
   byId('assetState').value = 'active';
   populateAssetSelects();
@@ -356,7 +355,13 @@ function resetAssetForm() {
 }
 
 async function openNewAsset() {
+  if (!puedeAccion('activos', 'create')) return;
   resetAssetForm();
+  const activeCategories = categoriasActivos.filter((category) => category.estado === 'activa');
+  const configured = tiposActivos.some((type) => type.estado === 'activo'
+    && activeCategories.some((category) => Number(category.id) === Number(type.categoria_id)));
+  byId('assetSetupNotice').classList.toggle('d-none', configured);
+  byId('assetSetupButton').classList.toggle('d-none', !puedeConfigurarActivos);
   await loadAssetAttributes(byId('assetType').value);
   assetModal.show();
 }
@@ -784,6 +789,11 @@ function setupEvents() {
   byId('attributeForm').addEventListener('submit', saveTypeAttribute);
   byId('assignmentForm').addEventListener('submit', saveAssignment);
   byId('newAssetButton').addEventListener('click', openNewAsset);
+  byId('assetSetupButton').addEventListener('click', () => {
+    if (!puedeConfigurarActivos) return;
+    assetModal.hide();
+    bootstrap.Tab.getOrCreateInstance(byId('setupTab')).show();
+  });
   byId('exportAssetsButton').addEventListener('click', exportAssets);
   byId('newCategoryButton').addEventListener('click', () => openCategoryForm());
   byId('newTypeButton').addEventListener('click', () => openTypeForm());
