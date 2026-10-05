@@ -1,3 +1,4 @@
+import { assertBodegasDisponibles } from '../../shared/inventario-bloqueos';
 /**
  * =================================
  * KORE INVENTORY - BODEGAS CONTROLLER
@@ -410,6 +411,13 @@ export const updateBodega = async (req: Request, res: Response): Promise<void> =
       );
     }
 
+    if (estado && estado !== bodega.estado) {
+      await assertBodegasDisponibles(async (sql, params) => {
+        const [rows] = await connection.query(sql, params);
+        return rows;
+      }, [Number(id)]);
+    }
+
     // Actualizar
     await connection.execute(
       `UPDATE bodegas SET
@@ -454,9 +462,9 @@ export const updateBodega = async (req: Request, res: Response): Promise<void> =
   } catch (error: any) {
     await connection.rollback();
     console.error('Error al actualizar bodega:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Error al actualizar bodega',
+      message: error.status ? error.message : 'Error al actualizar bodega',
       error: error.message
     });
   } finally {
@@ -546,6 +554,11 @@ export const deleteBodega = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    await assertBodegasDisponibles(async (sql, params) => {
+      const [rows] = await connection.query(sql, params);
+      return rows;
+    }, [Number(id)]);
+
     // Eliminar
     await connection.execute('DELETE FROM bodegas WHERE id = ?', [id]);
 
@@ -558,9 +571,9 @@ export const deleteBodega = async (req: Request, res: Response): Promise<void> =
   } catch (error: any) {
     await connection.rollback();
     console.error('Error al eliminar bodega:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Error al eliminar bodega',
+      message: error.status ? error.message : 'Error al eliminar bodega',
       error: error.message
     });
   } finally {

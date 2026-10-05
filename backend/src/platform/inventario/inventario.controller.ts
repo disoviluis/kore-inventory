@@ -1,3 +1,4 @@
+import { assertBodegasDisponibles } from '../../shared/inventario-bloqueos';
 /**
  * =================================
  * KORE INVENTORY - INVENTARIO CONTROLLER
@@ -235,6 +236,7 @@ export const registrarAjuste = async (req: Request, res: Response): Promise<Resp
       );
       if (bodegas.length === 0) throw new Error('La bodega no pertenece a la empresa o está inactiva');
 
+      await assertBodegasDisponibles(txQuery, [Number(bodegaId)]);
       const filasStock = await txQuery(
         'SELECT stock_actual FROM productos_bodegas WHERE producto_id = ? AND bodega_id = ? FOR UPDATE',
         [producto_id, bodegaId]
@@ -263,9 +265,9 @@ export const registrarAjuste = async (req: Request, res: Response): Promise<Resp
 
       return txQuery(
         `INSERT INTO inventario_movimientos
-          (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, referencia_tipo, usuario_id, fecha, notas, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())`,
-        [producto_id, Number(cantidad) >= 0 ? 'entrada' : 'salida', Math.abs(Number(cantidad)), stockAnterior, stockNuevo,
+          (producto_id, bodega_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, referencia_tipo, usuario_id, fecha, notas, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())`,
+        [producto_id, bodegaId, Number(cantidad) >= 0 ? 'entrada' : 'salida', Math.abs(Number(cantidad)), stockAnterior, stockNuevo,
           motivo || 'ajuste_manual', 'ajuste', usuario.id, notas]
       );
     });
@@ -285,6 +287,7 @@ export const registrarAjuste = async (req: Request, res: Response): Promise<Resp
 
   } catch (error) {
     logger.error('Error al registrar ajuste:', error);
+    if ((error as any).status) return errorResponse(res, (error as any).message, null, (error as any).status);
     return errorResponse(res, 'Error al registrar ajuste', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
@@ -311,6 +314,7 @@ export const registrarAjusteMasivo = async (req: Request, res: Response): Promis
       const bodegas = await txQuery('SELECT id, empresa_id FROM bodegas WHERE id = ? AND estado = "activa" LIMIT 1', [bodega_id]);
       if (bodegas.length === 0) throw new Error('La bodega no existe o está inactiva');
       const empresaId = bodegas[0].empresa_id;
+      await assertBodegasDisponibles(txQuery, [Number(bodega_id)]);
       const aplicados: any[] = [];
 
       for (const ajuste of ajustes) {
@@ -334,9 +338,9 @@ export const registrarAjusteMasivo = async (req: Request, res: Response): Promis
         await txQuery('UPDATE productos SET stock_actual = ?, updated_at = NOW() WHERE id = ?', [totalGlobal[0].total, ajuste.producto_id]);
         const movimiento: any = await txQuery(
           `INSERT INTO inventario_movimientos
-            (producto_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, referencia_tipo, usuario_id, fecha, notas, created_at)
-           VALUES (?, ?, ?, ?, ?, 'inventario_fisico', 'ajuste', ?, NOW(), ?, NOW())`,
-          [ajuste.producto_id, cantidad > 0 ? 'entrada' : 'salida', Math.abs(cantidad), anterior, nuevo, usuario.id, ajuste.observaciones || notas || null]
+            (producto_id, bodega_id, tipo_movimiento, cantidad, stock_anterior, stock_nuevo, motivo, referencia_tipo, usuario_id, fecha, notas, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'inventario_fisico', 'ajuste', ?, NOW(), ?, NOW())`,
+          [ajuste.producto_id, bodega_id, cantidad > 0 ? 'entrada' : 'salida', Math.abs(cantidad), anterior, nuevo, usuario.id, ajuste.observaciones || notas || null]
         );
         aplicados.push({
           producto_id: ajuste.producto_id,
@@ -352,7 +356,7 @@ export const registrarAjusteMasivo = async (req: Request, res: Response): Promis
     return successResponse(res, 'Inventario físico aplicado exitosamente', { aplicados: result.length, cambios: result }, CONSTANTS.HTTP_STATUS.OK);
   } catch (error: any) {
     logger.error('Error en ajuste masivo:', error);
-    return errorResponse(res, error.message || 'Error al aplicar inventario físico', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    return errorResponse(res, error.message || 'Error al aplicar inventario físico', null, error.status || CONSTANTS.HTTP_STATUS.BAD_REQUEST);
   }
 };
 

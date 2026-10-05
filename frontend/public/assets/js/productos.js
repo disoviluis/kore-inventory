@@ -1280,49 +1280,6 @@ function cerrarSesion() {
 // ============================================
 
 /**
- * Comprime una imagen usando Canvas antes de subirla.
- * Devuelve un Blob JPEG/WebP reducido.
- */
-function comprimirImagen(file, maxWidth = 800, maxHeight = 800, quality = 0.82) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                let { width, height } = img;
-
-                // Escalar manteniendo proporción
-                if (width > maxWidth || height > maxHeight) {
-                    const ratio = Math.min(maxWidth / width, maxHeight / height);
-                    width = Math.round(width * ratio);
-                    height = Math.round(height * ratio);
-                }
-
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                // Preferir WebP si está disponible
-                const mime = canvas.toDataURL('image/webp').startsWith('data:image/webp')
-                    ? 'image/webp' : 'image/jpeg';
-
-                canvas.toBlob(
-                    (blob) => blob ? resolve({ blob, mime }) : reject(new Error('No se pudo comprimir la imagen')),
-                    mime,
-                    quality
-                );
-            };
-            img.onerror = () => reject(new Error('No se pudo leer la imagen'));
-            img.src = e.target.result;
-        };
-        reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
-        reader.readAsDataURL(file);
-    });
-}
-
-/**
  * Maneja el flujo completo: comprimir → solicitar presigned URL → subir a S3 → actualizar campo URL
  */
 async function manejarSubidaImagen(e) {

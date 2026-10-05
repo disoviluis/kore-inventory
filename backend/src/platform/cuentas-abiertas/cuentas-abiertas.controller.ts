@@ -439,7 +439,7 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
       res,
       error?.message || 'Error al agregar item a cuenta',
       null,
-      CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      error.status || CONSTANTS.HTTP_STATUS.BAD_REQUEST
     );
   }
 };
@@ -575,7 +575,7 @@ export const actualizarItemCuenta = async (req: Request, res: Response): Promise
       res,
       error?.message || 'Error al actualizar item de cuenta',
       null,
-      CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      error.status || CONSTANTS.HTTP_STATUS.BAD_REQUEST
     );
   }
 };
@@ -653,6 +653,7 @@ export const eliminarItemCuenta = async (req: Request, res: Response): Promise<R
 
   } catch (error) {
     logger.error('Error al eliminar item de cuenta:', error);
+    if ((error as any).status) return errorResponse(res, (error as any).message, null, (error as any).status);
     return errorResponse(
       res,
       'Error al eliminar item de cuenta',
@@ -1021,6 +1022,7 @@ export const cancelarCuenta = async (req: Request, res: Response): Promise<Respo
 
   } catch (error) {
     logger.error('Error al cancelar cuenta:', error);
+    if ((error as any).status) return errorResponse(res, (error as any).message, null, (error as any).status);
     return errorResponse(
       res,
       'Error al cancelar cuenta',

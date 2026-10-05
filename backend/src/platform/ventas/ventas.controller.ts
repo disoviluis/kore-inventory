@@ -671,6 +671,7 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
 
   } catch (error) {
     logger.error('Error al crear venta:', error);
+    if ((error as any).status) return errorResponse(res, (error as any).message, null, (error as any).status);
     return errorResponse(res, 'Error al crear venta', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
@@ -745,6 +746,7 @@ export const anularVenta = async (req: Request, res: Response): Promise<Response
 
   } catch (error) {
     logger.error('Error al anular venta:', error);
+    if ((error as any).status) return errorResponse(res, (error as any).message, null, (error as any).status);
     return errorResponse(res, 'Error al anular venta', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };

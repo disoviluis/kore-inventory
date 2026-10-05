@@ -28,6 +28,11 @@ const MODULE_MAP = {
   
   // LOGÍSTICA
   'bodegas.html': 'bodegas',
+  'activos.html': 'activos',
+  'repuestos.html': 'repuestos',
+  'inventarios-fisicos.html': 'inventarios_fisicos',
+  'ajustes-inventario.html': 'ajustes_inventario',
+  'mantenimientos.html': 'mantenimientos',
   'traslados.html': 'traslados',
   'mensajeros-dashboard.html': 'mensajeros',
   
@@ -107,6 +112,10 @@ function construirSidebarEstandarSiIncompleto() {
       ])}
       ${sidebarSection('logisticaCollapse', 'bi-diagram-3', 'LOGÍSTICA', [
         { href: 'bodegas.html', icon: 'bi-building', text: 'Bodegas' },
+        { href: 'activos.html', icon: 'bi-pc-display', text: 'Activos' },
+        { href: 'repuestos.html', icon: 'bi-tools', text: 'Repuestos' },
+        { href: 'inventarios-fisicos.html', icon: 'bi-clipboard-check', text: 'Inventarios físicos' },
+        { href: 'mantenimientos.html', icon: 'bi-wrench-adjustable', text: 'Mantenimientos' },
         { href: 'traslados.html', icon: 'bi-arrow-left-right', text: 'Traslados' },
         { href: 'mensajeros-dashboard.html', icon: 'bi-truck', text: 'Control Mensajeros' }
       ])}

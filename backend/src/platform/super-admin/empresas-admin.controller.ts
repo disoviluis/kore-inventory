@@ -1,3 +1,4 @@
+import { assertEmpresaInventarioDisponible } from '../../shared/inventario-bloqueos';
 import { Request, Response } from 'express';
 import pool from '../../shared/database';
 import logger from '../../shared/logger';
@@ -817,6 +818,11 @@ export const deleteEmpresa = async (req: Request, res: Response) => {
     await connection.beginTransaction();
 
     const { id } = req.params;
+
+    await assertEmpresaInventarioDisponible(async (sql, params) => {
+      const [rows] = await connection.query(sql, params);
+      return rows;
+    }, Number(id));
 
     // Eliminar registros relacionados en orden por dependencias
     // 1. Eliminar impuestos de ventas

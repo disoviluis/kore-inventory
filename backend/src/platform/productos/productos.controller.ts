@@ -6,7 +6,8 @@
  */
 
 import { Request, Response } from 'express';
-import { query } from '../../shared/database';
+import { query, withTransaction } from '../../shared/database';
+import { assertEmpresaInventarioDisponible } from '../../shared/inventario-bloqueos';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
@@ -296,7 +297,9 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
       );
     }
 
-    const result = await query(
+    const result = await withTransaction(async (tx) => {
+      await assertEmpresaInventarioDisponible(tx, Number(empresa_id));
+      return tx(
       `INSERT INTO productos SET
         empresa_id = ?,
         tipo = ?,
@@ -370,7 +373,8 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
         req.body.en_promocion ? (req.body.promocion_fin || null) : null,
         req.body.userId || null // Asumiendo que el userId viene del middleware de auth
       ]
-    );
+      );
+    });
 
     logger.info(`Producto creado: ${nombre} (ID: ${result.insertId})`);
 
@@ -383,6 +387,7 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
 
   } catch (error) {
     logger.error('Error al crear producto:', error);
+    if ((error as any).status) return errorResponse(res, (error as any).message, null, (error as any).status);
     return errorResponse(res, 'Error al crear producto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
@@ -612,10 +617,12 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);
 
-    await query(
-      `UPDATE productos SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
+    await withTransaction(async (tx) => {
+      if ([tipo, maneja_inventario, estado, sku, codigo_barras, unidad_medida].some((value) => value !== undefined)) {
+        await assertEmpresaInventarioDisponible(tx, Number(productoExiste[0].empresa_id));
+      }
+      await tx(`UPDATE productos SET ${updates.join(', ')} WHERE id = ?`, values);
+    });
 
     // Registrar historial de promoción si se activó una
     if (req.body.en_promocion && req.body.precio_promocion) {
@@ -657,6 +664,7 @@ export const updateProducto = async (req: Request, res: Response): Promise<Respo
 
   } catch (error) {
     logger.error('Error al actualizar producto:', error);
+    if ((error as any).status) return errorResponse(res, (error as any).message, null, (error as any).status);
     return errorResponse(res, 'Error al actualizar producto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
@@ -705,7 +713,7 @@ export const deleteProducto = async (req: Request, res: Response): Promise<Respo
     const { id } = req.params;
 
     // Verificar si el producto existe
-    const productoExiste = await query('SELECT id FROM productos WHERE id = ?', [id]);
+    const productoExiste = await query('SELECT id, empresa_id FROM productos WHERE id = ?', [id]);
     
     if (productoExiste.length === 0) {
       return errorResponse(
@@ -717,10 +725,10 @@ export const deleteProducto = async (req: Request, res: Response): Promise<Respo
     }
 
     // Eliminar el producto (soft delete cambiando estado a inactivo es mejor práctica)
-    await query(
-      `UPDATE productos SET estado = 'inactivo', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [id]
-    );
+    await withTransaction(async (tx) => {
+      await assertEmpresaInventarioDisponible(tx, Number(productoExiste[0].empresa_id));
+      await tx(`UPDATE productos SET estado = 'inactivo', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [id]);
+    });
 
     logger.info(`Producto eliminado (inactivado): ${id}`);
     
@@ -733,6 +741,7 @@ export const deleteProducto = async (req: Request, res: Response): Promise<Respo
 
   } catch (error) {
     logger.error('Error al eliminar producto:', error);
+    if ((error as any).status) return errorResponse(res, (error as any).message, null, (error as any).status);
     return errorResponse(res, 'Error al eliminar producto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };

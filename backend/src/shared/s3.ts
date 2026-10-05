@@ -1,4 +1,4 @@
-import { S3Client, ListObjectsV2Command, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const s3Client = new S3Client({
@@ -10,6 +10,7 @@ const s3Client = new S3Client({
 });
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET || '';
+const PRIVATE_BUCKET_NAME = process.env.AWS_S3_PRIVATE_BUCKET || '';
 
 export const getS3BucketName = (): string => BUCKET_NAME;
 
@@ -35,6 +36,40 @@ export const createS3PresignedUploadUrl = async (key: string, contentType: strin
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn: 900 });
+};
+
+const requirePrivateBucket = (): string => {
+  if (!PRIVATE_BUCKET_NAME) throw new Error('AWS_S3_PRIVATE_BUCKET no configurado');
+  return PRIVATE_BUCKET_NAME;
+};
+
+export const createS3PrivateUploadUrl = async (key: string, contentType: string, contentLength: number): Promise<string> => {
+  const command = new PutObjectCommand({
+    Bucket: requirePrivateBucket(), Key: key, ContentType: contentType, ContentLength: contentLength
+  });
+  return getSignedUrl(s3Client, command, { expiresIn: 900 });
+};
+
+export const getS3PrivateObjectMetadata = async (key: string) => {
+  const command = new HeadObjectCommand({ Bucket: requirePrivateBucket(), Key: key });
+  return s3Client.send(command);
+};
+
+export const getS3PrivateObjectPrefix = async (key: string, byteCount = 16): Promise<Uint8Array> => {
+  const command = new GetObjectCommand({
+    Bucket: requirePrivateBucket(), Key: key, Range: `bytes=0-${Math.max(0, byteCount - 1)}`
+  });
+  const response = await s3Client.send(command);
+  return response.Body ? response.Body.transformToByteArray() : new Uint8Array();
+};
+
+export const deleteS3PrivateObject = async (key: string): Promise<void> => {
+  await s3Client.send(new DeleteObjectCommand({ Bucket: requirePrivateBucket(), Key: key }));
+};
+
+export const createS3PrivateDownloadUrl = async (key: string): Promise<string> => {
+  const command = new GetObjectCommand({ Bucket: requirePrivateBucket(), Key: key });
+  return getSignedUrl(s3Client, command, { expiresIn: 300 });
 };
 
 /**

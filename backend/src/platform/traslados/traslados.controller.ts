@@ -9,6 +9,7 @@
 import { Request, Response } from 'express';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../../shared/database';
+import { assertBodegasDisponibles } from '../../shared/inventario-bloqueos';
 import logger from '../../shared/logger';
 
 /**
@@ -459,6 +460,11 @@ export const confirmarTraslado = async (req: Request, res: Response) => {
       [id]
     );
 
+    await assertBodegasDisponibles(async (sql, params) => {
+      const [rows] = await connection.query(sql, params);
+      return rows;
+    }, [Number(traslado.bodega_origen_id), Number(traslado.bodega_destino_id)]);
+
     // Validar stock disponible y mover
     for (const item of detalle) {
       const [stock] = await connection.query<RowDataPacket[]>(
@@ -517,7 +523,7 @@ export const confirmarTraslado = async (req: Request, res: Response) => {
   } catch (error: any) {
     await connection.rollback();
     logger.error('Error al confirmar traslado:', error);
-    res.status(500).json({ success: false, message: 'Error al confirmar traslado', error: error.message });
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Error al confirmar traslado', error: error.message });
   } finally {
     connection.release();
   }
@@ -644,6 +650,11 @@ export const enviarTraslado = async (req: Request, res: Response) => {
       WHERE traslado_id = ?
     `, [id]);
 
+    await assertBodegasDisponibles(async (sql, params) => {
+      const [rows] = await connection.query(sql, params);
+      return rows;
+    }, [Number(traslado.bodega_origen_id)]);
+
     // Descontar stock de bodega origen (reservar)
     for (const item of detalle) {
       await connection.query(`
@@ -682,9 +693,9 @@ export const enviarTraslado = async (req: Request, res: Response) => {
   } catch (error: any) {
     await connection.rollback();
     logger.error('Error al enviar traslado:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Error al enviar traslado',
+      message: error.status ? error.message : 'Error al enviar traslado',
       error: error.message
     });
   } finally {
@@ -767,6 +778,11 @@ export const recibirTraslado = async (req: Request, res: Response) => {
       WHERE traslado_id = ?
     `, [id]);
 
+    await assertBodegasDisponibles(async (sql, params) => {
+      const [rows] = await connection.query(sql, params);
+      return rows;
+    }, [Number(traslado.bodega_origen_id), Number(traslado.bodega_destino_id)]);
+
     // Mover stock
     for (const item of detalle) {
       // Quitar de stock reservado en origen
@@ -842,9 +858,9 @@ export const recibirTraslado = async (req: Request, res: Response) => {
   } catch (error: any) {
     await connection.rollback();
     logger.error('Error al recibir traslado:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Error al recibir traslado',
+      message: error.status ? error.message : 'Error al recibir traslado',
       error: error.message
     });
   } finally {
@@ -883,6 +899,10 @@ export const cancelarTraslado = async (req: Request, res: Response) => {
 
     // Si está en tránsito, liberar stock reservado
     if (traslado.estado === 'en_transito') {
+      await assertBodegasDisponibles(async (sql, params) => {
+        const [rows] = await connection.query(sql, params);
+        return rows;
+      }, [Number(traslado.bodega_origen_id)]);
       const [detalle] = await connection.query<RowDataPacket[]>(`
         SELECT producto_id, cantidad_aprobada
         FROM traslados_detalle
@@ -929,9 +949,9 @@ export const cancelarTraslado = async (req: Request, res: Response) => {
   } catch (error: any) {
     await connection.rollback();
     logger.error('Error al cancelar traslado:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Error al cancelar traslado',
+      message: error.status ? error.message : 'Error al cancelar traslado',
       error: error.message
     });
   } finally {

@@ -7,6 +7,7 @@
 
 import { Request, Response } from 'express';
 import { query, withTransaction } from '../../shared/database';
+import { assertBodegasDisponibles, assertEmpresaInventarioDisponible } from '../../shared/inventario-bloqueos';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import logger from '../../shared/logger';
 
@@ -238,38 +239,27 @@ export const recibirCompra = async (req: Request, res: Response) => {
             return errorResponse(res, 'El ID de empresa es requerido', 400);
         }
 
-        // Verificar que la compra existe y está pendiente
-        const [compra]: any = await query(
-            'SELECT * FROM compras WHERE id = ? AND empresa_id = ?',
-            [id, empresaId]
-        );
+        await withTransaction(async (txQuery) => {
+            const [compra]: any = await txQuery(
+                'SELECT * FROM compras WHERE id = ? AND empresa_id = ? FOR UPDATE',
+                [id, empresaId]
+            );
+            if (!compra) throw Object.assign(new Error('Compra no encontrada'), { status: 404 });
+            if (compra.estado !== 'pendiente') throw Object.assign(new Error('La compra ya ha sido procesada'), { status: 400 });
 
-        if (!compra) {
-            return errorResponse(res, 'Compra no encontrada', 404);
-        }
+            const productos = await txQuery('SELECT * FROM compras_detalle WHERE compra_id = ? FOR UPDATE', [id]);
+            const [bodegaPrincipal]: any = await txQuery(
+                'SELECT id FROM bodegas WHERE empresa_id = ? AND es_principal = TRUE AND estado = "activa" LIMIT 1',
+                [empresaId]
+            );
 
-        if (compra.estado !== 'pendiente') {
-            return errorResponse(res, 'La compra ya ha sido procesada', 400);
-        }
-
-        // Obtener productos de la compra
-        const productos = await query(
-            'SELECT * FROM compras_detalle WHERE compra_id = ?',
-            [id]
-        );
-
-        // Obtener bodega principal de la empresa
-        const [bodegaPrincipal]: any = await query(
-            'SELECT id FROM bodegas WHERE empresa_id = ? AND es_principal = TRUE AND estado = "activa" LIMIT 1',
-            [empresaId]
-        );
-
-        // Actualizar inventario de cada producto con Costo Promedio Ponderado (CPP)
-        for (const prod of productos as any[]) {
+            if (bodegaPrincipal) await assertBodegasDisponibles(txQuery, [Number(bodegaPrincipal.id)]);
+            else await assertEmpresaInventarioDisponible(txQuery, Number(empresaId));
+            for (const prod of productos as any[]) {
             // Obtener datos actuales del producto
-            const [producto]: any = await query(
-                'SELECT stock_actual, precio_compra, maneja_inventario FROM productos WHERE id = ?',
-                [prod.producto_id]
+            const [producto]: any = await txQuery(
+                'SELECT stock_actual, precio_compra, maneja_inventario FROM productos WHERE id = ? AND empresa_id = ? FOR UPDATE',
+                [prod.producto_id, empresaId]
             );
 
             if (!producto) {
@@ -297,21 +287,27 @@ export const recibirCompra = async (req: Request, res: Response) => {
             }
             // ────────────────────────────────────────────────────────────────
 
-            // Actualizar stock y precio_compra (CPP) en la tabla productos
-            await query(
-                'UPDATE productos SET stock_actual = ?, precio_compra = ? WHERE id = ?',
-                [stockNuevo, nuevoPrecioCompra, prod.producto_id]
-            );
-
             // Actualizar stock en bodega principal
+            let stockActualTotal = stockNuevo;
             if (bodegaPrincipal) {
-                await query(
+                await txQuery(
                     `INSERT INTO productos_bodegas (producto_id, bodega_id, stock_actual)
                      VALUES (?, ?, ?)
                      ON DUPLICATE KEY UPDATE stock_actual = stock_actual + ?`,
                     [prod.producto_id, bodegaPrincipal.id, prod.cantidad, prod.cantidad]
                 );
+                const totalRows = await txQuery(
+                    'SELECT COALESCE(SUM(stock_actual), 0) AS total FROM productos_bodegas WHERE producto_id = ?',
+                    [prod.producto_id]
+                );
+                stockActualTotal = Number(totalRows[0]?.total || 0);
             }
+
+            // Actualizar stock agregado y precio_compra (CPP) en la tabla productos
+            await txQuery(
+                'UPDATE productos SET stock_actual = ?, precio_compra = ? WHERE id = ?',
+                [stockActualTotal, nuevoPrecioCompra, prod.producto_id]
+            );
 
             // Construir nota con detalle del CPP para trazabilidad
             const notaCPP = stockAnterior > 0 && precioAnterior > 0
@@ -320,15 +316,15 @@ export const recibirCompra = async (req: Request, res: Response) => {
 
             // Registrar movimiento con costo unitario CPP
             try {
-                await query(
+                await txQuery(
                     `INSERT INTO inventario_movimientos (
-                        producto_id, tipo_movimiento, cantidad, stock_anterior,
+                        producto_id, bodega_id, tipo_movimiento, cantidad, stock_anterior,
                         stock_nuevo, costo_unitario, precio_costo_anterior,
                         motivo, referencia_tipo, referencia_id,
                         usuario_id, fecha, notas
-                    ) VALUES (?, 'entrada', ?, ?, ?, ?, ?, 'compra', 'compra', ?, ?, ?, ?)`,
+                    ) VALUES (?, ?, 'entrada', ?, ?, ?, ?, ?, 'compra', 'compra', ?, ?, ?, ?)`,
                     [
-                        prod.producto_id, prod.cantidad, stockAnterior, stockNuevo,
+                        prod.producto_id, bodegaPrincipal?.id || null, prod.cantidad, stockAnterior, stockActualTotal,
                         nuevoPrecioCompra, precioAnterior > 0 ? precioAnterior : null,
                         id, usuarioId, fechaRecepcion || new Date(), notaCPP
                     ]
@@ -336,14 +332,14 @@ export const recibirCompra = async (req: Request, res: Response) => {
             } catch (movErr: any) {
                 // Si las columnas CPP no existen aún (migración pendiente), insertar sin ellas
                 if (movErr.code === 'ER_BAD_FIELD_ERROR') {
-                    await query(
+                    await txQuery(
                         `INSERT INTO inventario_movimientos (
-                            producto_id, tipo_movimiento, cantidad, stock_anterior,
+                            producto_id, bodega_id, tipo_movimiento, cantidad, stock_anterior,
                             stock_nuevo, motivo, referencia_tipo, referencia_id,
                             usuario_id, fecha, notas
-                        ) VALUES (?, 'entrada', ?, ?, ?, 'compra', 'compra', ?, ?, ?, ?)`,
+                        ) VALUES (?, ?, 'entrada', ?, ?, ?, 'compra', 'compra', ?, ?, ?, ?)`,
                         [
-                            prod.producto_id, prod.cantidad, stockAnterior, stockNuevo,
+                            prod.producto_id, bodegaPrincipal?.id || null, prod.cantidad, stockAnterior, stockActualTotal,
                             id, usuarioId, fechaRecepcion || new Date(), notaCPP
                         ]
                     );
@@ -356,18 +352,20 @@ export const recibirCompra = async (req: Request, res: Response) => {
                 `Producto ${prod.producto_id}: stock ${stockAnterior}→${stockNuevo}, ` +
                 `precio_compra $${precioAnterior}→$${nuevoPrecioCompra} (CPP)`
             );
-        }
+            }
 
-        // Actualizar estado de la compra
-        await query(
-            'UPDATE compras SET estado = "recibida", fecha_recepcion = ? WHERE id = ?',
-            [fechaRecepcion || new Date(), id]
-        );
+            await txQuery(
+                'UPDATE compras SET estado = "recibida", fecha_recepcion = ? WHERE id = ? AND empresa_id = ?',
+                [fechaRecepcion || new Date(), id, empresaId]
+            );
+        });
 
         return successResponse(res, 'Compra recibida e inventario actualizado exitosamente', null);
 
     } catch (error: any) {
         logger.error('Error en recibirCompra:', error);
+        if (error.status) return errorResponse(res, error.message, null, error.status);
+        if (error.code === 'ER_SIGNAL_EXCEPTION') return errorResponse(res, error.sqlMessage || 'La bodega está bloqueada por un inventario físico', 409);
         return errorResponse(res, 'Error al recibir la compra', 500);
     }
 };

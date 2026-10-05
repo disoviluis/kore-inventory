@@ -16,6 +16,7 @@ import clientesRoutes from './platform/clientes/clientes.routes';
 import ventasRoutes from './platform/ventas/ventas.routes';
 import proveedoresRoutes from './platform/proveedores/proveedores.routes';
 import inventarioRoutes from './platform/inventario/inventario.routes';
+import inventariosFisicosRoutes from './platform/inventario/inventarios-fisicos.routes';
 import comprasRoutes from './platform/compras/compras.routes';
 import superAdminRoutes from './platform/super-admin/super-admin.routes';
 import impuestosRoutes from './platform/impuestos/impuestos.routes';
@@ -31,6 +32,10 @@ import reportesRoutes from './platform/reportes/reportes.routes';
 import comandasRoutes from './platform/comandas/comandas.routes';
 import nominaRoutes from './platform/nomina/nomina.routes';
 import contabilidadRoutes from './platform/contabilidad/contabilidad.routes';
+import activosRoutes from './platform/activos/activos.routes';
+import mantenimientosRoutes from './platform/activos/mantenimientos.routes';
+import repuestosRoutes from './platform/repuestos/repuestos.routes';
+import evidenciasRoutes from './platform/archivos/evidencias.routes';
 import { verificarEmpresaActiva } from './core/middleware/licencia.middleware';
 import { authMiddleware } from './core/middleware/auth.middleware';
 
@@ -81,6 +86,7 @@ router.use('/clientes', authMiddleware, verificarEmpresaActiva, clientesRoutes);
 router.use('/ventas', authMiddleware, verificarEmpresaActiva, ventasRoutes);
 router.use('/proveedores', authMiddleware, verificarEmpresaActiva, proveedoresRoutes);
 router.use('/inventario', authMiddleware, verificarEmpresaActiva, inventarioRoutes);
+router.use('/inventarios-fisicos', authMiddleware, verificarEmpresaActiva, inventariosFisicosRoutes);
 router.use('/compras', authMiddleware, verificarEmpresaActiva, comprasRoutes);
 router.use('/impuestos', authMiddleware, verificarEmpresaActiva, impuestosRoutes);
 router.use('/facturacion', facturacionRoutes); // Middlewares aplicados dentro del módulo
@@ -89,6 +95,10 @@ router.use('/traslados', authMiddleware, verificarEmpresaActiva, trasladosRoutes
 router.use('/finanzas', authMiddleware, verificarEmpresaActiva, finanzasRoutes);
 router.use('/nomina', authMiddleware, verificarEmpresaActiva, nominaRoutes);
 router.use('/contabilidad', authMiddleware, verificarEmpresaActiva, contabilidadRoutes);
+router.use('/activos', authMiddleware, verificarEmpresaActiva, activosRoutes);
+router.use('/mantenimientos', authMiddleware, verificarEmpresaActiva, mantenimientosRoutes);
+router.use('/repuestos', authMiddleware, verificarEmpresaActiva, repuestosRoutes);
+router.use('/evidencias', authMiddleware, verificarEmpresaActiva, evidenciasRoutes);
 router.use('/cuentas-abiertas', cuentasAbiertasRoutes); // Middlewares aplicados dentro del módulo
 router.use('/cajas', cajasRoutes);
 router.use('/reportes', authMiddleware, verificarEmpresaActiva, reportesRoutes);

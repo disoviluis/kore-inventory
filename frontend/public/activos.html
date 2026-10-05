@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activos - KORE Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <style>
+    .asset-photo { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; background: #f1f3f5; }
+    .asset-photo-placeholder { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 6px; background: #eef3f7; color: #526474; }
+    .asset-kpi { min-height: 82px; }
+    .asset-kpi strong { font-size: 1.25rem; }
+    .asset-table th { white-space: nowrap; }
+    .asset-table td { vertical-align: middle; }
+    .asset-actions { white-space: nowrap; }
+    .empty-state { min-height: 170px; }
+    @media (max-width: 767.98px) {
+      .asset-toolbar { align-items: stretch !important; }
+      .asset-toolbar > * { width: 100%; }
+      .asset-table { min-width: 760px; }
+      .asset-modal-footer { position: sticky; bottom: 0; background: #fff; z-index: 2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="d-flex align-items-center">
+        <div class="logo-container-sidebar me-2"><i class="bi bi-boxes"></i></div>
+        <div><h5 class="mb-0 fw-bold text-white">KORE<span class="text-warning">.</span>inventory</h5><small class="text-white-50">ERP SaaS</small></div>
+      </div>
+      <button class="btn-close-sidebar d-lg-none" id="closeSidebar" aria-label="Cerrar menú"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="sidebar-user">
+      <div class="d-flex align-items-center">
+        <div class="user-avatar me-3"><i class="bi bi-person-circle"></i></div>
+        <div class="flex-grow-1"><div class="user-name" id="userName">Cargando...</div><div class="user-role" id="userRole">-</div></div>
+        <div class="dropdown">
+          <button class="btn-user-menu" data-bs-toggle="dropdown" aria-label="Menú de usuario"><i class="bi bi-three-dots-vertical"></i></button>
+          <ul class="dropdown-menu dropdown-menu-dark">
+            <li><a class="dropdown-item" href="#" id="logoutBtn"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="company-selector">
+      <label class="form-label text-white-50 small mb-2" for="companySelector">Empresa activa</label>
+      <select class="form-select form-select-sm" id="companySelector"><option value="">Cargando empresas...</option></select>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+  </aside>
+
+  <main class="main-content">
+    <header class="top-bar">
+      <button class="btn-menu d-lg-none" id="menuToggle" aria-label="Abrir menú"><i class="bi bi-list"></i></button>
+      <h1 class="page-title mb-0"><i class="bi bi-pc-display me-2 text-primary"></i>Activos</h1>
+      <div class="user-actions"><span class="badge bg-success">Operación</span></div>
+    </header>
+
+    <div class="content-wrapper">
+      <div id="alertContainer"></div>
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-xl-3"><div class="card shadow-sm asset-kpi"><div class="card-body d-flex justify-content-between align-items-center"><div><small class="text-muted">Activos</small><br><strong id="kpiTotal">0</strong></div><i class="bi bi-pc-display fs-3 text-primary"></i></div></div></div>
+        <div class="col-6 col-xl-3"><div class="card shadow-sm asset-kpi"><div class="card-body d-flex justify-content-between align-items-center"><div><small class="text-muted">En mantenimiento</small><br><strong id="kpiMaintenance">0</strong></div><i class="bi bi-wrench-adjustable fs-3 text-warning"></i></div></div></div>
+        <div class="col-6 col-xl-3"><div class="card shadow-sm asset-kpi"><div class="card-body d-flex justify-content-between align-items-center"><div><small class="text-muted">Fuera de servicio</small><br><strong id="kpiOutOfService">0</strong></div><i class="bi bi-exclamation-circle fs-3 text-danger"></i></div></div></div>
+        <div class="col-6 col-xl-3"><div class="card shadow-sm asset-kpi"><div class="card-body d-flex justify-content-between align-items-center"><div><small class="text-muted">En operación</small><br><strong id="kpiActive">0</strong></div><i class="bi bi-check-circle fs-3 text-success"></i></div></div></div>
+      </div>
+
+      <ul class="nav nav-tabs mb-3" id="assetTabs" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" id="assetsTab" data-bs-toggle="tab" data-bs-target="#assetsPane" type="button" role="tab">Activos</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" id="setupTab" data-bs-toggle="tab" data-bs-target="#setupPane" type="button" role="tab">Categorías y tipos</button></li>
+      </ul>
+
+      <div class="tab-content">
+        <section class="tab-pane fade show active" id="assetsPane" role="tabpanel" aria-labelledby="assetsTab">
+          <div class="card shadow-sm mb-3"><div class="card-body">
+            <div class="d-flex gap-2 asset-toolbar">
+              <div class="input-group flex-grow-1"><span class="input-group-text bg-white"><i class="bi bi-search"></i></span><input id="assetSearch" class="form-control" type="search" placeholder="Código, nombre o serie"></div>
+              <select id="assetCategoryFilter" class="form-select"><option value="">Todas las categorías</option></select>
+              <select id="assetStateFilter" class="form-select"><option value="">Todos los estados</option><option value="active">En operación</option><option value="in_maintenance">En mantenimiento</option><option value="out_of_service">Fuera de servicio</option><option value="retired">Dado de baja</option><option value="lost">Extraviado</option></select>
+              <button class="btn btn-outline-secondary text-nowrap" id="exportAssetsButton"><i class="bi bi-download me-1"></i>Exportar CSV</button>
+              <button class="btn btn-primary text-nowrap" id="newAssetButton"><i class="bi bi-plus-lg me-1"></i>Nuevo activo</button>
+            </div>
+          </div></div>
+          <div class="card shadow-sm"><div class="table-responsive">
+            <table class="table table-hover mb-0 asset-table"><thead class="table-light"><tr><th>Activo</th><th>Código</th><th>Categoría / tipo</th><th>Estado</th><th>Ubicación</th><th>Responsable</th><th class="text-end">Acciones</th></tr></thead>
+              <tbody id="assetsTableBody"><tr><td colspan="7" class="text-center py-5 text-muted">Cargando activos...</td></tr></tbody>
+            </table>
+          </div></div>
+        </section>
+
+        <section class="tab-pane fade" id="setupPane" role="tabpanel" aria-labelledby="setupTab">
+          <div class="row g-3">
+            <div class="col-lg-5">
+              <div class="card shadow-sm h-100"><div class="card-header bg-white d-flex justify-content-between align-items-center"><h2 class="h6 mb-0">Categorías de activos</h2><button class="btn btn-sm btn-outline-primary" id="newCategoryButton" title="Nueva categoría"><i class="bi bi-plus-lg"></i></button></div><div class="list-group list-group-flush" id="categoriesList"><div class="list-group-item text-muted">Cargando...</div></div></div>
+            </div>
+            <div class="col-lg-7">
+              <div class="card shadow-sm h-100"><div class="card-header bg-white d-flex justify-content-between align-items-center"><h2 class="h6 mb-0">Tipos de activo</h2><button class="btn btn-sm btn-outline-primary" id="newTypeButton" title="Nuevo tipo"><i class="bi bi-plus-lg"></i></button></div><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>Tipo</th><th>Categoría</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead><tbody id="typesTableBody"><tr><td colspan="4" class="text-center py-4 text-muted">Cargando...</td></tr></tbody></table></div></div>
+            </div>
+          </div>
+          <div class="card shadow-sm mt-3"><div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2"><h2 class="h6 mb-0">Características del tipo</h2><div class="d-flex gap-2"><select class="form-select form-select-sm" id="attributeTypeSelect" aria-label="Tipo para configurar atributos"><option value="">Selecciona tipo</option></select><button class="btn btn-sm btn-outline-primary text-nowrap" id="newAttributeButton" disabled><i class="bi bi-plus-lg me-1"></i>Atributo</button></div></div><div class="table-responsive"><table class="table table-hover mb-0"><thead class="table-light"><tr><th>Campo</th><th>Tipo de dato</th><th>Unidad / opciones</th><th>Requerido</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead><tbody id="attributesTableBody"><tr><td colspan="6" class="text-center py-4 text-muted">Selecciona un tipo.</td></tr></tbody></table></div></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal fade" id="assetModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title h5" id="assetModalTitle">Nuevo activo</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <form id="assetForm"><div class="modal-body"><input type="hidden" id="assetId"><div class="row g-3">
+      <div class="col-md-6"><label class="form-label" for="assetName">Nombre *</label><input class="form-control" id="assetName" maxlength="200" required></div>
+      <div class="col-md-3"><label class="form-label" for="assetInternalCode">Código interno</label><input class="form-control" id="assetInternalCode" maxlength="80"></div>
+      <div class="col-md-3"><label class="form-label" for="assetState">Estado</label><select class="form-select" id="assetState"><option value="active">En operación</option><option value="in_maintenance">En mantenimiento</option><option value="out_of_service">Fuera de servicio</option><option value="lost">Extraviado</option></select></div>
+      <div class="col-md-6"><label class="form-label" for="assetCategory">Categoría *</label><select class="form-select" id="assetCategory" required></select></div>
+      <div class="col-md-6"><label class="form-label" for="assetType">Tipo *</label><select class="form-select" id="assetType" required></select></div>
+      <div class="col-md-4"><label class="form-label" for="assetBrand">Marca</label><input class="form-control" id="assetBrand" maxlength="100"></div>
+      <div class="col-md-4"><label class="form-label" for="assetModel">Modelo</label><input class="form-control" id="assetModel" maxlength="100"></div>
+      <div class="col-md-4"><label class="form-label" for="assetSerial">Número de serie</label><input class="form-control" id="assetSerial" maxlength="120"></div>
+      <div class="col-md-6"><label class="form-label" for="assetWarehouse">Bodega</label><select class="form-select" id="assetWarehouse"><option value="">Sin bodega</option></select></div>
+      <div class="col-md-6"><label class="form-label" for="assetLocation">Ubicación</label><input class="form-control" id="assetLocation" maxlength="160" placeholder="Área, pasillo, oficina"></div>
+      <div class="col-md-6"><label class="form-label" for="assetResponsible">Responsable</label><select class="form-select" id="assetResponsible"><option value="">Sin asignar</option></select></div>
+      <div class="col-md-3"><label class="form-label" for="assetAcquired">Fecha de adquisición</label><input class="form-control" id="assetAcquired" type="date"></div>
+      <div class="col-md-3"><label class="form-label" for="assetValue">Valor de adquisición</label><input class="form-control" id="assetValue" type="number" min="0" step="0.01"></div>
+      <div class="col-md-6"><label class="form-label" for="assetProvider">Proveedor</label><select class="form-select" id="assetProvider"><option value="">Sin proveedor</option></select></div>
+      <div class="col-md-6"><label class="form-label" for="assetPurchaseDocument">Documento de compra</label><input class="form-control" id="assetPurchaseDocument" maxlength="120"></div>
+      <div class="col-md-5"><label class="form-label" for="assetImageUrl">URL de imagen</label><input class="form-control" id="assetImageUrl" type="url" maxlength="1000" placeholder="https://..."></div>
+      <div class="col-md-7"><label class="form-label" for="assetImageFile">Subir foto</label><input class="form-control" id="assetImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><small class="text-muted" id="assetImageUploadStatus" aria-live="polite">La foto se comprime y sube a S3/CloudFront; queda accesible públicamente. No subas documentos ni evidencia sensible.</small></div>
+      <div class="col-md-6"><label class="form-label" for="assetReference">Referencia</label><input class="form-control" id="assetReference" maxlength="120"></div>
+      <div class="col-12"><label class="form-label" for="assetDescription">Descripción</label><textarea class="form-control" id="assetDescription" rows="2" maxlength="4000"></textarea></div>
+      <div class="col-12"><label class="form-label" for="assetNotes">Observaciones</label><textarea class="form-control" id="assetNotes" rows="2" maxlength="4000"></textarea></div>
+      <div class="col-12" id="assetDynamicAttributes"></div>
+    </div></div><div class="modal-footer asset-modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit" id="saveAssetButton"><i class="bi bi-check-lg me-1"></i>Guardar activo</button></div></form>
+  </div></div></div>
+
+  <div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form id="categoryForm"><div class="modal-header"><h2 class="modal-title h5" id="categoryModalTitle">Nueva categoría</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body"><input type="hidden" id="categoryId"><label class="form-label" for="categoryName">Nombre *</label><input class="form-control mb-3" id="categoryName" maxlength="100" required><label class="form-label" for="categoryDescription">Descripción</label><textarea class="form-control mb-3" id="categoryDescription" rows="3" maxlength="4000"></textarea><label class="form-label" for="categoryState">Estado</label><select class="form-select" id="categoryState"><option value="activa">Activa</option><option value="inactiva">Inactiva</option></select></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit">Guardar</button></div></form></div></div></div>
+
+  <div class="modal fade" id="typeModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form id="typeForm"><div class="modal-header"><h2 class="modal-title h5" id="typeModalTitle">Nuevo tipo</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body"><input type="hidden" id="typeId"><label class="form-label" for="typeCategory">Categoría *</label><select class="form-select mb-3" id="typeCategory" required></select><label class="form-label" for="typeName">Nombre *</label><input class="form-control mb-3" id="typeName" maxlength="100" required><label class="form-label" for="typeDescription">Descripción</label><textarea class="form-control mb-3" id="typeDescription" rows="3" maxlength="4000"></textarea><label class="form-label" for="typeState">Estado</label><select class="form-select" id="typeState"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit">Guardar</button></div></form></div></div></div>
+
+  <div class="modal fade" id="attributeModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form id="attributeForm"><div class="modal-header"><h2 class="modal-title h5" id="attributeModalTitle">Nuevo atributo</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body"><input type="hidden" id="attributeId"><label class="form-label" for="attributeKey">Clave *</label><input class="form-control mb-3" id="attributeKey" maxlength="80" pattern="[a-zA-Z][a-zA-Z0-9_]*" required><label class="form-label" for="attributeLabel">Etiqueta *</label><input class="form-control mb-3" id="attributeLabel" maxlength="120" required><label class="form-label" for="attributeDataType">Tipo de dato *</label><select class="form-select mb-3" id="attributeDataType" required><option value="texto">Texto</option><option value="numero">Número</option><option value="booleano">Sí / No</option><option value="fecha">Fecha</option><option value="opcion">Lista de opciones</option></select><div id="attributeOptionsWrap" class="mb-3 d-none"><label class="form-label" for="attributeOptions">Opciones (una por línea)</label><textarea class="form-control" id="attributeOptions" rows="4"></textarea></div><div class="row g-3"><div class="col-6"><label class="form-label" for="attributeUnit">Unidad</label><input class="form-control" id="attributeUnit" maxlength="30"></div><div class="col-6"><label class="form-label" for="attributeOrder">Orden</label><input class="form-control" id="attributeOrder" type="number" min="0" max="32767" value="0"></div></div><div class="form-check mt-3"><input class="form-check-input" id="attributeRequired" type="checkbox"><label class="form-check-label" for="attributeRequired">Campo obligatorio al crear activos</label></div><div class="mt-3"><label class="form-label" for="attributeState">Estado</label><select class="form-select" id="attributeState"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit">Guardar atributo</button></div></form></div></div></div>
+
+  <div class="modal fade" id="assignmentModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><form id="assignmentForm"><div class="modal-header"><h2 class="modal-title h5">Asignar activo</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body"><input type="hidden" id="assignmentAssetId"><label class="form-label" for="assignmentResponsible">Responsable</label><select class="form-select mb-3" id="assignmentResponsible"><option value="">Sin asignar</option></select><label class="form-label" for="assignmentWarehouse">Bodega</label><select class="form-select mb-3" id="assignmentWarehouse"><option value="">Sin bodega</option></select><label class="form-label" for="assignmentLocation">Ubicación</label><input class="form-control mb-3" id="assignmentLocation" maxlength="160"><label class="form-label" for="assignmentReason">Motivo</label><textarea class="form-control" id="assignmentReason" maxlength="255" rows="2"></textarea></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary" type="submit">Guardar asignación</button></div></form></div></div></div>
+
+  <div class="modal fade" id="assetDetailModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h2 class="modal-title h5">Ficha del activo</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body" id="assetDetailBody"></div></div></div></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="assets/js/company-selector.js"></script>
+  <script src="assets/js/image-utils.js"></script>
+  <script src="assets/js/csv-export.js"></script>
+  <script src="assets/js/private-evidence.js"></script>
+  <script src="assets/js/activos.js"></script>
+  <script src="assets/js/sidebar-navigation.js?v=20261001-activos"></script>
+</body>
+</html>
