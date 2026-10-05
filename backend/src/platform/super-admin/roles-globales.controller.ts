@@ -45,19 +45,21 @@ async function validarJerarquiaRol(
   const nivelUsuario = await obtenerNivelUsuario(usuario.id);
 
   // Regla 1: Solo puedes crear/editar/eliminar roles de nivel menor al tuyo
-  if (nivelRol >= nivelUsuario) {
+  const gestionaNivel100 = usuario.tipo_usuario === 'super_admin' && Number(nivelUsuario) === 100
+    && nivelRol === 100 && operacion !== 'eliminar';
+  if (nivelRol >= nivelUsuario && !gestionaNivel100) {
     return {
       valid: false,
       message: `No puedes ${operacion} un rol de nivel igual o superior al tuyo (${nivelUsuario})`
     };
   }
 
-  // Regla 2: Los roles globales deben estar entre 80 y 99
+  // Regla 2: Los roles globales deben estar entre 80 y 100
   // EXCEPCIÓN: Al eliminar, permitir borrar roles mal configurados
-  if (operacion !== 'eliminar' && (nivelRol < 80 || nivelRol > 99)) {
+  if (operacion !== 'eliminar' && (!Number.isInteger(nivelRol) || nivelRol < 80 || nivelRol > 100)) {
     return {
       valid: false,
-      message: 'Los roles globales deben tener un nivel entre 80 y 99'
+      message: 'Los roles globales deben tener un nivel entre 80 y 100'
     };
   }
 
@@ -219,34 +221,35 @@ export const createRolGlobal = async (req: Request, res: Response): Promise<void
     await connection.beginTransaction();
 
     const usuario = (req as any).user;
-    const { nombre, descripcion, nivel, permisos_ids } = req.body;
+    const { nombre, descripcion, permisos_ids } = req.body;
+    const nivel = Number(req.body.nivel);
 
-    if (usuario.tipo_usuario !== 'super_admin') {
+    if (usuario?.tipo_usuario !== 'super_admin') {
       await connection.rollback();
-      connection.release();
       res.status(403).json({
         success: false,
         message: 'Solo el Super Admin puede crear roles globales'
       });
+      return;
     }
 
     // Validaciones básicas
     if (!nombre || !nombre.trim()) {
       await connection.rollback();
-      connection.release();
       res.status(400).json({
         success: false,
         message: 'El nombre del rol es obligatorio'
       });
+      return;
     }
 
-    if (!nivel || nivel < 80 || nivel > 99) {
+    if (!Number.isInteger(nivel) || nivel < 80 || nivel > 100) {
       await connection.rollback();
-      connection.release();
       res.status(400).json({
         success: false,
-        message: 'Los roles globales deben tener un nivel entre 80 y 99'
+        message: 'Los roles globales deben tener un nivel entre 80 y 100'
       });
+      return;
     }
 
     // Validar jerarquía
@@ -254,11 +257,11 @@ export const createRolGlobal = async (req: Request, res: Response): Promise<void
     
     if (!validacion.valid) {
       await connection.rollback();
-      connection.release();
       res.status(403).json({
         success: false,
         message: validacion.message
       });
+      return;
     }
 
     // Validar que no exista un rol global con el mismo nombre
@@ -270,11 +273,11 @@ export const createRolGlobal = async (req: Request, res: Response): Promise<void
 
     if (existentes.length > 0) {
       await connection.rollback();
-      connection.release();
       res.status(400).json({
         success: false,
         message: 'Ya existe un rol global con ese nombre'
       });
+      return;
     }
 
     // Generar slug
@@ -356,64 +359,66 @@ export const updateRolGlobal = async (req: Request, res: Response): Promise<void
 
     const { id } = req.params;
     const usuario = (req as any).user;
-    const { nombre, descripcion, nivel, activo, permisos_ids } = req.body;
+    const { nombre, descripcion, activo, permisos_ids } = req.body;
+    const nivel = req.body.nivel === undefined ? undefined : Number(req.body.nivel);
 
-    if (usuario.tipo_usuario !== 'super_admin') {
+    if (usuario?.tipo_usuario !== 'super_admin') {
       await connection.rollback();
-      connection.release();
       res.status(403).json({
         success: false,
         message: 'Solo el Super Admin puede editar roles globales'
       });
+      return;
     }
 
     // Verificar que el rol existe y es global
     const [roles] = await connection.execute<RowDataPacket[]>(
-      'SELECT * FROM roles WHERE id = ? AND empresa_id IS NULL',
+      'SELECT * FROM roles WHERE id = ? AND empresa_id IS NULL FOR UPDATE',
       [id]
     );
 
     if (roles.length === 0) {
       await connection.rollback();
-      connection.release();
       res.status(404).json({
         success: false,
         message: 'Rol global no encontrado'
       });
+      return;
     }
 
     const rol = roles[0];
 
-    // No se puede editar el rol super_admin
-    if (rol.slug === 'super_admin') {
+    const esSuperAdminPrincipal = rol.slug === 'super_admin';
+    if (esSuperAdminPrincipal && ((nivel !== undefined && nivel !== 100)
+        || (activo !== undefined && activo !== true && Number(activo) !== 1))) {
       await connection.rollback();
-      connection.release();
       res.status(403).json({
         success: false,
-        message: 'No se puede modificar el rol Super Administrador'
+        message: 'El rol Super Administrador debe conservar nivel 100 y permanecer activo'
       });
+      return;
     }
 
-    // Validar jerarquía si se cambia el nivel
-    if (nivel !== undefined && nivel !== rol.nivel) {
-      if (nivel < 80 || nivel > 99) {
+    const nivelDestino = nivel === undefined ? Number(rol.nivel) : nivel;
+    if (nivel !== undefined || Number(rol.nivel) === 100) {
+      if (!Number.isInteger(nivelDestino) || nivelDestino < 80 || nivelDestino > 100) {
         await connection.rollback();
-        connection.release();
         res.status(400).json({
           success: false,
-          message: 'Los roles globales deben tener un nivel entre 80 y 99'
+          message: 'Los roles globales deben tener un nivel entre 80 y 100'
         });
+        return;
       }
 
-      const validacion = await validarJerarquiaRol(usuario, nivel, 'editar');
+      const validacion = await validarJerarquiaRol(usuario, Math.max(Number(rol.nivel), nivelDestino), 'editar');
       
       if (!validacion.valid) {
         await connection.rollback();
-        connection.release();
         res.status(403).json({
           success: false,
           message: validacion.message
         });
+        return;
       }
     }
 
@@ -431,17 +436,17 @@ export const updateRolGlobal = async (req: Request, res: Response): Promise<void
 
       if (existentes.length > 0) {
         await connection.rollback();
-        connection.release();
         res.status(400).json({
           success: false,
           message: 'Ya existe otro rol global con ese nombre'
         });
+        return;
       }
 
       updates.push('nombre = ?');
       params.push(nombre.trim());
       
-      const slug = nombre.toLowerCase()
+      const slug = esSuperAdminPrincipal ? rol.slug : nombre.toLowerCase()
         .trim()
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '_');

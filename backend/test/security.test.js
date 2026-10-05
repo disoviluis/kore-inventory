@@ -7,6 +7,7 @@ const { assertBodegasDisponibles, assertEmpresaInventarioDisponible } = require(
 const { moverStock } = require('../dist/shared/inventario');
 const repuestosController = require('../dist/platform/repuestos/repuestos.controller');
 const inventariosController = require('../dist/platform/inventario/inventarios-fisicos.controller');
+const rolesGlobalesController = require('../dist/platform/super-admin/roles-globales.controller');
 const {
   isValidPrivateEvidenceKey,
   matchesEvidenceFileSignature
@@ -218,4 +219,100 @@ test('adjustment review writes reviewer using the locked previous state', async 
   } finally {
     pool.getConnection = original;
   }
+});
+
+async function withGlobalRoleMocks(level, role, operation) {
+  const originalConnection = pool.getConnection;
+  const originalExecute = pool.execute;
+  const calls = [];
+  let committed = false;
+  let releases = 0;
+  try {
+    pool.execute = async () => [[{ nivel_privilegio: level }], []];
+    pool.getConnection = async () => ({
+      beginTransaction: async () => {}, rollback: async () => {},
+      release() { releases += 1; }, commit: async () => { committed = true; },
+      execute: async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.startsWith('SELECT * FROM roles')) return [role ? [role] : [], []];
+        if (sql.includes('SELECT id FROM roles')) return [[], []];
+        return [{ insertId: 9, affectedRows: 1 }, []];
+      },
+      query: async (sql, params) => {
+        calls.push({ sql, params });
+        return [{ affectedRows: 1 }, []];
+      }
+    });
+    const res = responseMock();
+    await operation(res);
+    assert.equal(releases, 1);
+    return { res, calls, committed };
+  } finally {
+    pool.getConnection = originalConnection;
+    pool.execute = originalExecute;
+  }
+}
+
+test('Super Admin at level 100 may create a global level 100 role', async () => {
+  const result = await withGlobalRoleMocks(100, null, (res) => rolesGlobalesController.createRolGlobal({
+    user: { id: 1, tipo_usuario: 'super_admin' },
+    body: { nombre: 'Administrador adicional', nivel: 100, permisos_ids: [7] }
+  }, res));
+  assert.equal(result.res.statusCode, 201);
+  assert.equal(result.committed, true);
+});
+
+test('lower-level Super Admin and non-Super Admin cannot create level 100 roles', async () => {
+  for (const actor of [{ type: 'super_admin', level: 99 }, { type: 'admin_empresa', level: 100 }]) {
+    const result = await withGlobalRoleMocks(actor.level, null, (res) => rolesGlobalesController.createRolGlobal({
+      user: { id: 1, tipo_usuario: actor.type }, body: { nombre: 'No autorizado', nivel: 100 }
+    }, res));
+    assert.equal(result.res.statusCode, 403);
+    assert.equal(result.committed, false);
+    assert.equal(result.calls.some((call) => /INSERT|UPDATE|DELETE/.test(call.sql)), false);
+  }
+});
+
+test('global role level must be an integer in the 80-100 range', async () => {
+  for (const level of [79, 101, 99.5]) {
+    const result = await withGlobalRoleMocks(100, null, (res) => rolesGlobalesController.createRolGlobal({
+      user: { id: 1, tipo_usuario: 'super_admin' }, body: { nombre: 'Nivel invalido', nivel: level }
+    }, res));
+    assert.equal(result.res.statusCode, 400);
+    assert.equal(result.committed, false);
+  }
+});
+
+test('principal Super Admin permissions are editable and renaming preserves its reserved slug', async () => {
+  const result = await withGlobalRoleMocks(100, { id: 1, slug: 'super_admin', nivel: 100 },
+    (res) => rolesGlobalesController.updateRolGlobal({
+      params: { id: '1' }, user: { id: 1, tipo_usuario: 'super_admin' },
+      body: { nombre: 'Administrador principal', permisos_ids: [7, 8] }
+    }, res));
+  assert.equal(result.res.body.success, true);
+  assert.equal(result.committed, true);
+  const update = result.calls.find((call) => call.sql.startsWith('UPDATE roles'));
+  assert.equal(update.params[1], 'super_admin');
+  assert.match(result.calls[0].sql, /FOR UPDATE/);
+});
+
+test('principal Super Admin cannot be deactivated or demoted', async () => {
+  for (const body of [{ nivel: 99 }, { activo: false }, { activo: 0 }]) {
+    const result = await withGlobalRoleMocks(100, { id: 1, slug: 'super_admin', nivel: 100 },
+      (res) => rolesGlobalesController.updateRolGlobal({
+        params: { id: '1' }, user: { id: 1, tipo_usuario: 'super_admin' }, body
+      }, res));
+    assert.equal(result.res.statusCode, 403);
+    assert.equal(result.committed, false);
+    assert.equal(result.calls.some((call) => /INSERT|UPDATE roles|DELETE/.test(call.sql)), false);
+  }
+});
+
+test('editing level 100 permissions requires a Super Admin at level 100', async () => {
+  const result = await withGlobalRoleMocks(99, { id: 1, slug: 'super_admin', nivel: 100 },
+    (res) => rolesGlobalesController.updateRolGlobal({
+      params: { id: '1' }, user: { id: 2, tipo_usuario: 'super_admin' }, body: { permisos_ids: [7] }
+    }, res));
+  assert.equal(result.res.statusCode, 403);
+  assert.equal(result.committed, false);
 });

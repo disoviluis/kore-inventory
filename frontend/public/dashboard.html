@@ -1532,9 +1532,9 @@
                                 <strong>¿Qué son los Roles Globales?</strong><br>
                                 Los roles globales son plantillas base que pueden ser usadas por todas las empresas del sistema:
                                 <ul class="mb-0 mt-2">
-                                    <li><strong>Nivel de Privilegio:</strong> De 80 a 99 (niveles 10-79 reservados para roles de empresa)</li>
+                                    <li><strong>Nivel de Privilegio:</strong> De 80 a 100 (niveles 10-79 reservados para roles de empresa)</li>
                                     <li><strong>Plantilla Reutilizable:</strong> Las empresas pueden crear roles basados en estos</li>
-                                    <li><strong>Jerarquía:</strong> Solo puedes crear roles con nivel inferior al tuyo (Super Admin = 100)</li>
+                                    <li><strong>Jerarquía:</strong> El nivel 100 solo puede ser gestionado por un Super Admin de nivel 100</li>
                                     <li><strong>Gestión Centralizada:</strong> Los permisos se definen una vez y se heredan en todas las empresas</li>
                                 </ul>
                             </div>
@@ -1566,6 +1566,7 @@
                                         <div class="col-md-3">
                                             <select class="form-select" id="filterNivelRolGlobal">
                                                 <option value="">Todos los niveles</option>
+                                                <option value="100">Nivel 100</option>
                                                 <option value="99">Nivel 99</option>
                                                 <option value="95">Nivel 95</option>
                                                 <option value="90">Nivel 90</option>
@@ -2555,6 +2556,7 @@
                                                 <label class="form-label form-label-sm mb-1">Nivel de Privilegio <span class="text-danger">*</span></label>
                                                 <select class="form-select form-select-sm" id="rolGlobalNivel" required>
                                                     <option value="">Selecciona...</option>
+                                                    <option value="100">Nivel 100 - Super Admin</option>
                                                     <option value="99">Nivel 99 - Muy Alto</option>
                                                     <option value="95">Nivel 95 - Alto</option>
                                                     <option value="90">Nivel 90 - Alto Medio</option>
@@ -2594,10 +2596,10 @@
                                     <div class="alert alert-info alert-sm mb-2">
                                         <strong><i class="bi bi-exclamation-triangle me-2"></i>Importante sobre Jerarquía:</strong>
                                         <ul class="mb-0 mt-1 small">
-                                            <li>Roles globales: niveles <strong>80-99</strong></li>
+                                            <li>Roles globales: niveles <strong>80-100</strong></li>
                                             <li>Solo <strong>Super Admin (nivel 100)</strong> gestiona roles globales</li>
                                             <li>Roles de empresa: niveles <strong>10-79</strong></li>
-                                            <li>Solo puedes gestionar roles con <strong>nivel inferior</strong> al tuyo</li>
+                                            <li>El nivel <strong>100</strong> requiere un Super Admin de nivel 100; el rol principal no se puede desactivar ni degradar</li>
                                         </ul>
                                     </div>
                                 </div>

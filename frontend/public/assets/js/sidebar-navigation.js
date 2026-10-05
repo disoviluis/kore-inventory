@@ -115,6 +115,7 @@ function construirSidebarEstandarSiIncompleto() {
         { href: 'activos.html', icon: 'bi-pc-display', text: 'Activos' },
         { href: 'repuestos.html', icon: 'bi-tools', text: 'Repuestos' },
         { href: 'inventarios-fisicos.html', icon: 'bi-clipboard-check', text: 'Inventarios físicos' },
+        { href: 'ajustes-inventario.html', icon: 'bi-arrow-left-right', text: 'Ajustes de inventario' },
         { href: 'mantenimientos.html', icon: 'bi-wrench-adjustable', text: 'Mantenimientos' },
         { href: 'traslados.html', icon: 'bi-arrow-left-right', text: 'Traslados' },
         { href: 'mensajeros-dashboard.html', icon: 'bi-truck', text: 'Control Mensajeros' }

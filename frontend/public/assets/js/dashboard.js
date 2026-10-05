@@ -4882,6 +4882,8 @@ async function abrirModalRolGlobal(rolId = null) {
   const form = document.getElementById('rolGlobalForm');
   form.reset();
   permisosGlobalesSeleccionados = [];
+  document.getElementById('rolGlobalNivel').disabled = false;
+  document.getElementById('rolGlobalActivo').disabled = false;
   
   document.getElementById('rolGlobalModalTitle').innerHTML = rolId 
     ? '<i class="bi bi-shield-fill-check me-2"></i>Editar Rol Global' 
@@ -4915,6 +4917,12 @@ async function abrirModalRolGlobal(rolId = null) {
       document.getElementById('rolGlobalDescripcion').value = rol.descripcion || '';
       document.getElementById('rolGlobalNivel').value = rol.nivel;
       document.getElementById('rolGlobalActivo').value = rol.activo ? '1' : '0';
+      if (rol.slug === 'super_admin') {
+        document.getElementById('rolGlobalNivel').value = '100';
+        document.getElementById('rolGlobalActivo').value = '1';
+        document.getElementById('rolGlobalNivel').disabled = true;
+        document.getElementById('rolGlobalActivo').disabled = true;
+      }
       
       // Marcar permisos asignados
       permisosGlobalesSeleccionados = rol.permisos.map(p => p.permiso_id);
@@ -5200,8 +5208,8 @@ async function guardarRolGlobal() {
     return;
   }
   
-  if (!nivel || nivel < 80 || nivel > 99) {
-    mostrarAlertaConfigGlobal('Debes seleccionar un nivel válido (80-99)', 'warning');
+  if (!nivel || nivel < 80 || nivel > 100) {
+    mostrarAlertaConfigGlobal('Debes seleccionar un nivel válido (80-100)', 'warning');
     return;
   }
   
