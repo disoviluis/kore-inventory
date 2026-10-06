@@ -236,6 +236,18 @@ function renderAssetAttributeInputs(values = []) {
     }
     return `<div class="col-md-6"><label class="form-label">${escapeHtml(definition.etiqueta)}${required ? ' *' : ''}${definition.unidad ? ` (${escapeHtml(definition.unidad)})` : ''}</label>${input}</div>`;
   }).join('')}</div>`;
+  const valueHints = {
+    texto: 'Escribe el dato propio de este activo, por ejemplo el color o la referencia técnica.',
+    numero: 'Ingresa solo el valor numérico; la unidad aparece en la etiqueta. Ejemplo: 16 para una memoria de 16 GB.',
+    booleano: 'Selecciona Sí si este activo cumple la característica, o No si no la cumple.',
+    fecha: 'Selecciona la fecha correspondiente a esta característica del activo.',
+    opcion: 'Elige uno de los valores definidos para este tipo de activo.'
+  };
+  byId('assetDynamicAttributes').querySelectorAll('.dynamic-asset-attribute').forEach((field) => {
+    field.id = `assetAttribute${field.dataset.attributeId}`;
+    field.previousElementSibling.setAttribute('for', field.id);
+    addAssetFieldHint(field, `${valueHints[field.dataset.attributeType] || valueHints.texto} ${field.required ? 'Dato obligatorio.' : 'Dato opcional.'}`);
+  });
 }
 
 async function loadAssetAttributes(typeId, savedValues = []) {
@@ -776,6 +788,72 @@ function handleTableActions(event) {
   }
 }
 
+function addAssetFieldHint(field, text) {
+  const helpId = `${field.id}Help`;
+  if (byId(helpId)) return;
+  const help = document.createElement('div');
+  help.id = helpId;
+  help.className = 'form-text';
+  help.textContent = text;
+  if (field.classList.contains('mb-3')) {
+    field.classList.remove('mb-3');
+    help.classList.add('mb-3');
+  }
+  const anchor = field.type === 'checkbox' ? field.closest('.form-check') : field;
+  anchor.insertAdjacentElement('afterend', help);
+  const descriptions = new Set((field.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+  descriptions.add(helpId);
+  field.setAttribute('aria-describedby', [...descriptions].join(' '));
+}
+
+function addAssetFormHints() {
+  const hints = {
+    assetName: 'Nombre que permite reconocer el bien. Ejemplo: Portátil de recepción o Montacargas 01.',
+    assetInternalCode: 'Código de tu placa o etiqueta interna, si ya existe. Ejemplo: EQ-015. El código del sistema se genera aparte.',
+    assetState: 'Situación actual del bien: en operación, mantenimiento, fuera de servicio o extraviado.',
+    assetCategory: 'Grupo general al que pertenece el activo. Ejemplos: Equipos de cómputo, Vehículos o Mobiliario.',
+    assetType: 'Clase de activo dentro de la categoría. Ejemplo: Portátil dentro de Equipos de cómputo. Define sus características adicionales.',
+    assetBrand: 'Fabricante del bien. Ejemplos: Dell, Toyota o Samsung. Opcional.',
+    assetModel: 'Modelo indicado por el fabricante. Ejemplos: Latitude 5440 o Hilux. Opcional.',
+    assetSerial: 'Número de serie de la etiqueta del fabricante; identifica este bien individualmente. No es el modelo.',
+    assetWarehouse: 'Bodega de la empresa donde se encuentra el activo. Puede quedar sin bodega si aun no esta ubicado.',
+    assetLocation: 'Lugar preciso dentro de la bodega o sede. Ejemplo: Oficina 2, escritorio de recepción.',
+    assetResponsible: 'Usuario activo de esta empresa encargado de custodiar el bien. Puede quedar sin asignar.',
+    assetAcquired: 'Fecha en que la empresa adquirió el activo; normalmente aparece en la factura de compra.',
+    assetValue: 'Valor de compra del activo en la moneda de la empresa. Ingresa solo números y hasta dos decimales.',
+    assetProvider: 'Proveedor que vendió el activo, tomado del catálogo de proveedores de esta empresa. Opcional.',
+    assetPurchaseDocument: 'Número de la factura, recibo u otro soporte de compra. Ejemplo: FV-2026-0158.',
+    assetImageUrl: 'Enlace completo HTTP o HTTPS a una foto del bien, si ya esta publicada. Ejemplo: https://tu-sitio.com/equipo.jpg.',
+    assetReference: 'Referencia comercial o técnica del fabricante, si es distinta del modelo y del número de serie. Opcional.',
+    assetDescription: 'Describe el bien y sus detalles útiles para identificarlo. Ejemplo: Portátil gris de 14 pulgadas con cargador.',
+    assetNotes: 'Notas internas sobre condición, accesorios o restricciones. Ejemplo: Entregado con cargador y maletín.',
+    categoryName: 'Nombre del grupo general de activos. Ejemplos: Equipos de cómputo, Vehículos o Mobiliario.',
+    categoryDescription: 'Indica qué bienes pertenecen a esta categoría. Ejemplo: Computadores, monitores y periféricos. Opcional.',
+    categoryState: 'Activa permite usar la categoría en nuevos registros. Inactiva conserva su información histórica.',
+    typeCategory: 'Categoría que agrupa este tipo. Ejemplo: Equipos de cómputo para el tipo Portátil.',
+    typeName: 'Nombre de la clase de activo. Ejemplos: Portátil, Camión o Escritorio.',
+    typeDescription: 'Describe los bienes de este tipo y lo que los distingue. Ejemplo: Computadores portátiles para trabajo de oficina. Opcional.',
+    typeState: 'Activo permite seleccionar este tipo en nuevos activos. Inactivo conserva el historial.',
+    attributeKey: 'Identificador interno único dentro del tipo. Empieza con una letra y usa letras, números o guion bajo; sin espacios. Ejemplo: memoria_ram.',
+    attributeLabel: 'Nombre visible del campo al registrar un activo. Ejemplo: Memoria RAM o Fecha de vencimiento de la garantía.',
+    attributeDataType: 'Define el valor permitido: Texto para palabras; Número para cantidades; Sí / No para una condición; Fecha para una fecha; Lista para opciones fijas.',
+    attributeOptions: 'Escribe una opción por línea; serán los valores que se podrán elegir. Ejemplo: Diésel, Gasolina y Eléctrico, cada uno en una línea.',
+    attributeUnit: 'Unidad de medida del valor, si aplica. Ejemplos: GB para memoria, kg para peso o kW para potencia. Opcional.',
+    attributeOrder: 'Posición del campo en el formulario: los números menores aparecen primero. Ejemplo: 0 antes de 1 y 2.',
+    attributeRequired: 'Al marcarlo, este dato será obligatorio al guardar activos de este tipo. Déjalo sin marcar para permitir omitirlo.',
+    attributeState: 'Activo muestra este campo en el formulario del tipo. Inactivo oculta su captura sin borrar los valores existentes.',
+    assignmentResponsible: 'Usuario de esta empresa que recibirá o custodiará el bien. Sin asignar deja el activo sin responsable.',
+    assignmentWarehouse: 'Bodega donde quedará el activo después de esta asignación. Sin bodega deja esa ubicación sin definir.',
+    assignmentLocation: 'Ubicación precisa del bien. Ejemplo: Sede principal, oficina de contabilidad, puesto 3.',
+    assignmentReason: 'Motivo del cambio para el historial. Ejemplo: Entrega a nuevo empleado o traslado a otra oficina.'
+  };
+  Object.entries(hints).forEach(([id, text]) => addAssetFieldHint(byId(id), text));
+  byId('assetImageFile').setAttribute('aria-describedby', 'assetImageUploadStatus');
+  ['categoryModal', 'typeModal', 'attributeModal', 'assignmentModal'].forEach((id) => {
+    byId(id).querySelector('.modal-dialog').classList.add('modal-dialog-scrollable');
+  });
+}
+
 function setupEvents() {
   byId('assetForm').addEventListener('submit', saveAsset);
   byId('assetImageFile').addEventListener('change', (event) => {
@@ -841,6 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
   renderUser();
+  addAssetFormHints();
   assetModal = new bootstrap.Modal(byId('assetModal'));
   categoryModal = new bootstrap.Modal(byId('categoryModal'));
   typeModal = new bootstrap.Modal(byId('typeModal'));
