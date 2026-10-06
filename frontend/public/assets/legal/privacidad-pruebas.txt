@@ -1,0 +1,46 @@
+BASE DE PRIVACIDAD PARA REVISION - NO ES LA POLITICA DEFINITIVA
+Version: pruebas-2026-10-06
+
+Este texto es una base informativa para preparar la politica de privacidad de
+Kore Inventory. No identifica un responsable legal aun no confirmado ni genera
+autorizaciones retroactivas o consentimientos de usuarios.
+
+1. Informacion relacionada con el servicio
+El proceso de acceso puede tratar nombre, correo, relacion con empresas, roles,
+evidencia de verificacion y aceptacion, fechas y datos tecnicos de seguridad.
+Las empresas pueden introducir informacion de clientes, proveedores, empleados
+y otros terceros. Las finalidades y bases juridicas de cada tratamiento deben
+documentarse antes de utilizar datos reales.
+
+2. Responsabilidades
+La politica definitiva debe identificar a la persona natural o juridica
+responsable del SaaS, su contacto y direccion, y distinguir su papel del de cada
+empresa cliente. La marca o nombre futuro de una sociedad no sustituye la
+identidad del responsable. No se inventa una identificacion tributaria.
+
+3. Finalidades y seguridad
+Las funciones de seguridad tienen por finalidad controlar acceso, verificar
+cuentas, gestionar sesiones y conservar trazabilidad. No autorizan uso para
+publicidad, venta de datos o publicacion de informacion privada.
+Las credenciales deben protegerse; nunca compartirse en mensajes de soporte.
+
+4. Infraestructura y archivos
+El servicio utiliza infraestructura en la nube. Deben confirmarse proveedores,
+ubicaciones y las condiciones de tratamiento internacional aplicables.
+Las imagenes publicas pueden distribuirse mediante CDN; no deben contener
+informacion sensible. Evidencias privadas requieren un almacenamiento privado
+habilitado y controles de autorizacion independientes.
+
+5. Derechos y conservacion
+La politica definitiva debe explicar consultas, reclamos, acceso, actualizacion,
+rectificacion, supresion y revocacion cuando correspondan; asi como plazos,
+conservacion legal, exportacion, eliminacion y copias de seguridad reales.
+No se inventan plazos ni compromisos de soporte que no esten confirmados.
+
+6. Pruebas y contacto
+Usar datos sinteticos o anonimizados, sin datos reales de terceros. Para consultas
+preliminares: soportekinventory@gmail.com. No enviar documentos sensibles o
+credenciales por este canal sin un procedimiento seguro autorizado.
+
+La publicacion definitiva requiere identificacion del responsable y aprobacion
+del contenido. Esta base no habilita la aceptacion contractual de cuentas nuevas.

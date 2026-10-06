@@ -17,6 +17,10 @@ export default async function run(page) {
   }, user);
   await page.route('**/api/**', async route => {
     const request = route.request(); const url = new URL(request.url());
+    if (url.pathname === '/api/auth/verify' && (request.headers().referer || '').endsWith('/login.html')) {
+      await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ success: false, message: 'QA anonymous login' }) });
+      return;
+    }
     let body;
     try { body = request.postDataJSON(); } catch { body = null; }
     requests.push({ pathname: url.pathname, method: request.method(), body, headers: request.headers() });
@@ -29,6 +33,9 @@ export default async function run(page) {
     }
     else if (url.pathname === '/api/super-admin/configuracion/smtp/prueba') smtp.lastTestStatus = 'exitoso';
     else if (url.pathname === '/api/super-admin/roles-globales') data = [];
+    else if (url.pathname === '/api/super-admin/planes/catalogo-modulos') data = ['pos', 'inventario', 'ventas', 'clientes', 'usuarios', 'roles', 'reportes', 'finanzas', 'activos'].map(code => ({ codigo: code, nombre: code.replace(/_/g, ' ') }));
+    else if (url.pathname === '/api/super-admin/planes') data = [];
+    else if (url.pathname === '/api/super-admin/licencias') data = [];
     else if (url.pathname === '/api/auth/permisos/modulos') data = { modulos: [] };
     else if (url.pathname === '/api/auth/permisos') data = { permisos: [] };
     else if (url.pathname === '/api/empresas/42') data = { id: 42, nombre: 'Empresa QA', estado: 'activa', nit: 'QA' };
@@ -116,5 +123,41 @@ export default async function run(page) {
     layouts.push({ filename: 'dashboard.html#smtp', width: viewport.width, overflow: false });
   }
   await page.screenshot({ path: path.join(os.tmpdir(), 'kore-smtp-mobile.png'), fullPage: true });
-  return { layouts, confirmation: 'passed', controlledInvitation: 'passed', serverPricedPlanRequest: 'passed', smtpSaveAndTest: 'passed', screenshots: ['kore-accesos-mobile.png', 'kore-suscripcion-desktop.png', 'kore-smtp-mobile.png'] };
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.locator('a[href="dashboard.html#planes"]').click();
+  await page.locator('[onclick="abrirModalPlan()"]').click();
+  await page.locator('#planModal.show').waitFor();
+  await page.locator('#planModuleChecks input').first().waitFor();
+  await page.locator('#planNombre').fill('Plan QA gestion'); await page.locator('#planPrecioMensual').fill('69900');
+  await page.locator('#planMultiBodega').check(); await page.locator('#planReportesAvanzados').check();
+  await page.locator('#plan-module-reportes').check(); await page.locator('#plan-module-finanzas').check();
+  await page.locator('#planDestacado').check();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'kore-plan-desktop.png'), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForFunction(() => {
+    const content = document.querySelector('#planModal .modal-content');
+    const bounds = content.getBoundingClientRect();
+    return bounds.left >= 0 && bounds.right <= innerWidth + 1 && content.scrollWidth <= content.clientWidth + 1;
+  });
+  const planDimensions = await page.locator('#planModal .modal-content').boundingBox();
+  assert.ok(planDimensions.width <= 391);
+  await page.screenshot({ path: path.join(os.tmpdir(), 'kore-plan-mobile.png'), fullPage: true });
+  const dialogHandler = async dialog => dialog.accept(); page.on('dialog', dialogHandler);
+  await page.locator('button[form="planForm"]').click();
+  await page.locator('#planModal.show').waitFor({ state: 'hidden' });
+  page.off('dialog', dialogHandler);
+  const planRequest = requests.find(request => request.pathname === '/api/super-admin/planes' && request.method === 'POST');
+  assert.equal(planRequest.body.multi_bodega, 1);
+  assert.equal(planRequest.body.reportes_avanzados, 1);
+  assert.equal(planRequest.body.max_usuarios_por_empresa, null);
+  assert.equal(planRequest.body.soporte_nivel, 'email');
+  assert.equal(planRequest.body.destacado, 1);
+  layouts.push({ filename: 'dashboard.html#planModal', width: 390, overflow: false });
+  await page.route('**/api/public/documentos-legales', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) }));
+  await page.goto(`${origin}/documentos-legales.html?tipo=terminos`);
+  await page.locator('#legalDocument').getByText('BASE INFORMATIVA DE PRUEBAS', { exact: false }).waitFor();
+  assert.match(await page.locator('#accessStatus').innerText(), /pendiente de aprobacion/);
+  await page.goto(`${origin}/documentos-legales.html?tipo=privacidad`);
+  await page.locator('#legalDocument').getByText('BASE DE PRIVACIDAD PARA REVISION', { exact: false }).waitFor();
+  return { layouts, confirmation: 'passed', controlledInvitation: 'passed', serverPricedPlanRequest: 'passed', smtpSaveAndTest: 'passed', visualPlanEditor: 'passed', informationalTestDocuments: 'passed', screenshots: ['kore-accesos-mobile.png', 'kore-suscripcion-desktop.png', 'kore-smtp-mobile.png', 'kore-plan-mobile.png'] };
 }

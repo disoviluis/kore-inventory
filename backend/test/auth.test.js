@@ -7,7 +7,7 @@ const { authenticator } = require('otplib');
 const { authMiddleware } = require('../dist/core/middleware/auth.middleware');
 const { completeAccessChallenge } = require('../dist/core/auth/auth.onboarding');
 const { deactivateAccessUser } = require('../dist/core/auth/auth.admin');
-const { enforceSubscription, moduleIncluded, addCalendarMonths, requestedCompany, assertPlanQuota } = require('../dist/core/auth/subscription.service');
+const { enforceSubscription, moduleIncluded, addCalendarMonths, requestedCompany, assertPlanQuota, planFeatureDenied, assertWarehousePlan } = require('../dist/core/auth/subscription.service');
 const { approveSubscriptionRequest } = require('../dist/core/auth/subscription.controller');
 const http = require('node:http');
 const { validateSmtpConfig, safeSmtpConfig, isPublicSmtpAddress, loadAccessSmtpConfig, describeSmtpFailure } = require('../dist/core/auth/auth.smtp');
@@ -15,6 +15,8 @@ const { saveGlobalSmtp } = require('../dist/core/auth/auth.smtp.controller');
 const { sendAuthMail } = require('../dist/core/auth/auth.mail');
 const nodemailer = require('nodemailer');
 const dnsPromises = require('node:dns/promises');
+const { validatePlanInput } = require('../dist/platform/super-admin/planes.rules');
+const { createValidatedPlan, updateValidatedPlan } = require('../dist/platform/super-admin/planes-save.controller');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
@@ -416,4 +418,87 @@ test('SMTP diagnostics classify failure without leaking provider response or cre
   assert.equal(describeSmtpFailure({ code: 'ENOTFOUND' }).code, 'SMTP_DNS_FALLIDO');
   assert.equal(describeSmtpFailure({ code: 'CERT_HAS_EXPIRED' }).code, 'SMTP_TLS_FALLIDO');
   assert.equal(describeSmtpFailure({ code: 'EENVELOPE' }).code, 'SMTP_REMITENTE_DESTINO_RECHAZADO');
+});
+
+test('plan validation preserves unlimited quotas and configurable commercial flags', () => {
+  const input = { nombre: 'Gestion', precio_mensual: 49900, modulos_incluidos: ['inventario', 'activos', 'reportes', 'finanzas'],
+    max_usuarios_por_empresa: null, max_productos: '', max_facturas_mes: 100, multi_bodega: true,
+    reportes_avanzados: true, soporte_nivel: 'prioritario', activo: false, destacado: true };
+  const plan = validatePlanInput(input);
+  assert.equal(plan.max_usuarios_por_empresa, null);
+  assert.equal(plan.max_productos, null);
+  assert.equal(plan.multi_bodega, 1);
+  assert.equal(plan.reportes_avanzados, 1);
+  assert.equal(plan.activo, 0);
+  assert.equal(plan.destacado, 1);
+  assert.throws(() => validatePlanInput({ ...input, max_facturas_mes: 0 }));
+  assert.throws(() => validatePlanInput({ ...input, soporte_nivel: 'basico' }));
+  assert.throws(() => validatePlanInput({ ...input, api_access: true }));
+  assert.throws(() => validatePlanInput({ ...input, modulos_incluidos: ['unknown'] }));
+});
+
+test('plan creation persists null quotas and booleans instead of silent defaults', async () => {
+  const writes = [];
+  await withDatabaseMock(async (sql, params) => { writes.push({ sql, params }); return { insertId: 7 }; }, async () => {
+    const res = responseMock();
+    await createValidatedPlan({ user: { id: 1 }, body: { nombre: 'Gestion', precio_mensual: 49900,
+      modulos_incluidos: ['inventario', 'activos', 'reportes', 'finanzas'], max_usuarios_por_empresa: null,
+      max_productos: null, max_facturas_mes: null, multi_bodega: true, reportes_avanzados: true,
+      activo: false, destacado: true } }, res);
+    assert.equal(res.statusCode, 201);
+    const values = writes[0].params;
+    assert.equal(values[5], null);
+    assert.equal(values[6], null);
+    assert.equal(values[7], null);
+    assert.equal(values[12], 1);
+    assert.equal(values[13], 1);
+    assert.equal(values[14], 0);
+    assert.equal(values[15], 1);
+    assert.equal(writes[1].sql.includes('fecha'), false);
+  });
+});
+
+test('inventory and POS do not implicitly grant premium count, transfer or maintenance modules', () => {
+  assert.equal(moduleIncluded('["inventario"]', 'inventarios-fisicos'), false);
+  assert.equal(moduleIncluded('["inventario"]', 'traslados'), false);
+  assert.equal(moduleIncluded('["activos"]', 'mantenimientos'), false);
+  assert.equal(moduleIncluded('["pos"]', 'comandas'), false);
+  assert.ok(planFeatureDenied({ multi_bodega: 0 }, 'traslados', '/api/traslados'));
+  assert.ok(planFeatureDenied({ reportes_avanzados: 0 }, 'finanzas', '/api/finanzas/reportes/estado-resultados'));
+  assert.equal(planFeatureDenied({ reportes_avanzados: 1 }, 'finanzas', '/api/finanzas/reportes/estado-resultados'), null);
+});
+
+test('a paid active plan cannot lose modules or quotas through an in-place edit', async () => {
+  const input = { nombre: 'Gestion', precio_mensual: 69900, modulos_incluidos: ['inventario'],
+    max_usuarios_por_empresa: 3, max_productos: 500, max_facturas_mes: 300, multi_bodega: false,
+    reportes_avanzados: false, soporte_nivel: 'email', activo: true };
+  await withDatabaseMock(async sql => {
+    if (sql.startsWith('SELECT * FROM planes')) return [{ ...input, id: 1, modulos_incluidos: '["inventario","activos"]' }];
+    if (sql.startsWith('SELECT l.id FROM licencias')) return [{ id: 7 }];
+    assert.fail('Contract edit must not write: ' + sql);
+  }, async () => {
+    const res = responseMock();
+    await updateValidatedPlan({ params: { id: '1' }, user: { id: 1 }, body: input }, res);
+    assert.equal(res.statusCode, 409);
+  });
+});
+
+test('second active warehouse is rejected by the paid plan under a company lock', async () => {
+  const statements = [];
+  await assert.rejects(() => assertWarehousePlan(async sql => {
+    statements.push(sql);
+    if (sql.startsWith('SELECT id FROM empresas')) return [{ id: 42 }];
+    if (sql.includes('FROM empresas e')) return [{ id: 42, estado: 'activa' }];
+    if (sql.includes('FROM licencias l')) return [{ multi_bodega: 0 }];
+    if (sql.includes('FROM bodegas')) return [{ total: 1 }];
+    assert.fail(sql);
+  }, 42), error => error.status === 403);
+  assert.match(statements[0], /FOR UPDATE/);
+});
+
+test('older paid licenses retain previously available aliases and feature access', () => {
+  assert.equal(moduleIncluded('["inventario"]', 'inventarios-fisicos', true), true);
+  assert.equal(moduleIncluded('["inventario"]', 'traslados', true), true);
+  assert.equal(planFeatureDenied({ controles_version: 0, multi_bodega: 0 }, 'traslados', '/api/traslados'), null);
+  assert.ok(planFeatureDenied({ controles_version: 2, multi_bodega: 0 }, 'traslados', '/api/traslados'));
 });

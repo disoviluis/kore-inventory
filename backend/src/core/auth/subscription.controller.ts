@@ -107,9 +107,11 @@ export const approveSubscriptionRequest = async (req: Request, res: Response) =>
       const counts = await tx(`SELECT
         (SELECT COUNT(*) FROM usuario_empresa ue JOIN usuarios u ON u.id = ue.usuario_id
           WHERE ue.empresa_id = ? AND ue.activo = 1 AND u.activo = 1 AND u.tipo_usuario <> 'super_admin') AS usuarios,
-        (SELECT COUNT(*) FROM productos WHERE empresa_id = ? AND estado = 'activo') AS productos`, [companyId, companyId]);
+        (SELECT COUNT(*) FROM productos WHERE empresa_id = ? AND estado = 'activo') AS productos,
+        (SELECT COUNT(*) FROM bodegas WHERE empresa_id = ? AND estado = 'activa') AS bodegas`, [companyId, companyId, companyId]);
       if ((plan.max_usuarios_por_empresa !== null && counts[0].usuarios > plan.max_usuarios_por_empresa) ||
           (plan.max_productos !== null && counts[0].productos > plan.max_productos)) throw new Error('La empresa supera los limites del plan seleccionado; ajuste el plan sin borrar datos');
+          if (!Number(plan.multi_bodega) && Number(counts[0].bodegas) > 1) throw new Error('La empresa tiene varias bodegas activas; seleccione un plan multi-bodega sin borrar datos');
       const current = await companySubscription(companyId, tx);
       if (current.empresa.estado === 'cancelada') throw new Error('No se puede activar una empresa cancelada');
       if (current.licencia && current.licencia.plan_id !== plan.id) throw new Error('El cambio de plan debe realizarse al vencer el periodo actual; no se perderan dias pagados');
@@ -120,9 +122,10 @@ export const approveSubscriptionRequest = async (req: Request, res: Response) =>
       const end = addCalendarMonths(start, request.periodicidad === 'anual' ? 12 : request.meses);
       const license = await tx(`INSERT INTO licencias
         (empresa_id, plan_id, estado, fecha_inicio, fecha_fin, tipo_facturacion, auto_renovacion, monto, moneda,
-         limite_usuarios, limite_productos, limite_facturas_mes)
-        VALUES (?, ?, 'activa', ?, ?, ?, 0, ?, 'COP', ?, ?, ?)`,
-      [companyId, plan.id, start, end, request.periodicidad, request.monto, plan.max_usuarios_por_empresa, plan.max_productos, plan.max_facturas_mes]);
+         limite_usuarios, limite_productos, limite_facturas_mes, notas)
+        VALUES (?, ?, 'activa', ?, ?, ?, 0, ?, 'COP', ?, ?, ?, ?)`,
+      [companyId, plan.id, start, end, request.periodicidad, request.monto, plan.max_usuarios_por_empresa, plan.max_productos,
+        plan.max_facturas_mes, JSON.stringify({ control_comercial_version: 2, solicitud_id: requestId })]);
       await tx('INSERT INTO licencias_vigencias (licencia_id, inicio_at, fin_at) VALUES (?, ?, ?)', [license.insertId, start, end]);
       await tx(`INSERT INTO pagos_licencias
         (licencia_id, empresa_id, plan_id, monto, moneda, tipo, metodo_pago, estado, referencia_pago, datos_pago,

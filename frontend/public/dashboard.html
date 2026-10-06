@@ -2126,7 +2126,7 @@
 
     <!-- Modal Plan -->
     <div class="modal fade" id="planModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="planModalTitle">Nuevo Plan</h5>
@@ -2167,7 +2167,8 @@
                                 <label class="form-label">Precio Mensual <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" id="planPrecioMensual" step="0.01" required>
+                                    <input type="number" class="form-control" id="planPrecioMensual" step="0.01" min="0.01" required>
+                                    <span class="input-group-text">COP</span>
                                 </div>
                             </div>
 
@@ -2175,7 +2176,8 @@
                                 <label class="form-label">Precio Anual</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" id="planPrecioAnual" step="0.01">
+                                    <input type="number" class="form-control" id="planPrecioAnual" step="0.01" min="0.01">
+                                    <span class="input-group-text">COP</span>
                                 </div>
                                 <small class="text-muted">Opcional - Descuento por pago anual</small>
                             </div>
@@ -2186,45 +2188,54 @@
 
                             <div class="col-md-4">
                                 <label class="form-label">Máx. Usuarios por Empresa</label>
-                                <input type="number" class="form-control" id="planMaxUsuarios">
+                                <input type="number" class="form-control" id="planMaxUsuarios" min="1" step="1">
                                 <small class="text-muted">Dejar vacío = ilimitado</small>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">Máx. Productos</label>
-                                <input type="number" class="form-control" id="planMaxProductos">
+                                <input type="number" class="form-control" id="planMaxProductos" min="1" step="1">
                                 <small class="text-muted">Dejar vacío = ilimitado</small>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="form-label">Máx. Facturas/Mes</label>
-                                <input type="number" class="form-control" id="planMaxFacturas">
+                                <input type="number" class="form-control" id="planMaxFacturas" min="1" step="1">
                                 <small class="text-muted">Dejar vacío = ilimitado</small>
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">Nivel de Soporte</label>
                                 <select class="form-select" id="planSoporteNivel">
-                                    <option value="basico">Básico (Email)</option>
-                                    <option value="estandar">Estándar (Email + Chat)</option>
-                                    <option value="premium">Premium (24/7 + Teléfono)</option>
+                                    <option value="email">Email</option>
+                                    <option value="prioritario">Prioritario</option>
+                                    <option value="24/7">24/7 (solo con cobertura contratada)</option>
                                 </select>
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">Duración Trial (días)</label>
-                                <input type="number" class="form-control" id="planDuracionTrial" value="30">
+                                <input type="number" class="form-control" id="planDuracionTrial" value="30" readonly>
                             </div>
 
                             <div class="col-12">
                                 <label class="form-label">Módulos Incluidos</label>
-                                <textarea class="form-control" id="planModulosIncluidos" rows="2" placeholder='["inventario", "ventas", "compras", "clientes"]'></textarea>
-                                <small class="text-muted">JSON array con los módulos disponibles</small>
+                                <input type="hidden" id="planModulosIncluidos">
+                                <div id="planModuleChecks" class="row g-2 border rounded p-3" style="max-height:320px;overflow-y:auto"></div>
+                                <div id="planModuleStatus" role="status" class="mt-2"></div>
                             </div>
+                            <div class="col-12 border-top pt-3"><div class="d-flex gap-4 flex-wrap">
+                                <div class="form-check form-switch"><input id="planMultiBodega" type="checkbox" class="form-check-input"><label for="planMultiBodega" class="form-check-label">Multi-bodega</label></div>
+                                <div class="form-check form-switch"><input id="planReportesAvanzados" type="checkbox" class="form-check-input"><label for="planReportesAvanzados" class="form-check-label">Reportes financieros avanzados</label></div>
+                                <div class="form-check form-switch"><input id="planDestacado" type="checkbox" class="form-check-input"><label for="planDestacado" class="form-check-label">Plan destacado</label></div>
+                            </div></div>
+                            <div class="col-md-4"><label class="form-label" for="planEmpresas">Empresas por suscripci&oacute;n</label><input id="planEmpresas" class="form-control" type="number" value="1" readonly></div>
+                            <div class="col-md-8"><div class="d-flex gap-4 flex-wrap pt-4"><div class="form-check"><input id="planApiExterna" type="checkbox" class="form-check-input" disabled><label for="planApiExterna" class="form-check-label text-muted">API externa no disponible</label></div><div class="form-check"><input id="planMarcaBlanca" type="checkbox" class="form-check-input" disabled><label for="planMarcaBlanca" class="form-check-label text-muted">Marca blanca no disponible</label></div></div></div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
+                    <button id="duplicatePlanButton" type="button" class="btn btn-outline-primary d-none" title="Crear copia con nuevas condiciones"><i class="bi bi-copy me-2" aria-hidden="true"></i>Duplicar</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" form="planForm" class="btn btn-primary">
                         <i class="bi bi-save me-2"></i>Guardar Plan
@@ -2703,8 +2714,9 @@
     <script src="assets/js/fecha-utils.js"></script>
     <!-- Custom JS (debe cargar primero para declarar API_URL) -->
     <script src="assets/js/impuestos-utils.js"></script>
-    <script src="assets/js/dashboard.js?v=20260827-superadmin2"></script>
+    <script src="assets/js/dashboard.js?v=20261006-planes"></script>
     <script src="assets/js/global-smtp.js?v=20261006"></script>
+    <script src="assets/js/plan-editor.js?v=20261006"></script>
     <!-- Sidebar Navigation (Common) - Usa API_URL si existe -->
     <script src="assets/js/sidebar-navigation.js?v=20260824-sidebar3"></script>
 </body>

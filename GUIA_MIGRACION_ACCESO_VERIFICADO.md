@@ -176,6 +176,33 @@ no constituye certificacion de cumplimiento legal.
 
 ## 6. Prueba y pagos
 
+### Catalogo aprobado y publicaciones de prueba (2026-10-06)
+
+Las nuevas ofertas aprobadas son Esencial 29.900 COP/mes, Gestion 69.900 COP/mes
+e Integral 129.900 COP/mes; anual equivale a diez mensualidades. Activarlas con
+`SQL/migration_20261006_catalogo_planes_aprobado.sql`, ejecutado manualmente
+despues de respaldo. Crea registros nuevos y retira solo las ofertas antiguas
+conocidas de nuevas ventas, sin mover empresas ni modificar licencias vigentes.
+Si los nombres nuevos ya existen, no sobrescribe sus precios editados.
+
+El editor de Planes muestra COP, modulos seleccionables y las caracteristicas
+que realmente tienen controles. Los precios se pueden cambiar para solicitudes
+nuevas. Para cambiar modulos/cupos de un plan con periodos pagados, duplicarlo:
+no se reescriben las condiciones contratadas en sitio.
+
+Las licencias nuevas guardan version comercial 2 en sus notas JSON. Los periodos
+anteriores mantienen sus aliases y acceso previo de caracteristicas hasta una
+renovacion o cambio acordado; no se elimina stock, usuarios ni bodegas existentes.
+
+Los textos `frontend/public/assets/legal/terminos-pruebas.txt` y
+`privacidad-pruebas.txt` son bases informativas publicas para revision con datos
+sinteticos. El visor las presenta cuando no hay documentos definitivos publicados.
+NO se insertan como documentos contractuales ni se aceptan automaticamente.
+No contienen una SAS ficticia ni NIT provisional. Para activar usuarios nuevos
+en produccion o contratar, sigue siendo necesario identificar al operador real,
+completar las condiciones pendientes y publicar ambos textos definitivos desde
+Accesos verificados. La aprobacion del catalogo no equivale a revision juridica.
+
 Una empresa nueva espera la verificacion de su primer administrador aprobado.
 Entonces comienza una unica prueba de 30 x 24 horas, registrada en UTC.
 Invitaciones posteriores, cambios de usuario o plan no la reinician.

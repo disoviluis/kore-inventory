@@ -1,0 +1,44 @@
+BASE INFORMATIVA DE PRUEBAS - NO PUBLICADA COMO CONTRATO COMERCIAL
+Version: pruebas-2026-10-06
+
+Este texto sirve para revisar el funcionamiento de Kore Inventory antes de la
+aprobacion de documentos definitivos. No identifica una sociedad constituida,
+no contiene un NIT provisional y no afirma una revision juridica realizada.
+No reemplaza los terminos y la politica de privacidad que deben aprobarse antes
+de activar cuentas para uso comercial con datos reales.
+
+1. Finalidad y alcance
+Las pruebas deben realizarse con informacion sintetica o anonimizada, dentro
+de las empresas y permisos autorizados. No deben introducirse datos personales,
+contables o confidenciales de terceros como si fueran ejemplos ficticios.
+
+2. Acceso y seguridad
+Cada participante debe usar una cuenta individual, proteger sus credenciales y
+evitar compartir codigos de verificacion o recuperacion. La verificacion de correo
+comprueba control del buzon, no identidad civil ni representacion empresarial.
+No se concede acceso a otras empresas ni privilegios de Super Admin.
+
+3. Suscripcion
+Una empresa nueva aprobada tiene una sola prueba de 30 dias desde la verificacion
+de su primer administrador. Cambiar personas, correo o plan no reinicia periodos
+existentes. La seleccion de un plan no equivale a un pago ni activa una licencia.
+No hay cobro automatico ni pasarela integrada en el flujo actual.
+
+4. Operaciones
+Los modulos y limites dependen del plan y de los permisos. La aplicacion no
+sustituye la revision profesional ni acredita por si sola cumplimiento fiscal,
+contable, de proteccion de datos o habilitacion de facturacion ante DIAN.
+Las pruebas no deben producir cobros ni documentos de negocio reales.
+
+5. Datos y archivos
+No subir documentos de identidad o evidencias sensibles al catalogo publico.
+El almacenamiento de evidencia privada requiere configuracion independiente.
+No se promete disponibilidad absoluta, conservacion indefinida ni recuperacion
+instantanea de informacion en este documento de pruebas.
+
+6. Contacto
+Consultas sobre las pruebas: soportekinventory@gmail.com.
+La identificacion del operador, direccion, tratamiento tributario, condiciones
+de soporte y politica de conservacion siguen pendientes de confirmacion.
+
+Leer este documento no registra una aceptacion legal ni crea una contratacion.

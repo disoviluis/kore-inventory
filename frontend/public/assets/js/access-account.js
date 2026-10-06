@@ -115,7 +115,13 @@
       documents = await api('public/documentos-legales');
       const type = new URLSearchParams(location.search).get('tipo') || 'terminos';
       const documentData = documents.find(entry => entry.tipo === type);
-      if (!documentData) throw new Error('Este documento aun no ha sido publicado.');
+      if (!documentData) {
+        const draft = await fetch(`assets/legal/${type === 'privacidad' ? 'privacidad' : 'terminos'}-pruebas.txt`);
+        if (!draft.ok) throw new Error('Este documento aun no ha sido publicado.');
+        document.getElementById('legalDocument').textContent = await draft.text();
+        message('Base informativa de pruebas. La version contractual definitiva sigue pendiente de aprobacion.', true);
+        return;
+      }
       document.getElementById('legalDocument').textContent = `${documentData.titulo}\nVersion: ${documentData.version}\nOperador: ${documentData.operador_nombre}\nNIT: ${documentData.operador_nit}\nContacto: ${documentData.operador_contacto}\n\n${documentData.contenido}`;
     }
   } catch (error) { message(error.message, true); }

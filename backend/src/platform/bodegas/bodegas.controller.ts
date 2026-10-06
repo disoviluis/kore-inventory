@@ -7,6 +7,7 @@ import { assertBodegasDisponibles } from '../../shared/inventario-bloqueos';
  */
 
 import { Request, Response } from 'express';
+import { assertWarehousePlan } from '../../core/auth/subscription.service';
 import pool from '../../shared/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
@@ -240,6 +241,12 @@ export const createBodega = async (req: Request, res: Response): Promise<void> =
       }
     }
 
+    if (usuario.tipo_usuario !== 'super_admin') {
+      await assertWarehousePlan(async (sql, params) => {
+        const [rows] = await connection.execute(sql, params);
+        return rows;
+      }, empresaIdFinal);
+    }
     // Verificar que el código no exista para esta empresa
     const [codigoExistente] = await connection.execute<RowDataPacket[]>(
       'SELECT id FROM bodegas WHERE empresa_id = ? AND codigo = ?',
@@ -321,9 +328,9 @@ export const createBodega = async (req: Request, res: Response): Promise<void> =
   } catch (error: any) {
     await connection.rollback();
     console.error('Error al crear bodega:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Error al crear bodega',
+      message: error.status ? error.message : 'Error al crear bodega',
       error: error.message
     });
   } finally {
@@ -402,6 +409,13 @@ export const updateBodega = async (req: Request, res: Response): Promise<void> =
     }
 
     const bodega = bodegas[0];
+
+    if (usuario.tipo_usuario !== 'super_admin' && estado === 'activa' && bodega.estado !== 'activa') {
+      await assertWarehousePlan(async (sql, params) => {
+        const [rows] = await connection.execute(sql, params);
+        return rows;
+      }, Number(bodega.empresa_id));
+    }
 
     // Si se marca como principal, desmarcar otras
     if (es_principal && !bodega.es_principal) {

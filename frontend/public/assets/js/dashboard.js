@@ -2489,9 +2489,10 @@ function abrirModalPlan(planId = null) {
     document.getElementById('planId').value = '';
     // Valores por defecto
     document.getElementById('planActivo').value = '1';
-    document.getElementById('planSoporteNivel').value = 'basico';
+    document.getElementById('planSoporteNivel').value = 'email';
     document.getElementById('planDuracionTrial').value = '30';
     document.getElementById('planModulosIncluidos').value = '["inventario", "ventas", "compras", "clientes"]';
+    window.korePlanEditor.reset();
   }
   
   modal.show();
@@ -2512,20 +2513,15 @@ async function cargarDatosPlan(id) {
     document.getElementById('planDescripcion').value = plan.descripcion || '';
     document.getElementById('planPrecioMensual').value = plan.precio_mensual;
     document.getElementById('planPrecioAnual').value = plan.precio_anual || '';
-    document.getElementById('planMaxUsuarios').value = plan.max_usuarios_por_empresa || '';
-    document.getElementById('planMaxProductos').value = plan.max_productos || '';
-    document.getElementById('planMaxFacturas').value = plan.max_facturas_mes || '';
-    document.getElementById('planSoporteNivel').value = plan.soporte_nivel || 'basico';
-    document.getElementById('planDuracionTrial').value = plan.duracion_trial_dias || 30;
+    document.getElementById('planMaxUsuarios').value = plan.max_usuarios_por_empresa ?? '';
+    document.getElementById('planMaxProductos').value = plan.max_productos ?? '';
+    document.getElementById('planMaxFacturas').value = plan.max_facturas_mes ?? '';
+    document.getElementById('planSoporteNivel').value = plan.soporte_nivel || 'email';
+    document.getElementById('planDuracionTrial').value = 30;
     document.getElementById('planActivo').value = plan.activo ? '1' : '0';
     
     // Módulos incluidos
-    if (plan.modulos_incluidos) {
-      document.getElementById('planModulosIncluidos').value = 
-        typeof plan.modulos_incluidos === 'string' 
-          ? plan.modulos_incluidos 
-          : JSON.stringify(plan.modulos_incluidos);
-    }
+    await window.korePlanEditor.setPlan(plan);
   } catch (error) {
     console.error('Error:', error);
     mostrarError('Error al cargar datos del plan');
@@ -2536,7 +2532,7 @@ async function guardarPlan() {
   const id = document.getElementById('planId').value;
   
   // Validar JSON de módulos
-  const modulosText = document.getElementById('planModulosIncluidos').value;
+  const modulosText = JSON.stringify(window.korePlanEditor.selectedModules());
   let modulosIncluidos = null;
   if (modulosText) {
     try {
@@ -2566,10 +2562,11 @@ async function guardarPlan() {
       : null,
     modulos_incluidos: modulosIncluidos,
     soporte_nivel: document.getElementById('planSoporteNivel').value,
-    api_access: 0, // Valores por defecto para campos booleanos
+    api_access: 0,
     white_label: 0,
-    reportes_avanzados: 0,
-    multi_bodega: 0,
+    reportes_avanzados: document.getElementById('planReportesAvanzados').checked ? 1 : 0,
+    multi_bodega: document.getElementById('planMultiBodega').checked ? 1 : 0,
+    destacado: document.getElementById('planDestacado').checked ? 1 : 0,
     activo: parseInt(document.getElementById('planActivo').value)
   };
   

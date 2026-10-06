@@ -27,7 +27,9 @@ export async function companySubscription(companyId: number, tx: Query = query) 
   if (!companies.length) throw Object.assign(new Error('Empresa no encontrada o migracion pendiente'), { status: 404 });
   const company = companies[0];
   const licenses = await tx(`SELECT l.*, p.nombre AS plan_nombre, p.modulos_incluidos,
-    p.multi_bodega, p.reportes_avanzados, COALESCE(v.fin_at, DATE_ADD(l.fecha_fin, INTERVAL 1 DAY)) AS fin_at
+    p.multi_bodega, p.reportes_avanzados,
+    CASE WHEN JSON_VALID(l.notas) THEN COALESCE(JSON_UNQUOTE(JSON_EXTRACT(l.notas, '$.control_comercial_version')), 0) ELSE 0 END AS controles_version,
+    COALESCE(v.fin_at, DATE_ADD(l.fecha_fin, INTERVAL 1 DAY)) AS fin_at
     FROM licencias l JOIN planes p ON p.id = l.plan_id
     LEFT JOIN licencias_vigencias v ON v.licencia_id = l.id
     WHERE l.empresa_id = ? AND l.estado = 'activa' AND l.monto > 0
@@ -41,20 +43,24 @@ export async function companySubscription(companyId: number, tx: Query = query) 
 
 const moduleByRoute: Record<string, string[]> = {
   productos: ['productos', 'inventario'], categorias: ['productos', 'inventario'], ventas: ['ventas', 'pos'],
-  inventario: ['inventario'], 'inventarios-fisicos': ['inventarios_fisicos', 'inventario'], clientes: ['clientes'],
-  compras: ['compras'], proveedores: ['proveedores'], bodegas: ['bodegas', 'inventario'], traslados: ['traslados', 'inventario'],
+  inventario: ['inventario'], 'inventarios-fisicos': ['inventarios_fisicos'], clientes: ['clientes'],
+  compras: ['compras'], proveedores: ['proveedores'], bodegas: ['bodegas', 'inventario'], traslados: ['traslados'],
   finanzas: ['finanzas', 'cuentas_por_cobrar', 'cuentas_por_pagar', 'caja', 'bancos'],
   cajas: ['cajas', 'caja', 'pos'], 'cuentas-abiertas': ['cuentas_abiertas', 'pos'],
-  comandas: ['comandas', 'pos'], activos: ['activos'], mantenimientos: ['mantenimientos', 'activos'],
+  comandas: ['comandas'], activos: ['activos'], mantenimientos: ['mantenimientos'],
   repuestos: ['repuestos'], contabilidad: ['contabilidad'], nomina: ['nomina', 'nomina_empleados', 'nomina_periodos'],
   reportes: ['reportes'], facturacion: ['facturacion', 'ventas', 'pos'], impuestos: ['impuestos', 'ventas', 'pos']
 };
 
-export function moduleIncluded(serialized: unknown, route: string): boolean {
+export function moduleIncluded(serialized: unknown, route: string, legacy = false): boolean {
   if (serialized === null || serialized === undefined) return true;
   const modules = typeof serialized === 'string' ? JSON.parse(serialized) : serialized;
   if (!Array.isArray(modules)) return false;
-  const names = moduleByRoute[route];
+  const legacyAliases: Record<string, string[]> = {
+    'inventarios-fisicos': ['inventarios_fisicos', 'inventario'], traslados: ['traslados', 'inventario'],
+    mantenimientos: ['mantenimientos', 'activos'], comandas: ['comandas', 'pos']
+  };
+  const names = legacy && legacyAliases[route] ? legacyAliases[route] : moduleByRoute[route];
   return !names || modules.includes('*') || names.some(name => modules.includes(name));
 }
 
@@ -74,9 +80,11 @@ export const enforceSubscription = async (req: Request, res: Response, next: Nex
       return;
     }
     const route = req.originalUrl.split('/')[2];
-    if (subscription.licencia && !moduleIncluded(subscription.licencia.modulos_incluidos, route)) {
+    if (subscription.licencia && !moduleIncluded(subscription.licencia.modulos_incluidos, route, Number(subscription.licencia.controles_version) < 2)) {
       res.status(403).json({ success: false, codigo: 'MODULO_NO_INCLUIDO', message: 'El modulo no esta incluido en el plan contratado' }); return;
     }
+    const deniedFeature = planFeatureDenied(subscription.licencia, route, req.originalUrl);
+    if (deniedFeature) { res.status(403).json({ success: false, codigo: 'CARACTERISTICA_NO_INCLUIDA', message: deniedFeature }); return; }
     (req as any).licenciaInfo = subscription;
     next();
   } catch (error: any) {
@@ -111,4 +119,28 @@ export async function assertPlanQuota(tx: Query, companyId: number, resource: 'p
     count = await tx('SELECT COUNT(*) AS total FROM ventas WHERE empresa_id = ? AND fecha_venta >= ? AND fecha_venta < ?', [companyId, start, end]);
   }
   if (Number(count[0].total) >= Number(limit)) throw Object.assign(new Error(`Se alcanzo el limite de ${resource} del plan contratado`), { status: 403 });
+}
+
+export function planFeatureDenied(license: any, route: string, url: string): string | null {
+  if (!license) return null;
+  if (license.controles_version !== undefined && Number(license.controles_version) < 2) return null;
+  if (route === 'traslados' && !Number(license.multi_bodega)) return 'Los traslados requieren multi-bodega en el plan';
+  if (route === 'finanzas' && /\/finanzas\/reportes\/(estado-resultados|flujo-caja)(?:[/?]|$)/.test(url) && !Number(license.reportes_avanzados)) {
+    return 'Los reportes financieros avanzados no estan incluidos en el plan';
+  }
+  if (route === 'comandas' && /\/comandas\/tablero(?:[/?]|$)/.test(url)) {
+    const modules = typeof license.modulos_incluidos === 'string' ? JSON.parse(license.modulos_incluidos) : license.modulos_incluidos;
+    if (Array.isArray(modules) && !modules.includes('cocina') && !modules.includes('*')) return 'El tablero de cocina no esta incluido en el plan';
+  }
+  return null;
+}
+
+export async function assertWarehousePlan(tx: Query, companyId: number) {
+  const companies = await tx('SELECT id FROM empresas WHERE id = ? FOR UPDATE', [companyId]);
+  if (!companies.length) throw Object.assign(new Error('Empresa no encontrada'), { status: 404 });
+  const subscription = await companySubscription(companyId, tx);
+  if (!subscription.licencia || Number(subscription.licencia.multi_bodega) ||
+    (subscription.licencia.controles_version !== undefined && Number(subscription.licencia.controles_version) < 2)) return;
+  const warehouses = await tx("SELECT COUNT(*) AS total FROM bodegas WHERE empresa_id = ? AND estado = 'activa'", [companyId]);
+  if (Number(warehouses[0].total) >= 1) throw Object.assign(new Error('El plan permite una sola bodega activa; contrate multi-bodega para agregar otra'), { status: 403 });
 }

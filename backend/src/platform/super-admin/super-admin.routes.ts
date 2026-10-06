@@ -11,6 +11,7 @@ import { getLegalAdministration, publishLegalDocument } from '../../core/auth/au
 import { listSubscriptionRequests, approveSubscriptionRequest, rejectSubscriptionRequest, requirePaymentWorkflow } from '../../core/auth/subscription.controller';
 import { rateLimit } from 'express-rate-limit';
 import { getGlobalSmtp, saveGlobalSmtp, testGlobalSmtp } from '../../core/auth/auth.smtp.controller';
+import { createValidatedPlan, updateValidatedPlan, getPlanModuleCatalog } from './planes-save.controller';
 
 const router = Router();
 
@@ -72,9 +73,10 @@ router.delete('/usuarios/:id', deactivateAccessUser);
 // GESTIÓN DE PLANES
 // ========================================
 router.get('/planes', planesAdminController.getPlanes);
+router.get('/planes/catalogo-modulos', getPlanModuleCatalog);
 router.get('/planes/:id', planesAdminController.getPlanById);
-router.post('/planes', planesAdminController.createPlan);
-router.put('/planes/:id', planesAdminController.updatePlan);
+router.post('/planes', createValidatedPlan);
+router.put('/planes/:id', updateValidatedPlan);
 router.delete('/planes/:id', planesAdminController.deletePlan);
 
 // ========================================
