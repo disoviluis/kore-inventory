@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+    <script src="assets/js/session-security.js?v=20261006"></script>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Suscripci&oacute;n | Kore Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/style.css" rel="stylesheet">
+</head><body class="bg-light"><main class="container py-4" style="max-width:1100px">
+  <nav class="d-flex justify-content-between gap-3 flex-wrap"><a href="dashboard.html">KORE.inventory</a><a href="seguridad-cuenta.html">Seguridad de cuenta</a></nav>
+  <h1 class="h3 mt-4">Suscripci&oacute;n de empresa</h1><div id="subscriptionAlert" role="status"></div>
+  <div class="row g-3 align-items-end border-bottom pb-4">
+    <div class="col-md-6"><label for="subscriptionCompany" class="form-label">Empresa</label><select id="subscriptionCompany" class="form-select"></select></div>
+    <div class="col-md-6"><p id="subscriptionState" class="mb-0"></p></div>
+  </div>
+  <section class="py-4"><h2 class="h5">Planes disponibles</h2><div id="subscriptionPlans" class="row g-3"></div></section>
+  <form id="subscriptionRequest" class="border-top py-4">
+    <h2 class="h5">Solicitar plan</h2><div class="row g-3">
+      <div class="col-md-5"><label for="selectedPlan" class="form-label">Plan</label><select id="selectedPlan" class="form-select" required></select></div>
+      <div class="col-md-4"><label for="planPeriod" class="form-label">Periodo</label><select id="planPeriod" class="form-select"><option value="mensual">Mensual</option><option value="anual">Anual</option></select></div>
+      <div class="col-md-3"><label for="planMonths" class="form-label">Meses</label><input id="planMonths" type="number" class="form-control" value="1" min="1" max="24" required></div>
+      <div class="col-12"><label for="paymentNotes" class="form-label">Referencia del pago u observaciones</label><textarea id="paymentNotes" class="form-control" maxlength="1000" rows="2"></textarea></div>
+    </div><p id="subscriptionTotal" class="fw-semibold mt-3"></p><div id="subscriptionLegal" class="mb-3"></div>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-send me-2"></i>Solicitar confirmaci&oacute;n de pago</button>
+  </form>
+  <section class="border-top py-4"><h2 class="h5">Solicitudes y pagos</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Solicitud</th><th>Fecha</th><th>Monto</th><th>Estado</th><th>Referencia</th><th></th></tr></thead><tbody id="subscriptionHistory"></tbody></table></div></section>
+  </main><script src="assets/js/subscription.js?v=20261006"></script></body></html>

@@ -6,6 +6,11 @@ import * as usuariosAdminController from './usuarios-admin.controller';
 import * as planesAdminController from './planes-admin.controller';
 import * as rolesGlobalesController from './roles-globales.controller';
 import * as licenciasAdminController from './licencias-admin.controller';
+import { getAccessMigration, inviteExistingUser, createInvitedUser, deactivateAccessUser, reactivateAccessUser } from '../../core/auth/auth.admin';
+import { getLegalAdministration, publishLegalDocument } from '../../core/auth/auth.account';
+import { listSubscriptionRequests, approveSubscriptionRequest, rejectSubscriptionRequest, requirePaymentWorkflow } from '../../core/auth/subscription.controller';
+import { rateLimit } from 'express-rate-limit';
+import { getGlobalSmtp, saveGlobalSmtp, testGlobalSmtp } from '../../core/auth/auth.smtp.controller';
 
 const router = Router();
 
@@ -20,6 +25,18 @@ const router = Router();
 // Aplicar middleware de autenticación a todas las rutas
 router.use(authMiddleware);
 router.use(requireUserType('super_admin'));
+router.get('/configuracion/smtp', getGlobalSmtp);
+router.put('/configuracion/smtp', saveGlobalSmtp);
+router.post('/configuracion/smtp/prueba', rateLimit({ windowMs: 15 * 60 * 1000, limit: 5,
+	standardHeaders: 'draft-8', legacyHeaders: false, message: { success: false, message: 'Limite de pruebas alcanzado. Intente mas tarde.' } }), testGlobalSmtp);
+router.get('/accesos', getAccessMigration);
+router.post('/usuarios/:id/invitacion', inviteExistingUser);
+router.post('/usuarios/:id/reactivar', reactivateAccessUser);
+router.get('/documentos-legales', getLegalAdministration);
+router.post('/documentos-legales', publishLegalDocument);
+router.get('/solicitudes-suscripcion', listSubscriptionRequests);
+router.post('/solicitudes-suscripcion/:id/aprobar', approveSubscriptionRequest);
+router.post('/solicitudes-suscripcion/:id/rechazar', rejectSubscriptionRequest);
 
 // ========================================
 // DASHBOARD Y MÉTRICAS
@@ -36,7 +53,7 @@ router.get('/empresas/:id', empresasAdminController.getEmpresaById);
 router.post('/empresas', empresasAdminController.createEmpresa);
 router.put('/empresas/:id', empresasAdminController.updateEmpresa);
 router.put('/empresas/:id/estado', empresasAdminController.cambiarEstadoEmpresa);
-router.post('/empresas/:id/activar-licencia', empresasAdminController.activarLicenciaPagada);
+router.post('/empresas/:id/activar-licencia', requirePaymentWorkflow);
 router.delete('/empresas/:id', empresasAdminController.deleteEmpresa);
 
 // ========================================
@@ -44,12 +61,12 @@ router.delete('/empresas/:id', empresasAdminController.deleteEmpresa);
 // ========================================
 router.get('/usuarios', usuariosAdminController.getUsuarios);
 router.get('/usuarios/:id', usuariosAdminController.getUsuarioById);
-router.post('/usuarios', usuariosAdminController.createUsuario);
+router.post('/usuarios', createInvitedUser);
 router.put('/usuarios/:id', usuariosAdminController.updateUsuario);
 router.put('/usuarios/:id/password', usuariosAdminController.cambiarPasswordUsuario);
 router.post('/usuarios/:id/empresas', usuariosAdminController.asignarUsuarioEmpresa);
 router.delete('/usuarios/:id/empresas/:empresaId', usuariosAdminController.desasignarUsuarioEmpresa);
-router.delete('/usuarios/:id', usuariosAdminController.deleteUsuario);
+router.delete('/usuarios/:id', deactivateAccessUser);
 
 // ========================================
 // GESTIÓN DE PLANES
@@ -65,13 +82,13 @@ router.delete('/planes/:id', planesAdminController.deletePlan);
 // ========================================
 router.get('/licencias', planesAdminController.getLicencias);
 router.post('/licencias/procesar-notificaciones', licenciasAdminController.procesarNotificaciones);
-router.post('/licencias/procesar-renovaciones', licenciasAdminController.procesarRenovaciones);
+router.post('/licencias/procesar-renovaciones', requirePaymentWorkflow);
 router.get('/licencias/estado', licenciasAdminController.getEstadoLicencias);
 router.get('/licencias/:id/historial', licenciasAdminController.getHistorialLicencia);
 router.get('/licencias/:id', planesAdminController.getLicenciaById);
-router.post('/licencias', planesAdminController.createLicencia);
-router.put('/licencias/:id', planesAdminController.updateLicencia);
-router.delete('/licencias/:id', planesAdminController.deleteLicencia);
+router.post('/licencias', requirePaymentWorkflow);
+router.put('/licencias/:id', requirePaymentWorkflow);
+router.delete('/licencias/:id', requirePaymentWorkflow);
 
 // ========================================
 // GESTIÓN DE ROLES GLOBALES

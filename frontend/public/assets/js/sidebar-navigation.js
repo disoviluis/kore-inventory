@@ -142,6 +142,8 @@ function construirSidebarEstandarSiIncompleto() {
       ${sidebarSection('administracionCollapse', 'bi-gear', 'ADMINISTRACIÓN', [
         { href: 'dashboard.html#usuarios', icon: 'bi-people-fill', text: 'Usuarios' },
         { href: 'dashboard.html#roles', icon: 'bi-shield-lock', text: 'Roles' },
+        { href: 'suscripcion.html', icon: 'bi-credit-card', text: 'Suscripcion' },
+        { href: 'seguridad-cuenta.html', icon: 'bi-person-lock', text: 'Seguridad de cuenta' },
         { href: 'dashboard.html#impuestos', icon: 'bi-percent', text: 'Impuestos' },
         { href: 'configuracion-general.html', icon: 'bi-building-gear', text: 'Empresa' }
       ])}
@@ -153,6 +155,7 @@ function construirSidebarEstandarSiIncompleto() {
           <ul class="nav flex-column submenu">
             ${sidebarLink('dashboard.html#empresas', 'bi-building', 'Empresas')}
             ${sidebarLink('dashboard.html#usuarios-admin', 'bi-person-lines-fill', 'Usuarios Globales')}
+            ${sidebarLink('accesos.html', 'bi-envelope-check', 'Accesos verificados')}
             ${sidebarLink('dashboard.html#planes', 'bi-card-checklist', 'Planes')}
             ${sidebarLink('dashboard.html#configuracion-global', 'bi-sliders', 'Configuración Global')}
           </ul>
@@ -261,7 +264,7 @@ async function filtrarSidebarPorPermisos() {
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
     navItems.forEach(item => {
       const link = item.querySelector('a.nav-link');
-      if (link && !link.classList.contains('nav-section') && link.getAttribute('href') !== 'dashboard.html') {
+      if (link && !link.classList.contains('nav-section') && !['dashboard.html', 'suscripcion.html', 'seguridad-cuenta.html'].includes(link.getAttribute('href'))) {
         item.style.display = 'none';
       }
     });

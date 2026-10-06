@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+    <script src="assets/js/session-security.js?v=20261006"></script>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accesos verificados | Kore Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/style.css" rel="stylesheet">
+</head><body class="bg-light"><main class="container-fluid px-3 px-lg-5 py-4">
+  <nav class="d-flex justify-content-between gap-3"><a href="dashboard.html">KORE.inventory</a><a href="seguridad-cuenta.html">Seguridad de cuenta</a></nav>
+  <h1 class="h3 mt-4">Accesos verificados</h1><div id="adminAccessAlert" role="status"></div>
+  <ul class="nav nav-tabs mt-3"><li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#usersPane">Usuarios</button></li><li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#paymentsPane">Pagos pendientes</button></li><li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#legalPane">Documentos legales</button></li></ul>
+  <div class="tab-content">
+    <section class="tab-pane fade show active py-4" id="usersPane">
+      <div class="row g-3 align-items-end"><div class="col-md-4"><label for="migrationCompany" class="form-label">Empresa</label><select id="migrationCompany" class="form-select"><option value="">Todas las empresas</option></select></div><div class="col-md-4"><label for="migrationSearch" class="form-label">Buscar usuario o correo</label><input id="migrationSearch" type="search" class="form-control"></div><div class="col-md-4"><button id="newInvitationButton" class="btn btn-primary"><i class="bi bi-person-plus me-2"></i>Invitar usuario nuevo</button></div></div>
+      <p id="migrationCounts" class="text-muted mt-3"></p>
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Usuario</th><th>Correo actual</th><th>Empresas</th><th>Verificaci&oacute;n</th><th>MFA</th><th>Acceso</th><th>Acciones</th></tr></thead><tbody id="migrationUsers"></tbody></table></div>
+    </section>
+    <section class="tab-pane fade py-4" id="paymentsPane"><h2 class="h5">Solicitudes de suscripci&oacute;n</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Solicitud</th><th>Empresa</th><th>Plan</th><th>Monto COP</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="pendingPayments"></tbody></table></div></section>
+    <section class="tab-pane fade py-4" id="legalPane"><h2 class="h5">Publicar una versi&oacute;n revisada</h2>
+      <form id="legalPublishForm" style="max-width:1000px"><div class="row g-3">
+        <div class="col-md-4"><label for="legalType" class="form-label">Documento</label><select id="legalType" class="form-select"><option value="terminos">T&eacute;rminos del servicio</option><option value="privacidad">Pol&iacute;tica de privacidad</option></select></div>
+        <div class="col-md-4"><label for="legalVersion" class="form-label">Versi&oacute;n</label><input id="legalVersion" class="form-control" maxlength="60" required></div>
+        <div class="col-md-4"><label for="legalTitle" class="form-label">T&iacute;tulo</label><input id="legalTitle" class="form-control" maxlength="150" required></div>
+        <div class="col-md-4"><label for="operatorName" class="form-label">Raz&oacute;n social del operador</label><input id="operatorName" class="form-control" maxlength="200" required></div>
+        <div class="col-md-4"><label for="operatorNit" class="form-label">NIT del operador</label><input id="operatorNit" class="form-control" maxlength="40" required></div>
+        <div class="col-md-4"><label for="operatorContact" class="form-label">Correo de contacto</label><input id="operatorContact" type="email" class="form-control" maxlength="254" required></div>
+        <div class="col-12"><label for="legalContent" class="form-label">Contenido completo</label><textarea id="legalContent" class="form-control" rows="14" maxlength="100000" required></textarea></div>
+        <div class="col-12"><div class="form-check"><input id="legalReviewed" type="checkbox" class="form-check-input" required><label for="legalReviewed" class="form-check-label">Confirmo que esta versi&oacute;n fue revisada jur&iacute;dicamente y autorizo su publicaci&oacute;n.</label></div></div>
+      </div><button type="submit" class="btn btn-primary mt-3"><i class="bi bi-file-earmark-check me-2"></i>Publicar versi&oacute;n</button></form>
+      <h2 class="h5 mt-4">Versiones publicadas</h2><div id="legalVersions"></div>
+    </section>
+  </div>
+  <div class="modal fade" id="inviteModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><form id="inviteUserForm"><div class="modal-header"><h2 class="modal-title h5" id="inviteTitle">Invitar usuario</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body">
+    <input id="inviteUserId" type="hidden"><div id="newUserFields">
+      <div class="mb-3"><label for="inviteName" class="form-label">Nombre</label><input id="inviteName" class="form-control" maxlength="100"></div>
+      <div class="mb-3"><label for="inviteLastName" class="form-label">Apellido</label><input id="inviteLastName" class="form-control" maxlength="100"></div>
+      <div class="mb-3"><label for="inviteCompany" class="form-label">Empresa</label><select id="inviteCompany" class="form-select"></select></div>
+      <div class="mb-3"><label for="inviteType" class="form-label">Tipo de usuario</label><select id="inviteType" class="form-select"><option value="admin_empresa">Administrador de empresa</option><option value="usuario">Usuario</option></select></div>
+      <div class="mb-3"><label for="inviteRole" class="form-label">Rol de empresa</label><select id="inviteRole" class="form-select"><option value="">Sin rol adicional</option></select></div>
+    </div><div class="mb-3"><label for="inviteEmail" class="form-label">Correo real de la misma persona</label><input id="inviteEmail" type="email" class="form-control" maxlength="100" required></div>
+    <div class="form-check" id="blockInviteField"><input id="blockUntilVerified" type="checkbox" class="form-check-input"><label for="blockUntilVerified" class="form-check-label">Restringir acceso hasta verificar el correo</label></div>
+    <div class="form-check mt-3" id="samePersonField"><input id="samePersonConfirmed" type="checkbox" class="form-check-input"><label for="samePersonConfirmed" class="form-check-label">Confirmo que es la misma persona titular del historial de esta cuenta.</label></div>
+    <div id="inviteResult" class="mt-3" role="status"></div>
+  </div><div class="modal-footer"><button type="submit" class="btn btn-primary"><i class="bi bi-send me-2"></i>Enviar invitaci&oacute;n</button></div></form></div></div></div>
+  </main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script><script src="assets/js/access-admin.js?v=20261006"></script></body></html>

@@ -7,14 +7,27 @@
 
 import { Router } from 'express';
 import * as empresasController from './empresas.controller';
+import { assertCompanyMembership } from '../../core/auth/subscription.service';
 
 const router = Router();
 
 // Obtener todas las empresas
-router.get('/', empresasController.getEmpresas);
+router.get('/', (req, res, next) => {
+	if ((req as any).user.tipo_usuario !== 'super_admin') { res.status(403).json({ success: false, message: 'Acceso reservado a Super Admin' }); return; }
+	next();
+}, empresasController.getEmpresas);
 
 // Obtener empresas del usuario
-router.get('/usuario/:userId', empresasController.getEmpresasByUsuario);
+router.get('/usuario/:userId', (req, res, next) => {
+	if ((req as any).user.tipo_usuario !== 'super_admin' && Number(req.params.userId) !== (req as any).user.id) {
+		res.status(403).json({ success: false, message: 'No tiene acceso a ese usuario' }); return;
+	}
+	next();
+}, empresasController.getEmpresasByUsuario);
+router.use('/:id', async (req, res, next) => {
+	try { await assertCompanyMembership((req as any).user, Number(req.params.id)); next(); }
+	catch { res.status(403).json({ success: false, message: 'No tiene acceso a esta empresa' }); }
+});
 
 // Obtener empresa por ID
 router.get('/:id/contabilidad/estado', empresasController.getEstadoParametrizacionContable);

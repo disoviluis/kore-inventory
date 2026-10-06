@@ -14,7 +14,7 @@
 async function apiFetch(url, options = {}) {
   try {
     // Agregar token automáticamente si existe
-    const token = sessionStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (token && !options.headers) {
       options.headers = {};
     }
@@ -26,7 +26,7 @@ async function apiFetch(url, options = {}) {
     
     // Verificar si la licencia está vencida
     if (response.status === 403) {
-      const data = await response.json();
+      const data = await response.clone().json();
       
       const normalizedLicenseCode = String(data.codigo || data.code || '').trim().toUpperCase();
       const licenseErrorCodes = [

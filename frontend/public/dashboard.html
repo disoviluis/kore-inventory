@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script src="assets/js/session-security.js?v=20261006"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Dashboard - Kore Inventory ERP">
@@ -1513,6 +1514,11 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="smtp-global-tab" data-bs-toggle="tab" data-bs-target="#smtp-global" type="button" role="tab" aria-controls="smtp-global" aria-selected="false">
+                                <i class="bi bi-envelope-check me-2" aria-hidden="true"></i>Correo SMTP
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link disabled" id="modulos-tab" data-bs-toggle="tab" data-bs-target="#modulos" type="button">
                                 <i class="bi bi-box me-2"></i>Módulos
                                 <span class="badge bg-secondary ms-2">Próximamente</span>
@@ -1610,6 +1616,33 @@
                             </div>
 
                         </div><!-- END ROLES GLOBALES TAB -->
+
+                        <div class="tab-pane fade" id="smtp-global" role="tabpanel" aria-labelledby="smtp-global-tab">
+                            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
+                                <h3 class="h5 mb-0">Correo de acceso e invitaciones</h3>
+                                <button id="smtpReload" type="button" class="btn btn-outline-secondary" title="Recargar configuracion SMTP" aria-label="Recargar configuracion SMTP"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i></button>
+                            </div>
+                            <div id="smtpAlert" role="status" aria-live="polite"></div>
+                            <p id="smtpState" class="text-muted"></p>
+                            <form id="smtpGlobalForm" style="max-width:1000px" autocomplete="off">
+                                <div class="row g-3">
+                                    <div class="col-md-4"><label for="smtpProvider" class="form-label">Proveedor</label><select id="smtpProvider" class="form-select"><option value="gmail">Gmail</option><option value="microsoft">Microsoft 365</option><option value="other">Otro proveedor SMTP</option></select></div>
+                                    <div class="col-md-8"><label for="smtpHost" class="form-label">Servidor SMTP</label><input id="smtpHost" class="form-control" maxlength="253" required></div>
+                                    <div class="col-md-4"><label for="smtpPort" class="form-label">Puerto</label><select id="smtpPort" class="form-select"><option value="587">587</option><option value="465">465</option><option value="2525">2525</option></select></div>
+                                    <div class="col-md-4"><label for="smtpSecurity" class="form-label">Seguridad</label><select id="smtpSecurity" class="form-select"><option value="starttls">STARTTLS</option><option value="tls">TLS</option></select></div>
+                                    <div class="col-md-4 d-flex align-items-end"><div class="form-check form-switch mb-2"><input type="checkbox" class="form-check-input" id="smtpEnabled" checked><label for="smtpEnabled" class="form-check-label">Servicio de correo activo</label></div></div>
+                                    <div class="col-md-6"><label for="smtpUser" class="form-label">Usuario SMTP</label><input id="smtpUser" class="form-control" maxlength="254" autocomplete="off" required></div>
+                                    <div class="col-md-6"><label for="smtpPassword" class="form-label">Credencial SMTP / contrase&ntilde;a de aplicaci&oacute;n</label><input id="smtpPassword" type="password" class="form-control" maxlength="2048" autocomplete="new-password" aria-describedby="smtpCredentialState"><div id="smtpCredentialState" class="form-text"></div></div>
+                                    <div class="col-md-6"><label for="smtpFromEmail" class="form-label">Correo remitente</label><input id="smtpFromEmail" type="email" class="form-control" maxlength="254" required></div>
+                                    <div class="col-md-6"><label for="smtpFromName" class="form-label">Nombre del remitente</label><input id="smtpFromName" class="form-control" maxlength="100" value="Kore Inventory"></div>
+                                </div>
+                                <button type="submit" class="btn btn-primary mt-4"><i class="bi bi-floppy me-2" aria-hidden="true"></i>Guardar SMTP</button>
+                            </form>
+                            <form id="smtpTestForm" class="border-top mt-4 pt-4" style="max-width:1000px">
+                                <h4 class="h6">Prueba de env&iacute;o</h4>
+                                <div class="row g-3 align-items-end"><div class="col-md-8"><label for="smtpTestEmail" class="form-label">Correo destinatario de prueba</label><input id="smtpTestEmail" type="email" class="form-control" maxlength="254" required></div><div class="col-md-4"><button type="submit" id="smtpTestButton" class="btn btn-outline-primary w-100" disabled><i class="bi bi-send me-2" aria-hidden="true"></i>Enviar prueba</button></div></div>
+                            </form>
+                        </div>
 
                         <!-- MÓDULOS TAB (Próximamente) -->
                         <div class="tab-pane fade" id="modulos" role="tabpanel">
@@ -2671,6 +2704,7 @@
     <!-- Custom JS (debe cargar primero para declarar API_URL) -->
     <script src="assets/js/impuestos-utils.js"></script>
     <script src="assets/js/dashboard.js?v=20260827-superadmin2"></script>
+    <script src="assets/js/global-smtp.js?v=20261006"></script>
     <!-- Sidebar Navigation (Common) - Usa API_URL si existe -->
     <script src="assets/js/sidebar-navigation.js?v=20260824-sidebar3"></script>
 </body>

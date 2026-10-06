@@ -9,6 +9,7 @@ import { Request, Response } from 'express';
 import pool from '../../shared/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import bcrypt from 'bcryptjs';
+import { validAuthPassword } from '../auth/auth.security';
 
 // ============================================
 // TIPOS
@@ -191,6 +192,9 @@ export const getUsuarioById = async (req: Request, res: Response): Promise<void>
     }
 
     const usuarioData = usuarios[0];
+    delete (usuarioData as any).password;
+    delete (usuarioData as any).token_verificacion;
+    delete (usuarioData as any).token_reset_password;
 
     // Para usuarios no super_admin, verificar que el usuario consultado pertenezca a la empresa
     if (usuario.tipo_usuario !== 'super_admin') {
@@ -603,6 +607,7 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
     }
 
     if (password && password.trim()) {
+      if (!validAuthPassword(password)) throw new Error('La contrasena debe tener al menos 15 caracteres y maximo 72 bytes');
       const hashedPassword = await bcrypt.hash(password, 10);
       updates.push('password = ?');
       params.push(hashedPassword);
@@ -690,6 +695,7 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       }
     }
 
+    await connection.execute('UPDATE usuarios_seguridad SET version_sesion = version_sesion + 1 WHERE usuario_id = ?', [id]);
     await connection.commit();
 
     res.json({

@@ -38,6 +38,7 @@ import repuestosRoutes from './platform/repuestos/repuestos.routes';
 import evidenciasRoutes from './platform/archivos/evidencias.routes';
 import { verificarEmpresaActiva } from './core/middleware/licencia.middleware';
 import { authMiddleware } from './core/middleware/auth.middleware';
+import { getSubscription, requestSubscription, cancelSubscriptionRequest } from './core/auth/subscription.controller';
 
 const router = Router();
 
@@ -50,11 +51,14 @@ router.use('/public', publicRoutes);
 // RUTAS DE AUTENTICACIÓN
 // ============================================
 router.use('/auth', authRoutes);
+router.get('/suscripciones/:empresaId', authMiddleware, getSubscription);
+router.post('/suscripciones/:empresaId/solicitudes', authMiddleware, requestSubscription);
+router.post('/suscripciones/:empresaId/solicitudes/:id/cancelar', authMiddleware, cancelSubscriptionRequest);
 
 // ============================================
 // RUTAS DE DASHBOARD
 // ============================================
-router.use('/dashboard', dashboardRoutes);
+router.use('/dashboard', authMiddleware, verificarEmpresaActiva, dashboardRoutes);
 
 // ============================================
 // RUTAS DE SUPER ADMIN
@@ -64,7 +68,7 @@ router.use('/super-admin', superAdminRoutes);
 // ============================================
 // RUTAS DE PLATAFORMA (Super Admin)
 // ============================================
-router.use('/empresas', empresasRoutes);
+router.use('/empresas', authMiddleware, empresasRoutes);
 // router.use('/platform/planes', planesRoutes);
 // router.use('/platform/licencias', licenciasRoutes);
 
@@ -102,6 +106,6 @@ router.use('/evidencias', authMiddleware, verificarEmpresaActiva, evidenciasRout
 router.use('/cuentas-abiertas', cuentasAbiertasRoutes); // Middlewares aplicados dentro del módulo
 router.use('/cajas', cajasRoutes);
 router.use('/reportes', authMiddleware, verificarEmpresaActiva, reportesRoutes);
-router.use('/comandas', comandasRoutes); // Middlewares aplicados dentro del módulo
+router.use('/comandas', authMiddleware, verificarEmpresaActiva, comandasRoutes);
 
 export default router;

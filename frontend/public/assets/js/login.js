@@ -27,12 +27,13 @@ function showAlert(message, type = 'danger') {
   const alertHTML = `
     <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
       <i class="bi ${iconClass} me-2"></i>
-      ${message}
+      <span class="alert-message"></span>
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
   `;
   
   alertContainer.innerHTML = alertHTML;
+  alertContainer.querySelector('.alert-message').textContent = message;
   
   // Auto-cerrar después de 5 segundos
   setTimeout(() => {
@@ -119,7 +120,7 @@ loginForm.addEventListener('submit', async (e) => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password, codigo_mfa: document.getElementById('codigoMfa').value.trim() })
     });
     
     const data = await response.json();
@@ -136,7 +137,7 @@ loginForm.addEventListener('submit', async (e) => {
       
       // Redirigir al dashboard después de 1 segundo
       setTimeout(() => {
-        window.location.href = 'dashboard.html';
+        window.location.href = data.data.requiere_seguridad ? 'seguridad-cuenta.html' : 'dashboard.html';
       }, 1000);
       
     } else {
@@ -193,7 +194,8 @@ async function verifyToken(token) {
     
     if (data.success) {
       // Token válido, redirigir al dashboard
-      window.location.href = 'dashboard.html';
+      saveSession('cookie', data.data.usuario);
+      window.location.href = data.data.usuario.requiere_seguridad ? 'seguridad-cuenta.html' : 'dashboard.html';
     } else {
       // Token inválido, limpiar localStorage
       localStorage.clear();
@@ -218,3 +220,19 @@ if (togglePassword) {
     icon.classList.toggle('bi-eye-slash');
   });
 }
+
+document.getElementById('forgotPasswordForm')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = event.currentTarget.querySelector('button[type=submit]');
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/auth/recuperar-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: document.getElementById('forgotEmail').value.trim() })
+    });
+    const data = await response.json();
+    bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'))?.hide();
+    showAlert(data.message, data.success ? 'success' : 'danger');
+  } catch { showAlert('No se pudo solicitar la recuperacion. Intente mas tarde.'); }
+  finally { button.disabled = false; }
+});

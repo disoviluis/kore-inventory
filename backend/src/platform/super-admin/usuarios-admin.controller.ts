@@ -3,6 +3,8 @@ import pool from '../../shared/database';
 import logger from '../../shared/logger';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import bcrypt from 'bcryptjs';
+import { validAuthPassword } from '../../core/auth/auth.security';
+import { revokeUserSessions } from '../../core/auth/auth.sessions';
 
 /**
  * ========================================
@@ -131,6 +133,9 @@ export const getUsuarioById = async (req: Request, res: Response) => {
     }
 
     const usuario = usuarios[0];
+    delete usuario.password;
+    delete usuario.token_verificacion;
+    delete usuario.token_reset_password;
     delete usuario._password; // No enviar password
 
     // Obtener empresas asignadas
@@ -356,7 +361,10 @@ export const updateUsuario = async (req: Request, res: Response) => {
     }
 
     // Si se cambió el email, verificar que no exista
-    if (email !== usuarios[0].email) {
+    if (email && email !== usuarios[0].email) {
+      return res.status(409).json({ success: false, message: 'Cambie el correo mediante una invitacion desde Accesos verificados' });
+    }
+    if (email && email !== usuarios[0].email) {
       const [existingUsers] = await pool.query<RowDataPacket[]>(
         'SELECT id FROM usuarios WHERE email = ? AND id != ?',
         [email, id]
@@ -397,6 +405,9 @@ export const updateUsuario = async (req: Request, res: Response) => {
       }
     }
 
+    if (Number(id) === (req as any).user.id && (activo === false || finalTipoUsuario !== 'super_admin')) {
+      return res.status(400).json({ success: false, message: 'No puede desactivar ni retirar su propio acceso de Super Admin' });
+    }
     // Actualizar usuario
     await pool.query(`
       UPDATE usuarios SET
@@ -410,7 +421,9 @@ export const updateUsuario = async (req: Request, res: Response) => {
         email_verificado = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [nombre, apellido, email, finalTipoUsuario, finalRolId, nivelPrivilegio, activo ? 1 : 0, email_verificado ? 1 : 0, id]);
+    `, [nombre, apellido, email || usuarios[0].email, finalTipoUsuario, finalRolId, nivelPrivilegio,
+      activo === undefined ? usuarios[0].activo : activo ? 1 : 0, usuarios[0].email_verificado, id]);
+    await revokeUserSessions(Number(id));
 
     // Auditoría
     await pool.query(`
@@ -445,8 +458,8 @@ export const cambiarPasswordUsuario = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { password } = req.body;
 
-    if (!password || password.length < 6) {
-      throw new Error('La contraseña debe tener al menos 6 caracteres');
+    if (!validAuthPassword(password)) {
+      throw new Error('La contrasena debe tener al menos 15 caracteres y maximo 72 bytes');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -455,6 +468,7 @@ export const cambiarPasswordUsuario = async (req: Request, res: Response) => {
       'UPDATE usuarios SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [hashedPassword, id]
     );
+    await revokeUserSessions(Number(id));
 
     // Auditoría
     await pool.query(`

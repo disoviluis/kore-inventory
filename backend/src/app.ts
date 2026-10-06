@@ -5,11 +5,13 @@
  * =================================
  */
 
+import 'express-async-errors';
 import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './core/middleware/error.middleware';
 
@@ -18,6 +20,8 @@ import { errorHandler, notFoundHandler } from './core/middleware/error.middlewar
  */
 const createApp = (): Application => {
   const app: Application = express();
+  app.set('trust proxy', 'loopback');
+  app.use(cookieParser());
 
   // ============================================
   // MIDDLEWARES GLOBALES
@@ -28,7 +32,7 @@ const createApp = (): Application => {
 
   // CORS
   const corsOptions = {
-    origin: process.env.CORS_ORIGIN?.split(',') || '*',
+    origin: process.env.CORS_ORIGIN?.split(',').map(origin => origin.trim()) || ['https://kinventoryservices.com'],
     credentials: true,
     optionsSuccessStatus: 200
   };
@@ -45,6 +49,7 @@ const createApp = (): Application => {
   }
 
   // Parser de JSON
+  app.use(`${process.env.API_PREFIX || '/api'}/auth`, express.json({ limit: '16kb' }));
   app.use(express.json({ limit: '10mb' }));
   
   // Parser de URL encoded

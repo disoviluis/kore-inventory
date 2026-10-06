@@ -271,11 +271,7 @@ export const createEmpresaTrial = async (req: Request, res: Response) => {
       }
     }
 
-    // Obtener días de trial desde configuración (default: 30)
-    const [config] = await connection.query<RowDataPacket[]>(
-      "SELECT valor FROM sistema_configuracion WHERE clave = 'dias_trial_default' LIMIT 1"
-    );
-    const diasTrial = config.length > 0 ? parseInt(config[0].valor) : 30;
+    const diasTrial = 30;
 
     // Validar plan
     const [planes] = await connection.query<RowDataPacket[]>(
@@ -301,65 +297,27 @@ export const createEmpresaTrial = async (req: Request, res: Response) => {
         email, telefono, direccion, ciudad, pais,
         regimen_tributario, tipo_contribuyente, estado, plan_id,
         fecha_inicio_trial, fecha_fin_trial
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'trial', ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL ? DAY))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'trial', ?, NULL, NULL)
     `, [
       nombre, razon_social || null, tipo_documento || 'NIT', nit, digito_verificacion || null,
       representante_legal || null, tipo_sociedad || null, matricula_mercantil || null,
       camara_comercio || null, fecha_matricula || null, actividad_economica || null,
       email, telefono, direccion, ciudad, pais,
       regimen_tributario, tipo_contribuyente,
-      plan_id,
-      diasTrial
+      plan_id
     ]);
 
     const empresaId = result.insertId;
-
-    // Crear licencia de TRIAL (monto = 0)
-    const fechaInicio = new Date();
-    const fechaFin = new Date();
-    fechaFin.setDate(fechaFin.getDate() + diasTrial);
-
-    await connection.query(`
-      INSERT INTO licencias (
-        empresa_id, plan_id, estado, fecha_inicio, fecha_fin,
-        tipo_facturacion, auto_renovacion, monto, moneda,
-        limite_usuarios, limite_productos, limite_facturas_mes
-      ) VALUES (?, ?, 'activa', ?, ?, 'mensual', 0, 0.00, 'COP', ?, ?, ?)
-    `, [
-      empresaId,
-      plan_id,
-      fechaInicio,
-      fechaFin,
-      plan.max_usuarios_por_empresa,
-      plan.max_productos,
-      plan.max_facturas_mes
-    ]);
-
-    // Registrar pago de trial (monto 0)
-    await connection.query(`
-      INSERT INTO pagos_licencias (
-        licencia_id, empresa_id, plan_id,
-        monto, moneda, tipo, estado,
-        periodo_inicio, periodo_fin, fecha_pago,
-        descripcion
-      ) SELECT 
-        id, empresa_id, plan_id,
-        0.00, 'COP', 'trial_inicial', 'exitoso',
-        fecha_inicio, fecha_fin, NOW(),
-        CONCAT('Período de prueba gratuito de ', ?, ' días')
-      FROM licencias 
-      WHERE empresa_id = ? 
-      ORDER BY id DESC 
-      LIMIT 1
-    `, [diasTrial, empresaId]);
+    await connection.query(`INSERT INTO empresas_suscripcion (empresa_id, es_nueva, trial_utilizado)
+      VALUES (?, 1, 0)`, [empresaId]);
 
     // Registrar evento
     await connection.query(`
       INSERT INTO licencias_eventos (empresa_id, evento, descripcion, datos)
-      VALUES (?, 'trial_iniciado', ?, ?)
+      VALUES (?, 'trial_pendiente_verificacion', ?, ?)
     `, [
       empresaId, 
-      `Período de prueba de ${diasTrial} días iniciado`,
+      `Prueba de ${diasTrial} dias pendiente de verificar administrador`,
       JSON.stringify({ dias_trial: diasTrial, plan: plan.nombre })
     ]);
 
@@ -431,7 +389,7 @@ export const createEmpresaTrial = async (req: Request, res: Response) => {
         nombre,
         estado: 'trial',
         dias_trial: diasTrial,
-        fecha_fin_trial: fechaFin
+        fecha_fin_trial: null
       }
     });
 

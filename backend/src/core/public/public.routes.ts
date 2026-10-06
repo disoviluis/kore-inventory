@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import * as publicController from './public.controller';
+import { getLegalDocuments } from '../auth/auth.account';
 
 const router = Router();
+router.get('/documentos-legales', getLegalDocuments);
 
 /**
  * ========================================

@@ -12,6 +12,7 @@ import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
 import { moverStock } from '../../shared/inventario';
+import { assertPlanQuota } from '../../core/auth/subscription.service';
 
 /**
  * Función auxiliar para recalcular totales de cuenta
@@ -855,7 +856,9 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
     const totalConPropina = (Number(cuenta.total) || 0) + propinaValor;
 
     // Crear venta
-    const ventaResult = await query(
+    const ventaResult = await withTransaction(async tx => {
+      if ((req as any).user?.tipo_usuario !== 'super_admin') await assertPlanQuota(tx, Number(cuenta.empresa_id), 'facturas');
+      return tx(
       `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, vendedor_id,
         fecha_venta, subtotal, impuesto, total, metodo_pago,
@@ -880,7 +883,8 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
         Number(cuenta.subtotal) || 0,
         cuenta.mesero_id || null
       ]
-    );
+      );
+    });
 
     const ventaId = ventaResult.insertId;
 

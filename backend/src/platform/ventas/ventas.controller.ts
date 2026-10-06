@@ -7,6 +7,7 @@
 
 import { Request, Response } from 'express';
 import { query, withTransaction } from '../../shared/database';
+import { assertPlanQuota } from '../../core/auth/subscription.service';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
@@ -491,6 +492,7 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
     // stock descontado solo parcialmente (ej. factura de 4 productos que
     // solo alcanzaba a descontar 2 antes de fallar).
     const ventaId = await withTransaction(async (txQuery) => {
+      if ((req as any).user?.tipo_usuario !== 'super_admin') await assertPlanQuota(txQuery, Number(empresa_id), 'facturas');
       const resultVenta = await txQuery(
         `INSERT INTO ventas (
           empresa_id, numero_factura, cliente_id, fecha_venta,

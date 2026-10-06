@@ -10,6 +10,7 @@ import dotenv from 'dotenv';
 import createApp from './app';
 import { testConnection } from './shared/database';
 import logger from './shared/logger';
+import { getAuthSecret, getAuthSecurityKey } from './core/auth/auth.security';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -22,6 +23,8 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
  */
 const startServer = async (): Promise<void> => {
   try {
+    getAuthSecret();
+    getAuthSecurityKey();
     // Banner
     console.log('\n');
     console.log('╔═══════════════════════════════════════════════╗');

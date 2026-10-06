@@ -12,6 +12,7 @@ import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
 import { createS3PresignedUploadUrl, getS3PublicUrl } from '../../shared/s3';
+import { assertPlanQuota } from '../../core/auth/subscription.service';
 
 const toBooleanFlag = (value: any, defaultValue = false): boolean => {
   if (value === undefined || value === null || value === '') return defaultValue;
@@ -298,6 +299,7 @@ export const createProducto = async (req: Request, res: Response): Promise<Respo
     }
 
     const result = await withTransaction(async (tx) => {
+      if ((req as any).user?.tipo_usuario !== 'super_admin') await assertPlanQuota(tx, Number(empresa_id), 'productos');
       await assertEmpresaInventarioDisponible(tx, Number(empresa_id));
       return tx(
       `INSERT INTO productos SET

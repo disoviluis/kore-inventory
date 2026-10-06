@@ -334,7 +334,7 @@ export const getEmpresasByUsuario = async (req: Request, res: Response): Promise
           logo_url,
           estado
         FROM empresas
-        WHERE estado IN ('activa', 'trial')
+        WHERE estado IN ('activa', 'trial', 'suspendida')
         ORDER BY nombre ASC`
       );
     } else {
@@ -351,7 +351,7 @@ export const getEmpresasByUsuario = async (req: Request, res: Response): Promise
         FROM empresas e
         INNER JOIN usuario_empresa ue ON e.id = ue.empresa_id
         WHERE ue.usuario_id = ? 
-          AND e.estado IN ('activa', 'trial')
+          AND e.estado IN ('activa', 'trial', 'suspendida')
           AND ue.activo = 1
         ORDER BY e.nombre ASC`,
         [userId]
