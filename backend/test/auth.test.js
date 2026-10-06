@@ -10,7 +10,7 @@ const { deactivateAccessUser } = require('../dist/core/auth/auth.admin');
 const { enforceSubscription, moduleIncluded, addCalendarMonths, requestedCompany, assertPlanQuota } = require('../dist/core/auth/subscription.service');
 const { approveSubscriptionRequest } = require('../dist/core/auth/subscription.controller');
 const http = require('node:http');
-const { validateSmtpConfig, safeSmtpConfig, isPublicSmtpAddress, loadAccessSmtpConfig } = require('../dist/core/auth/auth.smtp');
+const { validateSmtpConfig, safeSmtpConfig, isPublicSmtpAddress, loadAccessSmtpConfig, describeSmtpFailure } = require('../dist/core/auth/auth.smtp');
 const { saveGlobalSmtp } = require('../dist/core/auth/auth.smtp.controller');
 const { sendAuthMail } = require('../dist/core/auth/auth.mail');
 const nodemailer = require('nodemailer');
@@ -404,4 +404,16 @@ test('production bootstrap generates a private key once and preserves existing s
     assert.equal(fs.readFileSync(filename, 'utf8'), updated);
     assert.equal(fs.readdirSync(directory).filter(name => name.startsWith('.env.before-access-')).length, 1);
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('SMTP diagnostics classify failure without leaking provider response or credentials', () => {
+  const failure = describeSmtpFailure({ code: 'EAUTH', responseCode: 535,
+    message: 'sensitive-value', response: 'private-provider-response' });
+  assert.equal(failure.code, 'SMTP_AUTENTICACION_RECHAZADA');
+  assert.equal(JSON.stringify(failure).includes('sensitive-value'), false);
+  assert.equal(JSON.stringify(failure).includes('private-provider-response'), false);
+  assert.equal(describeSmtpFailure({ code: 'ETIMEDOUT' }).code, 'SMTP_CONEXION_FALLIDA');
+  assert.equal(describeSmtpFailure({ code: 'ENOTFOUND' }).code, 'SMTP_DNS_FALLIDO');
+  assert.equal(describeSmtpFailure({ code: 'CERT_HAS_EXPIRED' }).code, 'SMTP_TLS_FALLIDO');
+  assert.equal(describeSmtpFailure({ code: 'EENVELOPE' }).code, 'SMTP_REMITENTE_DESTINO_RECHAZADO');
 });

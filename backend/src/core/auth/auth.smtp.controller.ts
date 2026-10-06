@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { query, withTransaction } from '../../shared/database';
-import { loadAccessSmtpConfig, validateSmtpConfig, safeSmtpConfig, encryptedSmtpPassword, smtpMailbox } from './auth.smtp';
+import { loadAccessSmtpConfig, validateSmtpConfig, safeSmtpConfig, encryptedSmtpPassword, smtpMailbox, describeSmtpFailure } from './auth.smtp';
 import { sendAuthMail } from './auth.mail';
+import logger from '../../shared/logger';
 
 export const getGlobalSmtp = async (_req: Request, res: Response) => {
   try {
@@ -58,11 +59,13 @@ export const testGlobalSmtp = async (req: Request, res: Response) => {
     if (version !== null) await query(`UPDATE auth_smtp_configuracion SET ultima_prueba_at = UTC_TIMESTAMP(),
       ultima_prueba_estado = 'exitoso' WHERE id = 1 AND version = ?`, [version]);
     return res.json({ success: true, message: 'El servidor SMTP acepto el envio. Confirme la recepcion en el buzon de prueba y revise spam.' });
-  } catch {
+  } catch (error) {
     if (version !== null) {
       try { await query(`UPDATE auth_smtp_configuracion SET ultima_prueba_at = UTC_TIMESTAMP(), ultima_prueba_estado = 'fallido'
         WHERE id = 1 AND version = ?`, [version]); } catch { }
     }
-    return res.status(502).json({ success: false, message: 'No se pudo enviar la prueba. Revise servidor, puerto, TLS, credencial y remitente autorizado.' });
+    const failure = describeSmtpFailure(error);
+    logger.warning(`Prueba SMTP fallida: ${failure.code}`);
+    return res.status(502).json({ success: false, codigo: failure.code, message: failure.message });
   }
 };

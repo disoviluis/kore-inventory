@@ -70,6 +70,26 @@ export async function loadAccessSmtpConfig(): Promise<AccessSmtpConfig | null> {
 
 export const encryptedSmtpPassword = (config: AccessSmtpConfig) => encryptAuthSecret(config.password);
 
+export function describeSmtpFailure(error: unknown): { code: string; message: string } {
+  const failure = error as { code?: string; responseCode?: number } | null;
+  if (failure?.code === 'EAUTH' || failure?.responseCode === 534 || failure?.responseCode === 535) {
+    return { code: 'SMTP_AUTENTICACION_RECHAZADA', message: 'El proveedor rechazo la autenticacion SMTP. Para Gmail use una contrasena de aplicacion con verificacion en dos pasos, no su contrasena habitual. Revise tambien el usuario y que la cuenta permita SMTP.' };
+  }
+  if (failure?.code === 'ETIMEDOUT' || failure?.code === 'ECONNECTION' || failure?.code === 'ESOCKET' || failure?.code === 'ECONNREFUSED') {
+    return { code: 'SMTP_CONEXION_FALLIDA', message: 'No se pudo establecer o mantener la conexion SMTP. Revise el servidor, puerto, modo TLS y las reglas de salida del servidor.' };
+  }
+  if (['ENOTFOUND', 'EAI_AGAIN', 'EDNS'].includes(failure?.code || '')) {
+    return { code: 'SMTP_DNS_FALLIDO', message: 'No se pudo resolver el servidor SMTP. Revise el nombre del servidor y el servicio DNS.' };
+  }
+  if (failure?.code === 'ETLS' || /CERT|TLS|SSL/.test(failure?.code || '')) {
+    return { code: 'SMTP_TLS_FALLIDO', message: 'Fallo la verificacion TLS del proveedor. Use 587 con STARTTLS o 465 con TLS y un servidor con certificado valido.' };
+  }
+  if (failure?.code === 'EENVELOPE' || failure?.code === 'EMESSAGE') {
+    return { code: 'SMTP_REMITENTE_DESTINO_RECHAZADO', message: 'El proveedor rechazo el remitente o destinatario. Use un remitente autorizado para la cuenta SMTP y revise el correo de prueba.' };
+  }
+  return { code: 'SMTP_ENVIO_FALLIDO', message: 'No se pudo enviar la prueba. Revise la configuracion SMTP y las restricciones del proveedor. La credencial y los detalles privados no se muestran.' };
+}
+
 export function isPublicSmtpAddress(address: string): boolean {
   const family = isIP(address);
   const denied = new BlockList();
