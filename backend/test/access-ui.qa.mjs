@@ -176,5 +176,22 @@ export default async function run(page) {
   await page.locator('#legalDocument').getByText('Política de Tratamiento de Datos Personales de Kore Inventory', { exact: false }).waitFor();
   assert.equal(await page.locator('#legalDownload').getAttribute('download'), 'privacidad-v2.1.2.txt');
   assert.doesNotMatch(await page.locator('#legalDocument').innerText(), /Procedimientos internos|Anexo de implementación/i);
-  return { layouts, confirmation: 'passed', controlledInvitation: 'passed', legalPreparationAndDownload: 'passed', serverPricedPlanRequest: 'passed', inactiveSubscription: 'passed', smtpSaveAndTest: 'passed', visualPlanEditor: 'passed', screenshots: ['kore-accesos-mobile.png', 'kore-suscripcion-desktop.png', 'kore-smtp-mobile.png', 'kore-plan-mobile.png'] };
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${origin}/dashboard.html?qa=sidebar-mobile`);
+  await page.locator('.sidebar-nav.permissions-loaded').waitFor();
+  const menuButton = page.locator('#toggleSidebar');
+  await menuButton.click();
+  assert.equal(await page.locator('#sidebar').evaluate(element => element.classList.contains('active')), true);
+  assert.equal(await page.locator('#sidebarOverlay').evaluate(element => element.classList.contains('active')), true);
+  assert.equal(await menuButton.getAttribute('aria-expanded'), 'true');
+  await page.screenshot({ path: path.join(os.tmpdir(), 'kore-sidebar-mobile.png'), fullPage: true });
+  await menuButton.click();
+  assert.equal(await page.locator('#sidebar').evaluate(element => element.classList.contains('active')), false);
+  await menuButton.click();
+  await page.locator('a[href="#plataformaCollapse"]').click();
+  await page.locator('#plataformaCollapse.show').waitFor();
+  await page.locator('#plataformaSection a[onclick*="configuracion-global"]').click();
+  await page.waitForFunction(() => location.hash === '#configuracion-global' && getComputedStyle(document.getElementById('configuracion-globalModule')).display === 'block');
+  assert.equal(await page.locator('#sidebar').evaluate(element => element.classList.contains('active')), false);
+  return { layouts, confirmation: 'passed', controlledInvitation: 'passed', mobileSidebarToggleAndNavigation: 'passed', legalPreparationAndDownload: 'passed', serverPricedPlanRequest: 'passed', inactiveSubscription: 'passed', smtpSaveAndTest: 'passed', visualPlanEditor: 'passed', screenshots: ['kore-accesos-mobile.png', 'kore-suscripcion-desktop.png', 'kore-smtp-mobile.png', 'kore-plan-mobile.png', 'kore-sidebar-mobile.png'] };
 }

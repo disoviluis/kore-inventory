@@ -435,11 +435,12 @@ function configurarSidebarAdministracion() {
  */
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🔧 Sidebar Navigation inicializado');
+  initializeSidebarToggle();
 
   construirSidebarEstandarSiIncompleto();
   
-  // 1. Cargar módulos permitidos desde la API
-  await cargarModulosPermitidos();
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+  if (usuario.tipo_usuario !== 'super_admin') await cargarModulosPermitidos();
   
   habilitarEnlaceCaja();
 
@@ -465,10 +466,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 100);
   }
 
-  // ============================================
-  // TOGGLE SIDEBAR - FUNCIONA EN PC Y MÓVIL
-  // ============================================
-  initializeSidebarToggle();
 });
 
 /**
@@ -493,12 +490,16 @@ function initializeSidebarToggle() {
       
       if (window.innerWidth >= 992) {
         // En DESKTOP (PC): colapsar sidebar para ver módulos completos
-        if (sidebar) sidebar.classList.toggle('collapsed');
-        if (mainContent) mainContent.classList.toggle('expanded');
+        const collapsed = sidebar ? sidebar.classList.toggle('collapsed') : false;
+        if (mainContent) mainContent.classList.toggle('expanded', collapsed);
+        newToggleSidebar.setAttribute('aria-expanded', String(!collapsed));
       } else {
         // En MÓVIL: mostrar sidebar con overlay
-        if (sidebar) sidebar.classList.toggle('active');
-        if (overlay) overlay.classList.toggle('active');
+        const isOpen = sidebar ? !sidebar.classList.contains('active') : false;
+        if (sidebar) sidebar.classList.toggle('active', isOpen);
+        if (overlay) overlay.classList.toggle('active', isOpen);
+        newToggleSidebar.setAttribute('aria-expanded', String(isOpen));
+        document.body.classList.toggle('sidebar-open', isOpen);
       }
     });
     
@@ -516,6 +517,8 @@ function initializeSidebarToggle() {
       const overlay = document.getElementById('sidebarOverlay');
       if (sidebar) sidebar.classList.remove('active');
       if (overlay) overlay.classList.remove('active');
+      document.getElementById('toggleSidebar')?.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('sidebar-open');
     });
   }
 
@@ -529,6 +532,8 @@ function initializeSidebarToggle() {
       const sidebar = document.getElementById('sidebar');
       if (sidebar) sidebar.classList.remove('active');
       newSidebarOverlay.classList.remove('active');
+      document.getElementById('toggleSidebar')?.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('sidebar-open');
     });
   }
 }

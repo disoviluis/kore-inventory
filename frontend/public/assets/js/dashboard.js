@@ -952,68 +952,6 @@ function cerrarSesion() {
 }
 
 // ============================================
-// SIDEBAR TOGGLE (MOBILE)
-// ============================================
-
-// Toggle sidebar para todas las resoluciones (móvil y PC)
-const toggleSidebar = document.getElementById('toggleSidebar');
-if (toggleSidebar) {
-  toggleSidebar.addEventListener('click', () => {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    const mainContent = document.querySelector('.main-content');
-    
-    if (window.innerWidth >= 992) {
-      // En desktop: colapsar sidebar
-      if (sidebar) sidebar.classList.toggle('collapsed');
-      if (mainContent) mainContent.classList.toggle('expanded');
-    } else {
-      // En móvil: mostrar con overlay
-      if (sidebar) sidebar.classList.toggle('active');
-      if (overlay) overlay.classList.toggle('active');
-    }
-  });
-}
-
-// Cerrar sidebar (solo móvil)
-const closeSidebar = document.getElementById('closeSidebar');
-if (closeSidebar) {
-  closeSidebar.addEventListener('click', () => {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.remove('active');
-    if (overlay) overlay.classList.remove('active');
-  });
-}
-
-// Cerrar sidebar al hacer click en el overlay (solo móvil)
-const sidebarOverlay = document.getElementById('sidebarOverlay');
-if (sidebarOverlay) {
-  sidebarOverlay.addEventListener('click', () => {
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.classList.remove('active');
-    sidebarOverlay.classList.remove('active');
-  });
-}
-
-// Manejar redimensionamiento de ventana
-window.addEventListener('resize', () => {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  const mainContent = document.querySelector('.main-content');
-  
-  if (window.innerWidth >= 992) {
-    // Limpiar clases de móvil
-    if (sidebar) sidebar.classList.remove('active');
-    if (overlay) overlay.classList.remove('active');
-  } else {
-    // Limpiar clases de desktop
-    if (sidebar) sidebar.classList.remove('collapsed');
-    if (mainContent) mainContent.classList.remove('expanded');
-  }
-});
-
-// ============================================
 // NAVIGATION - MODULE SWITCHING
 // ============================================
 
@@ -1095,6 +1033,8 @@ function cambiarModulo(nombreModulo) {
     const overlay = document.getElementById('sidebarOverlay');
     if (sidebar) sidebar.classList.remove('active');
     if (overlay) overlay.classList.remove('active');
+    document.getElementById('toggleSidebar')?.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('sidebar-open');
   }
 }
 
