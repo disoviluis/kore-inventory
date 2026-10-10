@@ -968,6 +968,31 @@ body {
    TABS CONFIGURATION (card-header-tabs)
    =================================== */
 
+/* The dashboard-wide nav-link rule targets these tabs as well as the sidebar. */
+#configTabs .nav-link {
+    color: #526174 !important;
+    background: transparent;
+}
+
+#configTabs .nav-link:hover {
+    color: #1e40af !important;
+    background: rgba(23, 92, 211, 0.05);
+}
+
+#configTabs .nav-link.active {
+    color: #1e40af !important;
+    background: #fff !important;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+#configTabs .nav-link.active::before {
+    display: none;
+}
+
+#configTabs .nav-link.disabled {
+    color: #6c757d !important;
+}
+
 /* Tabs específicas para contenido (no sidebar) */
 .card-header-tabs .nav-link {
     color: #6c757d;
