@@ -99,6 +99,24 @@
         document.getElementById('inviteResult').textContent = result.message; await loadUsers();
       } catch (error) { document.getElementById('inviteResult').textContent = error.message; } finally { button.disabled = false; }
     });
+    document.getElementById('loadPreparedLegal').addEventListener('click', async event => {
+      const button = event.currentTarget; button.disabled = true;
+      try {
+        const type = document.getElementById('legalType').value;
+        const filename = type === 'privacidad' ? 'privacidad-v2.1.2.txt' : 'terminos-v2.1.2.txt';
+        const response = await fetch(`assets/legal/${filename}`);
+        if (!response.ok) throw new Error('No se pudo cargar el documento preparado.');
+        const paragraphs = (await response.text()).trim().split(/\r?\n\s*\r?\n/);
+        document.getElementById('legalVersion').value = '2.1.2';
+        document.getElementById('legalTitle').value = type === 'privacidad' ? 'Política de Tratamiento de Datos Personales de Kore Inventory' : 'Términos y condiciones del servicio Kore Inventory';
+        document.getElementById('operatorName').value = 'DISOVI SOFT SERVICES';
+        document.getElementById('operatorNit').value = '79648599-9';
+        document.getElementById('operatorContact').value = 'soporte.disovi@kinventoryservices.com';
+        document.getElementById('legalContent').value = paragraphs.slice(2).join('\n\n');
+        document.getElementById('legalReviewed').checked = false;
+      } catch (error) { alert(error.message, true); }
+      finally { button.disabled = false; }
+    });
     document.getElementById('legalPublishForm').addEventListener('submit', async event => {
       event.preventDefault(); if (!confirm('Publicar esta version inmutable y solicitar su aceptacion a las cuentas verificadas?')) return;
       const button = event.currentTarget.querySelector('button[type=submit]'); button.disabled = true;

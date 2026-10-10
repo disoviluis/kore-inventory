@@ -1,0 +1,245 @@
+Términos y condiciones del servicio Kore Inventory
+
+Versión 2.1.2 | Fecha de publicación y entrada en vigor: 10 de octubre de 2026
+
+Estos Términos y Condiciones (los “Términos”) regulan el acceso y uso de Kore Inventory. Al aceptar expresamente estos Términos, el cliente y los usuarios autorizados manifiestan que han tenido oportunidad de consultarlos, descargarlos y conservarlos. Las condiciones particulares de una orden, propuesta o acuerdo firmado prevalecerán únicamente respecto de los asuntos que regulen de forma expresa y siempre que no contradigan normas imperativas.
+
+1. Identificación del operador y canales de contacto
+
+El servicio Kore Inventory es operado por la persona natural o jurídica que se identifique de manera completa en la versión publicada de estos Términos (el “Operador”). Para esta versión, el Operador se identifica con los datos informados por el titular del proyecto: DISOVI SOFT SERVICES, NIT 79648599-9, domicilio Cra 39b # 29b - 30, Bogotá, Colombia; correo soporte.disovi@kinventoryservices.com; teléfono 300 109 8257; sitio web https://kinventoryservices.com. El titular del proyecto declara estos datos como los que deben utilizarse en el documento; su validez registral y tributaria debe mantenerse respaldada por los documentos oficiales correspondientes. Sitio web oficial: https://kinventoryservices.com.
+
+Los canales de contacto se utilizarán para soporte, solicitudes comerciales, reclamaciones, privacidad y comunicaciones contractuales. El Operador podrá habilitar canales adicionales e informarlos en el sitio web. Una solicitud se considerará recibida cuando exista constancia razonable de entrega o radicación; el envío por sí solo no garantiza una respuesta inmediata.
+
+2. Definiciones
+
+“Aplicación” o “Servicio”: la plataforma Kore Inventory y los módulos web, funciones y componentes que el Operador habilite para el cliente. “Cliente”: persona natural o jurídica que contrata o administra una cuenta empresarial. “Usuario”: persona a la que el Cliente autoriza un acceso individual. “Datos del Cliente”: registros, archivos, documentos, imágenes y demás información que el Cliente o sus usuarios carguen, generen o administren mediante el Servicio. “Plan”: modalidad comercial con precio, vigencia, módulos y límites definidos en la oferta vigente. “Proveedor externo”: tercero que presta infraestructura, pagos, comunicaciones, autenticación, integración u otro servicio relacionado.
+
+3. Objeto, alcance y naturaleza del servicio
+
+Kore Inventory es una herramienta de gestión empresarial suministrada por Internet. Según el plan contratado, la configuración y los permisos asignados, puede incluir funciones de productos, inventario, ventas, compras, activos, mantenimiento, repuestos, conteos físicos, reportes y otros módulos que se describan en la oferta vigente.
+
+El acceso a una función depende de que esté disponible técnicamente, incluida en el plan y habilitada para el rol del usuario. La contratación no concede acceso a información de otras empresas ni a funciones internas de administración de la plataforma. Salvo acuerdo escrito específico, el Servicio requiere conexión a Internet y no se ofrece como una licencia perpetua ni como una instalación local.
+
+El Operador podrá desarrollar, actualizar, corregir o reorganizar funciones por razones técnicas, de seguridad, legales o de evolución del producto. Cuando un cambio material reduzca una funcionalidad esencial contratada, se informará al Cliente con antelación razonable cuando sea posible y se gestionará conforme al acuerdo aplicable y a los derechos legales del Cliente.
+
+4. Aceptación electrónica, contratación y evidencia
+
+Los Términos deberán estar disponibles antes de la aceptación. La aceptación se realizará mediante una acción afirmativa e inequívoca en la interfaz, por ejemplo, marcar una casilla no preseleccionada y seleccionar el botón de aceptación. El silencio, la mera navegación o el uso previo de una cuenta no se utilizarán por sí solos como evidencia de aceptación de una nueva versión.
+
+El Operador podrá conservar, con medidas razonables de seguridad, la versión aceptada, fecha y hora, identificador de cuenta y usuario, y los registros técnicos necesarios para demostrar el proceso. Los registros se tratarán conforme a la política de privacidad y a los plazos legales aplicables. La aceptación electrónica y los mensajes de datos podrán producir los efectos previstos en la legislación colombiana, incluida la Ley 527 de 1999, cuando se cumplan sus requisitos.
+
+Quien contrate en nombre de una empresa declara que cuenta con autorización suficiente para hacerlo. La verificación del correo electrónico confirma control sobre ese canal, pero no demuestra por sí sola identidad civil, representación legal ni facultades corporativas. El Operador podrá solicitar documentación razonable para verificar la autorización.
+
+5. Elegibilidad, cuentas, invitaciones y credenciales
+
+El Cliente debe suministrar información cierta, completa y actualizada, mantener un administrador autorizado y gestionar oportunamente las altas, cambios y bajas de usuarios. Las invitaciones se enviarán al correo designado y cada usuario deberá completar los pasos de activación y seguridad habilitados.
+
+Cada persona debe utilizar una cuenta individual. Se prohíbe compartir credenciales, suplantar usuarios o mantener accesos de personas que ya no estén autorizadas. El Cliente administra los roles y permisos de su organización y es responsable de revisar que sean adecuados a las funciones de cada usuario.
+
+Las credenciales, códigos de autenticación y códigos de recuperación deben mantenerse confidenciales. Si el sistema exige autenticación multifactor, el usuario debe proteger el dispositivo o autenticador correspondiente. El Cliente notificará sin demora accesos sospechosos, pérdida de dispositivos o posibles incidentes.
+
+Por razones de seguridad, el Operador podrá cerrar sesiones, exigir verificaciones adicionales, limitar intentos, suspender temporalmente una cuenta o bloquear operaciones sospechosas. Cuando sea razonablemente posible informará el motivo y los pasos para recuperar el acceso. Estas medidas no sustituyen los derechos de reclamación que resulten aplicables.
+
+6. Usuarios existentes, migración y trazabilidad
+
+Las cuentas existentes podrán migrarse gradualmente a procesos de verificación. Cuando se compruebe que el titular es la misma persona, podrá actualizarse el correo conservando, cuando sea técnicamente posible y legítimo, el identificador y el historial de actividad.
+
+Una cuenta compartida, genérica o ficticia no debe reasignarse a otra persona como si fuera la autora de operaciones históricas. El Cliente deberá crear cuentas individuales, retirar accesos sustituidos y mantener la trazabilidad de los registros de negocio. El Operador podrá asistir en la migración, sin garantizar la corrección de información histórica que haya sido creada con datos incompletos o incorrectos.
+
+La migración de usuarios no reinicia pruebas gratuitas, no cambia la titularidad de los Datos del Cliente y no modifica los períodos de suscripción ya reconocidos.
+
+7. Prueba gratuita
+
+Según las condiciones operativas informadas, una empresa nueva aprobada puede disponer de una única prueba gratuita de treinta (30) días, contados desde la activación mediante verificación de su primer administrador autorizado. La plataforma deberá mostrar o comunicar la fecha de inicio y vencimiento.
+
+La prueba no se reinicia por cambios de usuario, correo, administrador o plan, ni por migración de cuentas. Las empresas existentes mantienen los períodos que ya les hayan sido reconocidos. Al finalizar la prueba, las operaciones sujetas a suscripción podrán restringirse si no existe un plan vigente y un pago confirmado.
+
+La prueba gratuita no autoriza por sí misma cargos automáticos ni obliga a contratar un plan.
+
+8. Planes, precios, impuestos, límites y ofertas
+
+Los planes, módulos, periodicidades, límites, precios, impuestos y condiciones comerciales se informarán en la oferta o catálogo vigente antes de contratar. El resumen previo a la compra deberá identificar el plan, período, precio total, tributos aplicables, costos adicionales y límites relevantes. No se efectuarán cargos no informados ni autorizados.
+
+Los límites podrán comprender, entre otros, cantidad de usuarios, productos, documentos u operaciones por período. La oferta debe especificar cómo se calcula cada límite y qué sucede al alcanzarlo. El exceso de un límite podrá impedir nuevas altas u operaciones sujetas a ese cupo, pero no autoriza la eliminación automática de datos existentes.
+
+El Cliente es responsable de seleccionar el plan adecuado a sus necesidades. Si supera los límites, podrá contratar un plan superior o acordar un ajuste. Los cambios de precio se aplicarán hacia el futuro, con aviso previo razonable y aceptación cuando corresponda; no modificarán retroactivamente períodos ya pagados.
+
+9. Solicitud, confirmación y comprobantes de pago
+
+En el flujo operativo actual, seleccionar un plan crea una solicitud pendiente. La solicitud, una referencia aportada por el Cliente o la aceptación de estos Términos no constituyen prueba de pago ni activan por sí solas una licencia.
+
+La activación requiere confirmación del pago recibido por el medio informado, conciliación del importe y registro de una referencia real. El Cliente deberá conservar su comprobante. El Operador entregará la factura, documento equivalente o soporte comercial que resulte exigible conforme a su situación tributaria y a la normativa aplicable.
+
+El flujo descrito no contempla cobro recurrente automático ni pasarela de pagos integrada. Si en el futuro se habilitan pagos recurrentes, tarjetas guardadas o renovación automática, el Operador informará las condiciones, periodicidad, importe, cancelación y tratamiento de datos y obtendrá las autorizaciones necesarias antes de activar esos mecanismos.
+
+10. Renovación, vigencia y cambios de plan
+
+La vigencia comienza en la fecha de activación confirmada y se extiende durante el período adquirido. Si el Cliente renueva anticipadamente el mismo plan, el período nuevo se adicionará al período pagado vigente, de manera que no se pierdan días ya reconocidos. Si no existe período pagado vigente, el nuevo período comienza con la activación confirmada.
+
+El flujo actual no contempla prorrateos automáticos. Un cambio de plan se realizará al vencimiento o mediante acuerdo escrito que indique expresamente el precio, la fecha de efecto y el tratamiento del saldo o período pagado. Ningún cambio implicará pérdida unilateral de días ya pagados salvo acuerdo válido y expreso o disposición legal aplicable.
+
+El Cliente puede decidir no renovar comunicándolo por los canales publicados. La falta de respuesta no se entenderá como autorización para un cargo recurrente ni como aceptación de un nuevo precio.
+
+11. Vencimiento, suspensión, terminación y efectos
+
+Al vencer la prueba o suscripción, el Operador podrá restringir las funciones que dependan de una licencia activa. En la medida técnicamente posible, mantendrá disponibles las funciones de cuenta, seguridad, consulta de estado y gestión de solicitudes de salida que se hayan previsto. El vencimiento o la falta de pago no causará por sí solos la eliminación automática de los registros empresariales.
+
+El Operador podrá suspender o terminar el acceso cuando exista incumplimiento material, uso ilícito, riesgo grave de seguridad, fraude, requerimiento legal o falta de pago después de las notificaciones razonables que correspondan. Cuando la urgencia de seguridad lo exija, la suspensión podrá ser inmediata, con información posterior tan pronto como sea razonable.
+
+El Cliente puede solicitar la terminación por el canal de contacto. La terminación no extingue obligaciones ya causadas ni afecta derechos irrenunciables. El tratamiento de datos, devolución, exportación, conservación y eliminación se regirá por estos Términos, la política de privacidad, el acuerdo aplicable y la ley. Si la terminación se produce por incumplimiento, el Operador evaluará medidas proporcionales y no retendrá datos de forma contraria a la ley.
+
+12. Datos empresariales, titularidad y licencia limitada
+
+Entre el Cliente y el Operador, el Cliente conserva los derechos que le correspondan sobre sus Datos del Cliente. El Cliente concede al Operador una autorización limitada, no exclusiva y durante el tiempo necesario para alojar, procesar, transmitir, respaldar y mostrar dichos datos únicamente para prestar, proteger, mantener y mejorar operativamente el Servicio, atender solicitudes y cumplir obligaciones legales o contractuales.
+
+Esta autorización no transfiere la propiedad de los datos ni permite venderlos, publicarlos o utilizarlos para publicidad ajena al Servicio. Los datos podrán ser tratados por proveedores que actúen por cuenta del Operador, bajo las condiciones contractuales y legales correspondientes. Los datos agregados o desidentificados solo podrán utilizarse cuando no permitan identificar razonablemente al Cliente o a una persona y se respeten las normas aplicables.
+
+El Cliente declara que tiene derechos, avisos y bases jurídicas suficientes para cargar la información y autorizar el tratamiento necesario. Debe evitar cargar datos innecesarios, especialmente datos sensibles, financieros, de salud, documentos de identidad o información de menores, salvo que la funcionalidad y las garantías aplicables lo permitan y exista fundamento jurídico.
+
+13. Protección de datos personales y privacidad
+
+El tratamiento de datos personales se regirá por la política de tratamiento de información publicada por el Operador y por las normas colombianas aplicables, incluida la Ley 1581 de 2012 y su reglamentación vigente. La política debe identificar al responsable del tratamiento, finalidades, derechos de los titulares, canales para consultas y reclamos, procedimiento, vigencia de bases de datos y datos de contacto.
+
+Según la actividad concreta, el Cliente podrá actuar como responsable del tratamiento de los datos personales de sus empleados, clientes, proveedores y contactos, mientras que el Operador podrá actuar como encargado al tratar esos datos siguiendo instrucciones documentadas del Cliente. Para los datos de cuenta, facturación, soporte, seguridad y relación comercial del propio Cliente, el Operador podrá actuar como responsable independiente. Los roles se determinarán según las finalidades reales, no solo por el nombre asignado en este documento.
+
+El Cliente debe suministrar los avisos y obtener las autorizaciones que sean necesarias para sus propios tratamientos. El Operador atenderá solicitudes que le correspondan, colaborará razonablemente con el Cliente y aplicará controles apropiados a los riesgos. Las solicitudes de titulares se tramitarán dentro de los términos legales; no se prometen plazos distintos de los que realmente puedan cumplirse.
+
+El uso de proveedores de nube, soporte, mensajería u otros servicios puede implicar tratamiento por terceros y, según su ubicación y configuración, transmisión o transferencia internacional. El Operador debe documentar los proveedores, países, funciones y mecanismos jurídicos aplicables en la política o en el acuerdo de tratamiento. Estos Términos no sustituyen una autorización, contrato de transmisión ni otro requisito legal que resulte necesario.
+
+14. Seguridad, incidentes y controles
+
+El Operador implementará medidas técnicas, humanas y administrativas razonables y proporcionales a la naturaleza de la información y a los riesgos del Servicio. Pueden incluir control de acceso por roles, autenticación, registros de actividad, actualizaciones, gestión de vulnerabilidades, protección de infraestructura y procedimientos de respuesta a incidentes, según las capacidades efectivamente implementadas.
+
+Ningún sistema conectado a Internet puede garantizar seguridad absoluta. El Operador no promete ausencia total de incidentes, pero tampoco se exonera de las obligaciones legales o contractuales que le correspondan. Ante un incidente que afecte datos personales o la continuidad del Servicio, gestionará la contención, investigación, recuperación y notificaciones que sean exigibles. La comunicación se realizará sin demoras indebidas y conforme a la ley, sin revelar información que comprometa la investigación o la seguridad.
+
+El Cliente debe limitar permisos, mantener protegidos sus dispositivos, usar contraseñas robustas, retirar accesos que ya no se necesiten y notificar anomalías. La seguridad es una responsabilidad compartida y no autoriza a ninguna parte a desatender sus obligaciones propias.
+
+15. Imágenes, documentos, archivos y contenido público
+
+El Cliente debe contar con los derechos y autorizaciones necesarios para cargar imágenes, documentos, marcas y otros contenidos. Debe distinguir entre imágenes de catálogo o contenido destinado a publicación y documentos privados, confidenciales o sensibles.
+
+El contenido publicado en catálogos, enlaces o páginas públicas puede quedar accesible a terceros, indexarse o distribuirse mediante redes de entrega de contenido. No deben subirse a espacios públicos documentos de identidad, contratos confidenciales, datos de pago, evidencia sensible ni información personal que no deba divulgarse.
+
+La interfaz de carga no garantiza por sí sola que un archivo se almacene de forma privada. El Cliente debe verificar la configuración y los permisos. El Operador debe describir en la documentación del producto qué tipos de almacenamiento son públicos o privados y no anunciar como privada una función que no tenga controles efectivos.
+
+16. Uso permitido y conductas prohibidas
+
+El Cliente y sus usuarios utilizarán el Servicio conforme a la ley, estos Términos, los permisos asignados y los derechos de terceros. Deben mantener información razonablemente exacta, revisar resultados antes de tomar decisiones y usar el sistema según su documentación.
+
+Está prohibido: (a) intentar acceder a otras empresas o cuentas sin autorización; (b) compartir o vender credenciales; (c) introducir malware o código dañino; (d) eludir límites, controles o mecanismos de seguridad; (e) interferir con la disponibilidad o integridad del Servicio; (f) realizar ingeniería inversa en la medida prohibida por la ley; (g) usar el Servicio para fraude, actividades ilícitas o tratamiento ilegal de datos; (h) cargar contenido que infrinja derechos de terceros; (i) alterar deliberadamente registros o evidencias para engañar; y (j) revender o explotar el Servicio sin autorización escrita.
+
+Ante un incumplimiento, el Operador podrá investigar y adoptar medidas proporcionadas, como advertencia, solicitud de corrección, limitación, suspensión o terminación. Siempre que sea razonablemente posible, permitirá al Cliente explicar los hechos o subsanar el incumplimiento, salvo urgencia, riesgo de daño, fraude o exigencia legal.
+
+17. Inventario, reportes, contabilidad y obligaciones tributarias
+
+Kore Inventory es una herramienta de apoyo a procesos empresariales. Los resultados dependen de la calidad de los datos, configuración, permisos, procedimientos y uso que realice el Cliente. El Cliente conserva la responsabilidad de verificar existencias, costos, movimientos, reportes, impuestos, registros contables y decisiones de negocio.
+
+El Servicio no sustituye asesoría contable, tributaria, jurídica ni profesional. La existencia de campos, consecutivos, reportes o documentos con apariencia de factura no demuestra por sí sola que exista una integración autorizada, validación o habilitación ante la Dirección de Impuestos y Aduanas Nacionales (DIAN), ni que un documento cumpla todos los requisitos legales.
+
+Las funciones de facturación electrónica, nómina electrónica, documentos soporte u otras obligaciones solo se considerarán incluidas cuando se describan expresamente en el plan o acuerdo, estén técnicamente habilitadas y se identifique al proveedor responsable de cada componente. El Cliente debe verificar con sus asesores y con el proveedor tecnológico correspondiente sus obligaciones y la validez de los documentos emitidos.
+
+18. Integraciones, APIs y proveedores externos
+
+El Servicio puede depender de proveedores de nube, correo, mensajería, pagos, autenticación, facturación electrónica, analítica u otras integraciones. Salvo pacto escrito, el Operador no controla las políticas, disponibilidad, precios, cambios ni decisiones de esos terceros.
+
+Una integración se considera incluida únicamente si se describe en la oferta o acuerdo correspondiente. El Cliente debe revisar los términos y políticas del tercero y mantener sus credenciales y autorizaciones. Los cambios, interrupciones o terminación de un proveedor pueden afectar la integración; el Operador procurará informar incidencias relevantes y, cuando sea viable, ofrecer alternativas razonables, sin garantizar que siempre exista una sustitución.
+
+El Cliente autoriza las comunicaciones técnicas estrictamente necesarias para ejecutar las integraciones que haya habilitado. No se compartirán datos con terceros para finalidades incompatibles con el Servicio sin el fundamento jurídico y la información que correspondan.
+
+19. Disponibilidad, mantenimiento y soporte
+
+El Servicio puede requerir mantenimiento, actualizaciones, correcciones y cambios de infraestructura, y depende de Internet, dispositivos y proveedores externos. El Operador procurará gestionar las interrupciones de manera razonable y comunicar las incidencias relevantes cuando tenga información suficiente.
+
+Salvo acuerdo de nivel de servicio (SLA) escrito, no se garantiza disponibilidad ininterrumpida, un porcentaje específico de disponibilidad, tiempos fijos de respuesta, recuperación instantánea ni atención permanente. El soporte se prestará a través de los canales y horarios que el Operador publique y conforme al plan contratado.
+
+El soporte no incluye, salvo acuerdo, capacitación ilimitada, corrección de datos introducidos por el Cliente, soporte de dispositivos ajenos, resolución de problemas de conectividad de terceros ni desarrollos personalizados. Los trabajos adicionales deberán cotizarse y aprobarse antes de ejecutarse.
+
+20. Copias de seguridad, continuidad y recuperación
+
+El Operador informará las prácticas de copia de seguridad y recuperación que estén implementadas y verificadas. No se garantiza la recuperación de toda modificación o archivo en cualquier circunstancia.
+
+Las copias de seguridad reducen riesgos, pero no garantizan recuperación de toda modificación o archivo en cualquier circunstancia. El Cliente debe mantener, cuando sea adecuado a su negocio, copias propias de la información crítica y revisar periódicamente que los datos registrados sean completos.
+
+En caso de pérdida o corrupción, el Operador realizará esfuerzos razonables para restaurar la información disponible a partir de las copias válidas, sujeto a la arquitectura y a los procedimientos vigentes. Los objetivos de tiempo y punto de recuperación solo serán vinculantes si constan en un acuerdo específico.
+
+21. Exportación, devolución, conservación y eliminación de datos
+
+El Cliente puede solicitar información sobre los mecanismos disponibles para consultar o exportar sus Datos del Cliente. Los formatos, campos, límites, costos y ventanas de acceso deben estar definidos en la documentación o acuerdo aplicable. El Operador no prometerá una exportación ilimitada ni formatos que no estén implementados.
+
+Al terminar la relación, las partes coordinarán una salida ordenada cuando sea razonablemente posible. El Cliente debe solicitar la exportación durante el período de acceso o dentro de la ventana que se le comunique. Si el acceso está restringido por vencimiento, el Operador informará el canal y los requisitos de verificación para solicitar los datos, sujeto a controles de seguridad y a la protección de información de terceros.
+
+Después del período de conservación comunicado, el Operador eliminará o anonimizará los datos que ya no necesite, salvo que deba conservarlos por obligaciones legales, defensa de reclamaciones, seguridad o cumplimiento contractual. Las copias de respaldo podrán permanecer durante su ciclo ordinario de rotación y no necesariamente se eliminarán de forma individual e inmediata; durante ese tiempo no se usarán para finalidades incompatibles y se protegerán adecuadamente.
+
+Los plazos de conservación, ventana de exportación, formato, costo y procedimiento de eliminación se informarán en la política de privacidad o acuerdo de salida aplicable. La eliminación no debe ejecutarse de manera que desconozca obligaciones legales de conservación o derechos del titular.
+
+22. Propiedad intelectual del Servicio
+
+El software, código, diseño, interfaces, marcas, documentación, estructura, componentes y demás elementos propios de Kore Inventory pertenecen al Operador o a sus licenciantes y están protegidos por las normas aplicables. Estos Términos no transfieren propiedad intelectual al Cliente.
+
+Durante la vigencia del plan y mientras cumpla estos Términos, el Operador concede al Cliente un derecho limitado, no exclusivo, no transferible y revocable conforme al contrato para acceder y utilizar el Servicio con fines internos autorizados. No se permite copiar, distribuir, sublicenciar, vender, modificar o crear obras derivadas del software, salvo autorización escrita o cuando una norma imperativa lo permita.
+
+El Cliente conserva los derechos sobre sus marcas y contenidos. Autoriza al Operador a mostrarlos solo en la medida necesaria para prestar el Servicio. El uso de nombre o logotipo del Cliente como referencia comercial requiere autorización separada, salvo que ya exista un consentimiento válido y específico.
+
+23. Confidencialidad
+
+Cada parte protegerá la información no pública de la otra parte que reciba por razón del Servicio y la utilizará únicamente para cumplir el contrato. Aplicará un cuidado al menos razonable y limitará el acceso a empleados, contratistas y proveedores que necesiten conocerla y estén sujetos a deberes de confidencialidad.
+
+No se considerará confidencial la información que la parte receptora pueda demostrar que era pública sin incumplimiento, ya conocía legítimamente, recibió de un tercero autorizado o desarrolló independientemente. Si una autoridad exige divulgar información, la parte requerida podrá hacerlo en la medida legalmente exigida y, cuando esté permitido, avisará previamente a la otra parte.
+
+Esta obligación continuará después de la terminación durante el tiempo en que la información mantenga carácter confidencial, sin perjuicio de los plazos o deberes legales aplicables.
+
+24. Precios, devoluciones, retracto y reversión del pago
+
+Las solicitudes de devolución se evaluarán según el tipo de Cliente, el canal de contratación, el estado de ejecución del Servicio, la oferta aceptada y las normas aplicables. No se establece una política de “no reembolso” absoluta ni se excluyen derechos que la ley reconozca.
+
+Cuando exista una relación de consumo y la contratación se encuentre dentro de los supuestos legales de retracto, el consumidor podrá ejercerlo dentro del término y bajo las condiciones establecidas por la ley. Para servicios contratados a distancia, la regla general prevista en el artículo 47 de la Ley 1480 de 2011 contempla cinco (5) días hábiles desde la celebración del contrato, con las excepciones legales, entre ellas los servicios cuya prestación haya comenzado con acuerdo del consumidor en las condiciones previstas por la norma. La procedencia concreta debe analizarse según el servicio, el inicio de ejecución y la relación jurídica. Este documento no elimina ni restringe derechos imperativos.
+
+Cuando proceda el retracto, la devolución se tramitará dentro del plazo legal aplicable y mediante el instrumento de pago o medio permitido por la ley. Para comercio electrónico, deberán observarse las modificaciones normativas vigentes, incluida la Ley 2439 de 2024 cuando resulte aplicable. Si una devolución no procede legalmente, el Operador informará la razón y podrá evaluar solicitudes comerciales excepcionales sin que ello implique una obligación general.
+
+La reversión del pago se atenderá cuando sea jurídicamente procedente, por ejemplo, en los supuestos legales de fraude, operación no solicitada, no recepción o prestación no conforme, de acuerdo con el medio de pago y la normativa aplicable. El Cliente deberá seguir el procedimiento y los términos exigidos por la ley y por los participantes del sistema de pago. El Operador colaborará con la información que legítimamente le corresponda suministrar.
+
+Las relaciones estrictamente empresariales pueden quedar sujetas a reglas distintas de las relaciones de consumo. Sin embargo, la calificación depende de las circunstancias reales y no se determina únicamente por llamar “empresa” al Cliente.
+
+25. Garantías, limitaciones y exclusiones de responsabilidad
+
+Cada parte responderá por sus propios incumplimientos, actos u omisiones conforme a la ley y al acuerdo aplicable. Nada en estos Términos excluye o limita responsabilidades que no puedan excluirse legalmente, derechos irrenunciables del consumidor, obligaciones de protección de datos, deberes de confidencialidad ni responsabilidades por dolo cuando la ley impida su limitación.
+
+En la máxima medida permitida por la ley y considerando la naturaleza del Servicio, el Operador no garantiza que el sistema satisfaga todas las necesidades particulares del Cliente, que esté libre de errores en todo momento o que los resultados sean correctos cuando dependan de datos, configuración o decisiones del Cliente. El Operador no responde por decisiones de negocio adoptadas sin verificar los resultados ni por errores derivados de información incorrecta introducida por el Cliente, uso contrario a la documentación o fallas de redes y sistemas fuera de su control, en la medida en que legalmente proceda.
+
+En la medida permitida por la ley, ninguna parte responderá frente a la otra por daños indirectos o lucro cesante que no fueran previsibles o atribuibles conforme al régimen aplicable. Cualquier límite monetario de responsabilidad solo será válido si se acuerda expresamente, se define de manera clara y respeta las normas imperativas; por eso, este documento no fija un tope monetario genérico sin datos comerciales y revisión jurídica.
+
+El Operador no será responsable de la disponibilidad o actos de terceros independientes que no controle, pero ello no lo libera de sus obligaciones respecto de la selección, contratación, seguridad o gestión de proveedores cuando la ley o el contrato le impongan deberes. Las exclusiones se interpretarán de manera restrictiva y no podrán utilizarse para vaciar de contenido las obligaciones esenciales del Servicio.
+
+26. Fuerza mayor y eventos fuera del control razonable
+
+Ninguna parte será responsable por retrasos causados por eventos imprevisibles o irresistibles fuera de su control razonable, en la medida reconocida por la ley, tales como desastres naturales, conflictos, actos de autoridad, fallas generalizadas de infraestructura, interrupciones masivas de telecomunicaciones o incidentes graves de proveedores externos. La parte afectada deberá adoptar medidas razonables para mitigar los efectos e informar a la otra cuando sea posible.
+
+La fuerza mayor no elimina obligaciones de pago ya causadas ni autoriza automáticamente a retener datos o desconocer derechos legales. Si el evento impide sustancialmente la prestación durante un período prolongado, las partes procurarán acordar una solución razonable conforme al contrato y a la ley.
+
+27. Reclamaciones, atención al cliente y solución de controversias
+
+Las consultas, reclamaciones comerciales, solicitudes de privacidad y comunicaciones legales podrán dirigirse a soporte.disovi@kinventoryservices.com y al teléfono 300 109 8257, una vez confirmados como canales activos. El Operador deberá indicar un mecanismo de radicación y conservar la información necesaria para tramitar las solicitudes.
+
+Las reclamaciones se atenderán dentro de los plazos legales o contractuales aplicables. El Cliente debe aportar información suficiente para identificar la cuenta y comprender la solicitud, sin enviar contraseñas ni códigos de seguridad. Para solicitudes sobre datos personales, se aplicarán los procedimientos y plazos previstos en la normativa de protección de datos.
+
+Las partes procurarán resolver de buena fe las diferencias mediante comunicación directa. Si no se logra solución, cada parte podrá acudir a las autoridades o jurisdicciones competentes conforme a la ley. Ninguna cláusula obliga a un consumidor a renunciar a competencias, acciones o mecanismos de protección irrenunciables. La ley colombiana regirá cuando corresponda conforme a las reglas aplicables, sin perjuicio de normas imperativas de otra jurisdicción que resulten procedentes.
+
+28. Cambios de los Términos
+
+El Operador conservará versiones identificables de los Términos. Los cambios se publicarán con número de versión y fecha de vigencia. Cuando un cambio sea material o requiera aceptación, se informará de forma clara y se solicitará aceptación expresa antes de que produzca los efectos correspondientes. El silencio no se tratará como aceptación cuando la ley o la naturaleza del cambio exijan consentimiento.
+
+Los cambios no modificarán retroactivamente períodos pagados, condiciones particulares ya pactadas ni derechos irrenunciables. Si el Cliente no acepta una modificación que requiera consentimiento, podrá dejar de utilizar las funciones afectadas y solicitar la terminación conforme al acuerdo y a la ley.
+
+29. Cesión, independencia y separabilidad
+
+El Cliente no podrá ceder su contrato ni transferir sus credenciales a terceros sin autorización, salvo reorganización empresarial permitida por la ley y previa notificación cuando corresponda. El Operador podrá ceder el contrato en el marco de una reorganización o transferencia del negocio, siempre que respete la normativa de datos personales, notifique cuando sea exigible y no reduzca derechos imperativos del Cliente.
+
+Las partes son independientes. Estos Términos no crean sociedad, mandato, agencia, relación laboral ni empresa conjunta. Si una cláusula se considera inválida o inaplicable, se interpretará o ajustará en la medida legalmente permitida y las demás conservarán su efecto, siempre que se mantenga el equilibrio y la finalidad lícita del contrato.
+
+30. Disposiciones finales y prevalencia normativa
+
+Estos Términos, la oferta aceptada, la política de privacidad y los acuerdos particulares aplicables constituyen el marco contractual del Servicio. En caso de contradicción, prevalecerá el acuerdo particular firmado respecto del asunto expresamente regulado, seguido de la oferta aceptada y estos Términos, siempre sujeto a las normas imperativas.
+
+Las referencias normativas incluyen sus modificaciones, reglamentos y normas que las sustituyan. Entre las disposiciones que pueden resultar pertinentes en Colombia se encuentran la Ley 527 de 1999 sobre mensajes de datos y comercio electrónico, la Ley 1581 de 2012 y su reglamentación sobre protección de datos personales, y la Ley 1480 de 2011 y sus modificaciones sobre protección al consumidor, según la naturaleza de cada relación. La inclusión de estas referencias no constituye una certificación de cumplimiento ni reemplaza el análisis de aplicabilidad al caso concreto.
+
+Si una traducción de estos Términos se ofrece en otro idioma, la versión que se identifique como oficial en la pantalla de aceptación prevalecerá, salvo que una norma imperativa disponga otra cosa. El Cliente podrá guardar o imprimir una copia de la versión aceptada.

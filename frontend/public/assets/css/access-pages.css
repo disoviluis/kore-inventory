@@ -1,0 +1,164 @@
+body.access-page-body {
+    min-height: 100vh;
+    padding: 24px 0;
+    background: #f2f5f9 !important;
+}
+
+body.access-page-body .access-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: clamp(20px, 4vw, 42px);
+    border: 1px solid #e1e7ee;
+    border-top: 5px solid var(--primary-color);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 18px 48px rgba(31, 41, 55, 0.09);
+}
+
+body.access-page-body .access-page-wide {
+    max-width: 1080px;
+}
+
+.access-page-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e6ebf1;
+}
+
+.access-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--dark-color);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.access-brand i {
+    color: var(--accent-color);
+    font-size: 1.25rem;
+}
+
+.access-page-heading {
+    margin: 28px 0 24px;
+}
+
+.access-page-heading h1 {
+    margin-bottom: 8px;
+    color: var(--primary-color);
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.access-eyebrow {
+    margin-bottom: 6px;
+    color: #657386;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+body.access-page-body .form-control,
+body.access-page-body .form-select {
+    min-height: 44px;
+}
+
+body.access-page-body .form-check {
+    padding: 14px 14px 14px 38px;
+    border: 1px solid #e1e7ee;
+    border-radius: 6px;
+    background: #f8fafc;
+}
+
+body.access-page-body .form-check-input {
+    margin-left: -24px;
+}
+
+body.access-page-body .form-check-label {
+    line-height: 1.55;
+}
+
+body.access-page-body .form-check-label a,
+.access-page-body a:not(.btn):hover {
+    color: var(--primary-color);
+}
+
+.legal-document-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #e1e7ee;
+}
+
+.legal-document-tabs a {
+    padding: 10px 2px;
+    border-bottom: 3px solid transparent;
+    color: #526174;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.legal-document-tabs a.active {
+    border-bottom-color: var(--accent-color);
+    color: var(--primary-color);
+}
+
+.legal-document-copy {
+    padding: 20px 0 4px;
+    border-top: 1px solid #e1e7ee;
+    color: #283547;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1rem;
+    line-height: 1.78;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.subscription-status {
+    margin: 0;
+    padding: 12px 16px;
+    border-left: 4px solid var(--accent-color);
+    border-radius: 4px;
+    background: #fff8e8;
+    color: #593e0b;
+    font-weight: 700;
+}
+
+.subscription-status.is-current {
+    border-left-color: var(--secondary-color);
+    background: #ecf8f2;
+    color: #155b3c;
+}
+
+#subscriptionPlans > [class*="col-"] > .border.rounded {
+    border-color: #dfe6ee !important;
+    border-radius: 8px !important;
+    box-shadow: 0 5px 16px rgba(31, 41, 55, 0.05);
+}
+
+#subscriptionRequest {
+    margin-top: 8px;
+}
+
+@media (max-width: 575.98px) {
+    body.access-page-body {
+        padding: 12px 0;
+    }
+
+    body.access-page-body .access-page {
+        width: calc(100% - 24px);
+        padding: 20px 16px;
+    }
+
+    .access-page-heading h1 {
+        font-size: 1.5rem;
+    }
+
+    .legal-document-tabs {
+        gap: 4px 16px;
+    }
+}

@@ -23,7 +23,9 @@
   async function loadSubscription() {
     const data = await api(`suscripciones/${companyId}`);
     plans = data.planes; canManage = data.puede_gestionar;
-    document.getElementById('subscriptionState').textContent = data.vigente ? `Vigente | ${data.licencia?.plan_nombre || 'Prueba gratuita'} | Vence: ${new Date(data.licencia?.fin_at || data.empresa.trial_fin_at).toLocaleString('es-CO')}` : 'Sin suscripcion vigente';
+    const state = document.getElementById('subscriptionState');
+    state.classList.toggle('is-current', Boolean(data.vigente));
+    state.textContent = data.vigente ? `Vigente | ${data.licencia?.plan_nombre || 'Prueba gratuita'} | Vence: ${new Date(data.licencia?.fin_at || data.empresa.trial_fin_at).toLocaleString('es-CO')}` : 'Sin suscripción vigente. Selecciona un plan para solicitar su activación.';
     const container = document.getElementById('subscriptionPlans'); container.replaceChildren();
     const selector = document.getElementById('selectedPlan'); selector.replaceChildren();
     for (const plan of plans) {

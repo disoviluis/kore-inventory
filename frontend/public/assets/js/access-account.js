@@ -3,6 +3,7 @@
   const page = document.body.dataset.accessPage;
   const status = document.getElementById('accessStatus');
   let documents = [];
+  let legalDownloadUrl;
   function message(text, error = false) {
     status.className = `alert ${error ? 'alert-danger' : 'alert-success'}`;
     status.textContent = text;
@@ -23,7 +24,7 @@
       const input = document.createElement('input'); input.type = 'checkbox'; input.className = 'form-check-input';
       input.id = `legal-${documentData.id}`; input.required = true; input.checked = accepted.includes(documentData.id);
       const label = document.createElement('label'); label.className = 'form-check-label'; label.htmlFor = input.id;
-      label.append('Acepto ');
+      label.append(documentData.tipo === 'privacidad' ? 'He leído y autorizo el tratamiento de mis datos personales conforme a la ' : 'Acepto los ');
       const link = document.createElement('a'); link.href = `documentos-legales.html?tipo=${encodeURIComponent(documentData.tipo)}`;
       link.target = '_blank'; link.rel = 'noopener'; link.textContent = `${documentData.titulo} (${documentData.version})`;
       label.append(link); row.append(input, label); container.append(row);
@@ -112,17 +113,36 @@
       const link = document.createElement('a'); link.className = 'btn btn-primary'; link.href = `mailto:${encodeURIComponent(contact)}?subject=Solicitud%20de%20acceso%20a%20Kore%20Inventory`; link.textContent = 'Contactar al administrador';
       document.getElementById('accessContact').append(link);
     } else {
-      documents = await api('public/documentos-legales');
+      let publicationUnavailable = false;
+      try { documents = await api('public/documentos-legales'); }
+      catch (error) { documents = []; publicationUnavailable = true; }
       const type = new URLSearchParams(location.search).get('tipo') || 'terminos';
       const documentData = documents.find(entry => entry.tipo === type);
+      const title = type === 'privacidad' ? 'Política de Tratamiento de Datos Personales de Kore Inventory' : 'Términos y condiciones del servicio Kore Inventory';
+      const download = document.getElementById('legalDownload');
+      document.querySelectorAll('[data-legal-type]').forEach(link => link.classList.toggle('active', link.dataset.legalType === type));
+      document.getElementById('legalHeading').textContent = title;
+      const setDocument = (content, filename, displayContent = content) => {
+        document.getElementById('legalDocument').textContent = displayContent;
+        if (legalDownloadUrl) URL.revokeObjectURL(legalDownloadUrl);
+        legalDownloadUrl = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
+        download.href = legalDownloadUrl; download.download = filename; download.classList.remove('d-none');
+      };
       if (!documentData) {
-        const draft = await fetch(`assets/legal/${type === 'privacidad' ? 'privacidad' : 'terminos'}-pruebas.txt`);
-        if (!draft.ok) throw new Error('Este documento aun no ha sido publicado.');
-        document.getElementById('legalDocument').textContent = await draft.text();
-        message('Base informativa de pruebas. La version contractual definitiva sigue pendiente de aprobacion.', true);
+        const filename = type === 'privacidad' ? 'privacidad-v2.1.2.txt' : 'terminos-v2.1.2.txt';
+        const prepared = await fetch(`assets/legal/${filename}`);
+        if (!prepared.ok) throw new Error('Este documento aun no esta disponible.');
+        const content = await prepared.text();
+        const paragraphs = content.trim().split(/\r?\n\s*\r?\n/);
+        document.getElementById('legalVersionInfo').textContent = paragraphs[1] || 'Versión 2.1.2';
+        setDocument(content, filename, paragraphs.slice(2).join('\n\n'));
+        message(publicationUnavailable
+          ? 'No se pudo consultar la publicación legal. Se muestra la versión 2.1.2 preparada; la aceptación requiere publicación en la plataforma.'
+          : 'Versión 2.1.2 preparada para publicación. La aceptación se habilitará cuando la versión quede publicada en la plataforma.', publicationUnavailable);
         return;
       }
-      document.getElementById('legalDocument').textContent = `${documentData.titulo}\nVersion: ${documentData.version}\nOperador: ${documentData.operador_nombre}\nNIT: ${documentData.operador_nit}\nContacto: ${documentData.operador_contacto}\n\n${documentData.contenido}`;
+      document.getElementById('legalVersionInfo').textContent = `Versión ${documentData.version} | ${documentData.operador_nombre} | NIT ${documentData.operador_nit} | ${documentData.operador_contacto}`;
+      setDocument(`${documentData.titulo}\nVersión: ${documentData.version}\nOperador: ${documentData.operador_nombre}\nNIT: ${documentData.operador_nit}\nContacto: ${documentData.operador_contacto}\n\n${documentData.contenido}`, `${type}-kore-inventory-${documentData.version}.txt`, documentData.contenido);
     }
   } catch (error) { message(error.message, true); }
 })();

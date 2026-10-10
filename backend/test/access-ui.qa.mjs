@@ -11,6 +11,7 @@ export default async function run(page) {
   ];
   const user = { id: 1, email: 'admin@example.com', tipo_usuario: 'super_admin', estado_verificacion: 'legado', mfa_activo: false, requiere_seguridad: false };
   let smtp = { configured: false, source: 'sin_configurar', version: 0 };
+  let subscriptionActive = true;
   await page.addInitScript(userData => {
     localStorage.setItem('token', 'cookie'); localStorage.setItem('usuario', JSON.stringify({ ...userData, nombre: 'QA', apellido: 'Admin' }));
     localStorage.setItem('empresaActiva', JSON.stringify({ id: 42, nombre: 'Empresa QA', estado: 'activa' }));
@@ -47,7 +48,7 @@ export default async function run(page) {
     else if (url.pathname === '/api/super-admin/solicitudes-suscripcion' || url.pathname === '/api/super-admin/documentos-legales') data = [];
     else if (url.pathname === '/api/roles') data = [{ id: 4, nombre: 'Operador empresa' }];
     else if (url.pathname === '/api/suscripciones/42') data = {
-      empresa: { id: 42, estado: 'trial', trial_fin_at: '2026-11-01T00:00:00Z' }, vigente: true, licencia: null, puede_gestionar: true,
+      empresa: { id: 42, estado: 'trial', trial_fin_at: '2026-11-01T00:00:00Z' }, vigente: subscriptionActive, licencia: null, puede_gestionar: true,
       planes: [{ id: 3, nombre: 'Plan QA', precio_mensual: 50000, precio_anual: 500000, max_usuarios_por_empresa: 5, max_productos: 100, max_facturas_mes: 20 }], solicitudes: []
     };
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data, message: 'Operacion QA registrada', correo_configurado: true }) });
@@ -87,6 +88,14 @@ export default async function run(page) {
   const invitation = requests.find(request => request.pathname === '/api/super-admin/usuarios/17/invitacion');
   assert.equal(invitation.body.misma_persona_confirmada, true);
   assert.equal(invitation.body.bloquear_hasta_verificar, false);
+  await page.locator('button[data-bs-target="#legalPane"]').click();
+  await page.locator('#loadPreparedLegal').click();
+  assert.equal(await page.locator('#legalVersion').inputValue(), '2.1.2');
+  assert.equal(await page.locator('#legalTitle').inputValue(), 'Términos y condiciones del servicio Kore Inventory');
+  const preparedTerms = await page.locator('#legalContent').inputValue();
+  assert.match(preparedTerms, /Estos Términos regulan el acceso/);
+  assert.doesNotMatch(preparedTerms, /borrador|antes de publicar|Anexo A|Procedimientos internos/i);
+  assert.equal(await page.locator('#legalReviewed').isChecked(), false);
   await page.screenshot({ path: path.join(os.tmpdir(), 'kore-accesos-mobile.png'), fullPage: true });
   await page.goto(`${origin}/suscripcion.html?empresa_id=42`);
   await page.locator('#subscription-legal-1').check(); await page.locator('#subscription-legal-2').check();
@@ -95,6 +104,10 @@ export default async function run(page) {
   const payment = requests.find(request => request.pathname === '/api/suscripciones/42/solicitudes');
   assert.equal(payment.body.plan_id, 3);
   assert.equal(Object.hasOwn(payment.body, 'monto'), false);
+  subscriptionActive = false;
+  await page.reload();
+  await page.getByText('Sin suscripción vigente. Selecciona un plan para solicitar su activación.', { exact: true }).waitFor();
+  assert.equal(await page.locator('#subscriptionState').evaluate(element => element.classList.contains('is-current')), false);
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.screenshot({ path: path.join(os.tmpdir(), 'kore-suscripcion-desktop.png'), fullPage: true });
   await page.goto(`${origin}/dashboard.html`);
@@ -155,9 +168,13 @@ export default async function run(page) {
   layouts.push({ filename: 'dashboard.html#planModal', width: 390, overflow: false });
   await page.route('**/api/public/documentos-legales', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [] }) }));
   await page.goto(`${origin}/documentos-legales.html?tipo=terminos`);
-  await page.locator('#legalDocument').getByText('BASE INFORMATIVA DE PRUEBAS', { exact: false }).waitFor();
-  assert.match(await page.locator('#accessStatus').innerText(), /pendiente de aprobacion/);
+  await page.locator('#legalDocument').getByText('Términos y condiciones del servicio Kore Inventory', { exact: false }).waitFor();
+  await page.getByText('Versión 2.1.2 preparada para publicación.', { exact: false }).waitFor();
+  assert.equal(await page.locator('#legalDownload').getAttribute('download'), 'terminos-v2.1.2.txt');
+  assert.doesNotMatch(await page.locator('#legalDocument').innerText(), /borrador|antes de publicar|Anexo A|Procedimientos internos/i);
   await page.goto(`${origin}/documentos-legales.html?tipo=privacidad`);
-  await page.locator('#legalDocument').getByText('BASE DE PRIVACIDAD PARA REVISION', { exact: false }).waitFor();
-  return { layouts, confirmation: 'passed', controlledInvitation: 'passed', serverPricedPlanRequest: 'passed', smtpSaveAndTest: 'passed', visualPlanEditor: 'passed', informationalTestDocuments: 'passed', screenshots: ['kore-accesos-mobile.png', 'kore-suscripcion-desktop.png', 'kore-smtp-mobile.png', 'kore-plan-mobile.png'] };
+  await page.locator('#legalDocument').getByText('Política de Tratamiento de Datos Personales de Kore Inventory', { exact: false }).waitFor();
+  assert.equal(await page.locator('#legalDownload').getAttribute('download'), 'privacidad-v2.1.2.txt');
+  assert.doesNotMatch(await page.locator('#legalDocument').innerText(), /Procedimientos internos|Anexo de implementación/i);
+  return { layouts, confirmation: 'passed', controlledInvitation: 'passed', legalPreparationAndDownload: 'passed', serverPricedPlanRequest: 'passed', inactiveSubscription: 'passed', smtpSaveAndTest: 'passed', visualPlanEditor: 'passed', screenshots: ['kore-accesos-mobile.png', 'kore-suscripcion-desktop.png', 'kore-smtp-mobile.png', 'kore-plan-mobile.png'] };
 }
