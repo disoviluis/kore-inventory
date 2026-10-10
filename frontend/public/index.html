@@ -426,10 +426,10 @@
                 <div class="col-lg-2 col-md-3">
                     <h6 class="fw-bold mb-3">Legal</h6>
                     <ul class="list-unstyled">
-                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Términos y Condiciones</a></li>
-                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Privacidad</a></li>
-                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Cookies</a></li>
-                        <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Licencias</a></li>
+                        <li class="mb-2"><a href="documentos-legales.html?tipo=terminos" class="text-white-50 text-decoration-none">Términos y Condiciones</a></li>
+                        <li class="mb-2"><a href="documentos-legales.html?tipo=privacidad" class="text-white-50 text-decoration-none">Privacidad</a></li>
+                        <li class="mb-2"><a href="cookies.html" class="text-white-50 text-decoration-none">Cookies</a></li>
+                        <li class="mb-2"><a href="documentos-legales.html?tipo=terminos" class="text-white-50 text-decoration-none">Licencias</a></li>
                     </ul>
                 </div>
             </div>
@@ -478,6 +478,10 @@
                 }
                 
                 const planes = data.data;
+                const formatoPrecioCop = valor => new Intl.NumberFormat('es-CO', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(Number(valor) || 0);
                 container.innerHTML = '';
                 
                 planes.forEach((plan, index) => {
@@ -521,7 +525,7 @@
                                 ${esDestacado ? '<div class="badge bg-warning text-dark mb-2">MÁS POPULAR</div>' : ''}
                                 <h4 class="text-center fw-bold">Plan ${plan.nombre}</h4>
                                 <div class="text-center py-3">
-                                    <h2 class="${priceClass}">$${plan.precio_mensual}<small class="${priceSmallClass}">/mes</small></h2>
+                                    <h2 class="${priceClass}">$${formatoPrecioCop(plan.precio_mensual)}<small class="${priceSmallClass}">/mes</small></h2>
                                 </div>
                             </div>
                             <div class="card-body">
