@@ -261,8 +261,9 @@ test('early paid renewal starts at the current paid end without cancelling that 
     if (sql.startsWith('SELECT * FROM planes')) return [{ id: 3, max_usuarios_por_empresa: null, max_productos: null, max_facturas_mes: null }];
     if (sql.includes('(SELECT COUNT(*) FROM usuario_empresa')) return [{ usuarios: 5, productos: 50 }];
     if (sql.includes('FROM empresas e')) return [{ id: 42, estado: 'activa' }];
-    if (sql.includes('FROM licencias l')) return [{ plan_id: 3, fin_at: paidEnd }];
+    if (sql.includes('FROM licencias l')) return [{ plan_id: 3, fecha_inicio: new Date('2026-09-01T00:00:00Z'), fin_at: paidEnd }];
     if (sql.startsWith('SELECT UTC_TIMESTAMP')) return [{ ahora: new Date('2026-10-06T15:00:00Z') }];
+    if (sql.startsWith('SELECT id, plan_id, fecha_inicio, fecha_fin FROM licencias')) return [{ id: 70, plan_id: 3, fecha_inicio: new Date('2026-09-01T00:00:00Z'), fecha_fin: paidEnd }];
     return { insertId: 70, affectedRows: 1 };
   }, async () => {
     const res = responseMock();
@@ -270,7 +271,38 @@ test('early paid renewal starts at the current paid end without cancelling that 
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.data.fecha_inicio.toISOString(), paidEnd.toISOString());
     assert.equal(res.body.data.fecha_fin.toISOString(), '2026-12-01T15:00:00.000Z');
-    assert.equal(statements.some(entry => /UPDATE licencias SET/.test(entry.sql)), false);
+    const licenseUpdate = statements.find(entry => /UPDATE licencias SET/.test(entry.sql));
+    assert.equal(licenseUpdate.params[1].toISOString(), '2026-09-01T00:00:00.000Z');
+    assert.equal(statements.some(entry => /UPDATE licencias SET/.test(entry.sql)), true);
+    assert.equal(statements.some(entry => /INSERT INTO licencias\s/.test(entry.sql)), false);
+    assert.equal(statements.find(entry => /INSERT INTO pagos_licencias/.test(entry.sql)).params[0], 70);
+  });
+});
+
+test('expired active license is reused when approving a new subscription', async () => {
+  const statements = [];
+  await withDatabaseMock(async (sql, params) => {
+    statements.push({ sql, params });
+    if (sql.startsWith('SELECT empresa_id FROM solicitudes')) return [{ empresa_id: 42 }];
+    if (sql.startsWith('SELECT id FROM empresas')) return [{ id: 42 }];
+    if (sql.startsWith('SELECT * FROM solicitudes')) return [{ estado: 'pendiente', plan_id: 3, monto: '129900.00', periodicidad: 'mensual', meses: 1 }];
+    if (sql.startsWith('SELECT id FROM pagos_licencias')) return [];
+    if (sql.startsWith('SELECT * FROM planes')) return [{ id: 3, max_usuarios_por_empresa: null, max_productos: null, max_facturas_mes: null }];
+    if (sql.includes('(SELECT COUNT(*) FROM usuario_empresa')) return [{ usuarios: 5, productos: 50, bodegas: 1 }];
+    if (sql.includes('FROM empresas e')) return [{ id: 42, estado: 'activa' }];
+    if (sql.startsWith('SELECT UTC_TIMESTAMP')) return [{ ahora: new Date('2026-10-20T15:00:00Z') }];
+    if (sql.startsWith('SELECT id, plan_id, fecha_inicio, fecha_fin FROM licencias')) return [{ id: 21, plan_id: 1, fecha_inicio: new Date('2026-08-27T00:00:00Z'), fecha_fin: new Date('2026-09-26T00:00:00Z') }];
+    return { insertId: 88, affectedRows: 1 };
+  }, async () => {
+    const res = responseMock();
+    await approveSubscriptionRequest({ user: { id: 1 }, params: { id: '11' }, body: { referencia: 'BANK-11', pago_confirmado: true, monto_recibido: 129900 } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.data.licencia_id, 21);
+    const licenseUpdate = statements.find(entry => /UPDATE licencias SET/.test(entry.sql));
+    assert.equal(licenseUpdate.params[0], 3);
+    assert.equal(licenseUpdate.params[1].toISOString(), '2026-10-20T15:00:00.000Z');
+    assert.equal(statements.some(entry => /INSERT INTO licencias\s/.test(entry.sql)), false);
+    assert.equal(statements.find(entry => /INSERT INTO pagos_licencias/.test(entry.sql)).params[0], 21);
   });
 });
 

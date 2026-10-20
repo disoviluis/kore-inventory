@@ -6,7 +6,11 @@ import { authMailConfigured, authPublicUrl, sendAuthMail } from './auth.mail';
 
 type Query = (sql: string, params?: any[]) => Promise<any>;
 const fail = (res: Response, error: any) => res.status(error.status || 400).json({ success: false,
-  message: error.code === 'ER_DUP_ENTRY' ? 'La referencia de pago ya fue utilizada' : error.message || 'No se pudo procesar la suscripcion' });
+  message: error.code === 'ER_DUP_ENTRY'
+    ? /uq_solicitud_referencia/i.test(`${error.message || ''} ${error.sqlMessage || ''}`)
+      ? 'La referencia de pago ya fue utilizada en otra solicitud'
+      : 'No se pudo activar la licencia por un conflicto de datos. Revise el estado actual de la licencia.'
+    : error.message || 'No se pudo procesar la suscripcion' });
 
 async function assertSubscriptionAdmin(req: Request, companyId: number, tx: Query = query) {
   const user = (req as any).user;
@@ -150,26 +154,47 @@ export const approveSubscriptionRequest = async (req: Request, res: Response) =>
       const paidEnd = current.licencia ? new Date(current.licencia.fin_at) : now;
       const start = paidEnd > now ? paidEnd : now;
       const end = addCalendarMonths(start, request.periodicidad === 'anual' ? 12 : request.meses);
-      const license = await tx(`INSERT INTO licencias
-        (empresa_id, plan_id, estado, fecha_inicio, fecha_fin, tipo_facturacion, auto_renovacion, monto, moneda,
-         limite_usuarios, limite_productos, limite_facturas_mes, notas)
-        VALUES (?, ?, 'activa', ?, ?, ?, 0, ?, 'COP', ?, ?, ?, ?)`,
-      [companyId, plan.id, start, end, request.periodicidad, request.monto, plan.max_usuarios_por_empresa, plan.max_productos,
-        plan.max_facturas_mes, JSON.stringify({ control_comercial_version: 2, solicitud_id: requestId })]);
-      await tx('INSERT INTO licencias_vigencias (licencia_id, inicio_at, fin_at) VALUES (?, ?, ?)', [license.insertId, start, end]);
+      const activeLicenses = await tx("SELECT id, plan_id, fecha_inicio, fecha_fin FROM licencias WHERE empresa_id = ? AND estado = 'activa' FOR UPDATE", [companyId]);
+      const existingLicense = activeLicenses[0];
+      const licenseStart = current.licencia ? current.licencia.fecha_inicio : start;
+      let licenseId;
+      if (existingLicense) {
+        licenseId = existingLicense.id;
+        await tx(`UPDATE licencias SET plan_id = ?, fecha_inicio = ?, fecha_fin = ?, tipo_facturacion = ?, auto_renovacion = 0,
+          monto = ?, moneda = 'COP', limite_usuarios = ?, limite_productos = ?, limite_facturas_mes = ?,
+          notas = CASE WHEN JSON_VALID(notas) THEN JSON_SET(notas, '$.control_comercial_version', 2, '$.solicitud_id', ?)
+            ELSE JSON_OBJECT('control_comercial_version', 2, 'solicitud_id', ?) END WHERE id = ?`,
+        [plan.id, current.licencia ? licenseStart : start, end, request.periodicidad, request.monto, plan.max_usuarios_por_empresa,
+          plan.max_productos, plan.max_facturas_mes, requestId, requestId, licenseId]);
+        await tx(`INSERT INTO licencias_vigencias (licencia_id, inicio_at, fin_at) VALUES (?, ?, ?)
+          ON DUPLICATE KEY UPDATE inicio_at = VALUES(inicio_at), fin_at = VALUES(fin_at)`,
+        [licenseId, current.licencia ? licenseStart : start, end]);
+      } else {
+        const license = await tx(`INSERT INTO licencias
+          (empresa_id, plan_id, estado, fecha_inicio, fecha_fin, tipo_facturacion, auto_renovacion, monto, moneda,
+           limite_usuarios, limite_productos, limite_facturas_mes, notas)
+          VALUES (?, ?, 'activa', ?, ?, ?, 0, ?, 'COP', ?, ?, ?, ?)`,
+        [companyId, plan.id, start, end, request.periodicidad, request.monto, plan.max_usuarios_por_empresa, plan.max_productos,
+          plan.max_facturas_mes, JSON.stringify({ control_comercial_version: 2, solicitud_id: requestId })]);
+        licenseId = license.insertId;
+        await tx('INSERT INTO licencias_vigencias (licencia_id, inicio_at, fin_at) VALUES (?, ?, ?)', [licenseId, start, end]);
+      }
       await tx(`INSERT INTO pagos_licencias
         (licencia_id, empresa_id, plan_id, monto, moneda, tipo, metodo_pago, estado, referencia_pago, datos_pago,
          periodo_inicio, periodo_fin, fecha_pago, descripcion)
         VALUES (?, ?, ?, ?, 'COP', ?, 'manual', 'exitoso', ?, ?, ?, ?, UTC_TIMESTAMP(), ?)`,
-      [license.insertId, companyId, plan.id, request.monto, request.periodicidad, reference,
+      [licenseId, companyId, plan.id, request.monto, request.periodicidad, reference,
         JSON.stringify({ solicitud_id: requestId, confirmado_por: (req as any).user.id }), start, end, 'Pago manual confirmado por Super Admin']);
       await tx(`UPDATE solicitudes_suscripcion SET estado = 'aprobada', referencia = ?, confirmada_por = ?,
-        confirmada_at = UTC_TIMESTAMP(), licencia_id = ? WHERE id = ?`, [reference, (req as any).user.id, license.insertId, requestId]);
+        confirmada_at = UTC_TIMESTAMP(), licencia_id = ? WHERE id = ?`, [reference, (req as any).user.id, licenseId, requestId]);
       await tx("UPDATE empresas SET estado = 'activa', plan_id = ? WHERE id = ?", [plan.id, companyId]);
       await tx(`INSERT INTO licencias_eventos (empresa_id, licencia_id, evento, descripcion, datos)
         VALUES (?, ?, 'pago_manual_confirmado', 'Pago recibido y licencia emitida', ?)`,
-      [companyId, license.insertId, JSON.stringify({ solicitud_id: requestId, actor_id: (req as any).user.id, referencia: reference, inicio: start, fin: end })]);
-      return { licencia_id: license.insertId, fecha_inicio: start, fecha_fin: end };
+      [companyId, licenseId, JSON.stringify({ solicitud_id: requestId, actor_id: (req as any).user.id, referencia: reference,
+        plan_anterior_id: existingLicense?.plan_id ?? current.licencia?.plan_id ?? null,
+        fecha_inicio_anterior: existingLicense?.fecha_inicio ?? current.licencia?.fecha_inicio ?? null,
+        fecha_fin_anterior: existingLicense?.fecha_fin ?? current.licencia?.fin_at ?? null, inicio: start, fin: end })]);
+      return { licencia_id: licenseId, fecha_inicio: start, fecha_fin: end };
     });
     return res.json({ success: true, message: 'Pago confirmado y licencia emitida', data: result });
   } catch (error) { return fail(res, error); }
