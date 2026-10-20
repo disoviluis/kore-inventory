@@ -379,6 +379,11 @@
                                             <i class="bi bi-building me-2"></i>Empresa
                                         </button>
                                     </li>
+                                    <li class="nav-item d-none" id="dataDeletionTabItem" role="presentation">
+                                        <button class="nav-link" id="data-deletion-tab" data-bs-toggle="tab" data-bs-target="#data-deletion-panel" type="button" role="tab" aria-controls="data-deletion-panel">
+                                            <i class="bi bi-eraser me-2"></i>Borrado de datos
+                                        </button>
+                                    </li>
                                     <li class="nav-item" role="presentation">
                                         <button class="nav-link" id="cajas-tab" data-bs-toggle="tab" data-bs-target="#cajas-panel" type="button" role="tab">
                                             <i class="bi bi-cash-register me-2"></i>Cajas
@@ -1257,20 +1262,20 @@
                                             </div>
                                         </form>
 
-                                        <section id="companyDataRequestAccess" class="border-top mt-4 pt-4 d-none">
-                                            <div class="row align-items-center g-3">
-                                                <div class="col-lg-8">
-                                                    <h6 class="mb-1"><i class="bi bi-eraser me-2"></i>Restablecimiento de datos de prueba</h6>
-                                                    <p class="text-muted mb-0">Solicita a Super Admin el borrado de datos de prueba de esta empresa. La solicitud requiere aprobación y no borra datos al enviarse.</p>
-                                                </div>
-                                                <div class="col-lg-4 text-lg-end">
-                                                    <a class="btn btn-outline-danger" href="solicitudes-datos.html">
-                                                        <i class="bi bi-arrow-up-right-square me-2"></i>Ver solicitudes
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </section>
+                                    </div>
 
+                                    <div class="tab-pane fade" id="data-deletion-panel" role="tabpanel" aria-labelledby="data-deletion-tab">
+                                        <div class="row align-items-center g-3">
+                                            <div class="col-lg-8">
+                                                <h5 class="mb-1">Solicitar borrado de datos de prueba</h5>
+                                                <p class="text-muted mb-0">La solicitud será revisada por Super Admin. Enviarla no borra datos; la ejecución requiere aprobación y un respaldo previo.</p>
+                                            </div>
+                                            <div class="col-lg-4 text-lg-end">
+                                                <a class="btn btn-outline-danger" href="solicitudes-datos.html">
+                                                    <i class="bi bi-arrow-up-right-square me-2"></i>Ir a solicitudes
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <!-- Tab: Configurador de Página -->
@@ -1836,7 +1841,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <!-- Custom JS -->
     <script src="assets/js/impuestos-utils.js"></script>
-    <script src="assets/js/configuracion-general.js?v=2.8"></script>
+    <script src="assets/js/configuracion-general.js?v=2.9"></script>
     <!-- Sidebar Navigation (Common) -->
     <script src="assets/js/sidebar-navigation.js?v=20261021-data-deletion-location"></script>
 </body>

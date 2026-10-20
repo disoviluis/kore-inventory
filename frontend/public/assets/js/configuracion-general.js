@@ -104,7 +104,7 @@ async function loadUserData() {
         }
 
         if (usuario.tipo_usuario === 'admin_empresa') {
-            document.getElementById('companyDataRequestAccess')?.classList.remove('d-none');
+            document.getElementById('dataDeletionTabItem')?.classList.remove('d-none');
         }
     } catch (error) {
         console.error('Error cargando usuario:', error);
