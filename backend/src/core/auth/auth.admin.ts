@@ -5,6 +5,7 @@ import { query, withTransaction } from '../../shared/database';
 import { normalizeAuthEmail } from './auth.security';
 import { authMailConfigured } from './auth.mail';
 import { createAccessChallenge } from './auth.onboarding';
+import { assertUserCapacity } from './subscription.service';
 
 const isOperator = (req: Request) => (req as any).user?.tipo_usuario === 'super_admin';
 const failure = (res: Response, error: any) => res.status(error.status || (error.code && error.code !== 'ER_DUP_ENTRY' ? 503 : 400)).json({ success: false,
@@ -74,12 +75,7 @@ export const createInvitedUser = async (req: Request, res: Response) => {
         type = level >= 100 ? 'super_admin' : level >= 80 ? 'admin_empresa' : level >= 50 ? 'soporte' : 'usuario';
       }
       for (const companyId of companies.sort((left, right) => left - right)) {
-        const rows = await tx(`SELECT e.id, p.max_usuarios_por_empresa FROM empresas e
-          LEFT JOIN planes p ON p.id = e.plan_id WHERE e.id = ? FOR UPDATE`, [companyId]);
-        if (!rows.length) throw new Error('Empresa no encontrada');
-        const counts = await tx(`SELECT COUNT(*) AS total FROM usuario_empresa ue JOIN usuarios u ON u.id = ue.usuario_id
-          WHERE ue.empresa_id = ? AND ue.activo = 1 AND u.activo = 1 AND u.tipo_usuario <> 'super_admin'`, [companyId]);
-        if (type !== 'super_admin' && rows[0].max_usuarios_por_empresa !== null && counts[0].total >= Number(rows[0].max_usuarios_por_empresa)) throw new Error('Se alcanzo el limite de usuarios del plan');
+        if (type !== 'super_admin') await assertUserCapacity(tx, companyId);
       }
       const result = await tx(`INSERT INTO usuarios
         (nombre, apellido, email, password, tipo_usuario, nivel_privilegio, rol_id, empresa_id_default, activo, email_verificado, created_by)
@@ -134,9 +130,13 @@ export const deactivateAccessUser = async (req: Request, res: Response) => {
 export const reactivateAccessUser = async (req: Request, res: Response) => {
   try {
     await withTransaction(async tx => {
-      const users = await tx('SELECT id, tipo_usuario FROM usuarios WHERE id = ? FOR UPDATE', [Number(req.params.id)]);
+      const users = await tx('SELECT id, tipo_usuario, activo FROM usuarios WHERE id = ? FOR UPDATE', [Number(req.params.id)]);
       if (!users.length) throw new Error('Usuario no encontrado');
       if (users[0].tipo_usuario === 'super_admin') throw new Error('El Super Admin no puede cambiarse por esta operacion');
+      if (!users[0].activo) {
+        const memberships = await tx('SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ? AND activo = 1 ORDER BY empresa_id', [Number(req.params.id)]);
+        for (const membership of memberships) await assertUserCapacity(tx, Number(membership.empresa_id));
+      }
       await tx('UPDATE usuarios SET activo = 1 WHERE id = ?', [Number(req.params.id)]);
       await tx(`UPDATE usuarios_seguridad SET estado = 'invitado', version_sesion = version_sesion + 1 WHERE usuario_id = ?`, [Number(req.params.id)]);
       await tx('INSERT INTO acceso_auditoria (usuario_id, actor_id, accion) VALUES (?, ?, ?)', [Number(req.params.id), (req as any).user.id, 'reactivacion_pendiente_verificacion']);

@@ -6,9 +6,10 @@ const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
 const { authMiddleware } = require('../dist/core/middleware/auth.middleware');
 const { completeAccessChallenge } = require('../dist/core/auth/auth.onboarding');
-const { deactivateAccessUser } = require('../dist/core/auth/auth.admin');
-const { enforceSubscription, moduleIncluded, addCalendarMonths, requestedCompany, assertPlanQuota, planFeatureDenied, assertWarehousePlan } = require('../dist/core/auth/subscription.service');
+const { deactivateAccessUser, reactivateAccessUser } = require('../dist/core/auth/auth.admin');
+const { enforceSubscription, moduleIncluded, addCalendarMonths, requestedCompany, assertPlanQuota, assertUserCapacity, planFeatureDenied, assertWarehousePlan } = require('../dist/core/auth/subscription.service');
 const { approveSubscriptionRequest } = require('../dist/core/auth/subscription.controller');
+const { asignarUsuarioEmpresa } = require('../dist/platform/super-admin/usuarios-admin.controller');
 const http = require('node:http');
 const { validateSmtpConfig, safeSmtpConfig, isPublicSmtpAddress, loadAccessSmtpConfig, describeSmtpFailure } = require('../dist/core/auth/auth.smtp');
 const { saveGlobalSmtp } = require('../dist/core/auth/auth.smtp.controller');
@@ -49,11 +50,65 @@ async function withDatabaseMock(execute, callback) {
   const originalConnection = pool.getConnection;
   pool.execute = async (sql, params) => [await execute(sql, params), []];
   pool.getConnection = async () => ({
-    execute: pool.execute, beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release() {}
+    execute: pool.execute,
+    query: async (sql, params) => [await execute(sql, params), []],
+    beginTransaction: async () => {}, commit: async () => {}, rollback: async () => {}, release() {}
   });
   try { return await callback(); }
   finally { pool.execute = originalExecute; pool.getConnection = originalConnection; }
 }
+
+test('user capacity counts active non-super-admin memberships and blocks the next user', async () => {
+  const statements = [];
+  await withDatabaseMock(async (sql, params) => {
+    statements.push({ sql, params });
+    if (sql.startsWith('SELECT e.id, p.max_usuarios_por_empresa')) return [{ id: 42, max_usuarios_por_empresa: 2 }];
+    if (sql.startsWith('SELECT ue.usuario_id FROM usuario_empresa')) return [{ usuario_id: 11 }, { usuario_id: 12 }];
+    assert.fail('Unexpected SQL: ' + sql);
+  }, async () => {
+    await assert.rejects(() => assertUserCapacity(async (sql, params) => {
+      const [rows] = await pool.execute(sql, params);
+      return rows;
+    }, 42), error => error.status === 409);
+  });
+  assert.match(statements[1].sql, /ue\.activo = 1 AND u\.activo = 1 AND u\.tipo_usuario <> 'super_admin'/);
+});
+
+test('reactivating a company user at capacity performs no user activation', async () => {
+  const statements = [];
+  await withDatabaseMock(async (sql, params) => {
+    statements.push({ sql, params });
+    if (sql.startsWith('SELECT id, tipo_usuario, activo FROM usuarios')) return [{ id: 12, tipo_usuario: 'usuario', activo: 0 }];
+    if (sql.startsWith('SELECT empresa_id FROM usuario_empresa')) return [{ empresa_id: 42 }];
+    if (sql.startsWith('SELECT e.id, p.max_usuarios_por_empresa')) return [{ id: 42, max_usuarios_por_empresa: 1 }];
+    if (sql.startsWith('SELECT ue.usuario_id FROM usuario_empresa')) return [{ usuario_id: 11 }];
+    assert.fail('Unexpected SQL: ' + sql);
+  }, async () => {
+    const res = responseMock();
+    await reactivateAccessUser({ params: { id: '12' }, user: { id: 1 } }, res);
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.body.message, 'Se alcanzo el limite de usuarios del plan');
+  });
+  assert.equal(statements.some(entry => /UPDATE usuarios SET activo = 1/.test(entry.sql)), false);
+});
+
+test('assigning an active existing user at capacity does not create a company membership', async () => {
+  const statements = [];
+  await withDatabaseMock(async (sql, params) => {
+    statements.push({ sql, params });
+    if (sql.startsWith('SELECT id, tipo_usuario, activo FROM usuarios')) return [{ id: 12, tipo_usuario: 'usuario', activo: 1 }];
+    if (sql.startsWith('SELECT * FROM usuario_empresa')) return [];
+    if (sql.startsWith('SELECT e.id, p.max_usuarios_por_empresa')) return [{ id: 42, max_usuarios_por_empresa: 1 }];
+    if (sql.startsWith('SELECT ue.usuario_id FROM usuario_empresa')) return [{ usuario_id: 11 }];
+    assert.fail('Unexpected SQL: ' + sql);
+  }, async () => {
+    const res = responseMock();
+    await asignarUsuarioEmpresa({ params: { id: '12' }, body: { empresa_id: 42 }, user: { id: 1 } }, res);
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.body.message, 'Se alcanzo el limite de usuarios del plan');
+  });
+  assert.equal(statements.some(entry => /INSERT INTO usuario_empresa/.test(entry.sql)), false);
+});
 
 test('authentication refuses a missing, default or short signing secret', () => {
   const previous = process.env.JWT_SECRET;

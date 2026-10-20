@@ -5,6 +5,7 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import bcrypt from 'bcryptjs';
 import { validAuthPassword } from '../../core/auth/auth.security';
 import { revokeUserSessions } from '../../core/auth/auth.sessions';
+import { assertUserCapacity } from '../../core/auth/subscription.service';
 
 /**
  * ========================================
@@ -507,6 +508,10 @@ export const asignarUsuarioEmpresa = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { empresa_id, rol_id } = req.body;
 
+    const [users] = await connection.execute<RowDataPacket[]>(
+      'SELECT id, tipo_usuario, activo FROM usuarios WHERE id = ? FOR UPDATE', [id]);
+    if (!users.length) throw new Error('Usuario no encontrado');
+
     // Verificar si ya está asignado
     const [existing] = await connection.query<RowDataPacket[]>(
       'SELECT * FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?',
@@ -515,6 +520,13 @@ export const asignarUsuarioEmpresa = async (req: Request, res: Response) => {
 
     if (existing.length > 0) {
       throw new Error('El usuario ya está asignado a esta empresa');
+    }
+
+    if (users[0].activo && users[0].tipo_usuario !== 'super_admin') {
+      await assertUserCapacity(async (sql, params) => {
+        const [rows] = await connection.execute(sql, params);
+        return rows as RowDataPacket[];
+      }, Number(empresa_id));
     }
 
     // Asignar usuario a empresa
@@ -550,10 +562,9 @@ export const asignarUsuarioEmpresa = async (req: Request, res: Response) => {
   } catch (error: any) {
     await connection.rollback();
     logger.error('Error al asignar usuario a empresa:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      message: 'Error al asignar usuario a empresa',
-      error: error.message
+      message: error.status ? error.message : 'Error al asignar usuario a empresa'
     });
   } finally {
     connection.release();

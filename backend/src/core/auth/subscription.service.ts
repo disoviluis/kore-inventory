@@ -121,6 +121,19 @@ export async function assertPlanQuota(tx: Query, companyId: number, resource: 'p
   if (Number(count[0].total) >= Number(limit)) throw Object.assign(new Error(`Se alcanzo el limite de ${resource} del plan contratado`), { status: 403 });
 }
 
+export async function assertUserCapacity(tx: Query, companyId: number) {
+  const companies = await tx(`SELECT e.id, p.max_usuarios_por_empresa FROM empresas e
+    LEFT JOIN planes p ON p.id = e.plan_id WHERE e.id = ? FOR UPDATE`, [companyId]);
+  if (!companies.length) throw new Error('Empresa no encontrada');
+  const limit = companies[0].max_usuarios_por_empresa;
+  if (limit === null || limit === undefined) return;
+  const members = await tx(`SELECT ue.usuario_id FROM usuario_empresa ue JOIN usuarios u ON u.id = ue.usuario_id
+    WHERE ue.empresa_id = ? AND ue.activo = 1 AND u.activo = 1 AND u.tipo_usuario <> 'super_admin' FOR UPDATE`, [companyId]);
+  if (members.length >= Number(limit)) {
+    throw Object.assign(new Error('Se alcanzo el limite de usuarios del plan'), { status: 409 });
+  }
+}
+
 export function planFeatureDenied(license: any, route: string, url: string): string | null {
   if (!license) return null;
   if (license.controles_version !== undefined && Number(license.controles_version) < 2) return null;
