@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { query, withTransaction } from '../../shared/database';
 import { requestedCompany, assertCompanyMembership, companySubscription, addCalendarMonths } from './subscription.service';
 import { recordLegalAcceptance } from './legal.service';
+import { authMailConfigured, authPublicUrl, sendAuthMail } from './auth.mail';
 
 type Query = (sql: string, params?: any[]) => Promise<any>;
 const fail = (res: Response, error: any) => res.status(error.status || 400).json({ success: false,
@@ -48,7 +49,7 @@ export const requestSubscription = async (req: Request, res: Response) => {
       await recordLegalAcceptance(tx, req, (req as any).user.id, companyId);
       const pending = await tx(`SELECT * FROM solicitudes_suscripcion WHERE empresa_id = ? AND estado = 'pendiente' FOR UPDATE`, [companyId]);
       if (pending.length) {
-        if (pending[0].plan_id === plan.id && pending[0].periodicidad === periodicity && pending[0].meses === months) return { id: pending[0].id, monto: pending[0].monto };
+        if (pending[0].plan_id === plan.id && pending[0].periodicidad === periodicity && pending[0].meses === months) return { id: pending[0].id, monto: pending[0].monto, creada: false };
         throw new Error('Ya hay una solicitud pendiente. Cancelela antes de seleccionar otro plan');
       }
       const request = await tx(`INSERT INTO solicitudes_suscripcion
@@ -58,9 +59,36 @@ export const requestSubscription = async (req: Request, res: Response) => {
         JSON.stringify(req.body.aceptaciones), req.ip || null, String(req.headers['user-agent'] || '').slice(0, 255)]);
       await tx(`INSERT INTO licencias_eventos (empresa_id, evento, descripcion, datos) VALUES (?, 'plan_solicitado', 'Solicitud pendiente de confirmacion manual de pago', ?)`,
         [companyId, JSON.stringify({ solicitud_id: request.insertId, usuario_id: (req as any).user.id, monto: amount })]);
-      return { id: request.insertId, monto: amount };
+      return { id: request.insertId, monto: amount, creada: true };
     });
-    return res.status(201).json({ success: true, message: 'Solicitud registrada. La licencia se activara solo cuando Super Admin confirme el pago.', data: result });
+    let avisoCorreo = 'No se pudo enviar el aviso por correo. Revise SMTP y Pagos pendientes.';
+    if (result.creada) {
+      try {
+        if (await authMailConfigured()) {
+          const [requests] = await Promise.all([
+            query(`SELECT e.nombre AS empresa_nombre, p.nombre AS plan_nombre, s.periodicidad, s.meses, s.monto, s.observaciones,
+              u.nombre AS solicitante_nombre, u.apellido AS solicitante_apellido, u.email AS solicitante_email
+              FROM solicitudes_suscripcion s JOIN empresas e ON e.id = s.empresa_id JOIN planes p ON p.id = s.plan_id
+              JOIN usuarios u ON u.id = s.usuario_id WHERE s.id = ?`, [result.id]),
+          ]);
+          const recipients = ['gerencia@kinventoryservices.com', 'soporte.disovi@kinventoryservices.com'];
+          if (requests.length) {
+            const request = requests[0];
+            const period = request.periodicidad === 'anual' ? 'Anual' : `Mensual, ${request.meses} mes(es)`;
+            const text = `Empresa: ${request.empresa_nombre}\nPlan: ${request.plan_nombre}\nPeriodo: ${period}\nMonto: ${request.monto} COP\nSolicitante: ${request.solicitante_nombre} ${request.solicitante_apellido || ''} (${request.solicitante_email})\nObservaciones: ${request.observaciones || 'Sin observaciones'}\n\nRevise la solicitud y confirme el pago recibido en ${authPublicUrl()}/accesos.html?tab=payments`;
+            let sent = 0;
+            for (const recipient of recipients) {
+              try {
+                await sendAuthMail(recipient, `Kore Inventory: solicitud de suscripcion pendiente #${result.id}`, text);
+                sent++;
+              } catch { }
+            }
+            avisoCorreo = sent ? `Aviso enviado por correo a ${sent} destinatario(s) configurado(s).` : 'No se pudo entregar el aviso por correo. Revise SMTP y Pagos pendientes.';
+          }
+        } else avisoCorreo = 'El correo de aviso no esta configurado. Revise SMTP y Pagos pendientes.';
+      } catch { }
+    } else avisoCorreo = 'Ya existia esta solicitud pendiente; no se envio un aviso duplicado.';
+    return res.status(201).json({ success: true, message: 'Solicitud registrada. La licencia se activara solo cuando Super Admin confirme el pago.', data: { ...result, aviso_correo: avisoCorreo } });
   } catch (error) { return fail(res, error); }
 };
 
@@ -75,8 +103,10 @@ export const cancelSubscriptionRequest = async (req: Request, res: Response) => 
 };
 
 export const listSubscriptionRequests = async (_req: Request, res: Response) => {
-  const rows = await query(`SELECT s.*, e.nombre AS empresa_nombre, p.nombre AS plan_nombre
+  const rows = await query(`SELECT s.*, e.nombre AS empresa_nombre, p.nombre AS plan_nombre,
+      u.nombre AS solicitante_nombre, u.apellido AS solicitante_apellido, u.email AS solicitante_email
     FROM solicitudes_suscripcion s JOIN empresas e ON e.id = s.empresa_id JOIN planes p ON p.id = s.plan_id
+    JOIN usuarios u ON u.id = s.usuario_id
     ORDER BY s.id DESC LIMIT 500`);
   return res.json({ success: true, data: rows });
 };

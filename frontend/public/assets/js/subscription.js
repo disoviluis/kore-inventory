@@ -79,10 +79,10 @@
     document.getElementById('subscriptionRequest').addEventListener('submit', async event => {
       event.preventDefault(); const button = event.currentTarget.querySelector('button[type=submit]'); button.disabled = true;
       try {
-        await api(`suscripciones/${companyId}/solicitudes`, { plan_id: Number(document.getElementById('selectedPlan').value), periodicidad: document.getElementById('planPeriod').value,
+        const request = await api(`suscripciones/${companyId}/solicitudes`, { plan_id: Number(document.getElementById('selectedPlan').value), periodicidad: document.getElementById('planPeriod').value,
           meses: Number(document.getElementById('planMonths').value), observaciones: document.getElementById('paymentNotes').value,
           aceptaciones: documents.filter(documentData => document.getElementById(`subscription-legal-${documentData.id}`).checked).map(documentData => ({ id: documentData.id, hash: documentData.hash })) });
-        alert('Solicitud pendiente. Super Admin debe confirmar el pago recibido antes de activar la licencia.'); await loadSubscription();
+        alert(`Solicitud pendiente. Super Admin debe confirmar el pago recibido antes de activar la licencia. ${request.aviso_correo || ''}`); await loadSubscription();
       } catch (error) { alert(error.message, true); } finally { button.disabled = false; }
     });
   } catch (error) { alert(error.message, true); }

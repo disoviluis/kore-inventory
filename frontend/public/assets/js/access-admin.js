@@ -56,9 +56,15 @@
   }
   async function loadPayments() {
     const data = await api('super-admin/solicitudes-suscripcion'); const table = document.getElementById('pendingPayments'); table.replaceChildren();
+    const pending = data.data.filter(request => request.estado === 'pendiente').length;
+    const badge = document.getElementById('pendingPaymentCount'); badge.textContent = pending; badge.classList.toggle('d-none', pending === 0);
+    const notice = document.getElementById('pendingPaymentNotice'); notice.textContent = pending ? `Hay ${pending} solicitud(es) pendiente(s) de revisar.` : 'No hay solicitudes pendientes.';
+    notice.classList.toggle('d-none', pending === 0);
     for (const request of data.data) {
-      const row = document.createElement('tr'); cell(row, `#${request.id}`); cell(row, request.empresa_nombre); cell(row, `${request.plan_nombre} | ${request.periodicidad}`);
-      cell(row, Number(request.monto).toLocaleString('es-CO')); cell(row, request.estado); const actions = cell(row, '');
+      const row = document.createElement('tr'); cell(row, `#${request.id}`); cell(row, request.empresa_nombre);
+      cell(row, `${request.plan_nombre} | ${request.periodicidad === 'anual' ? 'Anual' : `Mensual, ${request.meses} mes(es)`}`);
+      cell(row, `${request.solicitante_nombre} ${request.solicitante_apellido || ''}\n${request.solicitante_email}`);
+      cell(row, request.observaciones || 'Sin observaciones'); cell(row, Number(request.monto).toLocaleString('es-CO')); cell(row, request.estado); const actions = cell(row, '');
       if (request.estado === 'pendiente') {
         action(actions, 'bi-check-circle', 'Confirmar pago recibido', async () => {
           const reference = prompt('Referencia REAL del pago recibido (banco o comprobante):'); if (!reference) return;
@@ -129,5 +135,8 @@
       } catch (error) { alert(error.message, true); } finally { button.disabled = false; }
     });
     await loadUsers(); await loadPayments(); await loadLegalVersions();
+    if (new URLSearchParams(location.search).get('tab') === 'payments') {
+      bootstrap.Tab.getOrCreateInstance(document.querySelector('[data-bs-target="#paymentsPane"]')).show();
+    }
   } catch (error) { alert(error.message, true); }
 })();
