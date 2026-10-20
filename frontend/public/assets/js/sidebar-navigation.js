@@ -142,7 +142,6 @@ function construirSidebarEstandarSiIncompleto() {
       ${sidebarSection('administracionCollapse', 'bi-gear', 'ADMINISTRACIÓN', [
         { href: 'dashboard.html#usuarios', icon: 'bi-people-fill', text: 'Usuarios' },
         { href: 'dashboard.html#roles', icon: 'bi-shield-lock', text: 'Roles' },
-        { href: 'solicitudes-datos.html', icon: 'bi-eraser', text: 'Borrado de datos' },
         { href: 'suscripcion.html', icon: 'bi-credit-card', text: 'Suscripcion' },
         { href: 'seguridad-cuenta.html', icon: 'bi-person-lock', text: 'Seguridad de cuenta' },
         { href: 'dashboard.html#impuestos', icon: 'bi-percent', text: 'Impuestos' },
@@ -159,7 +158,6 @@ function construirSidebarEstandarSiIncompleto() {
             ${sidebarLink('accesos.html', 'bi-envelope-check', 'Accesos verificados')}
             ${sidebarLink('dashboard.html#planes', 'bi-card-checklist', 'Planes')}
             ${sidebarLink('solicitudes-datos.html', 'bi-eraser', 'Solicitudes de datos')}
-            ${sidebarLink('configuracion-general.html', 'bi-sliders', 'Configuración General')}
             ${sidebarLink('dashboard.html#configuracion-global', 'bi-sliders', 'Configuración Global')}
           </ul>
         </div>
