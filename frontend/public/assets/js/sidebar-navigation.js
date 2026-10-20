@@ -159,6 +159,7 @@ function construirSidebarEstandarSiIncompleto() {
             ${sidebarLink('accesos.html', 'bi-envelope-check', 'Accesos verificados')}
             ${sidebarLink('dashboard.html#planes', 'bi-card-checklist', 'Planes')}
             ${sidebarLink('solicitudes-datos.html', 'bi-eraser', 'Solicitudes de datos')}
+            ${sidebarLink('configuracion-general.html', 'bi-sliders', 'Configuración General')}
             ${sidebarLink('dashboard.html#configuracion-global', 'bi-sliders', 'Configuración Global')}
           </ul>
         </div>

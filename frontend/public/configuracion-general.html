@@ -402,6 +402,11 @@
                                             <span class="badge bg-info ms-2">Nuevo</span>
                                         </button>
                                     </li>
+                                    <li class="nav-item d-none" id="dataDeletionTabItem" role="presentation">
+                                        <button class="nav-link" id="data-deletion-tab" data-bs-toggle="tab" data-bs-target="#data-deletion-panel" type="button" role="tab" aria-controls="data-deletion-panel">
+                                            <i class="bi bi-eraser me-2"></i>Solicitudes de datos
+                                        </button>
+                                    </li>
                                 </ul>
                             </div>
                             <div class="card-body">
@@ -1509,6 +1514,20 @@
 
                                     </div>
 
+                                    <div class="tab-pane fade" id="data-deletion-panel" role="tabpanel" aria-labelledby="data-deletion-tab">
+                                        <div class="row align-items-center g-3">
+                                            <div class="col-lg-8">
+                                                <h5 class="mb-1">Solicitudes de datos</h5>
+                                                <p class="text-muted mb-0">Solicita un restablecimiento de datos de prueba o revisa una solicitud pendiente. El borrado requiere aprobaciones separadas y respaldo previo.</p>
+                                            </div>
+                                            <div class="col-lg-4 text-lg-end">
+                                                <a class="btn btn-danger" href="solicitudes-datos.html">
+                                                    <i class="bi bi-arrow-up-right-square me-2"></i>Abrir solicitudes
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
@@ -1822,8 +1841,8 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <!-- Custom JS -->
     <script src="assets/js/impuestos-utils.js"></script>
-    <script src="assets/js/configuracion-general.js?v=2.6"></script>
+    <script src="assets/js/configuracion-general.js?v=2.7"></script>
     <!-- Sidebar Navigation (Common) -->
-    <script src="assets/js/sidebar-navigation.js?v=20260824-sidebar3"></script>
+    <script src="assets/js/sidebar-navigation.js?v=20261021-data-deletion-tab"></script>
 </body>
 </html>

@@ -102,6 +102,10 @@ async function loadUserData() {
         if (usuario.tipo_usuario === 'super_admin') {
             document.getElementById('plataformaSection').style.display = 'block';
         }
+
+        if (['super_admin', 'admin_empresa'].includes(usuario.tipo_usuario)) {
+            document.getElementById('dataDeletionTabItem')?.classList.remove('d-none');
+        }
     } catch (error) {
         console.error('Error cargando usuario:', error);
     }
