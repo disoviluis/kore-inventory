@@ -1,0 +1,46 @@
+-- Aplicar manualmente en kore_inventory. No elimina ni modifica datos existentes.
+CREATE TABLE IF NOT EXISTS solicitudes_borrado_datos (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  empresa_id INT NOT NULL,
+  tipo ENUM('restablecimiento_pruebas','terminacion') NOT NULL,
+  origen ENUM('empresa','super_admin') NOT NULL,
+  estado ENUM('pendiente_empresa','pendiente_super_admin','aprobada','ejecutando','completada','rechazada','fallida') NOT NULL,
+  modulos JSON NOT NULL,
+  motivo VARCHAR(1000) NOT NULL,
+  confirmo_datos_sinteticos TINYINT(1) NOT NULL DEFAULT 0,
+  estado_empresa_anterior VARCHAR(30) NULL,
+  solicitada_por INT NOT NULL,
+  aprobada_empresa_por INT NULL,
+  aprobada_empresa_at DATETIME NULL,
+  aprobada_empresa_ip VARCHAR(45) NULL,
+  revisada_por INT NULL,
+  revisada_at DATETIME NULL,
+  ejecutada_por INT NULL,
+  ejecutada_at DATETIME NULL,
+  respaldo_referencia VARCHAR(255) NULL,
+  resultado JSON NULL,
+  certificado JSON NULL,
+  certificado_sha256 CHAR(64) NULL,
+  error_codigo VARCHAR(80) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_solicitud_borrado_empresa FOREIGN KEY (empresa_id) REFERENCES empresas(id),
+  CONSTRAINT fk_solicitud_borrado_solicitante FOREIGN KEY (solicitada_por) REFERENCES usuarios(id),
+  CONSTRAINT fk_solicitud_borrado_aprobador_empresa FOREIGN KEY (aprobada_empresa_por) REFERENCES usuarios(id),
+  CONSTRAINT fk_solicitud_borrado_revisor FOREIGN KEY (revisada_por) REFERENCES usuarios(id),
+  CONSTRAINT fk_solicitud_borrado_ejecutor FOREIGN KEY (ejecutada_por) REFERENCES usuarios(id),
+  INDEX idx_solicitudes_borrado_empresa (empresa_id, created_at),
+  INDEX idx_solicitudes_borrado_estado (estado, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS solicitudes_borrado_datos_eventos (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  solicitud_id BIGINT UNSIGNED NOT NULL,
+  actor_id INT NULL,
+  evento VARCHAR(60) NOT NULL,
+  datos JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_solicitud_borrado_evento_solicitud FOREIGN KEY (solicitud_id) REFERENCES solicitudes_borrado_datos(id),
+  CONSTRAINT fk_solicitud_borrado_evento_actor FOREIGN KEY (actor_id) REFERENCES usuarios(id),
+  INDEX idx_solicitud_borrado_eventos (solicitud_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

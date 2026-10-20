@@ -10,6 +10,7 @@ const { deactivateAccessUser, reactivateAccessUser } = require('../dist/core/aut
 const { enforceSubscription, moduleIncluded, addCalendarMonths, requestedCompany, assertPlanQuota, assertUserCapacity, planFeatureDenied, assertWarehousePlan } = require('../dist/core/auth/subscription.service');
 const { approveSubscriptionRequest } = require('../dist/core/auth/subscription.controller');
 const { asignarUsuarioEmpresa } = require('../dist/platform/super-admin/usuarios-admin.controller');
+const { validateDeletionScope, makeDeletionCertificate } = require('../dist/core/auth/data-deletion.service');
 const http = require('node:http');
 const { validateSmtpConfig, safeSmtpConfig, isPublicSmtpAddress, loadAccessSmtpConfig, describeSmtpFailure } = require('../dist/core/auth/auth.smtp');
 const { saveGlobalSmtp } = require('../dist/core/auth/auth.smtp.controller');
@@ -108,6 +109,21 @@ test('assigning an active existing user at capacity does not create a company me
     assert.equal(res.body.message, 'Se alcanzo el limite de usuarios del plan');
   });
   assert.equal(statements.some(entry => /INSERT INTO usuario_empresa/.test(entry.sql)), false);
+});
+
+test('data deletion scope requires synthetic-data confirmation and protects financial modules on termination', () => {
+  assert.throws(() => validateDeletionScope('restablecimiento_pruebas', ['inventario'], false), /Confirme que todos los datos/);
+  assert.deepEqual(validateDeletionScope('restablecimiento_pruebas', ['inventario'], true), ['inventario']);
+  assert.throws(() => validateDeletionScope('terminacion', ['ventas_pos'], false), /La baja conserva/);
+  assert.deepEqual(validateDeletionScope('terminacion', ['activos_mantenimiento'], false), ['activos_mantenimiento']);
+  assert.throws(() => validateDeletionScope('terminacion', ['inventario; DROP TABLE empresas'], false), /módulos no válidos/);
+});
+
+test('deletion certificate is stable for hashing and discloses backup limitation', () => {
+  const { certificate, sha256 } = makeDeletionCertificate({ solicitud_id: 8, datos_conservados: ['auditoria'] });
+  assert.equal(sha256.length, 64);
+  assert.equal(certificate.solicitud_id, 8);
+  assert.match(certificate.aviso_respaldos, /No certifica la expiración de respaldos/);
 });
 
 test('authentication refuses a missing, default or short signing secret', () => {

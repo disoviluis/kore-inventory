@@ -8,6 +8,9 @@
 import { Router } from 'express';
 import * as empresasController from './empresas.controller';
 import { assertCompanyMembership } from '../../core/auth/subscription.service';
+import {
+	createCompanyDataRequest, getCompanyDataCertificate, listCompanyDataRequests, respondCompanyDataRequest
+} from '../../core/auth/data-deletion.controller';
 
 const router = Router();
 
@@ -28,6 +31,11 @@ router.use('/:id', async (req, res, next) => {
 	try { await assertCompanyMembership((req as any).user, Number(req.params.id)); next(); }
 	catch { res.status(403).json({ success: false, message: 'No tiene acceso a esta empresa' }); }
 });
+
+router.get('/:id/solicitudes-borrado', listCompanyDataRequests);
+router.post('/:id/solicitudes-borrado', createCompanyDataRequest);
+router.post('/:id/solicitudes-borrado/:solicitudId/:decision(aprobar|rechazar)', respondCompanyDataRequest);
+router.get('/:id/solicitudes-borrado/:solicitudId/certificado', getCompanyDataCertificate);
 
 // Obtener empresa por ID
 router.get('/:id/contabilidad/estado', empresasController.getEstadoParametrizacionContable);

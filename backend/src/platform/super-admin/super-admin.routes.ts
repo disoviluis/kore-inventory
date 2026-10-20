@@ -12,6 +12,10 @@ import { listSubscriptionRequests, approveSubscriptionRequest, rejectSubscriptio
 import { rateLimit } from 'express-rate-limit';
 import { getGlobalSmtp, saveGlobalSmtp, testGlobalSmtp } from '../../core/auth/auth.smtp.controller';
 import { createValidatedPlan, updateValidatedPlan, getPlanModuleCatalog } from './planes-save.controller';
+import {
+	createPlatformDataRequest, executePlatformDataRequest, getPlatformDataCertificate,
+	listPlatformDataRequests, reviewPlatformDataRequest
+} from '../../core/auth/data-deletion.controller';
 
 const router = Router();
 
@@ -38,6 +42,11 @@ router.post('/documentos-legales', publishLegalDocument);
 router.get('/solicitudes-suscripcion', listSubscriptionRequests);
 router.post('/solicitudes-suscripcion/:id/aprobar', approveSubscriptionRequest);
 router.post('/solicitudes-suscripcion/:id/rechazar', rejectSubscriptionRequest);
+router.get('/solicitudes-borrado-datos', listPlatformDataRequests);
+router.post('/solicitudes-borrado-datos', createPlatformDataRequest);
+router.post('/solicitudes-borrado-datos/:id/:decision(aprobar|rechazar)', reviewPlatformDataRequest);
+router.post('/solicitudes-borrado-datos/:id/ejecutar', executePlatformDataRequest);
+router.get('/solicitudes-borrado-datos/:id/certificado', getPlatformDataCertificate);
 
 // ========================================
 // DASHBOARD Y MÉTRICAS
