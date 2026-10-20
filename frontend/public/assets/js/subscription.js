@@ -24,8 +24,19 @@
     const data = await api(`suscripciones/${companyId}`);
     plans = data.planes; canManage = data.puede_gestionar;
     const state = document.getElementById('subscriptionState');
-    state.classList.toggle('is-current', Boolean(data.vigente));
-    state.textContent = data.vigente ? `Vigente | ${data.licencia?.plan_nombre || 'Prueba gratuita'} | Vence: ${new Date(data.licencia?.fin_at || data.empresa.trial_fin_at).toLocaleString('es-CO')}` : 'Sin suscripción vigente. Selecciona un plan para solicitar su activación.';
+    const expiresAt = new Date(data.licencia?.fin_at || data.empresa.trial_fin_at);
+    const validExpiry = Number.isNaN(expiresAt.getTime()) ? null : expiresAt;
+    const daysRemaining = validExpiry ? Math.max(0, Math.ceil((validExpiry.getTime() - Date.now()) / 86400000)) : null;
+    state.className = 'subscription-status';
+    if (data.vigente) {
+      state.classList.add('is-current');
+      if (daysRemaining !== null && daysRemaining <= 15) state.classList.add(daysRemaining <= 7 ? 'is-urgent' : 'is-warning');
+      const countdown = daysRemaining === null ? '' : daysRemaining === 0 ? ' | Vence hoy' : ` | Restan ${daysRemaining} ${daysRemaining === 1 ? 'día' : 'días'}`;
+      state.textContent = `Vigente | ${data.licencia?.plan_nombre || 'Prueba gratuita'} | Vence: ${validExpiry ? validExpiry.toLocaleString('es-CO') : 'Fecha no disponible'}${countdown}`;
+    } else {
+      state.classList.add('is-expired');
+      state.textContent = 'Sin suscripción vigente. Selecciona un plan para solicitar su activación.';
+    }
     const container = document.getElementById('subscriptionPlans'); container.replaceChildren();
     const selector = document.getElementById('selectedPlan'); selector.replaceChildren();
     for (const plan of plans) {

@@ -134,6 +134,19 @@ body.access-page-body .form-check-label a,
     color: #155b3c;
 }
 
+.subscription-status.is-warning {
+    border-left-color: #d19a14;
+    background: #fff5d8;
+    color: #654b0c;
+}
+
+.subscription-status.is-urgent,
+.subscription-status.is-expired {
+    border-left-color: #c43c35;
+    background: #fff0ee;
+    color: #762a25;
+}
+
 #subscriptionPlans > [class*="col-"] > .border.rounded {
     border-color: #dfe6ee !important;
     border-radius: 8px !important;

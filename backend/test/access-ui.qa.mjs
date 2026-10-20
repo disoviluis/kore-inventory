@@ -12,6 +12,7 @@ export default async function run(page) {
   const user = { id: 1, email: 'admin@example.com', tipo_usuario: 'super_admin', estado_verificacion: 'legado', mfa_activo: false, requiere_seguridad: false };
   let smtp = { configured: false, source: 'sin_configurar', version: 0 };
   let subscriptionActive = true;
+  let subscriptionExpiry = new Date(Date.now() + 12 * 86400000).toISOString();
   await page.addInitScript(userData => {
     localStorage.setItem('token', 'cookie'); localStorage.setItem('usuario', JSON.stringify({ ...userData, nombre: 'QA', apellido: 'Admin' }));
     localStorage.setItem('empresaActiva', JSON.stringify({ id: 42, nombre: 'Empresa QA', estado: 'activa' }));
@@ -48,7 +49,7 @@ export default async function run(page) {
     else if (url.pathname === '/api/super-admin/solicitudes-suscripcion' || url.pathname === '/api/super-admin/documentos-legales') data = [];
     else if (url.pathname === '/api/roles') data = [{ id: 4, nombre: 'Operador empresa' }];
     else if (url.pathname === '/api/suscripciones/42') data = {
-      empresa: { id: 42, estado: 'trial', trial_fin_at: '2026-11-01T00:00:00Z' }, vigente: subscriptionActive, licencia: null, puede_gestionar: true,
+      empresa: { id: 42, estado: 'trial', trial_fin_at: subscriptionExpiry }, vigente: subscriptionActive, licencia: null, puede_gestionar: true,
       planes: [{ id: 3, nombre: 'Plan QA', precio_mensual: 50000, precio_anual: 500000, max_usuarios_por_empresa: 5, max_productos: 100, max_facturas_mes: 20 }], solicitudes: []
     };
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data, message: 'Operacion QA registrada', correo_configurado: true }) });
@@ -98,6 +99,12 @@ export default async function run(page) {
   assert.equal(await page.locator('#legalReviewed').isChecked(), false);
   await page.screenshot({ path: path.join(os.tmpdir(), 'kore-accesos-mobile.png'), fullPage: true });
   await page.goto(`${origin}/suscripcion.html?empresa_id=42`);
+  await page.locator('#subscriptionState.is-warning').waitFor();
+  assert.match(await page.locator('#subscriptionState').innerText(), /Restan 12 días/);
+  subscriptionExpiry = new Date(Date.now() + 5 * 86400000).toISOString();
+  await page.reload();
+  await page.locator('#subscriptionState.is-urgent').waitFor();
+  assert.match(await page.locator('#subscriptionState').innerText(), /Restan 5 días/);
   await page.locator('#subscription-legal-1').check(); await page.locator('#subscription-legal-2').check();
   await page.locator('#subscriptionRequest button[type=submit]').click();
   await page.getByText('Solicitud pendiente. Super Admin debe confirmar el pago recibido antes de activar la licencia.').waitFor();
