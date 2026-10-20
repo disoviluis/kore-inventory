@@ -968,6 +968,76 @@ body {
     color: white !important;
 }
 
+/* Distinguish section titles from submenu items with restrained group accents. */
+.sidebar-nav a.nav-section[href="#operacionesCollapse"],
+.sidebar-nav #operacionesCollapse {
+    --sidebar-group-accent: #5EEAD4;
+    --sidebar-group-tint: rgba(45, 212, 191, 0.12);
+}
+
+.sidebar-nav a.nav-section[href="#logisticaCollapse"],
+.sidebar-nav #logisticaCollapse {
+    --sidebar-group-accent: #A3E635;
+    --sidebar-group-tint: rgba(163, 230, 53, 0.12);
+}
+
+.sidebar-nav a.nav-section[href="#finanzasCollapse"],
+.sidebar-nav #finanzasCollapse {
+    --sidebar-group-accent: #FBBF24;
+    --sidebar-group-tint: rgba(251, 191, 36, 0.12);
+}
+
+.sidebar-nav a.nav-section[href="#nominaCollapse"],
+.sidebar-nav #nominaCollapse {
+    --sidebar-group-accent: #F472B6;
+    --sidebar-group-tint: rgba(244, 114, 182, 0.12);
+}
+
+.sidebar-nav a.nav-section[href="#reportesCollapse"],
+.sidebar-nav #reportesCollapse {
+    --sidebar-group-accent: #60A5FA;
+    --sidebar-group-tint: rgba(96, 165, 250, 0.12);
+}
+
+.sidebar-nav a.nav-section[href="#administracionCollapse"],
+.sidebar-nav #administracionCollapse {
+    --sidebar-group-accent: #C4B5FD;
+    --sidebar-group-tint: rgba(196, 181, 253, 0.12);
+}
+
+.sidebar-nav a.nav-section[href="#plataformaCollapse"],
+.sidebar-nav #plataformaCollapse {
+    --sidebar-group-accent: #FB7185;
+    --sidebar-group-tint: rgba(251, 113, 133, 0.12);
+}
+
+.sidebar-nav .nav-section {
+    color: #F8FAFC !important;
+}
+
+.sidebar-nav .nav-section > i.bi:first-child {
+    color: var(--sidebar-group-accent, #CBD5E1);
+}
+
+.sidebar-nav .collapse .nav-link {
+    color: #CBD5E1 !important;
+}
+
+.sidebar-nav .collapse .nav-link > i {
+    color: var(--sidebar-group-accent, #94A3B8);
+}
+
+.sidebar-nav .collapse .nav-link:hover,
+.sidebar-nav .collapse .nav-link.active {
+    background: var(--sidebar-group-tint, rgba(255, 255, 255, 0.08));
+    border-left-color: var(--sidebar-group-accent, #CBD5E1);
+    color: #FFFFFF !important;
+}
+
+.sidebar-nav .collapse .nav-link.disabled {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
 /* Disabled Links (Próximamente) */
 .nav-link.disabled {
     opacity: 0.6;
