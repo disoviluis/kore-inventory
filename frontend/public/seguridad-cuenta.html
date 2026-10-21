@@ -1,29 +1,44 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script src="assets/js/session-security.js?v=20261006"></script>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="assets/js/session-security.js?v=20261006"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Seguridad de cuenta | Kore Inventory</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="assets/css/style.css" rel="stylesheet">
-  <link href="assets/css/access-pages.css" rel="stylesheet">
+  <link href="assets/css/dashboard.css?v=20261021-sidebar-group-colors" rel="stylesheet">
+  <link href="assets/css/access-pages.css?v=20261020" rel="stylesheet">
 </head>
-<body class="access-page-body" data-access-page="security">
-  <main class="container access-page">
-    <nav class="access-page-nav"><a href="dashboard.html" class="access-brand"><i class="bi bi-boxes"></i><span>KORE.inventory</span></a><a href="login.html" id="securityLogout" class="btn btn-sm btn-outline-secondary">Cerrar sesi&oacute;n</a></nav>
-    <header class="access-page-heading"><p class="access-eyebrow">Protección de cuenta</p><h1>Seguridad de cuenta</h1></header>
-    <p id="accountEmail" class="text-muted"></p><div id="accessStatus" role="status"></div>
-    <section class="border-top py-4"><h2 class="h5">Documentos legales</h2>
-      <form id="acceptLegalForm"><div id="legalChecks"></div><button class="btn btn-primary mt-3"><i class="bi bi-check2 me-2"></i>Aceptar documentos</button></form>
-    </section>
-    <section class="border-top py-4"><h2 class="h5">Autenticaci&oacute;n de dos factores</h2>
-      <p id="mfaState"></p>
-      <form id="prepareMfaForm"><label for="mfaPassword" class="form-label">Contrase&ntilde;a actual</label><input type="password" id="mfaPassword" class="form-control mb-3" autocomplete="current-password" required><button class="btn btn-outline-primary"><i class="bi bi-shield-lock me-2"></i>Preparar autenticador</button></form>
-      <form id="confirmMfaForm" class="d-none mt-3"><img id="mfaQr" width="220" height="220" alt="QR para configurar autenticador"><p><code id="mfaManualSecret" style="overflow-wrap:anywhere"></code></p><label for="mfaCode" class="form-label">C&oacute;digo del autenticador</label><input id="mfaCode" class="form-control mb-3" pattern="[0-9]{6}" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required><button class="btn btn-primary"><i class="bi bi-check-circle me-2"></i>Activar MFA</button></form>
-      <div id="mfaBackup" class="d-none mt-4"><h3 class="h6">C&oacute;digos de respaldo de un solo uso</h3><pre id="mfaBackupCodes"></pre><button id="downloadMfaBackup" class="btn btn-outline-primary"><i class="bi bi-download me-2"></i>Descargar c&oacute;digos</button><a href="login.html" class="btn btn-primary ms-2">Iniciar sesi&oacute;n</a></div>
-      <form id="resetMfaForm" class="d-none mt-3"><label for="resetMfaPassword" class="form-label">Contrase&ntilde;a actual</label><input id="resetMfaPassword" type="password" class="form-control mb-3" autocomplete="current-password" required><label for="resetMfaCode" class="form-label">C&oacute;digo del autenticador o de respaldo</label><input id="resetMfaCode" class="form-control mb-3" pattern="[0-9]{6}|[a-f0-9]{16}" maxlength="16" required><button class="btn btn-outline-danger"><i class="bi bi-arrow-repeat me-2"></i>Cambiar autenticador</button></form>
-    </section>
-    <section class="border-top py-4 d-flex gap-3 flex-wrap"><a id="securityContinue" class="btn btn-primary" href="dashboard.html">Continuar</a><button id="revokeSessions" class="btn btn-outline-danger"><i class="bi bi-box-arrow-right me-2"></i>Cerrar todas las sesiones</button></section>
-  </main><script src="assets/js/access-account.js?v=20261006-documentos"></script>
-</body></html>
+<body data-access-page="security">
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="d-flex align-items-center"><div class="logo-container-sidebar me-2"><i class="bi bi-boxes"></i></div><div><h5 class="mb-0 fw-bold text-white">KORE<span class="text-warning">.</span>inventory</h5><small class="text-white-50">ERP SaaS</small></div></div>
+      <button class="btn-close-sidebar d-lg-none" id="closeSidebar" type="button" aria-label="Cerrar menú"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="sidebar-user"><div class="d-flex align-items-center"><div class="user-avatar me-3"><i class="bi bi-person-circle"></i></div><div class="flex-grow-1"><div class="user-name" id="userName">Cargando...</div><div class="user-role" id="userRole">-</div></div><button class="btn-user-menu" id="securityLogout" type="button" aria-label="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button></div></div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer"><div class="license-status"><i class="bi bi-shield-check text-success"></i><small>Cuenta protegida</small></div><small class="text-white-50">© Disovi Soft</small></div>
+  </aside>
+  <main class="main-content">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm"><div class="container-fluid"><button class="btn btn-toggle-sidebar" id="toggleSidebar" type="button" aria-label="Abrir menú de navegación" aria-expanded="false"><i class="bi bi-list"></i></button><ol class="breadcrumb mb-0 ms-3"><li class="breadcrumb-item"><a href="dashboard.html">Inicio</a></li><li class="breadcrumb-item">Administración</li><li class="breadcrumb-item active" aria-current="page">Seguridad de cuenta</li></ol></div></nav>
+    <div class="container-fluid page-content">
+      <header class="page-header mb-4"><p class="access-eyebrow">Protección de cuenta</p><h1 class="h3 mb-1">Seguridad de cuenta</h1></header>
+      <p id="accountEmail" class="text-muted"></p><div id="accessStatus" role="status" aria-live="polite"></div>
+      <section class="border-top py-4"><h2 class="h5">Documentos legales</h2><form id="acceptLegalForm"><div id="legalChecks"></div><button class="btn btn-primary mt-3"><i class="bi bi-check2 me-2"></i>Aceptar documentos</button></form></section>
+      <section class="border-top py-4"><h2 class="h5">Autenticación de dos factores</h2><p id="mfaState"></p>
+        <form id="prepareMfaForm"><label for="mfaPassword" class="form-label">Contraseña actual</label><input type="password" id="mfaPassword" class="form-control mb-3" autocomplete="current-password" required><button class="btn btn-outline-primary"><i class="bi bi-shield-lock me-2"></i>Preparar autenticador</button></form>
+        <form id="confirmMfaForm" class="d-none mt-3"><img id="mfaQr" width="220" height="220" alt="QR para configurar autenticador"><p><code id="mfaManualSecret" style="overflow-wrap:anywhere"></code></p><label for="mfaCode" class="form-label">Código del autenticador</label><input id="mfaCode" class="form-control mb-3" pattern="[0-9]{6}" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required><button class="btn btn-primary"><i class="bi bi-check-circle me-2"></i>Activar MFA</button></form>
+        <div id="mfaBackup" class="d-none mt-4"><h3 class="h6">Códigos de respaldo de un solo uso</h3><pre id="mfaBackupCodes"></pre><button id="downloadMfaBackup" class="btn btn-outline-primary"><i class="bi bi-download me-2"></i>Descargar códigos</button><a href="login.html" class="btn btn-primary ms-2">Iniciar sesión</a></div>
+        <form id="resetMfaForm" class="d-none mt-3"><label for="resetMfaPassword" class="form-label">Contraseña actual</label><input id="resetMfaPassword" type="password" class="form-control mb-3" autocomplete="current-password" required><label for="resetMfaCode" class="form-label">Código del autenticador o de respaldo</label><input id="resetMfaCode" class="form-control mb-3" pattern="[0-9]{6}|[a-f0-9]{16}" maxlength="16" required><button class="btn btn-outline-danger"><i class="bi bi-arrow-repeat me-2"></i>Cambiar autenticador</button></form>
+      </section>
+      <section class="border-top py-4 d-flex gap-3 flex-wrap"><a id="securityContinue" class="btn btn-primary" href="dashboard.html">Continuar</a><button id="revokeSessions" class="btn btn-outline-danger"><i class="bi bi-box-arrow-right me-2"></i>Cerrar todas las sesiones</button></section>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/access-account.js?v=20261006-documentos"></script>
+  <script src="assets/js/sidebar-navigation.js?v=20261021-sidebar-group-colors"></script>
+</body>
+</html>

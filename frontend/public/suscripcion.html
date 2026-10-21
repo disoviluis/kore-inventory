@@ -1,27 +1,53 @@
 <!DOCTYPE html>
-<html lang="es"><head>
-    <script src="assets/js/session-security.js?v=20261006"></script>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Suscripci&oacute;n | Kore Inventory</title>
+<html lang="es">
+<head>
+  <script src="assets/js/session-security.js?v=20261006"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Suscripción | Kore Inventory</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="assets/css/style.css" rel="stylesheet"><link href="assets/css/access-pages.css?v=20261020" rel="stylesheet">
-</head><body class="access-page-body"><main class="container access-page access-page-wide">
-  <nav class="access-page-nav"><a href="dashboard.html" class="access-brand"><i class="bi bi-boxes"></i><span>KORE.inventory</span></a><a href="seguridad-cuenta.html" class="btn btn-sm btn-outline-secondary"><i class="bi bi-shield-lock me-1"></i>Seguridad de cuenta</a></nav>
-  <header class="access-page-heading"><p class="access-eyebrow">Licencia de empresa</p><h1>Suscripci&oacute;n</h1><p class="text-muted mb-0">Consulta el estado de tu empresa y solicita un plan.</p></header><div id="subscriptionAlert" role="status"></div>
-  <div class="row g-3 align-items-end border-bottom pb-4 mt-2">
-    <div class="col-md-6"><label for="subscriptionCompany" class="form-label">Empresa</label><select id="subscriptionCompany" class="form-select"></select></div>
-    <div class="col-md-6"><p id="subscriptionState" class="subscription-status" role="status" aria-live="polite"></p></div>
-  </div>
-  <section class="py-4"><h2 class="h5">Planes disponibles</h2><div id="subscriptionPlans" class="row g-3"></div></section>
-  <form id="subscriptionRequest" class="border-top py-4">
-    <h2 class="h5">Solicitar plan</h2><div class="row g-3">
-      <div class="col-md-5"><label for="selectedPlan" class="form-label">Plan</label><select id="selectedPlan" class="form-select" required></select></div>
-      <div class="col-md-4"><label for="planPeriod" class="form-label">Periodo</label><select id="planPeriod" class="form-select"><option value="mensual">Mensual</option><option value="anual">Anual</option></select></div>
-      <div class="col-md-3"><label for="planMonths" class="form-label">Meses</label><input id="planMonths" type="number" class="form-control" value="1" min="1" max="24" required></div>
-      <div class="col-12"><label for="paymentNotes" class="form-label">Referencia del pago u observaciones</label><textarea id="paymentNotes" class="form-control" maxlength="1000" rows="2"></textarea></div>
-    </div><p id="subscriptionTotal" class="fw-semibold mt-3"></p><div id="subscriptionLegal" class="mb-3"></div>
-    <button class="btn btn-primary" type="submit"><i class="bi bi-send me-2"></i>Solicitar confirmaci&oacute;n de pago</button>
-  </form>
-  <section class="border-top py-4"><h2 class="h5">Solicitudes y pagos</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Solicitud</th><th>Fecha</th><th>Monto</th><th>Estado</th><th>Referencia</th><th></th></tr></thead><tbody id="subscriptionHistory"></tbody></table></div></section>
-  </main><script src="assets/js/subscription.js?v=20261020"></script></body></html>
+  <link href="assets/css/style.css" rel="stylesheet">
+  <link href="assets/css/dashboard.css?v=20261021-sidebar-group-colors" rel="stylesheet">
+  <link href="assets/css/access-pages.css?v=20261020" rel="stylesheet">
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="d-flex align-items-center"><div class="logo-container-sidebar me-2"><i class="bi bi-boxes"></i></div><div><h5 class="mb-0 fw-bold text-white">KORE<span class="text-warning">.</span>inventory</h5><small class="text-white-50">ERP SaaS</small></div></div>
+      <button class="btn-close-sidebar d-lg-none" id="closeSidebar" type="button" aria-label="Cerrar menú"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="sidebar-user"><div class="d-flex align-items-center"><div class="user-avatar me-3"><i class="bi bi-person-circle"></i></div><div class="flex-grow-1"><div class="user-name" id="userName">Cargando...</div><div class="user-role" id="userRole">-</div></div><button class="btn-user-menu" id="btnLogout" type="button" data-logout aria-label="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button></div></div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer"><div class="license-status"><i class="bi bi-check-circle-fill text-success"></i><small>Licencia y cuenta</small></div><small class="text-white-50">© Disovi Soft</small></div>
+  </aside>
+  <main class="main-content">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+      <div class="container-fluid"><button class="btn btn-toggle-sidebar" id="toggleSidebar" type="button" aria-label="Abrir menú de navegación" aria-expanded="false"><i class="bi bi-list"></i></button><ol class="breadcrumb mb-0 ms-3"><li class="breadcrumb-item"><a href="dashboard.html">Inicio</a></li><li class="breadcrumb-item">Administración</li><li class="breadcrumb-item active" aria-current="page">Suscripción</li></ol></div>
+    </nav>
+    <div class="container-fluid page-content">
+      <header class="page-header mb-4"><p class="access-eyebrow">Licencia de empresa</p><h1 class="h3 mb-1">Suscripción</h1><p class="text-muted mb-0">Consulta el estado de tu empresa y solicita un plan.</p></header>
+      <div id="subscriptionAlert" role="status" aria-live="polite"></div>
+      <div class="row g-3 align-items-end border-bottom pb-4 mt-2">
+        <div class="col-md-6"><label for="subscriptionCompany" class="form-label">Empresa</label><select id="subscriptionCompany" class="form-select"></select></div>
+        <div class="col-md-6"><p id="subscriptionState" class="subscription-status" role="status" aria-live="polite"></p></div>
+      </div>
+      <section class="py-4"><h2 class="h5">Planes disponibles</h2><div id="subscriptionPlans" class="row g-3"></div></section>
+      <form id="subscriptionRequest" class="border-top py-4">
+        <h2 class="h5">Solicitar plan</h2><div class="row g-3">
+          <div class="col-md-5"><label for="selectedPlan" class="form-label">Plan</label><select id="selectedPlan" class="form-select" required></select></div>
+          <div class="col-md-4"><label for="planPeriod" class="form-label">Periodo</label><select id="planPeriod" class="form-select"><option value="mensual">Mensual</option><option value="anual">Anual</option></select></div>
+          <div class="col-md-3"><label for="planMonths" class="form-label">Meses</label><input id="planMonths" type="number" class="form-control" value="1" min="1" max="24" required></div>
+          <div class="col-12"><label for="paymentNotes" class="form-label">Referencia del pago u observaciones</label><textarea id="paymentNotes" class="form-control" maxlength="1000" rows="2"></textarea></div>
+        </div><p id="subscriptionTotal" class="fw-semibold mt-3"></p><div id="subscriptionLegal" class="mb-3"></div>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-send me-2"></i>Solicitar confirmación de pago</button>
+      </form>
+      <section class="border-top py-4"><h2 class="h5">Solicitudes y pagos</h2><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Solicitud</th><th>Fecha</th><th>Monto</th><th>Estado</th><th>Referencia</th><th></th></tr></thead><tbody id="subscriptionHistory"></tbody></table></div></section>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/subscription.js?v=20261020"></script>
+  <script src="assets/js/sidebar-navigation.js?v=20261021-sidebar-group-colors"></script>
+</body>
+</html>

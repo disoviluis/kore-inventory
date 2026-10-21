@@ -4,6 +4,8 @@
   const api = '/api';
   const user = JSON.parse(localStorage.getItem('usuario') || 'null');
   const isPlatformAdmin = user?.tipo_usuario === 'super_admin';
+  const embeddedPlatformPanel = document.getElementById('dataDeletionGlobalPane');
+  if (embeddedPlatformPanel && !isPlatformAdmin) return;
   const moduleCatalog = {
     ventas_pos: 'Ventas y POS',
     inventario: 'Inventario y traslados',

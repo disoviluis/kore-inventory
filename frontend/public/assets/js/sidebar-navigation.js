@@ -155,9 +155,7 @@ function construirSidebarEstandarSiIncompleto() {
           <ul class="nav flex-column submenu">
             ${sidebarLink('dashboard.html#empresas', 'bi-building', 'Empresas')}
             ${sidebarLink('dashboard.html#usuarios-admin', 'bi-person-lines-fill', 'Usuarios Globales')}
-            ${sidebarLink('accesos.html', 'bi-envelope-check', 'Accesos verificados')}
             ${sidebarLink('dashboard.html#planes', 'bi-card-checklist', 'Planes')}
-            ${sidebarLink('solicitudes-datos.html', 'bi-eraser', 'Solicitudes de datos')}
             ${sidebarLink('dashboard.html#configuracion-global', 'bi-sliders', 'Configuración Global')}
           </ul>
         </div>
@@ -441,6 +439,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   construirSidebarEstandarSiIncompleto();
   
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+  const userName = `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim() || usuario.email || 'Usuario';
+  const userRole = ({ super_admin: 'Super Administrador', admin_empresa: 'Administrador', usuario: 'Usuario', soporte: 'Soporte' })[usuario.tipo_usuario] || usuario.tipo_usuario || '-';
+  ['userName', 'nombreUsuario'].forEach(id => { const element = document.getElementById(id); if (element) element.textContent = userName; });
+  ['userRole', 'tipoUsuario'].forEach(id => { const element = document.getElementById(id); if (element) element.textContent = userRole; });
   if (usuario.tipo_usuario !== 'super_admin') await cargarModulosPermitidos();
   
   habilitarEnlaceCaja();

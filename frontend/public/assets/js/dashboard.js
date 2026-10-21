@@ -1015,10 +1015,14 @@ function cambiarModulo(nombreModulo) {
         }
         break;
       case 'configuracion-global':
-        // Cargar módulo Super Admin - Configuración Global (Roles Globales)
-        if (typeof cargarRolesGlobales === 'function') {
-          cargarRolesGlobales();
+        if (usuarioActual?.tipo_usuario !== 'super_admin') {
+          window.alert('Configuración Global está reservada a Super Admin.');
+          cambiarModulo('dashboard');
+          return;
         }
+        document.getElementById('accessAdminTabItem')?.classList.remove('d-none');
+        document.getElementById('dataDeletionPlatformTabItem')?.classList.remove('d-none');
+        if (typeof cargarRolesGlobales === 'function') cargarRolesGlobales();
         break;
       // Agregar más módulos según se implementen
     }

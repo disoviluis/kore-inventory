@@ -1038,6 +1038,39 @@ body {
     color: rgba(255, 255, 255, 0.5) !important;
 }
 
+.deletion-module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 10px;
+}
+
+.deletion-module-option {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px;
+    border: 1px solid #dfe6ee;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.deletion-module-option:has(input:checked) {
+    border-color: #c43c35;
+    background: #fff8f7;
+}
+
+.deletion-module-option input {
+    flex: 0 0 auto;
+    margin-top: 4px;
+}
+
+.deletion-warning {
+    border-left: 4px solid #c43c35;
+    background: #fff0ee;
+    color: #762a25;
+    padding: 14px 16px;
+}
+
 /* Disabled Links (Próximamente) */
 .nav-link.disabled {
     opacity: 0.6;

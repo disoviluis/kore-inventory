@@ -1,5 +1,8 @@
 (async function () {
   'use strict';
+  const embeddedPlatformPanel = document.getElementById('accessAdminPane');
+  const currentUser = JSON.parse(localStorage.getItem('usuario') || 'null');
+  if (embeddedPlatformPanel && currentUser?.tipo_usuario !== 'super_admin') return;
   let users = [];
   const modal = new bootstrap.Modal(document.getElementById('inviteModal'));
   function alert(text, error = false) { const element = document.getElementById('adminAccessAlert'); element.className = `alert alert-${error ? 'danger' : 'success'}`; element.textContent = text; }
