@@ -512,6 +512,15 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
 
     const { id } = req.params;
     const usuario = (req as any).user;
+    if (usuario.tipo_usuario !== 'super_admin' && usuario.tipo_usuario !== 'admin_empresa') {
+      await connection.rollback();
+      res.status(403).json({
+        success: false,
+        message: 'No tienes permiso para editar usuarios de la empresa'
+      });
+      return;
+    }
+
     const {
       nombre,
       apellido,
@@ -559,7 +568,7 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       `SELECT u.*, ue.empresa_id
        FROM usuarios u
        INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
-       WHERE u.id = ? AND ue.empresa_id = ?`,
+       WHERE u.id = ? AND ue.empresa_id = ? AND ue.activo = 1`,
       [id, empresaIdToUse]
     );
 
@@ -580,6 +589,64 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
         message: 'No tienes permiso para editar este usuario'
       });
       return;
+    }
+
+    let bodegasIdsFinal: number[] | undefined;
+    let bodegaIdFinal: number | null | undefined;
+    if (bodegas_ids !== undefined) {
+      if (!Array.isArray(bodegas_ids) || bodegas_ids.length > 50) {
+        await connection.rollback();
+        res.status(400).json({ success: false, message: 'La selección de bodegas no es válida' });
+        return;
+      }
+
+      bodegasIdsFinal = [...new Set(bodegas_ids.map(Number))];
+      if (bodegasIdsFinal.some(bid => !Number.isSafeInteger(bid) || bid <= 0)) {
+        await connection.rollback();
+        res.status(400).json({ success: false, message: 'La selección de bodegas no es válida' });
+        return;
+      }
+
+      if (bodega_id !== undefined && bodega_id !== null && bodega_id !== '' &&
+          Number(bodega_id) !== (bodegasIdsFinal[0] ?? null)) {
+        await connection.rollback();
+        res.status(400).json({ success: false, message: 'La bodega principal debe estar entre las bodegas asignadas' });
+        return;
+      }
+
+      if (bodegasIdsFinal.length > 0) {
+        const [bodegasValidas] = await connection.execute<RowDataPacket[]>(
+          `SELECT id FROM bodegas WHERE empresa_id = ? AND id IN (${bodegasIdsFinal.map(() => '?').join(',')})`,
+          [empresaIdToUse, ...bodegasIdsFinal]
+        );
+        if (bodegasValidas.length !== bodegasIdsFinal.length) {
+          await connection.rollback();
+          res.status(400).json({ success: false, message: 'Una o más bodegas no pertenecen a esta empresa' });
+          return;
+        }
+      }
+      bodegaIdFinal = bodegasIdsFinal[0] ?? null;
+    } else if (bodega_id !== undefined) {
+      if (bodega_id === null || bodega_id === '') {
+        bodegaIdFinal = null;
+      } else {
+        const warehouseId = Number(bodega_id);
+        if (!Number.isSafeInteger(warehouseId) || warehouseId <= 0) {
+          await connection.rollback();
+          res.status(400).json({ success: false, message: 'La bodega seleccionada no es válida' });
+          return;
+        }
+        const [bodegasValidas] = await connection.execute<RowDataPacket[]>(
+          'SELECT id FROM bodegas WHERE id = ? AND empresa_id = ?',
+          [warehouseId, empresaIdToUse]
+        );
+        if (bodegasValidas.length === 0) {
+          await connection.rollback();
+          res.status(400).json({ success: false, message: 'La bodega no pertenece a esta empresa' });
+          return;
+        }
+        bodegaIdFinal = warehouseId;
+      }
     }
 
     // Actualizar información básica
@@ -613,19 +680,9 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       params.push(hashedPassword);
     }
 
-    if (bodega_id !== undefined) {
+    if (bodegaIdFinal !== undefined) {
       updates.push('bodega_id = ?');
-      params.push(bodega_id || null);
-    }
-
-    // Si se envía bodegas_ids (multi-bodega), deriva bodega_id del primero de la lista
-    if (bodegas_ids !== undefined && Array.isArray(bodegas_ids)) {
-      const primeraBodegaId = bodegas_ids.length > 0 ? bodegas_ids[0] : null;
-      // Solo actualizar bodega_id si no se mandó bodega_id explícito
-      if (bodega_id === undefined) {
-        updates.push('bodega_id = ?');
-        params.push(primeraBodegaId);
-      }
+      params.push(bodegaIdFinal);
     }
 
     if (updates.length > 0) {
@@ -679,7 +736,7 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
     }
 
     // Actualizar bodegas asignadas (multi-bodega)
-    if (bodegas_ids !== undefined && Array.isArray(bodegas_ids)) {
+    if (bodegasIdsFinal !== undefined) {
       // Eliminar asignaciones actuales de esta empresa
       await connection.execute(
         'DELETE FROM usuarios_bodegas WHERE usuario_id = ? AND empresa_id = ?',
@@ -687,7 +744,7 @@ export const updateUsuario = async (req: Request, res: Response): Promise<void> 
       );
 
       // Insertar nuevas asignaciones
-      for (const bid of bodegas_ids) {
+      for (const bid of bodegasIdsFinal) {
         await connection.execute(
           `INSERT IGNORE INTO usuarios_bodegas (usuario_id, empresa_id, bodega_id) VALUES (?, ?, ?)`,
           [id, empresaIdToUse, bid]

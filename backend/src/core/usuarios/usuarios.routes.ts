@@ -14,7 +14,6 @@ import {
   deleteUsuario
 } from './usuarios.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
-import { requireUserType } from '../middleware/auth.middleware';
 import { createInvitedUser, deactivateAccessUser } from '../auth/auth.admin';
 
 const router = Router();
@@ -26,7 +25,7 @@ router.use(authMiddleware);
 router.get('/', getUsuariosEmpresa); // Lista de usuarios de la empresa
 router.get('/:id', getUsuarioById); // Detalle de usuario
 router.post('/', createInvitedUser);
-router.put('/:id', requireUserType('super_admin'), updateUsuario);
+router.put('/:id', updateUsuario);
 router.delete('/:id', deactivateAccessUser);
 
 export default router;
