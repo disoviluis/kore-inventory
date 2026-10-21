@@ -5,6 +5,7 @@ const pool = require('../dist/shared/database').default;
 const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
 const { authMiddleware } = require('../dist/core/middleware/auth.middleware');
+const { authIpLimit } = require('../dist/core/auth/auth.limits');
 const { completeAccessChallenge } = require('../dist/core/auth/auth.onboarding');
 const { deactivateAccessUser, reactivateAccessUser } = require('../dist/core/auth/auth.admin');
 const { enforceSubscription, moduleIncluded, addCalendarMonths, requestedCompany, assertPlanQuota, assertUserCapacity, planFeatureDenied, assertWarehousePlan } = require('../dist/core/auth/subscription.service');
@@ -26,7 +27,8 @@ const { execFileSync } = require('node:child_process');
 
 function responseMock() {
   return {
-    statusCode: 200, body: null,
+    statusCode: 200, body: null, headers: {},
+    setHeader(name, value) { this.headers[name] = String(value); return this; },
     status(code) { this.statusCode = code; return this; },
     json(body) { this.body = body; return this; }
   };
@@ -58,6 +60,42 @@ async function withDatabaseMock(execute, callback) {
   try { return await callback(); }
   finally { pool.execute = originalExecute; pool.getConnection = originalConnection; }
 }
+
+test('IP authentication limit is shared, hashed and blocks the 61st request', async () => {
+  const ip = '203.0.113.42';
+  const statements = [];
+  let attempts = 59;
+  await withDatabaseMock(async (sql, params) => {
+    statements.push({ sql, params });
+    if (sql.startsWith('INSERT IGNORE INTO auth_limites')) return [];
+    if (sql.startsWith('SELECT intentos,') && sql.includes('FROM auth_limites')) {
+      return [{ intentos: attempts, ventana_vencida: 0, reinicio_en: 300 }];
+    }
+    if (sql.startsWith('UPDATE auth_limites')) {
+      attempts = params[0] ? 1 : attempts + 1;
+      return [];
+    }
+    assert.fail('Unexpected SQL: ' + sql);
+  }, async () => {
+    const request = { ip, socket: { remoteAddress: ip } };
+    const allowedResponse = responseMock();
+    let nextCalls = 0;
+    await authIpLimit(request, allowedResponse, () => { nextCalls += 1; });
+    assert.equal(allowedResponse.statusCode, 200);
+    assert.equal(allowedResponse.headers['RateLimit-Remaining'], '0');
+    assert.equal(nextCalls, 1);
+
+    const blockedResponse = responseMock();
+    await authIpLimit(request, blockedResponse, () => { nextCalls += 1; });
+    assert.equal(blockedResponse.statusCode, 429);
+    assert.equal(blockedResponse.headers['Retry-After'], '300');
+    assert.equal(nextCalls, 1);
+  });
+
+  const storedKey = statements.find(entry => entry.sql.startsWith('INSERT IGNORE INTO auth_limites')).params[0];
+  assert.match(storedKey, /^[a-f0-9]{64}$/);
+  assert.equal(storedKey.includes(ip), false);
+});
 
 test('user capacity counts active non-super-admin memberships and blocks the next user', async () => {
   const statements = [];
