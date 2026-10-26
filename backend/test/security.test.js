@@ -1,10 +1,12 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const pool = require('../dist/shared/database').default;
+const database = require('../dist/shared/database');
 const { resolveActivosEmpresa, requireActivosPermission } = require('../dist/platform/activos/activos.security');
 const { evaluateRoundConsensus } = require('../dist/platform/inventario/reconciliation.rules');
 const { assertBodegasDisponibles, assertEmpresaInventarioDisponible } = require('../dist/shared/inventario-bloqueos');
 const { moverStock } = require('../dist/shared/inventario');
+const inventarioController = require('../dist/platform/inventario/inventario.controller');
 const repuestosController = require('../dist/platform/repuestos/repuestos.controller');
 const inventariosController = require('../dist/platform/inventario/inventarios-fisicos.controller');
 const rolesGlobalesController = require('../dist/platform/super-admin/roles-globales.controller');
@@ -150,6 +152,28 @@ test('catalogue guard checks all company warehouses before accepting changes', a
   }, 42), (error) => error.status === 409);
   assert.deepEqual(calls[0].params, [42]);
   assert.match(calls[0].sql, /empresa_id = \?.*FOR UPDATE/);
+});
+
+test('bulk physical count rejects warehouses outside the selected company', async () => {
+  const original = database.withTransaction;
+  const calls = [];
+  try {
+    database.withTransaction = async (callback) => callback(async (sql, params) => {
+      calls.push({ sql, params });
+      return [];
+    });
+    const res = responseMock();
+    await inventarioController.registrarAjusteMasivo({
+      body: { empresa_id: 42, bodega_id: 7, ajustes: [{ producto_id: 9, cantidad: 1 }] },
+      user: { id: 17 }
+    }, res);
+    assert.equal(res.statusCode, 400);
+    assert.match(res.body.message, /La bodega no pertenece a la empresa seleccionada/);
+    assert.match(calls[0].sql, /id = \? AND empresa_id = \?/);
+    assert.deepEqual(calls[0].params, [7, 42]);
+  } finally {
+    database.withTransaction = original;
+  }
 });
 
 test('sales and open-account stock helper performs no writes when warehouse is frozen', async () => {

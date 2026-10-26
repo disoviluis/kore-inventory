@@ -474,8 +474,10 @@ function renderizarPrevisualizacionInventario() {
 async function confirmarInventarioExcel() {
     const ajustes = ajustesExcelPendientes.filter(ajuste => ajuste.valido && ajuste.diferencia !== 0).map(ajuste => ({ producto_id: ajuste.producto.id, cantidad: ajuste.diferencia, observaciones: ajuste.observaciones }));
     if (!ajustes.length) return mostrarAlerta('No hay diferencias para aplicar.', 'info');
+    const empresaId = Number(currentEmpresa?.id);
+    if (!Number.isSafeInteger(empresaId) || empresaId <= 0) return mostrarAlerta('Selecciona una empresa válida antes de guardar el conteo.', 'warning');
     try {
-        const response = await fetch(`${API_URL}/inventario/ajuste-masivo`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ bodega_id: obtenerBodegaInventario(), ajustes, notas: 'Carga de inventario físico desde Excel' }) });
+        const response = await fetch(`${API_URL}/inventario/ajuste-masivo`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ empresa_id: empresaId, bodega_id: obtenerBodegaInventario(), ajustes, notas: 'Carga de inventario físico desde Excel' }) });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'No se pudo aplicar el inventario');
         bootstrap.Modal.getInstance(document.getElementById('inventarioExcelModal')).hide();

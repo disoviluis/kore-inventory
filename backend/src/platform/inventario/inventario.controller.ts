@@ -298,9 +298,13 @@ export const registrarAjuste = async (req: Request, res: Response): Promise<Resp
  */
 export const registrarAjusteMasivo = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { bodega_id, ajustes, notas } = req.body;
+    const { empresa_id, bodega_id, ajustes, notas } = req.body;
     const usuario = (req as any).user;
     if (!usuario?.id) return errorResponse(res, 'Usuario no autenticado', null, CONSTANTS.HTTP_STATUS.UNAUTHORIZED);
+    const empresaId = Number(empresa_id);
+    if (!Number.isSafeInteger(empresaId) || empresaId <= 0) {
+      return errorResponse(res, 'Empresa válida es requerida', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
+    }
     if (!bodega_id || !Array.isArray(ajustes) || ajustes.length === 0) {
       return errorResponse(res, 'Bodega y ajustes son requeridos', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
     }
@@ -311,9 +315,13 @@ export const registrarAjusteMasivo = async (req: Request, res: Response): Promis
     }
 
     const result = await withTransaction(async (txQuery) => {
-      const bodegas = await txQuery('SELECT id, empresa_id FROM bodegas WHERE id = ? AND estado = "activa" LIMIT 1', [bodega_id]);
-      if (bodegas.length === 0) throw new Error('La bodega no existe o está inactiva');
-      const empresaId = bodegas[0].empresa_id;
+      const bodegas = await txQuery(
+        'SELECT id, empresa_id FROM bodegas WHERE id = ? AND empresa_id = ? AND estado = "activa" LIMIT 1',
+        [bodega_id, empresaId]
+      );
+      if (bodegas.length === 0) {
+        throw Object.assign(new Error('La bodega no pertenece a la empresa seleccionada o está inactiva'), { status: 400 });
+      }
       await assertBodegasDisponibles(txQuery, [Number(bodega_id)]);
       const aplicados: any[] = [];
 
