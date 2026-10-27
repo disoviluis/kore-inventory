@@ -23,6 +23,7 @@ import impuestosRoutes from './platform/impuestos/impuestos.routes';
 import rolesRoutes from './core/roles/roles.routes';
 import usuariosRoutes from './core/usuarios/usuarios.routes';
 import facturacionRoutes from './platform/facturacion/facturacion.routes';
+import matiasRoutes from './platform/matias/matias.routes';
 import bodegasRoutes from './platform/bodegas/bodegas.routes';
 import trasladosRoutes from './platform/traslados/traslados.routes';
 import finanzasRoutes from './platform/finanzas/finanzas.routes';
@@ -94,6 +95,7 @@ router.use('/inventarios-fisicos', authMiddleware, verificarEmpresaActiva, inven
 router.use('/compras', authMiddleware, verificarEmpresaActiva, comprasRoutes);
 router.use('/impuestos', authMiddleware, verificarEmpresaActiva, impuestosRoutes);
 router.use('/facturacion', facturacionRoutes); // Middlewares aplicados dentro del módulo
+router.use('/matias', matiasRoutes);
 router.use('/bodegas', authMiddleware, verificarEmpresaActiva, bodegasRoutes);
 router.use('/traslados', authMiddleware, verificarEmpresaActiva, trasladosRoutes);
 router.use('/finanzas', authMiddleware, verificarEmpresaActiva, finanzasRoutes);

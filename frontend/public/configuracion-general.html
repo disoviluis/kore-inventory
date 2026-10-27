@@ -402,6 +402,12 @@
                                         </button>
                                     </li>
                                     <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="matias-tab" data-bs-toggle="tab" data-bs-target="#matias-panel" type="button" role="tab">
+                                            <i class="bi bi-cloud-check me-2"></i>Facturación electrónica
+                                            <span class="badge bg-info ms-2">Matias</span>
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
                                         <button class="nav-link" id="plantilla-tab" data-bs-toggle="tab" data-bs-target="#plantilla-panel" type="button" role="tab">
                                             <i class="bi bi-file-earmark-text me-2"></i>Plantilla de Factura
                                             <span class="badge bg-info ms-2">Nuevo</span>
@@ -788,6 +794,72 @@
                                                 </form>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    <!-- Tab: Facturacion electronica Matias -->
+                                    <div class="tab-pane fade" id="matias-panel" role="tabpanel">
+                                        <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+                                            <div>
+                                                <h5 class="mb-1">Facturación electrónica Matias</h5>
+                                                <p class="text-muted small mb-0">Conexión Casa de Software por empresa y servicios contratados.</p>
+                                            </div>
+                                            <span class="badge bg-secondary" id="matiasEstado">No configurado</span>
+                                        </div>
+
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label" for="matiasEntorno">Entorno</label>
+                                                <select class="form-select" id="matiasEntorno">
+                                                    <option value="sandbox">Sandbox</option>
+                                                    <option value="produccion">Producción</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-8 d-none" id="matiasBaseUrlGroup">
+                                                <label class="form-label" for="matiasBaseUrl">URL base de producción</label>
+                                                <input class="form-control" id="matiasBaseUrl" type="url" placeholder="https://api.entregada-por-matias.com/api/ubl2.1">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="matiasCompanyUuid">UUID de subcuenta Matias</label>
+                                                <input class="form-control" id="matiasCompanyUuid" maxlength="36" placeholder="UUID client_uuid">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="matiasCompanyId">ID o referencia Matias</label>
+                                                <input class="form-control" id="matiasCompanyId" maxlength="100">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="matiasNit">NIT de la empresa</label>
+                                                <input class="form-control" id="matiasNit" maxlength="15">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="matiasRazonSocial">Razón social</label>
+                                                <input class="form-control" id="matiasRazonSocial" maxlength="200">
+                                            </div>
+                                            <div class="col-md-8">
+                                                <label class="form-label" for="matiasPat">Personal Access Token</label>
+                                                <input class="form-control" id="matiasPat" type="password" autocomplete="new-password" placeholder="Se guarda cifrado y no se vuelve a mostrar">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label" for="matiasTokenIdInput">ID de token</label>
+                                                <input class="form-control" id="matiasTokenIdInput" maxlength="100">
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex flex-wrap gap-2 mt-3">
+                                            <button class="btn btn-primary" id="matiasGuardar" type="button"><i class="bi bi-save me-2"></i>Guardar conexión</button>
+                                            <button class="btn btn-outline-primary" id="matiasProbar" type="button"><i class="bi bi-plug me-2"></i>Probar conexión</button>
+                                            <button class="btn btn-outline-danger" id="matiasRevocar" type="button"><i class="bi bi-x-circle me-2"></i>Revocar entorno</button>
+                                        </div>
+
+                                        <div class="row g-3 mt-3">
+                                            <div class="col-md-4"><small class="text-muted d-block">Credencial</small><strong id="matiasTienePat">PAT no registrado</strong></div>
+                                            <div class="col-md-4"><small class="text-muted d-block">Última prueba</small><strong id="matiasUltimaPrueba">Nunca probado</strong></div>
+                                            <div class="col-md-4"><small class="text-muted d-block">Token</small><strong id="matiasTokenId">Sin ID registrado</strong></div>
+                                            <div class="col-12"><small class="text-danger" id="matiasUltimoError"></small></div>
+                                        </div>
+
+                                        <hr class="my-4">
+                                        <h6 class="mb-3">Servicios disponibles</h6>
+                                        <div class="d-grid gap-2" id="matiasServicios"></div>
                                     </div>
 
                                     <!-- Tab: Plantilla de Factura -->
@@ -1842,6 +1914,7 @@
     <!-- Custom JS -->
     <script src="assets/js/impuestos-utils.js"></script>
     <script src="assets/js/configuracion-general.js?v=2.9"></script>
+    <script src="assets/js/matias-configuracion.js?v=20261026"></script>
     <!-- Sidebar Navigation (Common) -->
     <script src="assets/js/sidebar-navigation.js?v=20261021-data-deletion-location"></script>
 </body>
