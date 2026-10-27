@@ -244,6 +244,7 @@ async function cargarEmpresas(usuarioId) {
                     localStorage.setItem('empresaActiva', empresaId);
                     currentEmpresa = empresaSeleccionada;
                     // Recargar datos del módulo
+                    await cargarBodegasInventario();
                     await Promise.all([
                         cargarResumen(),
                         cargarMovimientos(),
@@ -407,14 +408,19 @@ async function cargarBodegasInventario() {
     const response = await fetch(`${API_URL}/bodegas?empresa_id=${currentEmpresa.id}`, { headers: { 'Authorization': `Bearer ${token}` } });
     const data = await response.json();
     if (!data.success || !Array.isArray(data.data)) return;
+    const bodegasActivas = data.data.filter(bodega => bodega.estado === 'activa');
     selector.innerHTML = '<option value="">Seleccione bodega...</option>';
-    data.data.filter(bodega => bodega.estado === 'activa').forEach(bodega => {
+    bodegasActivas.forEach(bodega => {
         const option = document.createElement('option');
         option.value = bodega.id;
         option.textContent = `${bodega.nombre}${bodega.es_principal ? ' (Principal)' : ''}`;
         selector.appendChild(option);
     });
-    bodegaInventarioId = Number(currentUsuario.bodega_id) || Number(data.data.find(bodega => bodega.es_principal)?.id) || Number(data.data[0]?.id) || null;
+    const bodegaAsignada = bodegasActivas.find(bodega => Number(bodega.id) === Number(currentUsuario?.bodega_id));
+    bodegaInventarioId = Number(bodegaAsignada?.id)
+        || Number(bodegasActivas.find(bodega => bodega.es_principal)?.id)
+        || Number(bodegasActivas[0]?.id)
+        || null;
     selector.value = bodegaInventarioId || '';
 }
 
