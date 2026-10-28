@@ -524,6 +524,9 @@ function abrirModalNuevo() {
     document.getElementById('clientePais').value = 'Colombia';
     document.getElementById('clienteLimiteCredito').value = '0';
     document.getElementById('clienteDiasCredito').value = '0';
+    document.getElementById('clienteTipoPersona').value = 'natural';
+    document.getElementById('clienteRegimenTributario').value = 'simplificado';
+    document.getElementById('clienteFormaPago').value = 'contado';
     document.getElementById('clienteEstado').value = 'activo';
 
     // Resetear campo DV (ocultar por defecto, CC no tiene DV)
@@ -552,6 +555,11 @@ async function editarCliente(id) {
         document.getElementById('clienteNombre').value = cliente.nombre;
         document.getElementById('clienteApellido').value = cliente.apellido || '';
         document.getElementById('clienteRazonSocial').value = cliente.razon_social || '';
+        document.getElementById('clienteTipoPersona').value = cliente.tipo_persona || 'natural';
+        document.getElementById('clienteRegimenTributario').value = cliente.regimen_tributario || 'simplificado';
+        document.getElementById('clienteResponsabilidadFiscal').value = cliente.responsabilidad_fiscal || '';
+        document.getElementById('clienteActividadEconomica').value = cliente.actividad_economica || '';
+        document.getElementById('clienteCodigoPostal').value = cliente.codigo_postal || '';
         document.getElementById('clienteEmail').value = cliente.email || '';
         document.getElementById('clienteTelefono').value = cliente.telefono || '';
         document.getElementById('clienteCelular').value = cliente.celular || '';
@@ -561,6 +569,7 @@ async function editarCliente(id) {
         document.getElementById('clientePais').value = cliente.pais || 'Colombia';
         document.getElementById('clienteLimiteCredito').value = cliente.limite_credito || 0;
         document.getElementById('clienteDiasCredito').value = cliente.dias_credito || 0;
+        document.getElementById('clienteFormaPago').value = cliente.forma_pago_predeterminada || 'contado';
         document.getElementById('clienteEstado').value = cliente.estado;
 
         // Mostrar/ocultar DV y cargar su valor
@@ -623,6 +632,11 @@ async function guardarCliente(e) {
         nombre: nombre,
         apellido: document.getElementById('clienteApellido').value.trim() || null,
         razon_social: document.getElementById('clienteRazonSocial').value.trim() || null,
+        tipo_persona: document.getElementById('clienteTipoPersona').value,
+        regimen_tributario: document.getElementById('clienteRegimenTributario').value,
+        responsabilidad_fiscal: document.getElementById('clienteResponsabilidadFiscal').value.trim() || null,
+        actividad_economica: document.getElementById('clienteActividadEconomica').value.trim() || null,
+        codigo_postal: document.getElementById('clienteCodigoPostal').value.trim() || null,
         email: email || null,
         telefono: document.getElementById('clienteTelefono').value.trim() || null,
         celular: document.getElementById('clienteCelular').value.trim() || null,
@@ -632,6 +646,7 @@ async function guardarCliente(e) {
         pais: document.getElementById('clientePais').value.trim() || 'Colombia',
         limite_credito: parseFloat(document.getElementById('clienteLimiteCredito').value) || 0,
         dias_credito: parseInt(document.getElementById('clienteDiasCredito').value) || 0,
+        forma_pago_predeterminada: document.getElementById('clienteFormaPago').value,
         estado: document.getElementById('clienteEstado').value
     };
 

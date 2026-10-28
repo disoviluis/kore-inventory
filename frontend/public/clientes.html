@@ -571,6 +571,43 @@
                                 <input type="text" class="form-control" id="clienteRazonSocial" placeholder="Para empresas">
                             </div>
 
+                            <!-- Información Fiscal -->
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Información Fiscal</h6>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de persona</label>
+                                <select class="form-select" id="clienteTipoPersona">
+                                    <option value="natural">Persona natural</option>
+                                    <option value="juridica">Persona jurídica</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Régimen tributario</label>
+                                <select class="form-select" id="clienteRegimenTributario">
+                                    <option value="simplificado">No responsable de IVA / Simplificado</option>
+                                    <option value="comun">Responsable de IVA / Común</option>
+                                    <option value="especial">Régimen especial</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Responsabilidad fiscal</label>
+                                <input type="text" class="form-control" id="clienteResponsabilidadFiscal" placeholder="Ej. IVA, Gran contribuyente">
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label">Actividad económica</label>
+                                <input type="text" class="form-control" id="clienteActividadEconomica" placeholder="Código y descripción CIIU">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Código postal</label>
+                                <input type="text" class="form-control" id="clienteCodigoPostal" maxlength="10">
+                            </div>
+
                             <!-- Contacto -->
                             <div class="col-12 mt-4">
                                 <h6 class="border-bottom pb-2">Información de Contacto</h6>
@@ -632,6 +669,15 @@
                             <div class="col-md-6">
                                 <label class="form-label">Días de Crédito</label>
                                 <input type="number" class="form-control" id="clienteDiasCredito" min="0" value="0">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Forma de pago predeterminada</label>
+                                <select class="form-select" id="clienteFormaPago">
+                                    <option value="contado">Contado</option>
+                                    <option value="credito">Crédito</option>
+                                </select>
+                                <div class="form-text">Se usa como sugerencia; cada venta puede cambiarla.</div>
                             </div>
 
                             <div class="col-md-6">

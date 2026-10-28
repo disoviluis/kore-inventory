@@ -38,6 +38,11 @@ export const getClientes = async (req: Request, res: Response): Promise<Response
         nombre,
         apellido,
         razon_social,
+        tipo_cliente,
+        tipo_persona,
+        regimen_tributario,
+        responsabilidad_fiscal,
+        actividad_economica,
         email,
         telefono,
         celular,
@@ -48,6 +53,7 @@ export const getClientes = async (req: Request, res: Response): Promise<Response
         pais,
         limite_credito,
         dias_credito,
+        forma_pago_predeterminada,
         estado,
         created_at,
         updated_at
@@ -110,14 +116,22 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
       nombre,
       apellido,
       razon_social,
+      tipo_cliente,
+      tipo_persona,
+      regimen_tributario,
+      responsabilidad_fiscal,
+      actividad_economica,
       email,
       telefono,
       celular,
       direccion,
       ciudad,
       departamento,
+      codigo_postal,
       pais,
       limite_credito,
+      dias_credito,
+      forma_pago_predeterminada,
       estado
     } = req.body;
 
@@ -155,17 +169,25 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         nombre,
         apellido,
         razon_social,
+        tipo_cliente,
+        tipo_persona,
+        regimen_tributario,
+        responsabilidad_fiscal,
+        actividad_economica,
         email,
         telefono,
         celular,
         direccion,
         ciudad,
         departamento,
+        codigo_postal,
         pais,
         limite_credito,
+        dias_credito,
+        forma_pago_predeterminada,
         estado,
         creado_por
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         tipo_documento || 'CC',
@@ -174,14 +196,22 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         nombre,
         apellido || null,
         razon_social || null,
+        tipo_cliente || (tipo_persona === 'juridica' ? 'empresa' : 'individual'),
+        tipo_persona || 'natural',
+        regimen_tributario || 'simplificado',
+        responsabilidad_fiscal || null,
+        actividad_economica || null,
         email || null,
         telefono || null,
         celular || null,
         direccion || null,
         ciudad || null,
         departamento || null,
+        codigo_postal || null,
         pais || 'Colombia',
         limite_credito || 0,
+        dias_credito || 0,
+        forma_pago_predeterminada || 'contado',
         estado || 'activo',
         req.body.userId || null
       ]
@@ -222,14 +252,22 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       nombre,
       apellido,
       razon_social,
+      tipo_cliente,
+      tipo_persona,
+      regimen_tributario,
+      responsabilidad_fiscal,
+      actividad_economica,
       email,
       telefono,
       celular,
       direccion,
       ciudad,
       departamento,
+      codigo_postal,
       pais,
       limite_credito,
+      dias_credito,
+      forma_pago_predeterminada,
       estado
     } = req.body;
 
@@ -294,6 +332,26 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       updates.push('razon_social = ?');
       values.push(razon_social);
     }
+    if (tipo_cliente !== undefined) {
+      updates.push('tipo_cliente = ?');
+      values.push(tipo_cliente);
+    }
+    if (tipo_persona !== undefined) {
+      updates.push('tipo_persona = ?');
+      values.push(tipo_persona);
+    }
+    if (regimen_tributario !== undefined) {
+      updates.push('regimen_tributario = ?');
+      values.push(regimen_tributario);
+    }
+    if (responsabilidad_fiscal !== undefined) {
+      updates.push('responsabilidad_fiscal = ?');
+      values.push(responsabilidad_fiscal || null);
+    }
+    if (actividad_economica !== undefined) {
+      updates.push('actividad_economica = ?');
+      values.push(actividad_economica || null);
+    }
     if (email !== undefined) {
       updates.push('email = ?');
       values.push(email);
@@ -318,6 +376,10 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       updates.push('departamento = ?');
       values.push(departamento);
     }
+    if (codigo_postal !== undefined) {
+      updates.push('codigo_postal = ?');
+      values.push(codigo_postal || null);
+    }
     if (pais !== undefined) {
       updates.push('pais = ?');
       values.push(pais);
@@ -325,6 +387,14 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
     if (limite_credito !== undefined) {
       updates.push('limite_credito = ?');
       values.push(limite_credito);
+    }
+    if (dias_credito !== undefined) {
+      updates.push('dias_credito = ?');
+      values.push(dias_credito);
+    }
+    if (forma_pago_predeterminada !== undefined) {
+      updates.push('forma_pago_predeterminada = ?');
+      values.push(forma_pago_predeterminada);
     }
     if (estado !== undefined) {
       updates.push('estado = ?');
