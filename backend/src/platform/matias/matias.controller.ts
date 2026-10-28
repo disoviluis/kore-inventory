@@ -191,6 +191,10 @@ export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
     await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', { venta_id: ventaId, motivo: 'conexion_no_probada' });
     return res.status(400).json({ success: false, message: 'Debe probar la conexion sandbox antes de emitir' });
   }
+  if (!connection.matias_company_uuid) {
+    await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', { venta_id: ventaId, motivo: 'client_uuid_faltante' });
+    return res.status(400).json({ success: false, message: 'Debe configurar el client_uuid de Sandbox antes de emitir' });
+  }
 
   const [serviceRows] = await pool.execute<RowDataPacket[]>(
     `SELECT activo_local FROM matias_servicios
@@ -243,8 +247,15 @@ export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
     [empresaId, ventaId]
   );
   const existing = existingRows[0];
-  if (existing && ['accepted', 'emitted', 'emitting'].includes(existing.estado)) {
-    return res.json({ success: true, data: { estado: existing.estado, message: 'La venta ya tiene una solicitud fiscal; consulte su estado antes de emitir nuevamente' } });
+  if (existing) {
+    await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', {
+      venta_id: ventaId, motivo: 'solicitud_fiscal_existente', estado: existing.estado
+    });
+    return res.status(409).json({
+      success: false,
+      message: 'La venta ya tiene una solicitud fiscal. Consulte su estado en MATÍAS antes de intentar otra emisión.',
+      data: { estado: existing.estado, request_uuid: existing.request_uuid }
+    });
   }
 
   const prefix = String(sale.prefijo_factura || 'FAC').trim();
@@ -256,6 +267,7 @@ export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
   const paymentValue = payments.length ? payments.reduce((sum, payment) => sum + Number(payment.monto || 0), 0) : Number(sale.total || 0);
 
   const payload = {
+    client_uuid: connection.matias_company_uuid,
     uuid: requestUuid,
     resolution_number: String(sale.resolucion_dian || ''),
     prefix,

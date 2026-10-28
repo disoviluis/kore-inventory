@@ -15,14 +15,19 @@ export interface MatiasInvoiceResult extends MatiasProbeResult {
 export async function emitMatiasInvoice(
   baseUrl: string,
   token: string,
-  clientUuid: string | null,
-  payload: any,
+  clientUuid: string,
+  payload: Record<string, unknown>,
   timeoutMs = 30000
 ): Promise<MatiasInvoiceResult> {
+  const normalizedClientUuid = clientUuid?.trim();
+  if (!normalizedClientUuid) {
+    return { ok: false, status: 0, error: 'client_uuid es obligatorio para emitir con Matias' };
+  }
+
   let url: URL;
   try {
     url = new URL(`${baseUrl.replace(/\/$/, '')}/invoice`);
-    if (clientUuid) url.searchParams.set('client_uuid', clientUuid);
+    url.searchParams.set('client_uuid', normalizedClientUuid);
   } catch {
     return { ok: false, status: 0, error: 'URL base invalida' };
   }
@@ -31,7 +36,7 @@ export async function emitMatiasInvoice(
     return { ok: false, status: 0, error: 'Matias requiere HTTPS en produccion' };
   }
 
-  const body = JSON.stringify(payload);
+  const body = JSON.stringify({ ...payload, client_uuid: normalizedClientUuid });
   return new Promise(resolve => {
     const request = https.request(url, {
       method: 'POST',
