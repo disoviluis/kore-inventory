@@ -300,9 +300,12 @@ llaves privadas en este documento.
 - **Se puede empezar ya:** build y pruebas locales sin contactar al proveedor;
   crear la cuenta Sandbox; revisar la documentacion/coleccion Postman; y probar
   `GET /auth/user` una vez se disponga del PAT.
-- **Emision real de prueba:** el backend local ya tiene rutas para configurar,
-  probar conexion y emitir una venta en Sandbox. Antes de emitir se requiere
-  PAT, `client_uuid`, resolucion/rango de prueba y validar el payload oficial.
+- **Estado actual confirmado:** aun no se ha creado la cuenta de MATÍAS Sandbox;
+  no hay PAT ni `client_uuid` disponibles para probar la conexion o emitir.
+- **Emision real de prueba:** el backend desplegado en AWS tiene rutas para
+  configurar, probar conexion y emitir una venta en Sandbox. Antes de emitir se
+  requiere PAT, `client_uuid`, resolucion/rango de prueba y validar el payload
+  oficial.
 - **Ajuste local realizado:** asegurar `client_uuid` en el body JSON de emision,
   conservarlo en el payload persistido/hash, enviarlo tambien como query por la
   guia multiempresa y rechazar la emision si falta. Tambien se bloquea una
