@@ -521,12 +521,20 @@ function abrirModalNuevo() {
     
     // Establecer valores por defecto
     document.getElementById('clienteTipoDocumento').value = 'CC';
+    document.getElementById('clienteTipoCliente').value = 'individual';
     document.getElementById('clientePais').value = 'Colombia';
+    document.getElementById('clienteListaPrecio').value = 'General';
     document.getElementById('clienteLimiteCredito').value = '0';
     document.getElementById('clienteDiasCredito').value = '0';
     document.getElementById('clienteTipoPersona').value = 'natural';
     document.getElementById('clienteRegimenTributario').value = 'simplificado';
     document.getElementById('clienteFormaPago').value = 'contado';
+    document.getElementById('clienteAplicaRetencionFuente').checked = false;
+    document.getElementById('clienteAplicaRetencionIva').checked = false;
+    document.getElementById('clienteAplicaIca').checked = false;
+    document.getElementById('clienteTasaRetencionFuente').value = '0';
+    document.getElementById('clienteTasaRetencionIva').value = '0';
+    document.getElementById('clienteTasaIca').value = '0';
     document.getElementById('clienteEstado').value = 'activo';
 
     // Resetear campo DV (ocultar por defecto, CC no tiene DV)
@@ -551,10 +559,12 @@ async function editarCliente(id) {
         document.getElementById('clienteModalTitle').textContent = 'Editar Cliente';
         document.getElementById('clienteId').value = cliente.id;
         document.getElementById('clienteTipoDocumento').value = cliente.tipo_documento || 'CC';
+        document.getElementById('clienteTipoCliente').value = cliente.tipo_cliente || 'individual';
         document.getElementById('clienteNumeroDocumento').value = cliente.numero_documento;
         document.getElementById('clienteNombre').value = cliente.nombre;
         document.getElementById('clienteApellido').value = cliente.apellido || '';
         document.getElementById('clienteRazonSocial').value = cliente.razon_social || '';
+        document.getElementById('clienteNombreComercial').value = cliente.nombre_comercial || '';
         document.getElementById('clienteTipoPersona').value = cliente.tipo_persona || 'natural';
         document.getElementById('clienteRegimenTributario').value = cliente.regimen_tributario || 'simplificado';
         document.getElementById('clienteResponsabilidadFiscal').value = cliente.responsabilidad_fiscal || '';
@@ -570,6 +580,13 @@ async function editarCliente(id) {
         document.getElementById('clienteLimiteCredito').value = cliente.limite_credito || 0;
         document.getElementById('clienteDiasCredito').value = cliente.dias_credito || 0;
         document.getElementById('clienteFormaPago').value = cliente.forma_pago_predeterminada || 'contado';
+        document.getElementById('clienteListaPrecio').value = cliente.lista_precio || 'General';
+        document.getElementById('clienteAplicaRetencionFuente').checked = Number(cliente.aplica_retencion_fuente) === 1;
+        document.getElementById('clienteAplicaRetencionIva').checked = Number(cliente.aplica_retencion_iva) === 1;
+        document.getElementById('clienteAplicaIca').checked = Number(cliente.aplica_ica) === 1;
+        document.getElementById('clienteTasaRetencionFuente').value = cliente.tasa_retencion_fuente || 0;
+        document.getElementById('clienteTasaRetencionIva').value = cliente.tasa_retencion_iva || 0;
+        document.getElementById('clienteTasaIca').value = cliente.tasa_ica || 0;
         document.getElementById('clienteEstado').value = cliente.estado;
 
         // Mostrar/ocultar DV y cargar su valor
@@ -625,6 +642,7 @@ async function guardarCliente(e) {
     const clienteData = {
         empresa_id: currentEmpresa.id,
         tipo_documento: tipoDocumentoSeleccionado,
+        tipo_cliente: document.getElementById('clienteTipoCliente').value,
         numero_documento: numeroDocumento,
         digito_verificacion: tipoDocumentoSeleccionado === 'NIT'
             ? (document.getElementById('clienteDigitoVerificacion').value.trim() || null)
@@ -632,6 +650,7 @@ async function guardarCliente(e) {
         nombre: nombre,
         apellido: document.getElementById('clienteApellido').value.trim() || null,
         razon_social: document.getElementById('clienteRazonSocial').value.trim() || null,
+        nombre_comercial: document.getElementById('clienteNombreComercial').value.trim() || null,
         tipo_persona: document.getElementById('clienteTipoPersona').value,
         regimen_tributario: document.getElementById('clienteRegimenTributario').value,
         responsabilidad_fiscal: document.getElementById('clienteResponsabilidadFiscal').value.trim() || null,
@@ -647,6 +666,13 @@ async function guardarCliente(e) {
         limite_credito: parseFloat(document.getElementById('clienteLimiteCredito').value) || 0,
         dias_credito: parseInt(document.getElementById('clienteDiasCredito').value) || 0,
         forma_pago_predeterminada: document.getElementById('clienteFormaPago').value,
+        lista_precio: document.getElementById('clienteListaPrecio').value.trim() || 'General',
+        aplica_retencion_fuente: document.getElementById('clienteAplicaRetencionFuente').checked ? 1 : 0,
+        tasa_retencion_fuente: parseFloat(document.getElementById('clienteTasaRetencionFuente').value) || 0,
+        aplica_retencion_iva: document.getElementById('clienteAplicaRetencionIva').checked ? 1 : 0,
+        tasa_retencion_iva: parseFloat(document.getElementById('clienteTasaRetencionIva').value) || 0,
+        aplica_ica: document.getElementById('clienteAplicaIca').checked ? 1 : 0,
+        tasa_ica: parseFloat(document.getElementById('clienteTasaIca').value) || 0,
         estado: document.getElementById('clienteEstado').value
     };
 

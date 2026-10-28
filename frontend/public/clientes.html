@@ -539,6 +539,14 @@
                                 </select>
                             </div>
 
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de cliente</label>
+                                <select class="form-select" id="clienteTipoCliente">
+                                    <option value="individual">Individual</option>
+                                    <option value="empresa">Empresa</option>
+                                </select>
+                            </div>
+
                             <div class="col-md-4" id="clienteNumeroDocumentoContainer">
                                 <label class="form-label">Número Documento <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="clienteNumeroDocumento" required>
@@ -569,6 +577,11 @@
                             <div class="col-md-8">
                                 <label class="form-label">Razón Social / Nombre Comercial</label>
                                 <input type="text" class="form-control" id="clienteRazonSocial" placeholder="Para empresas">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre comercial</label>
+                                <input type="text" class="form-control" id="clienteNombreComercial">
                             </div>
 
                             <!-- Información Fiscal -->
@@ -678,6 +691,42 @@
                                     <option value="credito">Crédito</option>
                                 </select>
                                 <div class="form-text">Se usa como sugerencia; cada venta puede cambiarla.</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Lista de precios</label>
+                                <input type="text" class="form-control" id="clienteListaPrecio" value="General" placeholder="Ej. General">
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <h6 class="border-bottom pb-2">Retenciones</h6>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="clienteAplicaRetencionFuente">
+                                    <label class="form-check-label" for="clienteAplicaRetencionFuente">Aplica retención en la fuente</label>
+                                </div>
+                                <label class="form-label" for="clienteTasaRetencionFuente">Tasa (%)</label>
+                                <input type="number" class="form-control" id="clienteTasaRetencionFuente" min="0" max="100" step="0.01" value="0">
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="clienteAplicaRetencionIva">
+                                    <label class="form-check-label" for="clienteAplicaRetencionIva">Aplica retención de IVA</label>
+                                </div>
+                                <label class="form-label" for="clienteTasaRetencionIva">Tasa (%)</label>
+                                <input type="number" class="form-control" id="clienteTasaRetencionIva" min="0" max="100" step="0.01" value="0">
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="clienteAplicaIca">
+                                    <label class="form-check-label" for="clienteAplicaIca">Aplica ICA</label>
+                                </div>
+                                <label class="form-label" for="clienteTasaIca">Tasa (%)</label>
+                                <input type="number" class="form-control" id="clienteTasaIca" min="0" max="100" step="0.001" value="0">
                             </div>
 
                             <div class="col-md-6">

@@ -43,6 +43,7 @@ export const getClientes = async (req: Request, res: Response): Promise<Response
         regimen_tributario,
         responsabilidad_fiscal,
         actividad_economica,
+        nombre_comercial,
         email,
         telefono,
         celular,
@@ -54,6 +55,13 @@ export const getClientes = async (req: Request, res: Response): Promise<Response
         limite_credito,
         dias_credito,
         forma_pago_predeterminada,
+        lista_precio,
+        aplica_retencion_fuente,
+        tasa_retencion_fuente,
+        aplica_retencion_iva,
+        tasa_retencion_iva,
+        aplica_ica,
+        tasa_ica,
         estado,
         created_at,
         updated_at
@@ -121,6 +129,7 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
       regimen_tributario,
       responsabilidad_fiscal,
       actividad_economica,
+      nombre_comercial,
       email,
       telefono,
       celular,
@@ -132,6 +141,13 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
       limite_credito,
       dias_credito,
       forma_pago_predeterminada,
+      lista_precio,
+      aplica_retencion_fuente,
+      tasa_retencion_fuente,
+      aplica_retencion_iva,
+      tasa_retencion_iva,
+      aplica_ica,
+      tasa_ica,
       estado
     } = req.body;
 
@@ -174,6 +190,7 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         regimen_tributario,
         responsabilidad_fiscal,
         actividad_economica,
+        nombre_comercial,
         email,
         telefono,
         celular,
@@ -185,9 +202,16 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         limite_credito,
         dias_credito,
         forma_pago_predeterminada,
+        lista_precio,
+        aplica_retencion_fuente,
+        tasa_retencion_fuente,
+        aplica_retencion_iva,
+        tasa_retencion_iva,
+        aplica_ica,
+        tasa_ica,
         estado,
         creado_por
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresa_id,
         tipo_documento || 'CC',
@@ -201,6 +225,7 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         regimen_tributario || 'simplificado',
         responsabilidad_fiscal || null,
         actividad_economica || null,
+        nombre_comercial || null,
         email || null,
         telefono || null,
         celular || null,
@@ -212,6 +237,13 @@ export const createCliente = async (req: Request, res: Response): Promise<Respon
         limite_credito || 0,
         dias_credito || 0,
         forma_pago_predeterminada || 'contado',
+        lista_precio || 'General',
+        aplica_retencion_fuente ? 1 : 0,
+        tasa_retencion_fuente || 0,
+        aplica_retencion_iva ? 1 : 0,
+        tasa_retencion_iva || 0,
+        aplica_ica ? 1 : 0,
+        tasa_ica || 0,
         estado || 'activo',
         req.body.userId || null
       ]
@@ -257,6 +289,7 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       regimen_tributario,
       responsabilidad_fiscal,
       actividad_economica,
+      nombre_comercial,
       email,
       telefono,
       celular,
@@ -268,6 +301,13 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       limite_credito,
       dias_credito,
       forma_pago_predeterminada,
+      lista_precio,
+      aplica_retencion_fuente,
+      tasa_retencion_fuente,
+      aplica_retencion_iva,
+      tasa_retencion_iva,
+      aplica_ica,
+      tasa_ica,
       estado
     } = req.body;
 
@@ -352,6 +392,10 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
       updates.push('actividad_economica = ?');
       values.push(actividad_economica || null);
     }
+    if (nombre_comercial !== undefined) {
+      updates.push('nombre_comercial = ?');
+      values.push(nombre_comercial || null);
+    }
     if (email !== undefined) {
       updates.push('email = ?');
       values.push(email);
@@ -395,6 +439,34 @@ export const updateCliente = async (req: Request, res: Response): Promise<Respon
     if (forma_pago_predeterminada !== undefined) {
       updates.push('forma_pago_predeterminada = ?');
       values.push(forma_pago_predeterminada);
+    }
+    if (lista_precio !== undefined) {
+      updates.push('lista_precio = ?');
+      values.push(lista_precio || 'General');
+    }
+    if (aplica_retencion_fuente !== undefined) {
+      updates.push('aplica_retencion_fuente = ?');
+      values.push(aplica_retencion_fuente ? 1 : 0);
+    }
+    if (tasa_retencion_fuente !== undefined) {
+      updates.push('tasa_retencion_fuente = ?');
+      values.push(tasa_retencion_fuente || 0);
+    }
+    if (aplica_retencion_iva !== undefined) {
+      updates.push('aplica_retencion_iva = ?');
+      values.push(aplica_retencion_iva ? 1 : 0);
+    }
+    if (tasa_retencion_iva !== undefined) {
+      updates.push('tasa_retencion_iva = ?');
+      values.push(tasa_retencion_iva || 0);
+    }
+    if (aplica_ica !== undefined) {
+      updates.push('aplica_ica = ?');
+      values.push(aplica_ica ? 1 : 0);
+    }
+    if (tasa_ica !== undefined) {
+      updates.push('tasa_ica = ?');
+      values.push(tasa_ica || 0);
     }
     if (estado !== undefined) {
       updates.push('estado = ?');
