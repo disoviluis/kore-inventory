@@ -311,8 +311,12 @@ llaves privadas en este documento.
 - **Validacion local (2026-10-28):** `npm --prefix backend test` compilo el
   backend y paso las 64 pruebas, incluidas las dos nuevas pruebas del cliente
   MATÍAS. No se hicieron llamadas al proveedor ni emisiones.
+- **Validacion AWS (2026-10-28):** `npm ci` y `npm test` completaron en EC2 con
+  64 pruebas aprobadas; el proceso PM2 reinicio correctamente. La pestaña de
+  Facturacion electronica esta disponible desde el frontend servido por Nginx.
 - **Base AWS:** Fase 1 y Fase 2 verificadas; ambas migraciones ya estaban
-  aplicadas. El backend con los cambios locales aun requiere deploy.
+  aplicadas. El commit `bd9e934` con los cambios del conector fue desplegado en
+  EC2; `kore-backend` esta online y `/health` respondio correctamente.
 - **Pendiente de integracion funcional:** aun no esta conectado el boton de
   emision al flujo POS; la prueba inicial se debe ejecutar con la ruta protegida
   de emision Sandbox sobre una venta sintetica.
@@ -334,8 +338,8 @@ Destino comprobado: EC2 `18.191.181.99`, rama `main`, backend PM2
   unicos requeridos. Resultado: `OK - MIGRACION FASE 2 VALIDA`.
 - Por tanto, **no fue necesario ejecutar DDL en RDS**; la base no fue
   modificada durante esta verificacion.
-- El deploy del codigo corregido sigue pendiente; aun no se probo PAT ni se
-  envio una factura a MATÍAS.
+- Aun no se ha configurado un PAT/UUID ni se ha probado autenticacion o enviado
+  una factura a MATÍAS.
 
 ### Cuenta y acceso Sandbox
 

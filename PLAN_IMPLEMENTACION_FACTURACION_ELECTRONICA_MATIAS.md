@@ -20,8 +20,8 @@
 | Fase | Estado | Implementacion |
 |---|---|---|
 | Fase 0 | Pendiente de acuerdos comerciales | No implementada |
-| Fase 1 | Completada | SQL aplicado y verificado en AWS RDS; código local pendiente de deploy |
-| Fase 2 | Implementada localmente | Emision sandbox, persistencia e idempotencia; pendiente SQL y prueba real |
+| Fase 1 | Desplegada en AWS | Migracion verificada; conector y pestaña desplegados; pendiente configurar cuenta Sandbox |
+| Fase 2 | Desplegada en AWS | Migracion ya aplicada y validada; pendiente PAT/UUID, validar payload y emision Sandbox real |
 | Fase 3 | No iniciada | Webhooks y resiliencia |
 | Fase 4 | No iniciada | Servicios adicionales |
 | Fase 5 | No iniciada | Produccion controlada |
@@ -350,15 +350,16 @@ Objetivo: confirmar modelo contractual y alcance inicial.
 
 Salida: alcance, modelo comercial, responsable fiscal y politica de soporte aprobados.
 
-### Fase 2 - implementada localmente
+### Fase 2 - desplegada en AWS
 
-Fecha: 2026-10-27.
+Implementada localmente el 2026-10-27 y desplegada a AWS el 2026-10-28.
 
-Estado: implementación local completada sin emisión real ni deployment. Incluye tabla SQL manual, cliente POST `/invoice`, registro de solicitudes/intentos y endpoints protegidos para emisión/consulta sandbox.
+Estado: cliente POST `/invoice`, registro de solicitudes/intentos y endpoints protegidos para emisión/consulta Sandbox desplegados. No se ha realizado una emisión real.
 
 Scripts:
 
 - [SQL/migration_20261027_matias_fase2.sql](SQL/migration_20261027_matias_fase2.sql)
+- [SQL/validar_migration_20261027_matias_fase2.sql](SQL/validar_migration_20261027_matias_fase2.sql)
 
 Archivos principales de Fase 2:
 
@@ -368,20 +369,26 @@ Archivos principales de Fase 2:
 
 Validaciones:
 
-- Backend compilado con `npm run build`.
-- Producción bloqueada en el endpoint de emisión; solo está disponible sandbox.
+- Migracion Fase 2 ya aplicada en `kore_inventory`; verificacion AWS de 2 tablas,
+  14 columnas criticas y 3 indices unicos: `OK - MIGRACION FASE 2 VALIDA`.
+- Backend compilado y suite de 64 pruebas aprobada en local y EC2.
+- Commit `bd9e934` desplegado en EC2 `18.191.181.99`; PM2 `kore-backend` online
+  y `/health` respondio correctamente.
+- Produccion bloqueada en el endpoint de emision; solo esta disponible Sandbox.
 
 Pendientes:
 
-- Ejecutar la migración manual en AWS.
-- Deployar backend y reiniciar PM2.
-- Configurar PAT sandbox y subcuenta de prueba.
-- Emitir una venta sandbox real y verificar CUFE/estado.
-- Repetir con timeout, rechazo, timeout y reintento sin duplicar número.
+- Crear/verificar cuenta Sandbox; guardar PAT desde el dashboard y configurar
+  `client_uuid` en la empresa sintetica sin compartir secretos por chat.
+- Crear resolucion/rango de prueba y revisar el payload oficial antes de emitir.
+- Probar conexion desde Kinventory y emitir una venta sintetica controlada;
+  verificar respuesta, CUFE y estado en el dashboard MATÍAS.
+- No reintentar una emision de resultado desconocido hasta consultar el
+  dashboard; el endpoint local bloquea una segunda emision para la misma venta.
 
 ### Fase 1: Sandbox, seguridad y modelo local
 
-**Estado:** completada; SQL verificado en AWS y código local pendiente de deploy/prueba sandbox real.
+**Estado:** desplegada en AWS; migracion verificada y pendiente la configuracion/prueba real de Sandbox.
 
 Objetivo: establecer conexion aislada sin emitir documentos reales.
 
@@ -619,7 +626,9 @@ Las fases terminadas se documentaran aqui con fecha, resumen, scripts SQL entreg
 
 Fecha: 2026-10-26. Migracion AWS verificada el 2026-10-27.
 
-Estado: backend y pestaña de configuración implementados localmente. El SQL fue ejecutado manualmente en AWS RDS y las tablas fueron verificadas por SSH. Aún no se realizó deployment del código ni se completó la prueba sandbox real.
+Estado: backend y pestaña de configuración desplegados en AWS. Las tablas fueron
+verificadas por consulta de solo lectura desde EC2. Aún no se completó la prueba
+Sandbox real.
 
 Verificacion AWS realizada:
 
@@ -646,14 +655,19 @@ Validaciones realizadas:
 - Build TypeScript backend completado con `npm run build`.
 - Sin errores de sintaxis reportados por VS Code en archivos backend, frontend y Markdown modificados.
 
+Validacion de despliegue (2026-10-28):
+
+- Fase 1: tablas base presentes en `kore_inventory`; 27 servicios Sandbox.
+- Fase 2: tablas e indices requeridos validados; no fue necesario ejecutar DDL.
+- EC2 actualizado al commit `bd9e934`; PM2 online y `/health` correcto.
+- El frontend es servido por Nginx desde `frontend/public`; la pestaña de
+  Facturación electrónica está presente en AWS.
+
 Pendientes para cerrar Fase 1:
 
-- Mantener el SQL aplicado en AWS actualizado cuando se reejecute el seed para producción.
-- Crear una cuenta sandbox y obtener PAT independiente.
-- Guardar y probar la conexión desde la pestaña Facturación electrónica.
-- Confirmar que el endpoint `/auth/user` de la URL base entregada responde correctamente con PAT.
-- Validar aislamiento tenant con dos usuarios/empresas.
-- Ejecutar deploy AWS solo después de aprobar toda la entrega.
+- Crear una cuenta Sandbox, guardar el PAT y el `client_uuid` de la empresa de
+  prueba mediante la pestaña de configuración.
+- Probar la conexion desde la pestaña y validar aislamiento tenant.
 
 ## Fuentes verificadas
 
