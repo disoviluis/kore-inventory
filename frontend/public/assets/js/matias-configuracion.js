@@ -8,20 +8,22 @@ window.MatiasConfiguracion = (() => {
 
     const headers = () => ({ 'Content-Type': 'application/json' });
 
-    async function load() {
+    async function load(entorno) {
         const empresaId = getCompanyId();
         if (!empresaId) return;
-        const response = await fetch(`/api/matias/${empresaId}`);
+        const query = entorno ? `?entorno=${encodeURIComponent(entorno)}` : '';
+        const response = await fetch(`/api/matias/${empresaId}${query}`);
         const result = await response.json();
         if (!result.success) throw new Error(result.message || 'No fue posible cargar Matias');
-        render(result.data);
+        render(result.data, entorno);
     }
 
-    function render(data) {
+    function render(data, entornoSeleccionado) {
         const connection = data.connection;
         const estado = document.getElementById('matiasEstado');
         estado.textContent = connection ? connection.estado.replace(/_/g, ' ') : 'no configurado';
-        document.getElementById('matiasEntorno').value = connection?.entorno || 'sandbox';
+        document.getElementById('matiasEntorno').value = entornoSeleccionado || connection?.entorno || 'sandbox';
+        document.getElementById('matiasBaseUrlGroup')?.classList.toggle('d-none', document.getElementById('matiasEntorno').value !== 'produccion');
         document.getElementById('matiasCompanyUuid').value = connection?.matias_company_uuid || '';
         document.getElementById('matiasCompanyId').value = connection?.matias_company_id || '';
         document.getElementById('matiasNit').value = connection?.nit || '';
@@ -36,7 +38,7 @@ window.MatiasConfiguracion = (() => {
         container.innerHTML = (data.services || []).map(service => `
             <div class="border rounded p-3 d-flex justify-content-between align-items-center gap-3">
                 <div>
-                    <div class="fw-semibold">${escapeHtml(service.nombre)}</div>
+                    <div class="fw-semibold">${escapeHtml(service.nombre)} <span class="badge text-bg-light border">${service.entorno === 'produccion' ? 'Producción' : 'Sandbox'}</span></div>
                     <small class="text-muted">Contratado: ${service.contratado ? 'Sí' : 'No confirmado'} | Proveedor: ${service.activo_proveedor === null ? 'Desconocido' : (service.activo_proveedor ? 'Activo' : 'Inactivo')}</small>
                 </div>
                 <div class="form-check form-switch flex-shrink-0">
@@ -63,7 +65,7 @@ window.MatiasConfiguracion = (() => {
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || 'No fue posible guardar la conexion');
         document.getElementById('matiasPat').value = '';
-        await load();
+        await load(entorno);
         return result;
     }
 
@@ -73,7 +75,7 @@ window.MatiasConfiguracion = (() => {
         const response = await fetch(`/api/matias/${empresaId}/probar?entorno=${encodeURIComponent(entorno)}`, { method: 'POST', headers: headers() });
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || 'La prueba de Matias falló');
-        await load();
+        await load(entorno);
         return result;
     }
 
@@ -83,7 +85,7 @@ window.MatiasConfiguracion = (() => {
         const response = await fetch(`/api/matias/${empresaId}/revocar?entorno=${encodeURIComponent(entorno)}`, { method: 'POST', headers: headers() });
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || 'No fue posible revocar la conexion');
-        await load();
+        await load(entorno);
         return result;
     }
 
@@ -130,6 +132,7 @@ window.MatiasConfiguracion = (() => {
         document.getElementById('matiasEntorno')?.addEventListener('change', event => {
             const production = event.target.value === 'produccion';
             document.getElementById('matiasBaseUrlGroup').classList.toggle('d-none', !production);
+            load(event.target.value).catch(error => notify(error));
         });
         document.getElementById('matias-tab')?.addEventListener('shown.bs.tab', () => load().catch(error => notify(error)));
         document.getElementById('companySelector')?.addEventListener('change', () => load().catch(error => notify(error)));

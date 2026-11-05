@@ -2,10 +2,31 @@ import { Request, Response } from 'express';
 import pool from '../../shared/database';
 import { decryptAuthSecret, encryptAuthSecret } from '../../core/auth/auth.security';
 import { emitMatiasInvoice, probeMatias } from './matias.client';
-import { RowDataPacket } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import crypto from 'crypto';
 
 const sandboxUrl = 'https://sandbox-api.matias-api.com/api/ubl2.1';
+
+export const matiasServiceCatalog: ReadonlyArray<readonly [string, string]> = [
+  ['factura_electronica', 'Factura electronica'],
+  ['pos_electronico', 'POS electronico'],
+  ['nota_credito', 'Nota credito'],
+  ['nota_debito', 'Nota debito'],
+  ['documento_soporte', 'Documento soporte'],
+  ['nomina_electronica', 'Nomina electronica'],
+  ['radian', 'RADIAN y recepcion'],
+  ['envio_masivo', 'Envio masivo'],
+  ['webhooks', 'Webhooks']
+];
+
+// Companies created after the Phase 1 migration have no service rows; create them inactive on demand.
+async function ensureMatiasServices(empresaId: number) {
+  const rows = ['sandbox', 'produccion'].flatMap(entorno => matiasServiceCatalog.map(([codigo, nombre]) => [empresaId, entorno, codigo, nombre]));
+  await pool.query(
+    'INSERT IGNORE INTO matias_servicios (empresa_id, entorno, codigo, nombre) VALUES ?',
+    [rows]
+  );
+}
 
 async function puedeOperarEmpresa(req: Request, empresaId: number): Promise<boolean> {
   const user: any = (req as any).user;
@@ -43,11 +64,14 @@ export async function getMatiasConnection(req: Request, res: Response) {
     [empresaId]
   );
 
+  const entorno = req.query.entorno === 'produccion' || (!req.query.entorno && rows[0]?.entorno === 'produccion')
+    ? 'produccion' : 'sandbox';
+  await ensureMatiasServices(empresaId);
   const [services] = await pool.execute<RowDataPacket[]>(
-    `SELECT codigo, nombre, contratado, activo_local, activo_proveedor,
+    `SELECT codigo, nombre, entorno, contratado, activo_local, activo_proveedor,
             ultima_verificacion_at, datos_publicos, version_api
-       FROM matias_servicios WHERE empresa_id = ? ORDER BY nombre`,
-    [empresaId]
+       FROM matias_servicios WHERE empresa_id = ? AND entorno = ? ORDER BY nombre`,
+    [empresaId, entorno]
   );
 
   return res.json({ success: true, data: { connection: rows[0] || null, services } });
@@ -401,7 +425,9 @@ export async function setMatiasService(req: Request, res: Response) {
   if (!await puedeOperarEmpresa(req, empresaId)) return res.status(403).json({ success: false, message: 'No tiene acceso a esta empresa' });
   const entorno = req.body.entorno === 'produccion' ? 'produccion' : 'sandbox';
   const activoLocal = req.body.activo === true ? 1 : 0;
-
+  if (!matiasServiceCatalog.some(([known]) => known === codigo)) {
+    return res.status(400).json({ success: false, message: 'Servicio Matias no reconocido' });
+  }
   const [connections] = await pool.execute<RowDataPacket[]>(
     `SELECT estado, pat_cifrado FROM matias_conexiones WHERE empresa_id = ? AND entorno = ? LIMIT 1`,
     [empresaId, entorno]
@@ -411,11 +437,16 @@ export async function setMatiasService(req: Request, res: Response) {
     return res.status(400).json({ success: false, message: 'Debe probar la conexion antes de activar un servicio' });
   }
 
-  await pool.execute(
+  await ensureMatiasServices(empresaId);
+  const [updated] = await pool.execute<ResultSetHeader>(
     `UPDATE matias_servicios SET activo_local = ?, ultima_verificacion_at = NOW()
      WHERE empresa_id = ? AND entorno = ? AND codigo = ?`,
     [activoLocal, empresaId, entorno, codigo]
   );
+  if (!updated.affectedRows) {
+    await audit(req, empresaId, entorno, 'activar_servicio', 'error', { codigo, motivo: 'servicio_no_registrado' });
+    return res.status(500).json({ success: false, message: 'No fue posible actualizar el servicio' });
+  }
   await audit(req, empresaId, entorno, activoLocal ? 'activar_servicio' : 'desactivar_servicio', 'ok', { codigo });
   return res.json({ success: true, message: activoLocal ? 'Servicio activado' : 'Servicio desactivado' });
 }
