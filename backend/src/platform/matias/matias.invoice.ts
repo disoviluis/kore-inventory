@@ -216,7 +216,7 @@ export function buildMatiasSandboxInvoice(
     payload: {
       client_uuid: clientUuid, uuid: requestUuid, resolution_number: sale.resolucion_dian.trim(),
       prefix, document_number: documentNumber,
-      operation_type_id: 1, type_document_id: 1, graphic_representation: true, send_email: false,
+      operation_type_id: 1, type_document_id: 7, graphic_representation: true, send_email: false,
       customer: {
         company_name: name, dni, ...(identity === 3 && sale.digito_verificacion != null ? { dv: String(sale.digito_verificacion) } : {}),
         identity_document_id: identity, type_organization_id: sale.tipo_cliente === 'empresa' ? 1 : 2,

@@ -24,6 +24,7 @@ const invoice = (overrides = {}, lines = [line], paid = payments, settings = opt
 test('FEV sale normalizes consecutive, maps customer and separates IVA, retention, cash and change', () => {
   const { payload, reconciliation, blockingErrors } = invoice();
   assert.equal(payload.document_number, '2');
+  assert.equal(payload.type_document_id, 7, 'MATIAS catalog API id, not DIAN code 01');
   assert.equal(payload.prefix, 'FEV');
   assert.equal(payload.client_uuid, 'client-uuid');
   assert.equal(payload.uuid, 'request-uuid');

@@ -232,9 +232,11 @@ test('emission sends and persists the same validated payload when withholding ha
         assert.equal(requestUrl.hostname, 'sandbox-api.matias-api.com');
         assert.equal(requestUrl.searchParams.get('client_uuid'), 'client-uuid');
         assert.equal(sent.document_number, '2');
+        assert.equal(sent.type_document_id, 7);
         assert.equal(sent.payments[0].value_paid, '159300.00');
         const saved = calls.find(call => call.sql.trim().startsWith('INSERT INTO matias_documentos'));
-        assert.deepEqual(JSON.parse(saved.params[5]), sent);
+        assert.deepEqual(saved.params.slice(2, 4), [sent.type_document_id, sent.operation_type_id]);
+        assert.deepEqual(JSON.parse(saved.params[7]), sent);
         assert.equal(calls.filter(call => call.sql.trim().startsWith('INSERT INTO matias_documentos')).length, 1);
       });
     } finally { https.request = original; }

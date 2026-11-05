@@ -320,8 +320,9 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
     `INSERT INTO matias_documentos
         (empresa_id, venta_id, entorno, tipo_documento_id, tipo_operacion_id, request_uuid,
          document_number, estado, payload_hash, request_payload, attempt_count, last_attempt_at, created_by)
-       VALUES (?, ?, 'sandbox', 1, 1, ?, ?, 'emitting', ?, ?, 1, NOW(), ?)`,
-    [empresaId, ventaId, requestUuid, `${prefix}${documentNumber}`, payloadHash, JSON.stringify(payload), (req as any).user?.id || null]
+       VALUES (?, ?, 'sandbox', ?, ?, ?, ?, 'emitting', ?, ?, 1, NOW(), ?)`,
+    [empresaId, ventaId, payload.type_document_id, payload.operation_type_id,
+        requestUuid, `${prefix}${documentNumber}`, payloadHash, JSON.stringify(payload), (req as any).user?.id || null]
   );
   const documentId = inserted.insertId;
 
