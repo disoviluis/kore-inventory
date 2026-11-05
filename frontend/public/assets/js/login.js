@@ -21,8 +21,8 @@ const btnText = document.getElementById('btnText');
  * Mostrar alerta
  */
 function showAlert(message, type = 'danger') {
-  const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-  const iconClass = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+  const alertClass = { success: 'alert-success', warning: 'alert-warning' }[type] || 'alert-danger';
+  const iconClass = { success: 'bi-check-circle-fill', warning: 'bi-clock-history' }[type] || 'bi-exclamation-triangle-fill';
   
   const alertHTML = `
     <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
@@ -34,6 +34,7 @@ function showAlert(message, type = 'danger') {
   
   alertContainer.innerHTML = alertHTML;
   alertContainer.querySelector('.alert-message').textContent = message;
+  if (type === 'warning') return;
   
   // Auto-cerrar después de 5 segundos
   setTimeout(() => {
@@ -170,6 +171,17 @@ passwordInput.addEventListener('input', () => {
  * Verificar si ya hay una sesión activa
  */
 document.addEventListener('DOMContentLoaded', () => {
+  const motivo = new URLSearchParams(location.search).get('motivo');
+  const mensajes = {
+    inactividad: 'Su sesion se cerro por inactividad. Inicie sesion nuevamente para continuar.',
+    expirada: 'Su sesion expiro. Inicie sesion nuevamente para continuar.'
+  };
+  if (mensajes[motivo]) {
+    showAlert(mensajes[motivo], 'warning');
+    history.replaceState(null, '', location.pathname);
+    return;
+  }
+
   const token = localStorage.getItem('token');
   
   if (token) {

@@ -7,6 +7,12 @@ import { getAuthSecret, protectAuthValue } from './auth.security';
 export const sessionCookie = 'kore_session';
 export const csrfCookie = 'kore_csrf';
 export const sessionDuration = 8 * 60 * 60 * 1000;
+// The browser logs out after 30 idle minutes and pings while the user is active;
+// the server window adds a margin so a ping interval never expires an active user.
+const idleMinutes = Number(process.env.SESSION_IDLE_MINUTES);
+export const sessionIdleMs = (Number.isFinite(idleMinutes) && idleMinutes > 0 ? idleMinutes : 35) * 60 * 1000;
+export const sessionExpiredCode = 'SESION_EXPIRADA';
+export const sessionExpiredMessage = 'Su sesion expiro o se cerro por inactividad. Inicie sesion nuevamente.';
 
 export const cookieOptions = () => ({
   httpOnly: true,
@@ -19,10 +25,11 @@ export async function issueSession(req: Request, res: Response, usuario: any) {
   const id = crypto.randomUUID();
   const csrf = crypto.randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + sessionDuration);
+  const idleExpires = new Date(Date.now() + Math.min(sessionIdleMs, sessionDuration));
   const version = Number(usuario.version_sesion);
   await query(`INSERT INTO auth_sesiones
     (id, usuario_id, version_sesion, csrf_hash, expira_at) VALUES (?, ?, ?, ?, ?)`,
-  [id, usuario.id, version, protectAuthValue(csrf), expires]);
+  [id, usuario.id, version, protectAuthValue(csrf), idleExpires]);
   const token = jwt.sign({ id: usuario.id, jti: id, version }, getAuthSecret(), {
     algorithm: 'HS256', expiresIn: '8h', issuer: 'kore-inventory', audience: 'kore-web'
   });
@@ -35,6 +42,15 @@ export async function issueSession(req: Request, res: Response, usuario: any) {
     empresa_id: usuario.empresa_id_default, bodega_id: usuario.bodega_id || null,
     estado_verificacion: usuario.estado, mfa_activo: Boolean(usuario.mfa_secret)
   } };
+}
+
+export async function extendIdleSession(sessionId: string, currentExpiry: unknown) {
+  const expiresAt = new Date(currentExpiry as any).getTime();
+  // Throttle writes: only slide the window once at least a minute has been consumed.
+  if (!Number.isFinite(expiresAt) || expiresAt - Date.now() > sessionIdleMs - 60 * 1000) return;
+  await query(`UPDATE auth_sesiones SET expira_at = ?
+    WHERE id = ? AND revocada_at IS NULL AND expira_at > UTC_TIMESTAMP()`,
+  [new Date(Date.now() + sessionIdleMs), sessionId]);
 }
 
 export async function revokeUserSessions(usuarioId: number) {

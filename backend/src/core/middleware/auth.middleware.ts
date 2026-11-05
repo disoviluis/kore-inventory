@@ -12,7 +12,7 @@ import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
 import { getAuthSecret, protectAuthValue } from '../auth/auth.security';
 import { query } from '../../shared/database';
-import { sessionCookie } from '../auth/auth.sessions';
+import { extendIdleSession, sessionCookie, sessionExpiredCode, sessionExpiredMessage } from '../auth/auth.sessions';
 import { needsLegalAcceptance } from '../auth/legal.service';
 
 interface JwtPayload {
@@ -20,6 +20,9 @@ interface JwtPayload {
   jti: string;
   version: number;
 }
+
+const sessionExpired = (res: Response) =>
+  res.status(401).json({ success: false, codigo: sessionExpiredCode, message: sessionExpiredMessage });
 
 /**
  * Middleware para validar JWT
@@ -31,18 +34,10 @@ export const authMiddleware = async (
 ): Promise<Response | void> => {
   try {
     if ((req as any).authSessionId) { next(); return; }
-    // Obtener token del header
-    const authHeader = req.headers.authorization;
-
     const token = req.cookies?.[sessionCookie];
     if (!token) {
       logger.warning(`authMiddleware: Token no proporcionado en ${req.method} ${req.url}`);
-      return errorResponse(
-        res,
-        CONSTANTS.MESSAGES.UNAUTHORIZED,
-        'Token no proporcionado',
-        CONSTANTS.HTTP_STATUS.UNAUTHORIZED
-      );
+      return sessionExpired(res);
     }
 
     logger.info(`authMiddleware: Verificando token para ${req.method} ${req.url}`);
@@ -54,12 +49,12 @@ export const authMiddleware = async (
       { algorithms: ['HS256'], issuer: 'kore-inventory', audience: 'kore-web' }
     ) as JwtPayload;
     if (!decoded.jti || !Number.isInteger(decoded.id) || !Number.isInteger(decoded.version)) {
-      return res.status(401).json({ success: false, message: 'Sesion no valida' });
+      return sessionExpired(res);
     }
     const users = await query(`SELECT u.id, u.email, u.nombre, u.apellido, u.tipo_usuario,
       u.empresa_id_default AS empresa_id, u.empresa_id_default, u.bodega_id,
       s.estado AS estado_verificacion, s.mfa_secret IS NOT NULL AS mfa_activo, s.mfa_obligatorio,
-      a.csrf_hash FROM usuarios u JOIN usuarios_seguridad s ON s.usuario_id = u.id
+      a.csrf_hash, a.expira_at AS sesion_expira_at FROM usuarios u JOIN usuarios_seguridad s ON s.usuario_id = u.id
       JOIN auth_sesiones a ON a.usuario_id = u.id
       WHERE u.id = ? AND u.activo = 1 AND s.estado IN ('legado','verificado')
         AND (u.rol_id IS NULL OR EXISTS (SELECT 1 FROM roles r WHERE r.id = u.rol_id AND r.activo = 1 AND r.nivel >= u.nivel_privilegio))
@@ -67,7 +62,7 @@ export const authMiddleware = async (
         AND a.id = ? AND a.revocada_at IS NULL AND a.expira_at > UTC_TIMESTAMP()`,
     [decoded.id, decoded.version, decoded.jti]);
     const user = users[0];
-    if (!user) return res.status(401).json({ success: false, message: 'Sesion revocada o expirada' });
+    if (!user) return sessionExpired(res);
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       const csrf = req.get('X-CSRF-Token');
       if (!csrf || protectAuthValue(csrf) !== user.csrf_hash) {
@@ -75,6 +70,9 @@ export const authMiddleware = async (
       }
     }
     delete user.csrf_hash;
+    const sessionExpiresAt = user.sesion_expira_at;
+    delete user.sesion_expira_at;
+    await extendIdleSession(decoded.jti, sessionExpiresAt);
     const pendingLegal = user.estado_verificacion === 'verificado' && await needsLegalAcceptance(user.id);
     const pendingMfa = (user.mfa_obligatorio || user.estado_verificacion === 'verificado' && ['super_admin', 'admin_empresa'].includes(user.tipo_usuario)) && !user.mfa_activo;
     user.requiere_seguridad = pendingLegal || pendingMfa;
@@ -90,22 +88,7 @@ export const authMiddleware = async (
     next();
   } catch (error: any) {
     logger.warning(`authMiddleware: Token inválido o expirado en ${req.method} ${req.url} - ${error.message}`);
-
-    if (error.name === 'TokenExpiredError') {
-      return errorResponse(
-        res,
-        CONSTANTS.MESSAGES.TOKEN_EXPIRED,
-        null,
-        CONSTANTS.HTTP_STATUS.UNAUTHORIZED
-      );
-    }
-
-    return errorResponse(
-      res,
-      CONSTANTS.MESSAGES.TOKEN_INVALID,
-      null,
-      CONSTANTS.HTTP_STATUS.UNAUTHORIZED
-    );
+    return sessionExpired(res);
   }
 };
 

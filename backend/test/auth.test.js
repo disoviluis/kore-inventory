@@ -234,6 +234,58 @@ test('authenticated cookie writes require the server-bound CSRF secret', async (
   });
 });
 
+test('expired, missing or revoked sessions return a re-login code', async () => {
+  const missing = responseMock();
+  await authMiddleware({ cookies: {}, headers: {}, method: 'GET', originalUrl: '/api/ventas', url: '/api/ventas' }, missing, () => assert.fail('missing session accepted'));
+  assert.equal(missing.statusCode, 401);
+  assert.equal(missing.body.codigo, 'SESION_EXPIRADA');
+
+  const expired = jwt.sign({ id: 17, jti: 'session-17', version: 1 }, security.getAuthSecret(), {
+    issuer: 'kore-inventory', audience: 'kore-web', expiresIn: -10
+  });
+  const res = responseMock();
+  await authMiddleware({ cookies: { kore_session: expired }, headers: {}, method: 'GET', originalUrl: '/api/ventas', url: '/api/ventas' }, res, () => assert.fail('expired session accepted'));
+  assert.equal(res.statusCode, 401);
+  assert.equal(res.body.codigo, 'SESION_EXPIRADA');
+  assert.match(res.body.message, /Inicie sesion nuevamente/);
+
+  const token = jwt.sign({ id: 17, jti: 'session-17', version: 1 }, security.getAuthSecret(), {
+    issuer: 'kore-inventory', audience: 'kore-web', expiresIn: '1h'
+  });
+  await withDatabaseMock(async () => [], async () => {
+    const revoked = responseMock();
+    await authMiddleware({ cookies: { kore_session: token }, headers: {}, method: 'GET', originalUrl: '/api/ventas', url: '/api/ventas' }, revoked, () => assert.fail('revoked session accepted'));
+    assert.equal(revoked.statusCode, 401);
+    assert.equal(revoked.body.codigo, 'SESION_EXPIRADA');
+  });
+});
+
+test('authenticated activity slides the idle expiry only when it is worth writing', async () => {
+  const { sessionIdleMs } = require('../dist/core/auth/auth.sessions');
+  const token = jwt.sign({ id: 17, jti: 'session-17', version: 1 }, security.getAuthSecret(), {
+    issuer: 'kore-inventory', audience: 'kore-web', expiresIn: '1h'
+  });
+  for (const [remaining, shouldExtend] of [[5 * 60 * 1000, true], [sessionIdleMs - 1000, false]]) {
+    const updates = [];
+    await withDatabaseMock(async (sql, params) => {
+      if (sql.startsWith('UPDATE auth_sesiones')) { updates.push(params); return { affectedRows: 1 }; }
+      return [{ id: 17, tipo_usuario: 'usuario', estado_verificacion: 'legado', csrf_hash: 'x', sesion_expira_at: new Date(Date.now() + remaining) }];
+    }, async () => {
+      const res = responseMock();
+      const req = { cookies: { kore_session: token }, headers: {}, method: 'GET', originalUrl: '/api/ventas', url: '/api/ventas' };
+      let next = false;
+      await authMiddleware(req, res, () => { next = true; });
+      assert.equal(next, true);
+      assert.equal('sesion_expira_at' in req.user, false);
+    });
+    assert.equal(updates.length, shouldExtend ? 1 : 0);
+    if (shouldExtend) {
+      assert.equal(updates[0][1], 'session-17');
+      assert.ok(updates[0][0].getTime() > Date.now() + sessionIdleMs - 5000);
+    }
+  }
+});
+
 test('wrong confirmation code increments attempts and does not change users or licenses', async () => {
   const writes = [];
   const challenge = { id: 'challenge', usuario_id: 17, intentos: 0, codigo_hash: security.protectAuthValue('challenge:123456'), expira_at: new Date(Date.now() + 600000), codigo_expira_at: new Date(Date.now() + 600000) };
