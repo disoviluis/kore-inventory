@@ -524,21 +524,66 @@ contrasenas, certificados o llaves privadas en este documento.
   `matias_servicios` (creada despues de la migracion Fase 1), por lo que activar
   un servicio no tenia efecto. Ahora el catalogo se crea al abrir la pestaña o
   activar un servicio y la lista se filtra por entorno.
-- **Datos a corregir en Kinventory antes de emitir** (lectura del 2026-11-05):
-  - NIT de la empresa 33: `900999001-1`; la subcuenta MATÍAS es `900999002-7`.
-    Deben coincidir con el emisor de la subcuenta.
-  - `resolucion_dian` vacia y `prefijo_factura = FAC`; la resolucion Sandbox
-    activa es `1876000001`, prefijo `FEV`, rango 1-1000.
-  - La empresa 33 no tiene ventas; crear una venta sintetica con un cliente de
-    prueba con datos fiscales completos.
-  - Activar el servicio **Factura electronica** en Sandbox.
-- **Siguiente paso:** confirmar la revocacion del PAT expuesto y configurar el
-  PAT de reemplazo y el `client_uuid` en la conexion Sandbox de Kinventory.
-- **Estado actual informado (2026-11-04):** subcuenta sintetica creada en
-  MATÍAS Sandbox; `client_uuid` conocido y FEV/rango visible. Falta vincularla
-  en la empresa sintetica AWS y probar la conexion desde Kinventory. El PAT
-  original fue expuesto; confirmar su revocacion y usar solo el reemplazo en
-  el campo seguro del ERP.
+- **Preparacion verificada (2026-11-05, despues de la venta POS):**
+  - Empresa 33: NIT actualizado a `900999002-7`, resolucion `1876000001` y
+    prefijo `FEV`.
+  - Conexion Sandbox `configurado`; servicio `factura_electronica` activo
+    en Sandbox e inactivo en Produccion.
+  - Venta `id 140`, factura local `FEV-000002`, estado `pagada`.
+    Subtotal: 135000.00; descuento: 0.00; IVA: 25650.00;
+    retenciones: 1350.00; total neto: 159300.00.
+    Pago en efectivo registrado: 170000.00 (diferencia frente al neto: 10700.00).
+  - No hay documentos en `matias_documentos` para esta empresa: la factura
+    del POS no acredita emision electronica en MATÍAS.
+- **Correcciones del payload (2026-11-05):**
+  - Eliminada la consulta a `p.codigo_unspsc`, inexistente en AWS. Se usa el
+    ID interno del producto como `code` y el estandar del contribuyente
+    (`type_item_identifications_id = 4`), admitido por MATIAS.
+  - `FEV-000002` se normaliza a prefijo `FEV` y consecutivo `2`.
+  - IVA en cada linea y agrupado por tarifa en `tax_totals`; el total calculado
+    debe coincidir con el IVA registrado en la venta. No se distribuye el IVA
+    global arbitrariamente ni se certifican tarifas historicas.
+  - Total fiscal bruto: 160650.00 en `tax_inclusive_amount` y `payable_amount`,
+    siguiendo el ejemplo oficial de factura con retenciones. El neto cobrado
+    se concilia aparte: 160650.00 - 1350.00 = 159300.00.
+  - `payments.value_paid`: 159300.00; efectivo recibido 170000.00 y cambio
+    10700.00. Solo se permite descontar cambio de pagos en efectivo.
+  - Tipo de documento, organizacion y regimen IVA del cliente mapeados a los
+    IDs MATIAS. Bogota corresponde a `city_id = 149`, no a `city_name`
+    (este ultimo es para extranjeros). Otras ciudades requieren un
+    `customer_city_id` explicito del catalogo del proveedor.
+  - La responsabilidad fiscal vacia no se inventa: se omite `tax_level_id` y
+    se advierte que MATIAS documenta por defecto 5 (R-99-PN).
+- **Decision del usuario sobre retenciones (2026-11-05):** no esta confirmado
+  que los 1350.00 sean ReteICA al 1%. La emision debe permanecer bloqueada
+  hasta verificar el desglose. No reclasificar ni modificar la venta.
+  La previsualizacion muestra el IVA y los importes corregidos, con
+  `ready: false`, HTTP 422 y el motivo de bloqueo; no es un JSON listo para
+  enviar mientras falte esa confirmacion.
+- **Previsualizacion sin efectos fiscales:**
+  `POST /api/matias/33/ventas/140/previsualizar-sandbox` con body `{}`.
+  Usa la misma validacion y constructor de JSON que `emitir-sandbox`, exige
+  la sesion, permisos y CSRF habituales; no descifra ni devuelve el PAT,
+  no llama al proveedor y no crea documentos/intentos ni modifica ventas.
+  El UUID de la vista previa es provisional y no reserva un consecutivo.
+  Cuando el desglose haya sido confirmado, ambos endpoints aceptan
+  `withholding_taxes`: arreglo con `tax_id` (5 ReteIVA, 6 ReteRenta, 7 ReteICA),
+  `tax_amount`, `taxable_amount` y `percent`. Se valida base, tarifa y suma
+  contra la retencion registrada. No inferir el desglose a partir del total.
+- **Alcance actual del mapeo Sandbox:** ventas pagadas de contado, productos
+  por unidad, IVA 0/5/19 con conciliacion por linea, y medios de pago con
+  equivalencia explicita. Descuentos de linea/globales, propinas, impuestos
+  adicionales, unidades sin mapeo, ventas de credito o datos inconsistentes
+  se rechazan con un mensaje explicito; no se envian aproximaciones fiscales.
+- **Fuentes verificadas para este ajuste:**
+  [Campos del documento](https://docs.matias-api.com/docs/billing-fields/),
+  [Factura con retenciones](https://docs.matias-api.com/docs/jsons-billing/invoice-with-retentions-example/)
+  y catalogos publicos Sandbox de impuestos, identificacion, regimenes,
+  ciudades, identificacion de item y medios de pago.
+- **Siguiente paso:** confirmar la naturaleza/base/tarifa de los 1350.00 de
+  retenciones y revisar nuevamente la previsualizacion. No repetir el cobro
+  ni emitir hasta entonces. Sigue pendiente confirmar la revocacion del PAT
+  expuesto anteriormente.
 - **Emision real de prueba:** el backend desplegado en AWS tiene rutas para
   configurar, probar conexion y emitir una venta en Sandbox. Antes de emitir se
   requiere PAT, `client_uuid`, resolucion/rango de prueba y validar el payload

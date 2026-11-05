@@ -8,6 +8,7 @@ import {
   revokeMatiasConnection,
   setMatiasService,
   emitMatiasSandboxInvoice,
+  previewMatiasSandboxInvoice,
   getMatiasVentaDocument
 } from './matias.controller';
 
@@ -19,6 +20,7 @@ router.post('/:empresaId/probar', authMiddleware, verificarEmpresaActiva, probeM
 router.post('/:empresaId/revocar', authMiddleware, verificarEmpresaActiva, revokeMatiasConnection);
 router.put('/:empresaId/servicios/:codigo', authMiddleware, verificarEmpresaActiva, setMatiasService);
 router.post('/:empresaId/ventas/:ventaId/emitir-sandbox', authMiddleware, verificarEmpresaActiva, emitMatiasSandboxInvoice);
+router.post('/:empresaId/ventas/:ventaId/previsualizar-sandbox', authMiddleware, verificarEmpresaActiva, previewMatiasSandboxInvoice);
 router.get('/:empresaId/ventas/:ventaId/documento', authMiddleware, verificarEmpresaActiva, getMatiasVentaDocument);
 
 export default router;

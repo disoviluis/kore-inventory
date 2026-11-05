@@ -2,6 +2,10 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const pool = require('../dist/shared/database').default;
 const { getMatiasConnection, setMatiasService, matiasServiceCatalog } = require('../dist/platform/matias/matias.controller');
+const { previewMatiasSandboxInvoice, emitMatiasSandboxInvoice } = require('../dist/platform/matias/matias.controller');
+const https = require('node:https');
+const { EventEmitter } = require('node:events');
+const { encryptAuthSecret } = require('../dist/core/auth/auth.security');
 
 function responseMock() {
   return {
@@ -82,4 +86,156 @@ test('connection services are limited to the selected environment', async () => 
     assert.equal(res.body.success, true);
     assert.ok(calls.some(call => call.sql.startsWith('INSERT IGNORE INTO matias_servicios')));
   });
+});
+
+const fiscalSale = {
+    numero_factura: 'FEV-000002', prefijo_factura: 'FEV', resolucion_dian: '1876000001',
+    subtotal: '135000.00', descuento: '0.00', impuesto: '25650.00', retenciones: '1350.00',
+    total: '159300.00', impuestos_adicionales: '0.00', propina_valor: '0.00',
+    estado: 'pagada', forma_pago: 'contado', tipo_documento: 'NIT', numero_documento: '900123456',
+    digito_verificacion: '8', nombre: null, apellido: null, razon_social: 'CLIENTE SINTETICO',
+    email: 'cliente@example.invalid', direccion: 'Calle de prueba', ciudad: 'Bogota',
+    tipo_cliente: 'empresa', regimen_tributario: 'simplificado', responsabilidad_fiscal: null
+  };
+  async function fiscalQuery(sql) {
+    if (sql.includes('FROM matias_conexiones')) return [{
+      base_url: 'https://sandbox-api.matias-api.com/api/ubl2.1', pat_cifrado: 'not-decrypted-in-preview',
+      matias_company_uuid: 'client-uuid', estado: 'configurado'
+    }];
+    if (sql.includes('FROM matias_servicios')) return [{ activo_local: 1 }];
+    if (sql.includes('FROM ventas v')) return [fiscalSale];
+    if (sql.includes('FROM venta_detalle')) {
+      assert.doesNotMatch(sql, /codigo_unspsc/);
+      assert.match(sql, /p.porcentaje_iva/);
+      return [{
+        producto_id: 1943, cantidad: '1.000', precio_unitario: '135000.00', descuento: '0.00',
+        subtotal: '135000.00', nombre: 'Producto sintetico', descripcion: null,
+        porcentaje_iva: '19.00', aplica_iva: 1, tipo_impuesto: 'gravado', unidad_medida: 'UND'
+      }];
+    }
+    if (sql.includes('FROM venta_pagos')) return [{ metodo_pago: 'efectivo', monto: '170000.00' }];
+    if (sql.includes('FROM matias_documentos')) return [];
+    if (sql.startsWith('INSERT INTO matias_eventos_auditoria')) return { affectedRows: 1 };
+    assert.fail(`Unexpected SQL: ${sql}`);
+  }
+
+  test('sandbox preview returns provisional corrected JSON and blocks unconfirmed historical withholdings without writes or HTTP', async () => {
+    const original = https.request;
+    https.request = () => assert.fail('preview must never contact MATIAS');
+    try {
+      await withPool(fiscalQuery, async calls => {
+        const res = responseMock();
+        await previewMatiasSandboxInvoice(requestMock({ params: { empresaId: '33', ventaId: '140' } }), res);
+        assert.equal(res.statusCode, 422);
+        assert.equal(res.body.success, false);
+        assert.equal(res.body.data.ready, false);
+        assert.equal(res.body.data.preview, true);
+        assert.equal(res.body.data.payload.document_number, '2');
+        assert.equal(res.body.data.payload.tax_totals[0].tax_amount, 25650);
+        assert.equal(res.body.data.payload.payments[0].value_paid, '159300.00');
+        assert.equal(JSON.stringify(res.body).includes('pat_cifrado'), false);
+        assert.ok(calls.every(call => call.sql.trim().startsWith('SELECT')));
+      });
+    } finally { https.request = original; }
+  });
+
+  test('sandbox preview and emission enforce the same retention blocker before creating a document', async () => {
+    const original = https.request;
+    https.request = () => assert.fail('blocked sale must never contact MATIAS');
+    try {
+      await withPool(fiscalQuery, async calls => {
+        const res = responseMock();
+        await emitMatiasSandboxInvoice(requestMock({ params: { empresaId: '33', ventaId: '140' } }), res);
+        assert.equal(res.statusCode, 422);
+        assert.match(res.body.message, /Confirme el desglose/);
+        assert.equal(calls.some(call => call.sql.startsWith('INSERT INTO matias_documentos')), false);
+      });
+    } finally { https.request = original; }
+  });
+
+  test('sandbox preview validates an explicitly confirmed retention breakdown without sending or storing it', async () => {
+    await withPool(fiscalQuery, async calls => {
+      const res = responseMock();
+      await previewMatiasSandboxInvoice(requestMock({
+        params: { empresaId: '33', ventaId: '140' },
+        body: { withholding_taxes: [{ tax_id: '7', tax_amount: 1350, taxable_amount: 135000, percent: 1 }] }
+      }), res);
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.body.success, true);
+      assert.equal(res.body.data.ready, true);
+      assert.equal(res.body.data.payload.tax_totals[1].tax_id, '7');
+      assert.ok(calls.every(call => call.sql.trim().startsWith('SELECT')));
+    });
+  });
+
+test('sandbox preview rejects unauthorized tenants and existing fiscal attempts', async () => {
+  await withPool(async sql => {
+    if (sql.includes('FROM usuario_empresa')) return [];
+    assert.fail('Unauthorized request must not load a sale');
+  }, async () => {
+    const res = responseMock();
+    await previewMatiasSandboxInvoice(requestMock({
+      user: { id: 2, tipo_usuario: 'admin_empresa' }, params: { empresaId: '33', ventaId: '140' }
+    }), res);
+    assert.equal(res.statusCode, 403);
+  });
+  await withPool(async sql => sql.includes('FROM matias_documentos')
+    ? [{ id: 1, estado: 'unknown', request_uuid: 'existing-uuid' }] : fiscalQuery(sql), async calls => {
+    const res = responseMock();
+    await previewMatiasSandboxInvoice(requestMock({ params: { empresaId: '33', ventaId: '140' } }), res);
+    assert.equal(res.statusCode, 409);
+    assert.ok(calls.every(call => call.sql.trim().startsWith('SELECT')));
+  });
+});
+
+test('emission sends and persists the same validated payload when withholding has been explicitly supplied', async () => {
+    process.env.JWT_SECRET = 'test-secret-with-more-than-thirty-two-bytes';
+    const original = https.request;
+    let sent;
+    let requestUrl;
+    https.request = (url, options, callback) => {
+      requestUrl = url;
+      const request = new EventEmitter();
+      request.end = body => {
+        sent = JSON.parse(body);
+        const response = new EventEmitter();
+        response.statusCode = 200;
+        response.setEncoding = () => {};
+        callback(response);
+        process.nextTick(() => {
+          response.emit('data', JSON.stringify({
+            success: true, uuid: 'provider-uuid', XmlDocumentKey: 'sandbox-cufe',
+            response: { IsValid: 'true', StatusCode: '00' }
+          }));
+          response.emit('end');
+        });
+      };
+      return request;
+    };
+    try {
+      await withPool(async sql => {
+        if (sql.includes('FROM matias_conexiones')) return [{
+          base_url: 'https://sandbox-api.matias-api.com/api/ubl2.1', pat_cifrado: encryptAuthSecret('fake-test-pat'),
+          matias_company_uuid: 'client-uuid', estado: 'configurado'
+        }];
+        if (sql.startsWith('INSERT INTO matias_documentos')) return { insertId: 99 };
+        if (/^(INSERT|UPDATE)/.test(sql.trim())) return { affectedRows: 1 };
+        return fiscalQuery(sql);
+      }, async calls => {
+        const res = responseMock();
+        await emitMatiasSandboxInvoice(requestMock({
+          params: { empresaId: '33', ventaId: '140' },
+          body: { withholding_taxes: [{ tax_id: '7', tax_amount: 1350, taxable_amount: 135000, percent: 1 }] }
+        }), res);
+        assert.equal(res.statusCode, 200);
+        assert.equal(res.body.data.estado, 'accepted');
+        assert.equal(requestUrl.hostname, 'sandbox-api.matias-api.com');
+        assert.equal(requestUrl.searchParams.get('client_uuid'), 'client-uuid');
+        assert.equal(sent.document_number, '2');
+        assert.equal(sent.payments[0].value_paid, '159300.00');
+        const saved = calls.find(call => call.sql.trim().startsWith('INSERT INTO matias_documentos'));
+        assert.deepEqual(JSON.parse(saved.params[5]), sent);
+        assert.equal(calls.filter(call => call.sql.trim().startsWith('INSERT INTO matias_documentos')).length, 1);
+      });
+    } finally { https.request = original; }
 });

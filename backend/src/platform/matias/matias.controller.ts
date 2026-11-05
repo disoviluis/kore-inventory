@@ -4,6 +4,8 @@ import { decryptAuthSecret, encryptAuthSecret } from '../../core/auth/auth.secur
 import { emitMatiasInvoice, probeMatias } from './matias.client';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import crypto from 'crypto';
+import { buildMatiasSandboxInvoice, MatiasInvoiceValidationError, MatiasLine, MatiasPayment, MatiasSale } from './matias.invoice';
+import logger from '../../shared/logger';
 
 const sandboxUrl = 'https://sandbox-api.matias-api.com/api/ubl2.1';
 
@@ -194,17 +196,24 @@ export async function getMatiasVentaDocument(req: Request, res: Response) {
   return res.json({ success: true, data: rows[0] || null });
 }
 
-function money(value: unknown): string {
-  const number = Math.max(0, Number(value || 0));
-  return number.toFixed(2);
+export async function previewMatiasSandboxInvoice(req: Request, res: Response) {
+  return processMatiasSandboxInvoice(req, res, true);
 }
 
 export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
+  return processMatiasSandboxInvoice(req, res, false);
+}
+
+async function processMatiasSandboxInvoice(req: Request, res: Response, preview: boolean) {
   const empresaId = Number(req.params.empresaId);
   const ventaId = Number(req.params.ventaId);
   if (!await puedeOperarEmpresa(req, empresaId)) return res.status(403).json({ success: false, message: 'No tiene acceso a esta empresa' });
   if (!Number.isInteger(ventaId) || ventaId <= 0) return res.status(400).json({ success: false, message: 'Venta invalida' });
 
+  const recordError = async (motivo: string) => {
+    if (preview) logger.warning(`MATIAS previsualizacion empresa ${empresaId}, venta ${ventaId}: ${motivo}`);
+    else await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', { venta_id: ventaId, motivo });
+  };
   const [connections] = await pool.execute<RowDataPacket[]>(
     `SELECT id, base_url, matias_company_uuid, pat_cifrado, estado
        FROM matias_conexiones WHERE empresa_id = ? AND entorno = 'sandbox' LIMIT 1`,
@@ -212,12 +221,16 @@ export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
   );
   const connection = connections[0];
   if (!connection?.pat_cifrado || !['configurado', 'ready_produccion', 'activo'].includes(connection.estado)) {
-    await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', { venta_id: ventaId, motivo: 'conexion_no_probada' });
+    await recordError('conexion_no_probada');
     return res.status(400).json({ success: false, message: 'Debe probar la conexion sandbox antes de emitir' });
   }
   if (!connection.matias_company_uuid) {
-    await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', { venta_id: ventaId, motivo: 'client_uuid_faltante' });
+    await recordError('client_uuid_faltante');
     return res.status(400).json({ success: false, message: 'Debe configurar el client_uuid de Sandbox antes de emitir' });
+  }
+  if (connection.base_url !== sandboxUrl) {
+    await recordError('url_no_sandbox');
+    return res.status(422).json({ success: false, message: 'La emision de prueba requiere la URL oficial de Sandbox' });
   }
 
   const [serviceRows] = await pool.execute<RowDataPacket[]>(
@@ -226,13 +239,14 @@ export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
     [empresaId]
   );
   if (!serviceRows[0]?.activo_local) {
-    await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', { venta_id: ventaId, motivo: 'servicio_inactivo' });
+    await recordError('servicio_inactivo');
     return res.status(400).json({ success: false, message: 'El servicio Factura electronica no esta activado para sandbox' });
   }
 
-  const [ventas] = await pool.execute<RowDataPacket[]>(
+  const [ventas] = await pool.execute<(RowDataPacket & MatiasSale)[]>(
     `SELECT v.id, v.numero_factura, v.subtotal, v.descuento, v.impuesto, v.total,
-            v.fecha_venta, v.metodo_pago, v.forma_pago,
+            v.fecha_venta, v.metodo_pago, v.forma_pago, v.estado,
+            v.retenciones, v.impuestos_adicionales, v.propina_valor,
             c.tipo_documento, c.numero_documento, c.digito_verificacion,
             c.nombre, c.apellido, c.razon_social, c.email, c.direccion, c.ciudad,
             c.tipo_cliente, c.regimen_tributario, c.responsabilidad_fiscal,
@@ -244,22 +258,21 @@ export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
     [ventaId, empresaId]
   );
   if (!ventas[0]) {
-    await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', { venta_id: ventaId, motivo: 'venta_no_encontrada' });
+    await recordError('venta_no_encontrada');
     return res.status(404).json({ success: false, message: 'Venta no encontrada para esta empresa' });
   }
   const sale = ventas[0];
 
-  const [details] = await pool.execute<RowDataPacket[]>(
-    `SELECT vd.cantidad, vd.precio_unitario, vd.descuento, vd.subtotal,
-            p.nombre, p.descripcion, p.codigo_unspsc
+  const [details] = await pool.execute<(RowDataPacket & MatiasLine)[]>(
+    `SELECT vd.producto_id, vd.cantidad, vd.precio_unitario, vd.descuento, vd.subtotal,
+            p.nombre, p.descripcion, p.porcentaje_iva, p.aplica_iva, p.tipo_impuesto,
+            COALESCE(vd.unidad_medida, p.unidad_medida) AS unidad_medida
        FROM venta_detalle vd
        LEFT JOIN productos p ON p.id = vd.producto_id AND p.empresa_id = ?
        WHERE vd.venta_id = ? ORDER BY vd.id`,
     [empresaId, ventaId]
   );
-  if (!details.length) return res.status(400).json({ success: false, message: 'La venta no tiene productos' });
-
-  const [payments] = await pool.execute<RowDataPacket[]>(
+  const [payments] = await pool.execute<(RowDataPacket & MatiasPayment)[]>(
     `SELECT metodo_pago, monto FROM venta_pagos WHERE venta_id = ? ORDER BY id`,
     [ventaId]
   );
@@ -272,9 +285,7 @@ export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
   );
   const existing = existingRows[0];
   if (existing) {
-    await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', {
-      venta_id: ventaId, motivo: 'solicitud_fiscal_existente', estado: existing.estado
-    });
+    await recordError('solicitud_fiscal_existente');
     return res.status(409).json({
       success: false,
       message: 'La venta ya tiene una solicitud fiscal. Consulte su estado en MATÍAS antes de intentar otra emisión.',
@@ -282,72 +293,37 @@ export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
     });
   }
 
-  const prefix = String(sale.prefijo_factura || 'FAC').trim();
-  const documentNumber = String(sale.numero_factura || '').replace(new RegExp(`^${prefix.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`, 'i'), '') || String(sale.numero_factura || '');
-  const customerName = sale.razon_social || `${sale.nombre || ''} ${sale.apellido || ''}`.trim() || 'CLIENTE';
-  const documentType = String(sale.tipo_documento || '').toUpperCase();
-  const customerDni = String(sale.numero_documento || '').replace(/[^0-9]/g, '').replace(/\-.*$/, '') || '222222222222';
-  const requestUuid = existing?.request_uuid || crypto.randomUUID();
-  const paymentValue = payments.length ? payments.reduce((sum, payment) => sum + Number(payment.monto || 0), 0) : Number(sale.total || 0);
-
-  const payload = {
-    client_uuid: connection.matias_company_uuid,
-    uuid: requestUuid,
-    resolution_number: String(sale.resolucion_dian || ''),
-    prefix,
-    document_number: documentNumber,
-    operation_type_id: 1,
-    type_document_id: 1,
-    payments: [{ payment_method_id: 1, means_payment_id: 10, value_paid: money(paymentValue) }],
-    customer: {
-      company_name: customerName,
-      dni: customerDni,
-      dv: sale.digito_verificacion ? String(sale.digito_verificacion) : undefined,
-      email: sale.email || undefined,
-      address: sale.direccion || undefined,
-      city_name: sale.ciudad || undefined
-    },
-    lines: details.map((line: any) => ({
-      invoiced_quantity: String(Number(line.cantidad || 0)),
-      line_extension_amount: money(line.subtotal),
-      description: String(line.nombre || line.descripcion || 'Producto'),
-      price_amount: money(line.precio_unitario),
-      base_quantity: '1'
-    })),
-    legal_monetary_totals: {
-      line_extension_amount: money(sale.subtotal),
-      tax_exclusive_amount: money(Number(sale.subtotal || 0) - Number(sale.descuento || 0)),
-      tax_inclusive_amount: money(sale.total),
-      payable_amount: money(sale.total)
-    },
-    graphic_representation: true
-  };
+  const requestUuid = crypto.randomUUID();
+  let invoice: ReturnType<typeof buildMatiasSandboxInvoice>;
+  try {
+    invoice = buildMatiasSandboxInvoice(sale, details, payments, connection.matias_company_uuid, requestUuid, req.body || {});
+  } catch (error) {
+    if (!(error instanceof MatiasInvoiceValidationError)) throw error;
+    await recordError(error.message);
+    return res.status(422).json({ success: false, message: error.message });
+  }
+  if (invoice.blockingErrors.length) {
+    await recordError('desglose_retenciones_pendiente');
+    return res.status(422).json({
+      success: false, message: invoice.blockingErrors.join(' '),
+      ...(preview ? { data: { ...invoice, ready: false, preview: true } } : {})
+    });
+  }
+  if (preview) {
+    return res.json({ success: true, message: 'Previsualizacion local; no se ha enviado a MATIAS', data: { ...invoice, ready: true, preview: true } });
+  }
+  const { payload } = invoice;
+  const { prefix, document_number: documentNumber } = payload;
   const payloadHash = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 
-  if (!sale.resolucion_dian || !documentNumber || !customerDni) {
-    await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', { venta_id: ventaId, motivo: 'datos_fiscales_incompletos' });
-    return res.status(422).json({ success: false, message: 'La venta requiere resolucion, numero fiscal y documento del cliente' });
-  }
-
-  let documentId: number;
-  if (existing) {
-    documentId = existing.id;
-    await pool.execute(
-      `UPDATE matias_documentos SET estado = 'emitting', payload_hash = ?, request_payload = ?,
-              attempt_count = attempt_count + 1, last_attempt_at = NOW(), updated_at = NOW()
-       WHERE id = ? AND empresa_id = ?`,
-      [payloadHash, JSON.stringify(payload), documentId, empresaId]
-    );
-  } else {
-    const [inserted] = await pool.execute(
-      `INSERT INTO matias_documentos
+  const [inserted] = await pool.execute<ResultSetHeader>(
+    `INSERT INTO matias_documentos
         (empresa_id, venta_id, entorno, tipo_documento_id, tipo_operacion_id, request_uuid,
          document_number, estado, payload_hash, request_payload, attempt_count, last_attempt_at, created_by)
        VALUES (?, ?, 'sandbox', 1, 1, ?, ?, 'emitting', ?, ?, 1, NOW(), ?)`,
-      [empresaId, ventaId, requestUuid, `${prefix}${documentNumber}`, payloadHash, JSON.stringify(payload), (req as any).user?.id || null]
-    );
-    documentId = (inserted as any).insertId;
-  }
+    [empresaId, ventaId, requestUuid, `${prefix}${documentNumber}`, payloadHash, JSON.stringify(payload), (req as any).user?.id || null]
+  );
+  const documentId = inserted.insertId;
 
   let pat: string;
   try {
@@ -390,7 +366,7 @@ export async function emitMatiasSandboxInvoice(req: Request, res: Response) {
       result.reference || result.code || null, state, state, documentId, empresaId]
   );
 
-  const attemptCount = existing ? Number(existing.attempt_count || 0) + 1 : 1;
+  const attemptCount = 1;
   await pool.execute(
     `INSERT INTO matias_documento_intentos
       (documento_id, empresa_id, numero_intento, request_hash, http_status, provider_code, provider_message, success, response_payload)
