@@ -335,7 +335,7 @@ function calcularDigitoVerificacion(nit) {
 }
 
 function formatearNumero(valor) {
-    return Number(valor || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return Number(valor || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 function obtenerDatosClienteVenta(venta) {
@@ -358,7 +358,7 @@ function generarHTMLFacturaVentaHistorial(venta, detalle) {
             cantidad: item.cantidad || 0,
             precio_unitario: item.precio_unitario || item.precio || item.valor_unitario || 0,
             precio: item.precio_unitario || item.precio || item.valor_unitario || 0,
-            subtotal: item.subtotal || item.total || ((item.cantidad || 0) * (item.precio_unitario || item.precio || 0))
+            subtotal: item.subtotal ?? item.total
         })),
         subtotal: venta.subtotal || 0,
         descuento: venta.descuento || 0,
@@ -366,7 +366,8 @@ function generarHTMLFacturaVentaHistorial(venta, detalle) {
         impuestos: venta.impuestos || [],
         pagos: venta.pagos || [],
         impuestos_adicionales: venta.impuestos_adicionales || 0,
-        total: (parseFloat(venta.subtotal) || 0) - (parseFloat(venta.descuento) || 0) + (parseFloat(venta.impuesto) || 0) + (parseFloat(venta.impuestos_adicionales) || 0) + (parseFloat(venta.propina_valor) || 0),
+        retenciones: venta.retenciones || 0,
+        total: venta.total,
         propina_porcentaje: venta.propina_porcentaje || 0,
         propina_valor: venta.propina_valor || 0,
         notas: venta.notas || ''
@@ -601,7 +602,8 @@ function mostrarDetalleVenta(venta, detalle) {
     const impuesto = parseFloat(venta.impuesto) || 0;
     const impuestosAd = parseFloat(venta.impuestos_adicionales) || 0;
     const propina = parseFloat(venta.propina_valor) || 0;
-    const total = subtotal - descuento + impuesto + impuestosAd + propina;
+    const retenciones = Number(venta.retenciones || 0);
+    const total = Number(venta.total);
 
     // Productos table
     const productosHTML = detalle.length > 0 ? detalle.map((item, i) => {
@@ -611,7 +613,7 @@ function mostrarDetalleVenta(venta, detalle) {
         const cantidad = item.cantidad || 0;
         const precio = parseFloat(item.precio_unitario) || 0;
         const desc = parseFloat(item.descuento) || 0;
-        const subtotalItem = parseFloat(item.subtotal) || (cantidad * precio - desc);
+        const subtotalItem = Number(item.subtotal);
         return `
         <tr>
             <td class="text-center">${i + 1}</td>
@@ -697,6 +699,7 @@ function mostrarDetalleVenta(venta, detalle) {
                     ${descuento > 0 ? `<div class="d-flex justify-content-between text-danger"><span>Descuento:</span><span>-$${formatearNumero(descuento)}</span></div>` : ''}
                     ${impuesto > 0 ? `<div class="d-flex justify-content-between"><span class="text-muted">IVA:</span><span>$${formatearNumero(impuesto)}</span></div>` : ''}
                     ${impuestosAd > 0 ? `<div class="d-flex justify-content-between"><span class="text-muted">Imp. adicionales:</span><span>$${formatearNumero(impuestosAd)}</span></div>` : ''}
+                    ${retenciones > 0 ? `<div class="d-flex justify-content-between text-danger"><span>Retenciones registradas:</span><span>-$${formatearNumero(retenciones)}</span></div>` : ''}
                     ${propina > 0 ? `<div class="d-flex justify-content-between"><span class="text-muted">Propina (${venta.propina_porcentaje || 0}%):</span><span>$${formatearNumero(propina)}</span></div>` : ''}
                     <hr class="my-2">
                     <div class="d-flex justify-content-between fw-bold fs-5"><span>Total:</span><span class="text-success">$${formatearNumero(total)}</span></div>
@@ -750,7 +753,7 @@ function imprimirDetalleVenta() {
             cantidad: item.cantidad || 0,
             precio_unitario: item.precio_unitario || item.precio || item.valor_unitario || 0,
             precio: item.precio_unitario || item.precio || item.valor_unitario || 0,
-            subtotal: item.subtotal || item.total || ((item.cantidad || 0) * (item.precio_unitario || item.precio || 0))
+            subtotal: item.subtotal ?? item.total
         })),
         subtotal: ventaActual.subtotal || 0,
         descuento: ventaActual.descuento || 0,
@@ -758,7 +761,8 @@ function imprimirDetalleVenta() {
         impuestos: ventaActual.impuestos || [],
         pagos: ventaActual.pagos || [],
         impuestos_adicionales: ventaActual.impuestos_adicionales || 0,
-        total: ventaActual.total || ((parseFloat(ventaActual.subtotal) || 0) - (parseFloat(ventaActual.descuento) || 0) + (parseFloat(ventaActual.impuesto) || 0) + (parseFloat(ventaActual.impuestos_adicionales) || 0) + (parseFloat(ventaActual.propina_valor) || 0)),
+        retenciones: ventaActual.retenciones || 0,
+        total: ventaActual.total,
         propina_porcentaje: ventaActual.propina_porcentaje || 0,
         propina_valor: ventaActual.propina_valor || 0,
         notas: ventaActual.notas || ''
@@ -825,7 +829,7 @@ async function actualizarEstadisticas() {
         .filter(v => v.estado !== 'anulada')
         .reduce((sum, v) => {
             // Calcular total correcto considerando todos los campos
-            const total = (parseFloat(v.subtotal) || 0) - (parseFloat(v.descuento) || 0) + (parseFloat(v.impuesto) || 0) + (parseFloat(v.impuestos_adicionales) || 0) + (parseFloat(v.propina_valor) || 0);
+            const total = Number(v.total);
             return sum + total;
         }, 0);
     const pendientes = ventasData.filter(v => v.estado === 'pendiente').length;
@@ -902,7 +906,7 @@ async function exportarVentas() {
     try {
         // Preparar datos para exportar
         const datosExportar = ventasData.map(v => {
-            const totalCorrecto = (parseFloat(v.subtotal) || 0) - (parseFloat(v.descuento) || 0) + (parseFloat(v.impuesto) || 0) + (parseFloat(v.impuestos_adicionales) || 0) + (parseFloat(v.propina_valor) || 0);
+            const totalCorrecto = Number(v.total);
             return {
                 'Nº Factura': v.numero_factura,
                 'Fecha': formatFechaColombia(v.fecha_venta),

@@ -13,13 +13,15 @@ import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
 import { moverStock } from '../../shared/inventario';
 import { assertPlanQuota } from '../../core/auth/subscription.service';
+import { calcular, conciliarPagos, centavos, ErrorCalculo } from '../../../../frontend/public/assets/js/pos-calculos';
+import { generarNumeroFactura } from '../../shared/dian-utils';
 
 /**
  * Función auxiliar para recalcular totales de cuenta
  * (Reemplaza los triggers de BD)
  */
-async function recalcularTotalesCuenta(cuentaId: number): Promise<void> {
-  const totalesResult = await query(
+async function recalcularTotalesCuenta(cuentaId: number, tx: typeof query): Promise<void> {
+  const totalesResult = await tx(
     `SELECT 
       COALESCE(SUM(subtotal), 0) as subtotal,
       COALESCE(SUM(iva_valor + impoconsumo_valor + otros_impuestos), 0) as total_impuestos,
@@ -31,12 +33,17 @@ async function recalcularTotalesCuenta(cuentaId: number): Promise<void> {
 
   const totales = totalesResult[0];
 
-  await query(
+  await tx(
     `UPDATE cuentas_abiertas
      SET subtotal = ?, total_impuestos = ?, total = ?
      WHERE id = ?`,
     [totales.subtotal, totales.total_impuestos, totales.total, cuentaId]
   );
+}
+
+async function bloquearCuentaAbierta(tx: typeof query, cuentaId: string): Promise<void> {
+  const cuentas = await tx('SELECT estado FROM cuentas_abiertas WHERE id = ? FOR UPDATE', [cuentaId]);
+  if (!cuentas.length || cuentas[0].estado !== 'abierta') throw new ErrorCalculo('La cuenta ya no esta abierta; actualice el POS');
 }
 
 /**
@@ -271,6 +278,7 @@ export const obtenerDetalleCuenta = async (req: Request, res: Response): Promise
         p.sku as producto_sku,
         p.aplica_iva,
         p.porcentaje_iva,
+        p.iva_incluido_en_precio,
         u.nombre as usuario_nombre
       FROM cuenta_abierta_detalle cad
       LEFT JOIN productos p ON cad.producto_id = p.id
@@ -361,7 +369,7 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     // Obtener información del producto
     const productoResult = await query(
       `SELECT 
-        id, nombre, sku, stock_actual, aplica_iva, porcentaje_iva,
+        id, nombre, sku, stock_actual, aplica_iva, porcentaje_iva, tipo_impuesto, iva_incluido_en_precio,
         permite_venta_sin_stock
       FROM productos
       WHERE id = ? AND estado = 'activo'`,
@@ -380,14 +388,17 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
     const producto = productoResult[0];
 
     // Calcular totales
-    const subtotal = precio_unitario * cantidad;
-    const iva_porcentaje = producto.aplica_iva ? (producto.porcentaje_iva || 19) : 0;
-    const iva_valor = (subtotal * iva_porcentaje) / 100;
+    const calculo = calcular({ productos: [{ ...producto, cantidad, precio_unitario }] });
+    const subtotal = calculo.subtotal;
+    const iva_porcentaje = Number(producto.aplica_iva) === 1 && (!producto.tipo_impuesto || producto.tipo_impuesto === 'gravado')
+      ? Number(producto.porcentaje_iva) : 0;
+    const iva_valor = calculo.impuesto;
     const impoconsumo_porcentaje = 0; // Por ahora no se maneja impoconsumo
     const impoconsumo_valor = 0;
-    const total = subtotal + iva_valor + impoconsumo_valor;
+    const total = calculo.total;
 
     const result = await withTransaction(async (txQuery) => {
+      await bloquearCuentaAbierta(txQuery, id);
       const insercion = await txQuery(
         `INSERT INTO cuenta_abierta_detalle (
           cuenta_abierta_id, producto_id, producto_nombre, producto_sku,
@@ -414,11 +425,9 @@ export const agregarItemCuenta = async (req: Request, res: Response): Promise<Re
         referenciaId: Number(id)
       });
 
+      await recalcularTotalesCuenta(parseInt(id), txQuery);
       return insercion;
     });
-
-    // Recalcular totales de la cuenta
-    await recalcularTotalesCuenta(parseInt(id));
 
     logger.info(`Item agregado a cuenta ${id}: ${producto.nombre} x${cantidad}`);
 
@@ -467,7 +476,7 @@ export const actualizarItemCuenta = async (req: Request, res: Response): Promise
 
     // Obtener información del item actual
     const itemResult = await query(
-      `SELECT cad.*, ca.empresa_id, ca.estado, p.nombre as producto_nombre
+      `SELECT cad.*, ca.empresa_id, ca.estado, p.nombre as producto_nombre, p.iva_incluido_en_precio
        FROM cuenta_abierta_detalle cad
        INNER JOIN cuentas_abiertas ca ON cad.cuenta_abierta_id = ca.id
        INNER JOIN productos p ON cad.producto_id = p.id
@@ -510,12 +519,29 @@ export const actualizarItemCuenta = async (req: Request, res: Response): Promise
     }
 
     // Calcular nuevos totales
-    const subtotal = nuevaCantidad * nuevoPrecio;
-    const ivaValor = item.iva_porcentaje ? (subtotal * item.iva_porcentaje / 100) : 0;
-    const impoconsumoValor = item.impoconsumo_porcentaje ? (subtotal * item.impoconsumo_porcentaje / 100) : 0;
-    const total = subtotal + ivaValor + impoconsumoValor;
+    const calculo = calcular({
+      productos: [{ cantidad: nuevaCantidad, precio_unitario: nuevoPrecio,
+        aplica_iva: Number(item.iva_porcentaje) > 0, porcentaje_iva: item.iva_porcentaje,
+        iva_incluido_en_precio: item.iva_incluido_en_precio }],
+      impuestos: [
+        { id: 1, codigo: 'INC', nombre: 'Impoconsumo', tipo: 'porcentaje', tasa: item.impoconsumo_porcentaje ?? 0,
+          aplica_sobre: 'subtotal', afecta_total: 'suma' },
+        { id: 2, codigo: 'OTROS', nombre: 'Otros impuestos registrados', tipo: 'valor_fijo', tasa: item.otros_impuestos ?? 0,
+          aplica_sobre: 'subtotal', afecta_total: 'suma' }
+      ]
+    });
+    const subtotal = calculo.subtotal;
+    const ivaValor = calculo.impuesto;
+    const impoconsumoValor = calculo.impuestos[0].valor;
+    const total = calculo.total;
 
     await withTransaction(async (txQuery) => {
+      await bloquearCuentaAbierta(txQuery, id);
+      const actual = await txQuery('SELECT cantidad, precio_unitario FROM cuenta_abierta_detalle WHERE id = ? FOR UPDATE', [itemId]);
+      if (!actual.length || Number(actual[0].cantidad) !== Number(cantidadAnterior) ||
+        Number(actual[0].precio_unitario) !== Number(precioAnterior)) {
+        throw new ErrorCalculo('El item cambio; actualice la cuenta antes de editarlo');
+      }
       await txQuery(
         `UPDATE cuenta_abierta_detalle
          SET cantidad = ?,
@@ -548,10 +574,8 @@ export const actualizarItemCuenta = async (req: Request, res: Response): Promise
           referenciaId: Number(id)
         });
       }
+      await recalcularTotalesCuenta(parseInt(id), txQuery);
     });
-
-    // Recalcular totales de la cuenta
-    await recalcularTotalesCuenta(parseInt(id));
 
     logger.info(`Item ${itemId} actualizado en cuenta ${id}: ${item.producto_nombre} - cantidad: ${cantidadAnterior} → ${nuevaCantidad}`);
 
@@ -620,6 +644,11 @@ export const eliminarItemCuenta = async (req: Request, res: Response): Promise<R
     }
 
     await withTransaction(async (txQuery) => {
+      await bloquearCuentaAbierta(txQuery, id);
+      const actual = await txQuery('SELECT cantidad FROM cuenta_abierta_detalle WHERE id = ? FOR UPDATE', [itemId]);
+      if (!actual.length || Number(actual[0].cantidad) !== Number(item.cantidad)) {
+        throw new ErrorCalculo('El item cambio; actualice la cuenta antes de eliminarlo');
+      }
       await txQuery(`DELETE FROM cuenta_abierta_detalle WHERE id = ?`, [itemId]);
 
       const usuarioBodegaResult = await txQuery(
@@ -638,10 +667,8 @@ export const eliminarItemCuenta = async (req: Request, res: Response): Promise<R
         referenciaTipo: 'devolucion',
         referenciaId: Number(id)
       });
+      await recalcularTotalesCuenta(parseInt(id), txQuery);
     });
-
-    // Recalcular totales de la cuenta
-    await recalcularTotalesCuenta(parseInt(id));
 
     logger.info(`Item ${itemId} eliminado de cuenta ${id}`);
 
@@ -726,228 +753,211 @@ export const cerrarCuenta = async (req: Request, res: Response): Promise<Respons
 
     const usuarioId = (req as any).user?.id;
 
-    // Obtener datos de la cuenta
-    const cuentaResult = await query(
-      `SELECT * FROM cuentas_abiertas WHERE id = ?`,
-      [id]
-    );
-
-    if (cuentaResult.length === 0) {
-      return errorResponse(
-        res,
-        'Cuenta no encontrada',
-        null,
-        CONSTANTS.HTTP_STATUS.NOT_FOUND
+    const resultado = await withTransaction(async query => {
+      // Obtener datos de la cuenta
+      const cuentaResult = await query(
+        `SELECT * FROM cuentas_abiertas WHERE id = ? AND empresa_id = ? FOR UPDATE`,
+        [id, empresa_id]
       );
-    }
 
-    const cuenta = cuentaResult[0];
+      if (cuentaResult.length === 0) {
+        throw new ErrorCalculo('Cuenta no encontrada en la empresa');
+      }
 
-    if (cuenta.estado !== 'abierta') {
-      return errorResponse(
-        res,
-        'La cuenta ya está cerrada o cancelada',
-        null,
-        CONSTANTS.HTTP_STATUS.BAD_REQUEST
+      const cuenta = cuentaResult[0];
+
+      if (cuenta.estado !== 'abierta') {
+        throw new ErrorCalculo('La cuenta ya esta cerrada o cancelada');
+      }
+
+      // Obtener items de la cuenta
+      const items = await query(
+        `SELECT * FROM cuenta_abierta_detalle WHERE cuenta_abierta_id = ?`,
+        [id]
       );
-    }
 
-    // Obtener items de la cuenta
-    const items = await query(
-      `SELECT * FROM cuenta_abierta_detalle WHERE cuenta_abierta_id = ?`,
-      [id]
-    );
+      if (items.length === 0) {
+        throw new ErrorCalculo('No se puede cerrar una cuenta sin items');
+      }
 
-    if (items.length === 0) {
-      return errorResponse(
-        res,
-        'No se puede cerrar una cuenta sin items',
-        null,
-        CONSTANTS.HTTP_STATUS.BAD_REQUEST
-      );
-    }
+      const subtotalCentavos = items.reduce((sum: number, item: { subtotal: string }) => sum + centavos(item.subtotal), 0);
+      const impuestosCentavos = items.reduce((sum: number, item: { iva_valor: string; impoconsumo_valor: string; otros_impuestos: string }) =>
+        sum + centavos(item.iva_valor) + centavos(item.impoconsumo_valor) + centavos(item.otros_impuestos ?? 0), 0);
+      if (subtotalCentavos !== centavos(cuenta.subtotal) || impuestosCentavos !== centavos(cuenta.total_impuestos) ||
+        subtotalCentavos + impuestosCentavos !== centavos(cuenta.total)) {
+        throw new ErrorCalculo('Los detalles de la cuenta no concilian con sus totales; revise la cuenta antes de cobrar');
+      }
+      const propinaValor = centavos(cuenta.propina_valor ?? 0) / 100;
+      const totalConPropina = (centavos(cuenta.total) + centavos(propinaValor)) / 100;
+      if (req.body.total === undefined || centavos(req.body.total) !== centavos(totalConPropina)) {
+        throw new ErrorCalculo('El total mostrado no coincide con la cuenta y su propina registrada. Actualice la cuenta antes de cobrar');
+      }
+      const conciliacion = conciliarPagos(pagos.length ? pagos :
+        monto_recibido !== undefined ? [{ metodo_pago, monto: monto_recibido }] : [], totalConPropina);
+      const pagosNetos = conciliacion.pagos;
+      const metodoPagoResumen = pagosNetos.length === 1 ? pagosNetos[0].metodo_pago : 'Múltiple';
+      const cambio = conciliacion.cambio;
 
-    // Calcular total de pagos
-    let totalPagado = 0;
-    let metodoPagoResumen = metodo_pago;
-    
-    if (pagos && Array.isArray(pagos) && pagos.length > 0) {
-      totalPagado = pagos.reduce((sum, p) => sum + parseFloat(p.monto || 0), 0);
-      metodoPagoResumen = pagos.length === 1 ? pagos[0].metodo_pago : 'Múltiple';
-    } else if (monto_recibido) {
-      // Compatibilidad con versión anterior (sin array de pagos)
-      totalPagado = parseFloat(monto_recibido);
-    } else {
-      totalPagado = cuenta.total;
-    }
-
-    const cambio = totalPagado - cuenta.total;
-
-    // Generar número de factura
-    const contadorResult = await query(
-      `SELECT COUNT(*) + 1 as contador FROM ventas WHERE empresa_id = ?`,
-      [cuenta.empresa_id]
-    );
-    const contador = contadorResult[0].contador;
-    const numero_factura = `FACT-${String(contador).padStart(6, '0')}`;
-
-    // Manejar cliente_id NULL (para tabs rápidos sin cliente registrado)
-    let clienteIdFinal = cuenta.cliente_id;
-    
-    if (!clienteIdFinal) {
-      // Buscar o crear cliente genérico "Mostrador"
-      const clienteGenericoResult = await query(
-        `SELECT id FROM clientes WHERE empresa_id = ? AND nombre = 'Mostrador' LIMIT 1`,
+      // Generar número de factura
+      const contadorResult = await query(
+        `SELECT prefijo_factura, numeracion_actual FROM empresas WHERE id = ? FOR UPDATE`,
         [cuenta.empresa_id]
       );
-      
-      if (clienteGenericoResult.length > 0) {
-        clienteIdFinal = clienteGenericoResult[0].id;
-      } else {
-        // Crear cliente genérico
-        const nuevoClienteResult = await query(
-          `INSERT INTO clientes (empresa_id, nombre, tipo_documento, numero_documento, telefono, direccion, estado)
-           VALUES (?, 'Mostrador', 'NIT', '222222222', '', 'Punto de Venta', 'activo')`,
+      if (!contadorResult.length) throw new ErrorCalculo('Empresa no encontrada');
+      const contador = Number(contadorResult[0].numeracion_actual) + 1;
+      if (!Number.isSafeInteger(contador) || contador < 1) throw new ErrorCalculo('Numeracion de empresa invalida');
+      await query('UPDATE empresas SET numeracion_actual = ? WHERE id = ?', [contador, cuenta.empresa_id]);
+      const numero_factura = generarNumeroFactura(contadorResult[0].prefijo_factura || 'FAC', contador);
+
+      // Manejar cliente_id NULL (para tabs rápidos sin cliente registrado)
+      let clienteIdFinal = cuenta.cliente_id;
+
+      if (!clienteIdFinal) {
+        // Buscar o crear cliente genérico "Mostrador"
+        const clienteGenericoResult = await query(
+          `SELECT id FROM clientes WHERE empresa_id = ? AND nombre = 'Mostrador' LIMIT 1`,
           [cuenta.empresa_id]
         );
-        clienteIdFinal = nuevoClienteResult.insertId;
-        logger.info(`Cliente genérico 'Mostrador' creado para empresa ${cuenta.empresa_id}`);
+
+        if (clienteGenericoResult.length > 0) {
+          clienteIdFinal = clienteGenericoResult[0].id;
+        } else {
+          // Crear cliente genérico
+          const nuevoClienteResult = await query(
+            `INSERT INTO clientes (empresa_id, nombre, tipo_documento, numero_documento, telefono, direccion, estado)
+           VALUES (?, 'Mostrador', 'NIT', '222222222', '', 'Punto de Venta', 'activo')`,
+            [cuenta.empresa_id]
+          );
+          clienteIdFinal = nuevoClienteResult.insertId;
+          logger.info(`Cliente genérico 'Mostrador' creado para empresa ${cuenta.empresa_id}`);
+        }
       }
-    }
 
-    // Preparar nombre descriptivo para la venta
-    let nombreDescriptivo = '';
-    if (cuenta.tipo_identificacion === 'mesa') {
-      nombreDescriptivo = `Mesa ${cuenta.mesa_numero}`;
-    } else if (cuenta.tipo_identificacion === 'tab_nombre') {
-      nombreDescriptivo = cuenta.cliente_nombre;
-    } else if (cuenta.cliente_nombre) {
-      nombreDescriptivo = cuenta.cliente_nombre;
-    }
-    
-    const observacionesVenta = notas || 
-      `${nombreDescriptivo} (${cuenta.numero_cuenta})`;
-
-    // Buscar turno activo del usuario (para asociar venta al turno)
-    let turnoId = null;
-    if (usuarioId) {
-      const turnoActivo = await query(
-        'SELECT id FROM turnos_caja WHERE usuario_id = ? AND empresa_id = ? AND estado = "abierto" LIMIT 1',
-        [usuarioId, cuenta.empresa_id]
-      );
-      
-      if (turnoActivo.length > 0) {
-        turnoId = turnoActivo[0].id;
+      // Preparar nombre descriptivo para la venta
+      let nombreDescriptivo = '';
+      if (cuenta.tipo_identificacion === 'mesa') {
+        nombreDescriptivo = `Mesa ${cuenta.mesa_numero}`;
+      } else if (cuenta.tipo_identificacion === 'tab_nombre') {
+        nombreDescriptivo = cuenta.cliente_nombre;
+      } else if (cuenta.cliente_nombre) {
+        nombreDescriptivo = cuenta.cliente_nombre;
       }
-    }
 
-    // Bodega/tienda que cierra la cuenta (para poder filtrar ventas por punto de venta)
-    let bodegaId = null;
-    if (usuarioId) {
-      const usuarioBodegaResult = await query(
-        `SELECT bodega_id FROM usuarios WHERE id = ?`,
-        [usuarioId]
-      );
-      bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
-    }
+      const observacionesVenta = notas ||
+        `${nombreDescriptivo} (${cuenta.numero_cuenta})`;
 
-    // La propina acordada en la mesa viaja a la venta para que el cajero cobre lo informado.
-    const propinaValor = Number(cuenta.propina_valor) || 0;
-    const totalConPropina = (Number(cuenta.total) || 0) + propinaValor;
+      // Buscar turno activo del usuario (para asociar venta al turno)
+      let turnoId = null;
+      if (usuarioId) {
+        const turnoActivo = await query(
+          'SELECT id FROM turnos_caja WHERE usuario_id = ? AND empresa_id = ? AND estado = "abierto" LIMIT 1 FOR UPDATE',
+          [usuarioId, cuenta.empresa_id]
+        );
 
-    // Crear venta
-    const ventaResult = await withTransaction(async tx => {
-      if ((req as any).user?.tipo_usuario !== 'super_admin') await assertPlanQuota(tx, Number(cuenta.empresa_id), 'facturas');
-      return tx(
-      `INSERT INTO ventas (
+        if (turnoActivo.length > 0) {
+          turnoId = turnoActivo[0].id;
+        }
+      }
+
+      // Bodega/tienda que cierra la cuenta (para poder filtrar ventas por punto de venta)
+      let bodegaId = null;
+      if (usuarioId) {
+        const usuarioBodegaResult = await query(
+          `SELECT bodega_id FROM usuarios WHERE id = ?`,
+          [usuarioId]
+        );
+        bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
+      }
+
+      // Crear venta
+      if ((req as any).user?.tipo_usuario !== 'super_admin') await assertPlanQuota(query, Number(cuenta.empresa_id), 'facturas');
+      const ventaResult = await query(
+        `INSERT INTO ventas (
         empresa_id, numero_factura, cliente_id, vendedor_id,
         fecha_venta, subtotal, impuesto, total, metodo_pago,
         observaciones, estado, forma_pago, turno_id, bodega_id,
         propina_habilitada, propina_porcentaje, propina_valor, propina_base, mesero_id
       ) VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, 'pagada', 'contado', ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        cuenta.empresa_id,
-        numero_factura,
-        clienteIdFinal, // Usar cliente genérico si es NULL
-        usuarioId,
-        cuenta.subtotal,
-        cuenta.total_impuestos, // En cuentas_abiertas es total_impuestos, en ventas es impuesto
-        totalConPropina,
-        metodoPagoResumen,
-        observacionesVenta,
-        turnoId,
-        bodegaId,
-        Number(cuenta.propina_habilitada) ? 1 : 0,
-        Number(cuenta.propina_porcentaje) || 0,
-        propinaValor,
-        Number(cuenta.subtotal) || 0,
-        cuenta.mesero_id || null
-      ]
-      );
-    });
-
-    const ventaId = ventaResult.insertId;
-
-    // Insertar detalle de venta
-    for (const item of items) {
-      await query(
-        `INSERT INTO venta_detalle (
-          venta_id, producto_id, cantidad, precio_unitario, subtotal
-        ) VALUES (?, ?, ?, ?, ?)`,
         [
-          ventaId,
-          item.producto_id,
-          item.cantidad,
-          item.precio_unitario,
-          item.total // El total del item es el subtotal en venta_detalle
+          cuenta.empresa_id,
+          numero_factura,
+          clienteIdFinal, // Usar cliente genérico si es NULL
+          usuarioId,
+          cuenta.subtotal,
+          cuenta.total_impuestos, // En cuentas_abiertas es total_impuestos, en ventas es impuesto
+          totalConPropina,
+          metodoPagoResumen,
+          observacionesVenta,
+          turnoId,
+          bodegaId,
+          Number(cuenta.propina_habilitada) ? 1 : 0,
+          Number(cuenta.propina_porcentaje) || 0,
+          propinaValor,
+          Number(cuenta.subtotal) || 0,
+          cuenta.mesero_id || null
         ]
       );
-    }
 
-    // Insertar pagos múltiples
-    if (pagos && Array.isArray(pagos) && pagos.length > 0) {
-      for (const pago of pagos) {
+      const ventaId = ventaResult.insertId;
+
+      // Insertar detalle de venta
+      for (const item of items) {
         await query(
-          `INSERT INTO venta_pagos (
-            venta_id, metodo_pago, monto, referencia, banco, notas
-          ) VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO venta_detalle (
+          venta_id, producto_id, cantidad, precio_unitario, subtotal
+        ) VALUES (?, ?, ?, ?, ?)`,
           [
             ventaId,
-            pago.metodo_pago,
-            pago.monto,
-            pago.referencia || null,
-            pago.banco || null,
-            pago.notas || null
+            item.producto_id,
+            item.cantidad,
+            item.precio_unitario,
+            item.subtotal
           ]
         );
       }
-      logger.info(`${pagos.length} métodos de pago registrados para venta ${numero_factura}`);
-    }
 
-    // Cerrar cuenta
-    await query(
-      `UPDATE cuentas_abiertas
+      // Insertar pagos múltiples
+      if (pagosNetos.length > 0) {
+        for (const pago of pagosNetos) {
+          await query(
+            `INSERT INTO venta_pagos (
+            venta_id, metodo_pago, monto, referencia, banco, notas
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              ventaId,
+              pago.metodo_pago,
+              pago.monto,
+              pago.referencia || null,
+              pago.banco || null,
+              pago.notas || null
+            ]
+          );
+        }
+        logger.info(`${pagosNetos.length} metodos de pago registrados para venta ${numero_factura}`);
+      }
+
+      // Cerrar cuenta
+      await query(
+        `UPDATE cuentas_abiertas
        SET estado = 'cerrada', venta_id = ?, usuario_cierre = ?, fecha_cierre = CONVERT_TZ(NOW(), '+00:00', '-05:00')
        WHERE id = ?`,
-      [ventaId, usuarioId, id]
-    );
+        [ventaId, usuarioId, id]
+      );
 
-    logger.info(`Cuenta ${cuenta.numero_cuenta} cerrada y convertida en venta ${numero_factura}`);
+      logger.info(`Cuenta ${cuenta.numero_cuenta} cerrada y convertida en venta ${numero_factura}`);
 
-    return successResponse(
-      res,
-      'Cuenta cerrada exitosamente',
-      {
+      return {
         venta_id: ventaId,
         numero_factura,
-        total: cuenta.total,
+        total: totalConPropina,
         cambio
-      },
-      CONSTANTS.HTTP_STATUS.OK
-    );
+      };
+    });
+    return successResponse(res, 'Cuenta cerrada exitosamente', resultado, CONSTANTS.HTTP_STATUS.OK);
 
   } catch (error) {
     logger.error('Error al cerrar cuenta:', error);
+    if (error instanceof ErrorCalculo) return errorResponse(res, error.message, null, error.status);
     return errorResponse(
       res,
       'Error al cerrar cuenta',

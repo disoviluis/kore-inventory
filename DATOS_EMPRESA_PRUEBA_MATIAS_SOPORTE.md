@@ -619,6 +619,77 @@ contrasenas, certificados o llaves privadas en este documento.
   emision como sincrona; un timeout puede dejar resultado desconocido. El
   endpoint local bloquea por ahora cualquier reemision de la misma venta.
 
+### Correccion de calculos del POS (2026-11-05)
+
+El usuario autorizo corregir y desplegar los calculos, sin modificar ventas
+historicas. La causa de la retencion inesperada era una regla interna:
+cliente de tipo empresa => ICA del 1%. Tambien existian reglas implicitas de
+retefuente y reteIVA por texto de responsabilidad o umbral de valor. No eran
+requisitos de MATIAS.
+
+Cambios:
+
+- Eliminadas esas retenciones implicitas. Solo se calculan los impuestos
+  configurados y seleccionados en el POS; el servidor vuelve a consultar su
+  configuracion activa dentro de la empresa. No se infiere la obligacion
+  tributaria del cliente por ser persona juridica.
+- Una calculadora compartida entre navegador y backend trabaja en centavos
+  enteros, con redondeo de mitad hacia arriba. Admite cantidades de hasta tres
+  decimales, precios/importes de dos, IVA cero, exento/excluido, IVA incluido,
+  descuentos por linea y distribucion proporcional del descuento global.
+- La propina conserva la convencion anterior: porcentaje sobre el subtotal
+  antes del descuento global y sin IVA. No es un cambio de politica fiscal.
+- El servidor recalcula subtotal, IVA, adicionales, retenciones, propina y
+  total. Si el total mostrado no coincide, rechaza antes de numerar/cobrar y
+  pide actualizar el POS. No sustituye silenciosamente un importe cobrado.
+- Los pagos deben cubrir el neto; el excedente solo puede salir del efectivo.
+  Se conservan tarjeta/transferencia y se registran pagos netos, sin guardar
+  el cambio como ingreso. El credito sin abono crea la cuenta por cobrar;
+  los abonos se registran por cartera, no como efectivo ficticio en el POS.
+- Numeracion, venta, detalles, stock, impuestos, pagos y cartera se confirman
+  en una sola transaccion. Un fallo revierte tambien el consecutivo.
+- El resumen y cierre de turno separan los pagos mixtos, descuentan el cambio
+  de registros antiguos y no cuentan credito como ingreso de efectivo.
+  Los registros antiguos pagados sin filas de pago usan su metodo guardado;
+  un pago historico incoherente bloquea el cierre con identificacion de venta.
+- El cierre de cuenta abierta bloquea la cuenta, comprueba los importes
+  registrados, incluye la propina, exige pagos y total mostrado explicitos y
+  guarda venta/detalles/pagos/cierre atomicamente. El detalle conserva la base
+  sin IVA, no el total con IVA. Usa la numeracion de la empresa.
+  Agregar/editar/eliminar items actualiza stock y cabecera en la misma
+  transaccion y no permite modificar una cuenta que ya se cerro.
+- Historial, exportacion y reimpresion respetan el total guardado, incluso si
+  existen retenciones historicas. La interfaz muestra hasta dos decimales.
+
+Compatibilidad: actualizar el POS tras el despliegue. Los consumidores del
+cierre de cuenta deben enviar `total` junto a `pagos`. No se reconstruyen ni
+se corrigen cuentas o documentos historicos automaticamente. Una diferencia
+entre la cuenta almacenada y ajustes locales de propina/descuento/impuestos
+detiene el cobro hasta revisar/guardar los datos compatibles de la cuenta.
+La calculadora no certifica por si sola la procedencia fiscal de una retencion;
+esa parametrizacion requiere revision del responsable contable.
+
+Validacion local: build TypeScript y 116/116 pruebas aprobadas, incluidas 31
+pruebas nuevas de calculo, persistencia, rollback, cuentas abiertas, caja e
+impresion. Uno de esos casos recorre 500 carritos.
+Se validaron tambien sintaxis JavaScript y diferencias sin errores de formato.
+
+Consulta AWS exclusivamente de lectura para preparar revision historica:
+
+| Empresa interna | Ventas con retenciones sin desglose conciliable | Retenciones registradas |
+|---|---:|---:|
+| 32 | 3 | 34200.00 |
+| 33 (sintetica) | 1 | 1350.00 |
+
+Estos cuatro registros requieren revision individual; el agregado no demuestra
+que todas las retenciones sean improcedentes. No se modificaron.
+
+La venta 140 / `FEV-000002` sigue con neto 159300.00 y retencion 1350.00.
+Su emision MATIAS permanece bloqueada. Para una venta nueva con la misma
+base 135000.00 e IVA 25650.00, sin retenciones aplicables, el calculo probado
+es total 160650.00 y cambio 9350.00 al recibir 170000.00.
+No volver a cobrar la venta 140 ni emitirla como si se hubiera corregido.
+
 ### Verificacion AWS autorizada (2026-10-28)
 
 Destino comprobado: EC2 `18.191.181.99`, rama `main`, backend PM2

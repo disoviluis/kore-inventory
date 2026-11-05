@@ -1039,7 +1039,8 @@ function agregarProducto(producto) {
             tipo_venta: 'normal',
             estado_entrega: 'entregado',
             aplica_iva: producto.aplica_iva || false,
-            porcentaje_iva: producto.porcentaje_iva || 19,
+            porcentaje_iva: producto.porcentaje_iva,
+            tipo_impuesto: producto.tipo_impuesto,
             iva_incluido_en_precio: producto.iva_incluido_en_precio || false
         });
     }
@@ -1411,76 +1412,33 @@ async function eliminarProducto(index) {
 // CÁLCULOS Y TOTALES
 // ============================================
 
+function obtenerCalculoVenta() {
+    const impuestos = impuestosSeleccionados.map(id => {
+        const impuesto = impuestosDisponibles.find(item => String(item.id) === String(id));
+        if (!impuesto) throw new Error('Impuesto no disponible. Actualice el POS antes de cobrar.');
+        return impuesto;
+    });
+    return PosCalculos.calcular({
+        productos: productosVenta.map(producto => ({ ...producto, producto_id: producto.id, descuento: producto.descuento ?? 0 })),
+        descuento: document.getElementById('inputDescuento').value || 0,
+        impuestos,
+        propina_habilitada: document.getElementById('checkPropina').checked,
+        propina_porcentaje: document.getElementById('inputPropinaPorcentaje').value || 0
+    });
+}
+
 function calcularTotales() {
-    const subtotal = productosVenta.reduce((sum, p) => sum + (parseFloat(p.subtotal) || 0), 0);
-    const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
-    
-    // La base imponible es el subtotal después de aplicar el descuento
-    const baseImponible = subtotal - descuento;
-    
-    // Calcular IVA solo para productos gravados (sobre la base imponible)
-    let impuesto = 0;
-    productosVenta.forEach(p => {
-        if (p.aplica_iva) {
-            const porcentaje = (parseFloat(p.porcentaje_iva) || 19) / 100;
-            // Aplicar descuento proporcionalmente a cada producto
-            const factorDescuento = descuento > 0 ? (1 - descuento / subtotal) : 1;
-            const subtotalProducto = (parseFloat(p.subtotal) || 0) * factorDescuento;
-            impuesto += subtotalProducto * porcentaje;
-        }
-    });
-    
-    // Calcular impuestos adicionales
-    let totalImpuestosAdicionales = 0;
-    const detalleImpuestos = [];
-    
-    impuestosSeleccionados.forEach(impId => {
-        const imp = impuestosDisponibles.find(i => i.id === impId);
-        if (imp) {
-            let base = 0;
-            switch(imp.aplica_sobre) {
-                case 'subtotal': base = baseImponible; break;
-                case 'iva': base = impuesto; break;
-                case 'total': base = baseImponible + impuesto; break;
-            }
-            
-            const valor = imp.tipo === 'porcentaje' 
-                ? base * (imp.tasa / 100)
-                : parseFloat(imp.tasa);
-            
-            const valorConSigno = imp.afecta_total === 'resta' ? -valor : valor;
-            totalImpuestosAdicionales += valorConSigno;
-            
-            detalleImpuestos.push({
-                impuesto_id: imp.id,
-                nombre: imp.nombre,
-                base_calculo: base,
-                tasa: imp.tasa,
-                tipo: imp.tipo,
-                valor: Math.abs(valor),
-                afecta_total: imp.afecta_total
-            });
-        }
-    });
-    
-    // Total de la factura (sin propina)
-    const totalFactura = baseImponible + impuesto + totalImpuestosAdicionales;
-    
-    // ========================================
-    // CÁLCULO DE PROPINA
-    // ========================================
-    const propinaHabilitada = document.getElementById('checkPropina').checked;
-    let propinaValor = 0;
-    let propinaPorcentaje = 0;
-    
-    if (propinaHabilitada) {
-        propinaPorcentaje = parseFloat(document.getElementById('inputPropinaPorcentaje').value) || 0;
-        // La propina se calcula sobre el NETO (subtotal sin descuento)
-        propinaValor = subtotal * (propinaPorcentaje / 100);
+    let calculo;
+    try {
+        calculo = obtenerCalculoVenta();
+    } catch (error) {
+        totalVentaActual = NaN;
+        document.getElementById('btnGuardarVenta').disabled = true;
+        document.getElementById('resumenTotal').textContent = 'Calculo invalido';
+        mostrarAlerta(error.message, 'warning');
+        return;
     }
-    
-    // Total final a pagar (factura + propina)
-    const total = totalFactura + propinaValor;
+    const { subtotal, impuesto, total, total_factura: totalFactura, propina_valor: propinaValor, impuestos: detalleImpuestos } = calculo;
     
     // Actualizar variable global para gestión de pagos
     totalVentaActual = total;
@@ -1623,13 +1581,15 @@ function eliminarPago(pagoId) {
 }
 
 function calcularTotalPagado() {
-    return pagosPendientes.reduce((sum, p) => sum + p.monto, 0);
+    return pagosPendientes.reduce((sum, p) => sum + PosCalculos.centavos(p.monto, 'Pago'), 0) / 100;
 }
 
 function actualizarEstadoPago() {
     const totalPagado = calcularTotalPagado();
-    const pendiente = totalVentaActual - totalPagado;
-    const cambio = totalPagado - totalVentaActual;
+    const diferencia = Number.isFinite(totalVentaActual)
+        ? (PosCalculos.centavos(totalVentaActual) - PosCalculos.centavos(totalPagado)) / 100 : NaN;
+    const pendiente = diferencia;
+    const cambio = -diferencia;
     
     console.log('=== actualizarEstadoPago ===');
     console.log('totalVentaActual:', totalVentaActual);
@@ -1645,10 +1605,10 @@ function actualizarEstadoPago() {
     
     // Mostrar pendiente o cambio según corresponda
     const montoPendienteEl = document.getElementById('montoPendiente');
-    if (pendiente > 0.01) {
+    if (pendiente > 0) {
         montoPendienteEl.textContent = `$${formatearNumero(pendiente)}`;
         montoPendienteEl.className = 'text-danger fw-bold';
-    } else if (cambio > 0.01) {
+    } else if (cambio > 0) {
         montoPendienteEl.textContent = `$${formatearNumero(cambio)} (Cambio)`;
         montoPendienteEl.className = 'text-success fw-bold';
     } else {
@@ -1658,11 +1618,11 @@ function actualizarEstadoPago() {
     
     // Mostrar/ocultar alerta
     const alertaPendiente = document.getElementById('alertaPendiente');
-    if (pendiente > 0.01) {
+    if (pendiente > 0) {
         alertaPendiente.style.display = 'block';
         alertaPendiente.textContent = `Pendiente por pagar: $${formatearNumero(pendiente)}`;
         alertaPendiente.className = 'alert alert-warning';
-    } else if (cambio > 0.01) {
+    } else if (cambio > 0) {
         alertaPendiente.style.display = 'block';
         alertaPendiente.textContent = `💵 Cambio a devolver: $${formatearNumero(cambio)}`;
         alertaPendiente.className = 'alert alert-success';
@@ -1673,7 +1633,17 @@ function actualizarEstadoPago() {
     // Habilitar/deshabilitar botones de acción
     const btnGuardar = document.getElementById('btnGuardarVenta');
     const btnAbrirCuenta = document.getElementById('btnAbrirCuenta');
-    const pagoCompleto = pendiente <= 0.01; // Permitir si está pagado o sobrepagado
+    let pagoCompleto = false;
+    try {
+        PosCalculos.conciliarPagos(pagosPendientes, totalVentaActual);
+        pagoCompleto = true;
+    } catch (error) {
+        if (pagosPendientes.length && pendiente <= 0 && Number.isFinite(totalVentaActual)) {
+            alertaPendiente.style.display = 'block';
+            alertaPendiente.textContent = error.message;
+            alertaPendiente.className = 'alert alert-warning';
+        }
+    }
     const tieneCliente = !!clienteSeleccionado;
     const tieneProductos = productosVenta.length > 0;
     
@@ -1720,70 +1690,19 @@ async function guardarVenta() {
     const btnGuardarVentaEl = document.getElementById('btnGuardarVenta');
     if (btnGuardarVentaEl) btnGuardarVentaEl.disabled = true;
 
-    const subtotal = productosVenta.reduce((sum, p) => sum + p.subtotal, 0);
-    const descuento = parseFloat(document.getElementById('inputDescuento').value) || 0;
-    const baseImponible = subtotal - descuento;
-    
-    // Calcular IVA solo para productos gravados
-    let impuesto = 0;
-    productosVenta.forEach(p => {
-        if (p.aplica_iva) {
-            const porcentaje = (p.porcentaje_iva || 19) / 100;
-            const subtotalProducto = p.subtotal * (descuento > 0 ? (1 - descuento / subtotal) : 1);
-            impuesto += subtotalProducto * porcentaje;
-        }
-    });
-    
-    // Calcular impuestos adicionales
-    let totalImpuestosAdicionales = 0;
-    const impuestosVenta = [];
-    
-    impuestosSeleccionados.forEach(impId => {
-        const imp = impuestosDisponibles.find(i => i.id === impId);
-        if (imp) {
-            let base = 0;
-            switch(imp.aplica_sobre) {
-                case 'subtotal': base = baseImponible; break;
-                case 'iva': base = impuesto; break;
-                case 'total': base = baseImponible + impuesto; break;
-            }
-            
-            const valor = imp.tipo === 'porcentaje' 
-                ? base * (imp.tasa / 100)
-                : parseFloat(imp.tasa);
-            
-            const valorConSigno = imp.afecta_total === 'resta' ? -valor : valor;
-            totalImpuestosAdicionales += valorConSigno;
-            
-            impuestosVenta.push({
-                impuesto_id: imp.id,
-                codigo: imp.codigo,
-                nombre: imp.nombre,
-                base_calculo: base,
-                tasa: imp.tasa,
-                valor: Math.abs(valor),
-                afecta_total: imp.afecta_total
-            });
-        }
-    });
-    
-    const total = baseImponible + impuesto + totalImpuestosAdicionales;
-    
-    // ========================================
-    // CÁLCULO DE PROPINA
-    // ========================================
     const propinaHabilitada = document.getElementById('checkPropina').checked;
-    let propinaValor = 0;
-    let propinaPorcentaje = 0;
-    
-    if (propinaHabilitada) {
-        propinaPorcentaje = parseFloat(document.getElementById('inputPropinaPorcentaje').value) || 0;
-        // La propina se calcula sobre el NETO (subtotal sin descuento)
-        propinaValor = subtotal * (propinaPorcentaje / 100);
+    let calculo;
+    try {
+        calculo = obtenerCalculoVenta();
+        PosCalculos.conciliarPagos(pagosPendientes, calculo.total);
+    } catch (error) {
+        guardandoVenta = false;
+        if (btnGuardarVentaEl) btnGuardarVentaEl.disabled = false;
+        mostrarAlerta(error.message, 'warning');
+        return;
     }
-    
-    // Total final a pagar (factura + propina)
-    const totalFinal = total + propinaValor;
+    const { subtotal, descuento, impuesto, total: totalFinal, impuestos: impuestosVenta,
+        propina_valor: propinaValor, propina_porcentaje: propinaPorcentaje } = calculo;
     
     // Determinar método de pago para mostrar en factura
     let metodoPagoResumen = 'No especificado';
@@ -1812,14 +1731,14 @@ async function guardarVenta() {
         // Impuestos y pagos
         impuestos: impuestosVenta,
         pagos: pagosPendientes,
-        productos: productosVenta.map(p => ({
+        productos: productosVenta.map((p, index) => ({
             producto_id: p.id,
             cantidad: p.cantidad,
             precio_unitario: p.precio_unitario,
             precio_original_promo: p.precio_original_promo || null,
             en_promocion_activa: p.en_promocion_activa || 0,
-            descuento: 0,
-            subtotal: p.subtotal,
+            descuento: p.descuento ?? 0,
+            subtotal: calculo.productos[index].subtotal,
             // Campos para ventas contra pedido
             tipo_venta: p.tipo_venta || 'inmediata',
             estado_entrega: p.estado_entrega || null,
@@ -1831,9 +1750,8 @@ async function guardarVenta() {
     console.log('=== DATOS DE VENTA A ENVIAR ===');
     console.log('Subtotal:', subtotal);
     console.log('Descuento:', descuento);
-    console.log('Base Imponible:', baseImponible);
     console.log('Impuesto:', impuesto);
-    console.log('Total (sin propina):', total);
+    console.log('Total (sin propina):', calculo.total_factura);
     console.log('Propina:', propinaValor);
     console.log('Total Final:', totalFinal);
     console.log('ventaData completo:', ventaData);
@@ -1884,6 +1802,12 @@ async function guardarVenta() {
         
         ultimaVentaData = {
             ...ventaData, 
+            subtotal: data.data.subtotal,
+            descuento: data.data.descuento,
+            impuesto: data.data.impuesto,
+            total: data.data.total,
+            retenciones: data.data.retenciones,
+            impuestos_adicionales: data.data.impuestos_adicionales,
             productos: productosConNombres,
             cliente: clienteSeleccionado, // Guardar cliente para impresión
             impuestos: impuestosConNombres // Agregar impuestos con nombres
@@ -2171,7 +2095,7 @@ function setPropinaPorcentaje(porcentaje) {
 function formatearNumero(num) {
     return new Intl.NumberFormat('es-CO', {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        maximumFractionDigits: 2
     }).format(num);
 }
 
@@ -2995,7 +2919,8 @@ function generarPlantillaTirilla(venta, ventaData, config) {
     const descuento = ventaData.descuento || 0;
     const impuesto = ventaData.impuesto || 0;
     const propinaValor = ventaData.propina_valor || 0;
-    const total = Number(ventaData.total || subtotal - descuento + impuesto + propinaValor);
+    const total = Number(ventaData.total);
+    if (ventaData.total == null || !Number.isFinite(total)) throw new Error('La factura no tiene un total valido registrado');
     const fecha = formatFechaColombia(new Date());
     const tipoFactura = configActual.plantillaId === 5 ? 'FACTURA ELECTRÓNICA SIIGO' : 'FACTURA DE VENTA';
 
@@ -3239,6 +3164,10 @@ document.getElementById('btnConfirmarContraPedido').addEventListener('click', fu
             stock_disponible: producto.stock_actual || 0,
             subtotal: precioUnitario,
             tipo_venta: 'contra_pedido',
+            aplica_iva: producto.aplica_iva,
+            porcentaje_iva: producto.porcentaje_iva,
+            tipo_impuesto: producto.tipo_impuesto,
+            iva_incluido_en_precio: producto.iva_incluido_en_precio,
             estado_entrega: 'pendiente',
             fecha_entrega_estimada: fechaEntrega,
             notas_entrega: notasEntrega
@@ -4010,8 +3939,7 @@ function renderizarUltimasVentas() {
             }
         }
         
-        // Calcular total correcto (puede que esté mal en BD si descuento no se guardó)
-        const totalCorrecto = (parseFloat(venta.subtotal) || 0) - (parseFloat(venta.descuento) || 0) + (parseFloat(venta.impuesto) || 0) + (parseFloat(venta.impuestos_adicionales) || 0) + (parseFloat(venta.propina_valor) || 0);
+        const totalCorrecto = Number(venta.total);
         
         return `
         <div class="list-group-item">
@@ -4086,6 +4014,7 @@ async function reimprimirFactura(numeroFactura) {
             descuento: parseFloat(venta.descuento) || 0,
             impuesto: parseFloat(venta.impuesto) || 0,
             total: parseFloat(venta.total) || 0,
+            retenciones: Number(venta.retenciones || 0),
             propina_habilitada: venta.propina_habilitada || false,
             propina_porcentaje: parseFloat(venta.propina_porcentaje) || 0,
             propina_valor: parseFloat(venta.propina_valor) || 0,
@@ -4103,7 +4032,7 @@ async function reimprimirFactura(numeroFactura) {
                 sku: p.sku,
                 cantidad: p.cantidad,
                 precio_unitario: parseFloat(p.precio_unitario),
-                subtotal: parseFloat(p.subtotal || (p.cantidad * p.precio_unitario))
+                subtotal: Number(p.subtotal)
             })),
             impuestos: venta.impuestos || [],
             pagos: venta.pagos || []
@@ -5529,6 +5458,13 @@ async function cargarCuentaAbierta(cuentaId) {
         // Cargar datos de la cuenta
         cuentaActual = data.data.cuenta;
         modoEdicionCuenta = true;
+        pagosPendientes = [];
+        renderizarPagos();
+        impuestosSeleccionados = [];
+        renderizarImpuestosDisponibles();
+        document.getElementById('inputDescuento').value = 0;
+        document.getElementById('checkPropina').checked = Number(cuentaActual.propina_habilitada) === 1;
+        document.getElementById('inputPropinaPorcentaje').value = cuentaActual.propina_porcentaje ?? 0;
         
         // Cargar cliente si existe
         if (cuentaActual.cliente_id) {
@@ -5554,8 +5490,9 @@ async function cargarCuentaAbierta(cuentaId) {
             precio_minorista: parseFloat(item.precio_unitario) || 0,
             subtotal: parseFloat(item.subtotal) || 0,
             stock_disponible: 999, // En modo edición no validamos stock
-            aplica_iva: item.aplica_iva || false,
-            porcentaje_iva: parseFloat(item.porcentaje_iva) || 0,
+            aplica_iva: Number(item.iva_porcentaje) > 0,
+            porcentaje_iva: Number(item.iva_porcentaje),
+            iva_incluido_en_precio: item.iva_incluido_en_precio,
             iva_porcentaje: parseFloat(item.iva_porcentaje) || 0,
             iva_valor: parseFloat(item.iva_valor) || 0,
             impoconsumo_porcentaje: parseFloat(item.impoconsumo_porcentaje) || 0,
@@ -5885,7 +5822,7 @@ async function agregarItemACuentaAbierta(producto) {
             producto_id: producto.id,
             cantidad: 1,
             precio_unitario: precioUnitario,
-            iva_porcentaje: producto.aplica_iva ? (producto.porcentaje_iva || 19) : 0,
+            iva_porcentaje: producto.aplica_iva ? producto.porcentaje_iva : 0,
             impoconsumo_porcentaje: producto.impoconsumo_porcentaje || 0
         };
         
@@ -5939,8 +5876,10 @@ async function agregarItemACuentaAbierta(producto) {
             subtotal: precioUnitario,
             stock_disponible: 999, // En modo edición no validamos stock
             aplica_iva: producto.aplica_iva || false,
-            porcentaje_iva: producto.porcentaje_iva || 19,
-            iva_porcentaje: producto.porcentaje_iva || 19,
+            porcentaje_iva: producto.porcentaje_iva,
+            tipo_impuesto: producto.tipo_impuesto,
+            iva_incluido_en_precio: producto.iva_incluido_en_precio,
+            iva_porcentaje: producto.porcentaje_iva,
             iva_valor: 0,
             impoconsumo_porcentaje: producto.impoconsumo_porcentaje || 0,
             impoconsumo_valor: 0,
@@ -6099,7 +6038,7 @@ async function cerrarCuentaYCobrar() {
     
     try {
         const token = localStorage.getItem('token');
-        const cambio = totalPagado - totalAPagar;
+        PosCalculos.conciliarPagos(pagosPendientes, totalAPagar);
         
         const response = await fetch(
             `${API_URL}/cuentas-abiertas/${cuentaActual.id}/cerrar`,
@@ -6112,6 +6051,7 @@ async function cerrarCuentaYCobrar() {
                 body: JSON.stringify({
                     empresa_id: currentEmpresa.id,
                     pagos: pagosPendientes,
+                    total: totalAPagar,
                     notas: document.getElementById('notasVenta')?.value || null
                 })
             }
@@ -6128,7 +6068,7 @@ async function cerrarCuentaYCobrar() {
         }
         
         mostrarAlerta(
-            `✅ Cuenta cerrada exitosamente\n\nTotal: $${formatearNumero(totalAPagar)}\nPagado: $${formatearNumero(totalPagado)}\nCambio: $${formatearNumero(cambio)}`,
+            `✅ Cuenta cerrada exitosamente\n\nTotal: $${formatearNumero(data.data.total)}\nPagado: $${formatearNumero(totalPagado)}\nCambio: $${formatearNumero(data.data.cambio)}`,
             'success'
         );
         reproducirSonido('success');

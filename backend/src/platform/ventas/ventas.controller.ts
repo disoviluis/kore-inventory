@@ -11,7 +11,9 @@ import { assertPlanQuota } from '../../core/auth/subscription.service';
 import { successResponse, errorResponse } from '../../shared/helpers';
 import { CONSTANTS } from '../../shared/constants';
 import logger from '../../shared/logger';
-import { generarNumeroFactura, generarCUFE, generarQRCode, calcularRetenciones, numeroATexto } from '../../shared/dian-utils';
+import { generarNumeroFactura, generarCUFE, generarQRCode, numeroATexto } from '../../shared/dian-utils';
+import { calcular, conciliarPagos, centavos, ErrorCalculo, Linea, Impuesto } from '../../../../frontend/public/assets/js/pos-calculos';
+import { resumenPagosTurno } from './ventas.pagos';
 import { moverStock } from '../../shared/inventario';
 
 /**
@@ -95,7 +97,7 @@ export const buscarProducto = async (req: Request, res: Response): Promise<Respo
         p.precio_minimo,
         p.precio_maximo,
         p.stock_actual, p.unidad_medida, p.imagen_url,
-        p.aplica_iva, p.porcentaje_iva, p.iva_incluido_en_precio,
+        p.aplica_iva, p.porcentaje_iva, p.iva_incluido_en_precio, p.tipo_impuesto,
         p.permite_venta_sin_stock,
         p.en_promocion,
         p.precio_promocion,
@@ -273,7 +275,7 @@ export const getVentaById = async (req: Request, res: Response): Promise<Respons
     // Cargar impuestos aplicados
     const impuestos = await query(
       `SELECT 
-        vi.*,
+        vi.*, vi.tipo_afectacion AS afecta_total, vi.nombre_impuesto AS nombre,
         i.nombre as impuesto_nombre, i.codigo
       FROM venta_impuestos vi
       LEFT JOIN impuestos i ON vi.impuesto_id = i.id
@@ -309,201 +311,193 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
     const {
       empresa_id,
       cliente_id,
-      productos,
-      subtotal,
-      descuento,
-      impuesto,
-      total,
+      productos: productosEnviados,
+      subtotal: subtotalEnviado,
+      descuento: descuentoEnviado,
+      impuesto: impuestoEnviado,
+      total: totalEnviado,
       metodo_pago,
       forma_pago, // 'contado' o 'credito'
       fecha_vencimiento, // Solo si es crédito
-      pagos,
+      pagos: pagosEnviados,
       notas,
       vendedor_id,
       bodega_id,
-        impuestos,
-        // Propina
-        propina_habilitada,
-        propina_porcentaje,
-        propina_valor,
-        propina_base
-      } = req.body;
+      impuestos: impuestosEnviados,
+      // Propina
+      propina_habilitada,
+      propina_porcentaje: porcentajePropina,
+      propina_valor: propinaEnviada
+    } = req.body;
 
-      // Validaciones
-    if (pagos && Array.isArray(pagos) && pagos.length > 0) {
-      const totalPagos = pagos.reduce((sum: number, p: any) => sum + parseFloat(p.monto), 0);
-      
-      // Permitir pagos mayores o iguales al total (para cálculo de cambio)
-      // Tolerancia de 1 centavo para evitar errores de redondeo
-      if (totalPagos < total - 0.01) {
-        return errorResponse(
-          res,
-          `La suma de pagos ($${totalPagos.toFixed(2)}) es menor al total de la venta ($${total})`,
-          null,
-          CONSTANTS.HTTP_STATUS.BAD_REQUEST
-        );
-      }
-      
-      // Registrar el cambio si el pago excede el total
-      const cambio = totalPagos - total;
-      if (cambio > 0.01) {
-        logger.info(`Venta con cambio: Total=$${total}, Pagado=$${totalPagos.toFixed(2)}, Cambio=$${cambio.toFixed(2)}`);
+    if (!Array.isArray(productosEnviados) || !productosEnviados.length) throw new ErrorCalculo('La venta requiere productos');
+    if (forma_pago && !['contado', 'credito'].includes(forma_pago)) throw new ErrorCalculo('Forma de pago invalida');
+    if (forma_pago === 'credito' && (!fecha_vencimiento || !Number.isFinite(Date.parse(fecha_vencimiento)))) {
+      throw new ErrorCalculo('La venta a credito requiere fecha de vencimiento valida');
+    }
+    const clienteResult = await query(
+      'SELECT tipo_documento, numero_documento FROM clientes WHERE id = ? AND empresa_id = ?',
+      [cliente_id, empresa_id]
+    );
+    if (!clienteResult.length) throw new ErrorCalculo('Cliente no encontrado en la empresa de la venta');
+    const cliente = clienteResult[0];
+    const productIds = productosEnviados.map((line: Linea) => Number(line.producto_id));
+    if (productIds.some((id: number) => !Number.isSafeInteger(id) || id <= 0)) throw new ErrorCalculo('Producto invalido');
+    const catalogo = await query(
+      `SELECT id, aplica_iva, porcentaje_iva, tipo_impuesto, iva_incluido_en_precio FROM productos
+       WHERE empresa_id = ? AND id IN (${productIds.map(() => '?').join(',')})`,
+      [empresa_id, ...productIds]
+    );
+    const lineas = productosEnviados.map((line: Linea) => {
+      const product = catalogo.find((item: { id: number }) => item.id === Number(line.producto_id));
+      if (!product) throw new ErrorCalculo('Producto no encontrado en la empresa de la venta');
+      return {
+        ...line, aplica_iva: product.aplica_iva, porcentaje_iva: product.porcentaje_iva,
+        tipo_impuesto: product.tipo_impuesto, iva_incluido_en_precio: product.iva_incluido_en_precio
+      };
+    });
+    if (impuestosEnviados !== undefined && !Array.isArray(impuestosEnviados)) throw new ErrorCalculo('Impuestos invalidos');
+    const taxIds = (impuestosEnviados || []).map((tax: { impuesto_id: number }) => Number(tax.impuesto_id));
+    if (taxIds.some((id: number) => !Number.isSafeInteger(id) || id <= 0) || new Set(taxIds).size !== taxIds.length) {
+      throw new ErrorCalculo('Impuesto invalido o duplicado');
+    }
+    const impuestosConfigurados: Impuesto[] = taxIds.length ? await query(
+      `SELECT id, codigo, nombre, tipo, tasa, aplica_sobre, afecta_total FROM impuestos
+       WHERE empresa_id = ? AND activo = 1 AND id IN (${taxIds.map(() => '?').join(',')})`, [empresa_id, ...taxIds]
+    ) : [];
+    if (impuestosConfigurados.length !== taxIds.length) throw new ErrorCalculo('Impuesto no disponible para esta empresa');
+    const calculo = calcular({
+      productos: lineas, descuento: descuentoEnviado ?? 0, impuestos: impuestosConfigurados,
+      propina_habilitada: Boolean(propina_habilitada), propina_porcentaje: porcentajePropina ?? 0
+    });
+    for (const [field, received, expected] of [
+      ['Subtotal', subtotalEnviado, calculo.subtotal], ['IVA', impuestoEnviado, calculo.impuesto],
+      ['Total', totalEnviado, calculo.total], ['Propina', propinaEnviada ?? 0, calculo.propina_valor]
+    ] as const) {
+      if (centavos(received, field) !== centavos(expected, field)) {
+        throw new ErrorCalculo(`${field} no coincide con el calculo del servidor. Actualice el POS y revise el cobro antes de continuar`);
       }
     }
+    const conciliacion = conciliarPagos(pagosEnviados ?? [], calculo.total, forma_pago === 'credito');
+    const { subtotal, descuento, impuesto, total: totalFinal, productos, impuestos,
+      retenciones: totalRetenciones, propina_valor, propina_base, propina_porcentaje } = calculo;
+    const pagos = conciliacion.pagos;
+    const metodoPago = pagos.length > 1 ? 'Múltiple' : pagos[0]?.metodo_pago || metodo_pago || 'efectivo';
 
     // Obtener configuración de empresa para generar número de factura.
     // Se bloquea la fila (FOR UPDATE) y se incrementa la numeración dentro de
-    // una transacción corta para evitar que dos ventas concurrentes generen
+    // la misma transaccion de la venta para evitar que dos ventas concurrentes generen
     // el mismo número de factura (condición de carrera lectura->+1->escritura).
-    let empresa: any = null;
-    try {
-      empresa = await withTransaction(async (txQuery) => {
-        const empresaResult = await txQuery(
-          `SELECT prefijo_factura, numeracion_actual, software_id, pin_software, ambiente, nit
+    const resultado = await withTransaction(async (txQuery) => {
+      const empresaResult = await txQuery(
+        `SELECT prefijo_factura, numeracion_actual, software_id, pin_software, ambiente, nit
            FROM empresas WHERE id = ? FOR UPDATE`,
-          [empresa_id]
-        );
-
-        if (empresaResult.length === 0) {
-          throw new Error('EMPRESA_NO_ENCONTRADA');
-        }
-
-        const emp = empresaResult[0];
-        const nuevoConsecutivo = (emp.numeracion_actual || 0) + 1;
-
-        await txQuery(
-          'UPDATE empresas SET numeracion_actual = ? WHERE id = ?',
-          [nuevoConsecutivo, empresa_id]
-        );
-
-        return { ...emp, numeracion_actual: nuevoConsecutivo };
-      });
-    } catch (err: any) {
-      if (err.message !== 'EMPRESA_NO_ENCONTRADA') throw err;
-    }
-
-    if (!empresa) {
-      return errorResponse(res, 'Empresa no encontrada', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
-    }
-
-    const prefijo = empresa.prefijo_factura || 'FAC';
-    const consecutivo = empresa.numeracion_actual;
-    const numeroFactura = generarNumeroFactura(prefijo, consecutivo);
-
-    // Obtener datos del cliente para CUFE
-    const clienteResult = await query(
-      `SELECT tipo_documento, numero_documento, tipo_cliente, 
-              responsabilidad_tributaria FROM clientes WHERE id = ?`,
-      [cliente_id]
-    );
-
-    if (clienteResult.length === 0) {
-      return errorResponse(res, 'Cliente no encontrado', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
-    }
-
-    const cliente = clienteResult[0];
-
-    // Calcular retenciones automáticamente
-    const esGranContribuyente = cliente.responsabilidad_tributaria?.includes('Gran Contribuyente') || false;
-    const retenciones = calcularRetenciones(
-      subtotal,
-      impuesto,
-      total,
-      esGranContribuyente,
-      cliente.tipo_cliente === 'empresa' ? 'juridica' : 'natural'
-    );
-
-    // Ajustar total con retenciones
-    const totalFinal = total - retenciones.retencionFuente - retenciones.retencionIVA - retenciones.retencionICA;
-
-    // Generar CUFE
-    const fecha = new Date();
-    const fechaStr = fecha.toISOString().split('T')[0]; // YYYY-MM-DD
-    const horaStr = fecha.toTimeString().split(' ')[0]; // HH:MM:SS
-
-    const cufe = generarCUFE({
-      numeroFactura,
-      fecha: fechaStr,
-      hora: horaStr,
-      subtotal,
-      impuesto,
-      total: totalFinal,
-      nitEmisor: empresa.nit,
-      tipoDocAdquiriente: cliente.tipo_documento === 'nit' ? '31' : '13',
-      numDocAdquiriente: cliente.numero_documento,
-      softwareId: empresa.software_id || 'SW-12345678',
-      ambiente: empresa.ambiente === 'produccion' ? '1' : '2',
-      pin: empresa.pin_software || '98765'
-    });
-
-    // Generar QR Code
-    const qrData = {
-      NumFac: numeroFactura,
-      FecFac: fechaStr,
-      NitFac: empresa.nit,
-      DocAdq: cliente.numero_documento,
-      ValFac: subtotal.toFixed(2),
-      ValIva: impuesto.toFixed(2),
-      ValOtroIm: '0.00',
-      ValTotal: totalFinal.toFixed(2),
-      CUFE: cufe
-    };
-
-    const qrCode = await generarQRCode(qrData);
-
-    // Calcular total de retenciones
-    const totalRetenciones = retenciones.retencionIVA + retenciones.retencionFuente + retenciones.retencionICA;
-
-    // Determinar estado de la venta
-    const estadoVenta = (forma_pago === 'credito') ? 'pendiente' : 'pagada';
-
-    // Obtener turno activo del usuario (si existe)
-    const usuario = (req as any).user;
-    let turnoId = null;
-    
-    if (usuario?.id) {
-      const turnoActivo = await query(
-        'SELECT id FROM turnos_caja WHERE usuario_id = ? AND empresa_id = ? AND estado = "abierto" LIMIT 1',
-        [usuario.id, empresa_id]
+        [empresa_id]
       );
-      
-      if (turnoActivo.length > 0) {
-        turnoId = turnoActivo[0].id;
+
+      if (empresaResult.length === 0) {
+        throw new ErrorCalculo('Empresa no encontrada');
       }
-    }
 
-    // Determinar la bodega/tienda que realiza la venta: se usa la enviada por
-    // el frontend o, si no llega, la bodega asignada al usuario que factura.
-    // Esto permite luego filtrar y exportar las ventas por punto de venta.
-    let bodegaId = bodega_id || null;
-    if (!bodegaId && usuario?.id) {
-      const usuarioBodegaResult = await query(
-        'SELECT bodega_id FROM usuarios WHERE id = ?',
-        [usuario.id]
+      const emp = empresaResult[0];
+      const nuevoConsecutivo = Number(emp.numeracion_actual) + 1;
+      if (!Number.isSafeInteger(nuevoConsecutivo) || nuevoConsecutivo < 1) throw new ErrorCalculo('Numeracion de empresa invalida');
+
+      await txQuery(
+        'UPDATE empresas SET numeracion_actual = ? WHERE id = ?',
+        [nuevoConsecutivo, empresa_id]
       );
-      bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
-    }
 
-    // Insertar venta, detalles, stock, impuestos, pagos y CxC en una única
-    // transacción: si algo falla a mitad de camino (ej. un producto inválido,
-    // un error de red con la BD, etc.) se hace ROLLBACK de TODO, incluyendo
-    // los descuentos de stock ya aplicados. Antes esto se ejecutaba con
-    // queries sueltas y un error a mitad del loop de productos dejaba el
-    // stock descontado solo parcialmente (ej. factura de 4 productos que
-    // solo alcanzaba a descontar 2 antes de fallar).
-    const ventaId = await withTransaction(async (txQuery) => {
+      const empresa = { ...emp, numeracion_actual: nuevoConsecutivo };
+
+      const prefijo = empresa.prefijo_factura || 'FAC';
+      const consecutivo = empresa.numeracion_actual;
+      const numeroFactura = generarNumeroFactura(prefijo, consecutivo);
+
+      // Generar CUFE
+      const fecha = new Date();
+      const fechaStr = fecha.toISOString().split('T')[0]; // YYYY-MM-DD
+      const horaStr = fecha.toTimeString().split(' ')[0]; // HH:MM:SS
+
+      const cufe = generarCUFE({
+        numeroFactura,
+        fecha: fechaStr,
+        hora: horaStr,
+        subtotal,
+        impuesto,
+        total: totalFinal,
+        nitEmisor: empresa.nit,
+        tipoDocAdquiriente: String(cliente.tipo_documento).toUpperCase() === 'NIT' ? '31' : '13',
+        numDocAdquiriente: cliente.numero_documento,
+        softwareId: empresa.software_id || 'SW-12345678',
+        ambiente: empresa.ambiente === 'produccion' ? '1' : '2',
+        pin: empresa.pin_software || '98765'
+      });
+
+      // Generar QR Code
+      const qrData = {
+        NumFac: numeroFactura,
+        FecFac: fechaStr,
+        NitFac: empresa.nit,
+        DocAdq: cliente.numero_documento,
+        ValFac: subtotal.toFixed(2),
+        ValIva: impuesto.toFixed(2),
+        ValOtroIm: '0.00',
+        ValTotal: totalFinal.toFixed(2),
+        CUFE: cufe
+      };
+
+      const qrCode = await generarQRCode(qrData);
+
+      // Determinar estado de la venta
+      const estadoVenta = (forma_pago === 'credito') ? 'pendiente' : 'pagada';
+
+      // Obtener turno activo del usuario (si existe)
+      const usuario = (req as any).user;
+      let turnoId = null;
+
+      if (usuario?.id) {
+        const turnoActivo = await txQuery(
+          'SELECT id FROM turnos_caja WHERE usuario_id = ? AND empresa_id = ? AND estado = "abierto" LIMIT 1 FOR UPDATE',
+          [usuario.id, empresa_id]
+        );
+
+        if (turnoActivo.length > 0) {
+          turnoId = turnoActivo[0].id;
+        }
+      }
+
+      // Determinar la bodega/tienda que realiza la venta: se usa la enviada por
+      // el frontend o, si no llega, la bodega asignada al usuario que factura.
+      // Esto permite luego filtrar y exportar las ventas por punto de venta.
+      let bodegaId = bodega_id || null;
+      if (!bodegaId && usuario?.id) {
+        const usuarioBodegaResult = await txQuery(
+          'SELECT bodega_id FROM usuarios WHERE id = ?',
+          [usuario.id]
+        );
+        bodegaId = usuarioBodegaResult[0]?.bodega_id || null;
+      }
+
+      // Insertar venta, detalles, stock, impuestos, pagos y CxC en una única
+      // transacción: si algo falla a mitad de camino (ej. un producto inválido,
+      // un error de red con la BD, etc.) se hace ROLLBACK de TODO, incluyendo
+      // los descuentos de stock ya aplicados. Antes esto se ejecutaba con
+      // queries sueltas y un error a mitad del loop de productos dejaba el
+      // stock descontado solo parcialmente (ej. factura de 4 productos que
+      // solo alcanzaba a descontar 2 antes de fallar).
       if ((req as any).user?.tipo_usuario !== 'super_admin') await assertPlanQuota(txQuery, Number(empresa_id), 'facturas');
       const resultVenta = await txQuery(
         `INSERT INTO ventas (
           empresa_id, numero_factura, cliente_id, fecha_venta,
           subtotal, descuento, impuesto, total, 
-          retenciones,
+          retenciones, impuestos_adicionales,
           estado, metodo_pago, forma_pago, fecha_vencimiento, notas, vendedor_id,
           bodega_id,
           cufe, qr_code,
           propina_habilitada, propina_porcentaje, propina_valor, propina_base,
           turno_id
-          ) VALUES (?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresa_id,
           numeroFactura,
@@ -513,8 +507,9 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
           impuesto || 0,
           totalFinal,
           totalRetenciones,
+          calculo.impuestos_adicionales,
           estadoVenta,
-          metodo_pago || 'efectivo',
+          metodoPago,
           forma_pago || 'contado',
           forma_pago === 'credito' ? fecha_vencimiento : null,
           notas || null,
@@ -528,13 +523,14 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
           propina_valor || 0,
           propina_base || 0,
           turnoId
-          ]
-        );
+        ]
+      );
 
       const nuevaVentaId = resultVenta.insertId;
 
       // Insertar detalles y actualizar stock
-      for (const producto of productos) {
+      for (const [index, producto] of productos.entries()) {
+        const datosEntrega = productosEnviados[index];
         // Insertar detalle con nuevos campos para ventas contra pedido
         await txQuery(
           `INSERT INTO venta_detalle (
@@ -548,15 +544,15 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
             producto.precio_unitario,
             producto.descuento || 0,
             producto.subtotal,
-            producto.tipo_venta || 'inmediata',
-            producto.estado_entrega || null,
-            producto.fecha_entrega_estimada || null,
-            producto.notas_entrega || null
+            datosEntrega.tipo_venta || 'inmediata',
+            datosEntrega.estado_entrega || null,
+            datosEntrega.fecha_entrega_estimada || null,
+            datosEntrega.notas_entrega || null
           ]
         );
 
         // Actualizar stock solo si NO es venta contra pedido
-        if (producto.tipo_venta !== 'contra_pedido') {
+        if (datosEntrega.tipo_venta !== 'contra_pedido') {
           await moverStock(txQuery, {
             productoId: Number(producto.producto_id),
             cantidad: Number(producto.cantidad),
@@ -654,22 +650,18 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
         logger.info(`Cuenta por cobrar creada para venta ${numeroFactura} - Vence: ${fecha_vencimiento}`);
       }
 
-      return nuevaVentaId;
-    });
-
-    logger.info(`Venta creada: ${numeroFactura} (ID: ${ventaId})`);
-
-    return successResponse(
-      res,
-      'Venta creada exitosamente',
-      { 
-        id: ventaId, 
+      return {
+        id: nuevaVentaId,
         numero_factura: numeroFactura,
         cufe: cufe,
-        qr_code: qrCode
-      },
-      CONSTANTS.HTTP_STATUS.CREATED
-    );
+        qr_code: qrCode,
+        subtotal, descuento, impuesto, total: totalFinal, retenciones: totalRetenciones,
+        impuestos_adicionales: calculo.impuestos_adicionales,
+        propina_valor, pagos, recibido: conciliacion.recibido, cambio: conciliacion.cambio
+      };
+    });
+    logger.info(`Venta creada: ${resultado.numero_factura} (ID: ${resultado.id})`);
+    return successResponse(res, 'Venta creada exitosamente', resultado, CONSTANTS.HTTP_STATUS.CREATED);
 
   } catch (error) {
     logger.error('Error al crear venta:', error);
@@ -930,13 +922,7 @@ export const getResumenTurno = async (req: Request, res: Response): Promise<Resp
     const turno = turnos[0];
 
     // Obtener ventas del turno agrupadas por método de pago
-    const ventas = await query(
-      `SELECT metodo_pago, COUNT(*) as cantidad, SUM(total) as total
-       FROM ventas
-       WHERE turno_id = ? AND estado != 'anulada'
-       GROUP BY metodo_pago`,
-      [turnoId]
-    );
+    const { ventas, totalVentas } = await resumenPagosTurno(turnoId);
 
     // Obtener gastos del turno
     const gastos = await query(
@@ -947,14 +933,13 @@ export const getResumenTurno = async (req: Request, res: Response): Promise<Resp
       [turnoId]
     );
 
-    const totalGastos = gastos.reduce((sum: number, g: any) => sum + parseFloat(g.monto), 0);
-    const totalVentas = ventas.reduce((sum: number, v: any) => sum + parseFloat(v.total), 0);
+    const totalGastos = gastos.reduce((sum: number, g: { monto: string }) => sum + centavos(g.monto), 0) / 100;
     
     // Calcular efectivo a entregar (ventas en efectivo - gastos)
     // NOTA: La base NO se entrega, se queda en caja para el siguiente turno
     const ventasEfectivo = ventas.find((v: any) => v.metodo_pago === 'efectivo');
-    const montoEfectivo = ventasEfectivo ? parseFloat(ventasEfectivo.total) : 0;
-    const efectivoAEntregar = montoEfectivo - totalGastos;
+    const montoEfectivo = ventasEfectivo?.total ?? 0;
+    const efectivoAEntregar = (centavos(montoEfectivo) - centavos(totalGastos)) / 100;
 
     const resumen = {
       turno,
@@ -970,6 +955,7 @@ export const getResumenTurno = async (req: Request, res: Response): Promise<Resp
 
   } catch (error) {
     logger.error('Error al obtener resumen del turno:', error);
+    if (error instanceof ErrorCalculo) return errorResponse(res, error.message, null, error.status);
     return errorResponse(res, 'Error al obtener resumen del turno', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
@@ -983,75 +969,71 @@ export const cerrarTurno = async (req: Request, res: Response): Promise<Response
     const { turnoId } = req.params;
     const { efectivoContado, notas } = req.body;
 
-    // Obtener datos del turno con nombre de bodega y usuario
-    const turnos = await query(
-      `SELECT t.*, 
+    const resumen = await withTransaction(async query => {
+      // Obtener datos del turno con nombre de bodega y usuario
+      const turnos = await query(
+        `SELECT t.*,
               b.nombre as bodega_nombre,
               u.nombre as usuario_nombre,
               u.apellido as usuario_apellido
        FROM turnos_caja t
        LEFT JOIN bodegas b ON t.bodega_id = b.id
        LEFT JOIN usuarios u ON t.usuario_id = u.id
-       WHERE t.id = ?`,
-      [turnoId]
-    );
+       WHERE t.id = ? FOR UPDATE`,
+        [turnoId]
+      );
 
-    if (turnos.length === 0) {
-      return errorResponse(res, 'Turno no encontrado', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
-    }
+      if (turnos.length === 0) {
+        throw new ErrorCalculo('Turno no encontrado');
+      }
 
-    const turno = turnos[0];
+      const turno = turnos[0];
+      if (turno.estado !== 'abierto') throw new ErrorCalculo('El turno ya esta cerrado');
 
-    // Obtener ventas del turno agrupadas por método de pago
-    const ventas = await query(
-      `SELECT metodo_pago, COUNT(*) as cantidad, SUM(total) as total
-       FROM ventas
-       WHERE turno_id = ? AND estado != 'anulada'
-       GROUP BY metodo_pago`,
-      [turnoId]
-    );
+      // Obtener ventas del turno agrupadas por método de pago
+      const { ventas, totalVentas } = await resumenPagosTurno(turnoId, query);
 
-    // Obtener gastos del turno
-    const gastos = await query(
-      `SELECT id, descripcion, monto, fecha_registro
+      // Obtener gastos del turno
+      const gastos = await query(
+        `SELECT id, descripcion, monto, fecha_registro
        FROM gastos_caja
        WHERE turno_id = ?
        ORDER BY fecha_registro DESC`,
-      [turnoId]
-    );
-
-    const totalGastos = gastos.reduce((sum: number, g: any) => sum + parseFloat(g.monto), 0);
-    const totalVentas = ventas.reduce((sum: number, v: any) => sum + parseFloat(v.total), 0);
-    
-    // Calcular efectivo a entregar (ventas en efectivo - gastos)
-    const ventasEfectivo = ventas.find((v: any) => v.metodo_pago === 'efectivo');
-    const montoEfectivo = ventasEfectivo ? parseFloat(ventasEfectivo.total) : 0;
-    const efectivoAEntregar = montoEfectivo - totalGastos;
-
-    const resumen = {
-      turno,
-      ventas_por_metodo: ventas,
-      gastos,
-      total_ventas: totalVentas,
-      total_gastos: totalGastos,
-      efectivo_a_entregar: efectivoAEntregar,
-      base_inicial: parseFloat(turno.base_inicial)
-    };
-
-    const diferencia = efectivoContado !== undefined ? efectivoContado - efectivoAEntregar : null;
-
-    // Guardar totales por método de pago
-    for (const venta of resumen.ventas_por_metodo) {
-      await query(
-        `INSERT INTO turnos_caja_totales (turno_id, metodo_pago, total, cantidad_transacciones)
-         VALUES (?, ?, ?, ?)`,
-        [turnoId, venta.metodo_pago, venta.total, venta.cantidad]
+        [turnoId]
       );
-    }
 
-    // Cerrar turno
-    await query(
-      `UPDATE turnos_caja 
+      const totalGastos = gastos.reduce((sum: number, g: { monto: string }) => sum + centavos(g.monto), 0) / 100;
+
+      // Calcular efectivo a entregar (ventas en efectivo - gastos)
+      const ventasEfectivo = ventas.find((v: any) => v.metodo_pago === 'efectivo');
+      const montoEfectivo = ventasEfectivo?.total ?? 0;
+      const efectivoAEntregar = (centavos(montoEfectivo) - centavos(totalGastos)) / 100;
+
+      const resumen = {
+        turno,
+        ventas_por_metodo: ventas,
+        gastos,
+        total_ventas: totalVentas,
+        total_gastos: totalGastos,
+        efectivo_a_entregar: efectivoAEntregar,
+        base_inicial: parseFloat(turno.base_inicial)
+      };
+
+      const contado = efectivoContado !== undefined ? centavos(efectivoContado, 'Efectivo contado') / 100 : null;
+      const diferencia = contado !== null ? (centavos(contado) - Math.round(efectivoAEntregar * 100)) / 100 : null;
+
+      // Guardar totales por método de pago
+      for (const venta of resumen.ventas_por_metodo) {
+        await query(
+          `INSERT INTO turnos_caja_totales (turno_id, metodo_pago, total, cantidad_transacciones)
+         VALUES (?, ?, ?, ?)`,
+          [turnoId, venta.metodo_pago, venta.total, venta.cantidad]
+        );
+      }
+
+      // Cerrar turno
+      await query(
+        `UPDATE turnos_caja
        SET fecha_cierre = CONVERT_TZ(NOW(), '+00:00', '-05:00'), 
            estado = 'cerrado',
            total_ventas = ?,
@@ -1061,16 +1043,18 @@ export const cerrarTurno = async (req: Request, res: Response): Promise<Response
            diferencia = ?,
            notas_cierre = ?
        WHERE id = ?`,
-      [
-        resumen.total_ventas,
-        resumen.total_gastos,
-        resumen.efectivo_a_entregar,
-        efectivoContado || null,
-        diferencia,
-        notas || null,
-        turnoId
-      ]
-    );
+        [
+          resumen.total_ventas,
+          resumen.total_gastos,
+          resumen.efectivo_a_entregar,
+          contado,
+          diferencia,
+          notas || null,
+          turnoId
+        ]
+      );
+      return resumen;
+    });
 
     logger.info(`Turno cerrado: ${turnoId}`);
 
@@ -1078,6 +1062,7 @@ export const cerrarTurno = async (req: Request, res: Response): Promise<Response
 
   } catch (error) {
     logger.error('Error al cerrar turno:', error);
+    if (error instanceof ErrorCalculo) return errorResponse(res, error.message, null, error.status);
     return errorResponse(res, 'Error al cerrar turno', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };
@@ -1096,18 +1081,21 @@ export const registrarGasto = async (req: Request, res: Response): Promise<Respo
       return errorResponse(res, 'Faltan parámetros: descripcion, monto', null, CONSTANTS.HTTP_STATUS.BAD_REQUEST);
     }
 
-    // Verificar que el turno existe y está abierto
-    const turnos = await query('SELECT id FROM turnos_caja WHERE id = ? AND estado = "abierto"', [turnoId]);
+    const importe = centavos(monto, 'Gasto') / 100;
+    const result = await withTransaction(async query => {
+      // Verificar que el turno existe y está abierto
+      const turnos = await query('SELECT id FROM turnos_caja WHERE id = ? AND estado = "abierto" FOR UPDATE', [turnoId]);
 
-    if (turnos.length === 0) {
-      return errorResponse(res, 'Turno no encontrado o ya cerrado', null, CONSTANTS.HTTP_STATUS.NOT_FOUND);
-    }
+      if (turnos.length === 0) {
+        throw new ErrorCalculo('Turno no encontrado o ya cerrado');
+      }
 
-    // Registrar gasto
-    const result = await query(
-      'INSERT INTO gastos_caja (turno_id, descripcion, monto, usuario_id, fecha_registro) VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), \'+00:00\', \'-05:00\'))',
-      [turnoId, descripcion, monto, usuario.id]
-    );
+      // Registrar gasto
+      return query(
+        'INSERT INTO gastos_caja (turno_id, descripcion, monto, usuario_id, fecha_registro) VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), \'+00:00\', \'-05:00\'))',
+        [turnoId, descripcion, importe, usuario.id]
+      );
+    });
 
     logger.info(`Gasto registrado en turno ${turnoId}: ${descripcion} - $${monto}`);
 
@@ -1115,6 +1103,7 @@ export const registrarGasto = async (req: Request, res: Response): Promise<Respo
 
   } catch (error) {
     logger.error('Error al registrar gasto:', error);
+    if (error instanceof ErrorCalculo) return errorResponse(res, error.message, null, error.status);
     return errorResponse(res, 'Error al registrar gasto', error, CONSTANTS.HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 };

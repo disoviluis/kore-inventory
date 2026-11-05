@@ -6,7 +6,7 @@
 function facturaModel_formatearNumero(num) {
     return new Intl.NumberFormat('es-CO', {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        maximumFractionDigits: 2
     }).format(Number(num || 0));
 }
 
@@ -54,7 +54,8 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
     const descuento = Number(ventaData.descuento || 0);
     const impuesto = Number(ventaData.impuesto || 0);
     const propinaValor = Number(ventaData.propina_valor || 0);
-    const total = Number(ventaData.total || subtotal - descuento + impuesto + propinaValor);
+    const total = Number(ventaData.total);
+    if (ventaData.total == null || !Number.isFinite(total)) throw new Error('La factura no tiene un total valido registrado');
 
     // Valores compactos para media carta
     const outerPad  = compact ? '10px' : '20px';
@@ -177,6 +178,12 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                                     <td style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">${imp.afecta_total === 'resta' ? '-' : ''}$${facturaModel_formatearNumero(Math.abs(imp.valor || 0))}</td>
                                 </tr>
                             `).join('')}
+                            ${Number(ventaData.retenciones) > 0 && !(ventaData.impuestos || []).some(imp => imp.afecta_total === 'resta') ? `
+                                <tr>
+                                    <td colspan="4" style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">Retenciones registradas (sin desglose)</td>
+                                    <td style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">-$${facturaModel_formatearNumero(ventaData.retenciones)}</td>
+                                </tr>
+                            ` : ''}
                             ${propinaValor > 0 ? `
                                 <tr>
                                     <td colspan="4" style="padding: ${cellPad}; border: 1px solid #ddd; text-align:right;">Propina (${ventaData.propina_porcentaje || 0}%)</td>
