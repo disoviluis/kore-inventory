@@ -863,6 +863,38 @@ Validacion local: 120/120 pruebas aprobadas, incluidas diferencias adicionales
 de payload, documento encontrado, concurrencia, confirmacion ausente y
 contador de intentos ya incrementado.
 
+**Resultado: FEV-000003 aceptada en Sandbox (2026-11-05 22:36 UTC).**
+
+- Recuperacion desplegada `f2f6192`; la primera ejecucion se detuvo antes de
+  llamadas externas por orden distinto de claves JSON de MySQL. Se corrigio
+  con comparacion profunda de contenido (`ce41599`), sin relajar valores;
+  prueba con claves reordenadas y 120/120 pruebas aprobadas en EC2.
+- Ejecucion efectiva: un GET de ausencia para el UUID anterior y un solo POST.
+  HTTP 200, `IsValid: true`, `StatusCode: 00`, `Procesado Correctamente.`,
+  mensaje `La Factura electronica FEV3, ha sido autorizada.`
+- Documento local 2, tipo 7, estado `accepted`, attempt_count 2.
+  Documento local 1 permanece intacto. Los intentos HTTP 422/400 se conservan;
+  el intento 2 del documento 2 registra HTTP 200 y success 1.
+- UUID proveedor: `60b10298-d969-11f1-a807-d843ae899220`.
+- CUFE Sandbox:
+  `23a9cfea207a36c4ceb3a17f0a532153959d531577b72f571de6a2ed4de3f5f748b4f04e7fbc12b8519f901dba687fde`.
+- Consulta posterior GET por UUID nuevo: HTTP 200, registro encontrado en
+  `dataRecord.shipping_history`, numero FEV3, is_valid 1, UUID proveedor
+  coincidente y XmlDocumentKey igual al CUFE almacenado.
+- La consulta local de documento mas reciente devuelve id 2 / accepted,
+  contador 2 y referencias PDF/QR presentes. Auditoria confirma un snapshot
+  del payload/respuesta/hash anteriores; intento 1 comparado intacto.
+- Venta 141 sin cambios: pagada, 160650.00, retenciones 0.00. No se genero
+  otra venta ni se repitio cobro o inventario. No se envio correo
+  (`send_email: false`). Venta 140 conserva su bloqueo independiente.
+- PM2 online, estado guardado y health correcto despues del despliegue.
+
+Esta aceptacion corresponde exclusivamente al entorno Sandbox; no constituye
+habilitacion ni autorizacion de facturacion en Produccion. Siguiente prueba:
+revisar en portal la factura FEV3 y su PDF/QR. La pantalla POS todavia requiere
+integrar la accion de emision y representar el estado fiscal real; no reenviar
+la factura aceptada ni crear otra para obtener su PDF.
+
 ### Consumidor final y documento equivalente electronico POS
 
 Que el comprador diga que no desea factura electronica a su nombre no significa
