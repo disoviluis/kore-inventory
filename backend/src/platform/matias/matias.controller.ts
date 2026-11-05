@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../../shared/database';
 import { decryptAuthSecret, encryptAuthSecret } from '../../core/auth/auth.security';
-import { emitMatiasInvoice, probeMatias } from './matias.client';
+import { emitMatiasInvoice, probeMatias, lookupMatiasDocument } from './matias.client';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import crypto from 'crypto';
 import { buildMatiasSandboxInvoice, MatiasInvoiceValidationError, MatiasLine, MatiasPayment, MatiasSale } from './matias.invoice';
@@ -190,7 +190,7 @@ export async function getMatiasVentaDocument(req: Request, res: Response) {
             error_payload, provider_reference, attempt_count, last_attempt_at, accepted_at,
             rejected_at, created_at, updated_at
        FROM matias_documentos WHERE empresa_id = ? AND venta_id = ?
-       ORDER BY updated_at DESC LIMIT 1`,
+       ORDER BY updated_at DESC, id DESC LIMIT 1`,
     [empresaId, ventaId]
   );
   return res.json({ success: true, data: rows[0] || null });
@@ -278,18 +278,32 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
   );
 
   const [existingRows] = await pool.execute<RowDataPacket[]>(
-    `SELECT id, request_uuid, attempt_count, estado
-       FROM matias_documentos WHERE empresa_id = ? AND venta_id = ? AND entorno = 'sandbox'
-       LIMIT 1`,
+    `SELECT d.id, d.request_uuid, d.attempt_count, d.estado, d.tipo_documento_id,
+            d.cufe, d.matias_uuid, d.response_payload,
+            (SELECT i.http_status FROM matias_documento_intentos i
+             WHERE i.documento_id = d.id ORDER BY i.numero_intento DESC LIMIT 1) AS last_http_status
+       FROM matias_documentos d WHERE d.empresa_id = ? AND d.venta_id = ? AND d.entorno = 'sandbox'
+       ORDER BY d.id`,
     [empresaId, ventaId]
   );
   const existing = existingRows[0];
-  if (existing) {
+  const recoveryRequested = !preview && req.body?.retry_validation_document_id !== undefined;
+  const recoverable = recoveryRequested && req.body?.portal_absence_confirmed === true && existingRows.length === 1 &&
+    Number(req.body.retry_validation_document_id) === existing?.id &&
+    existing.estado === 'unknown' && existing.tipo_documento_id === 1 &&
+    existing.attempt_count === 1 && existing.last_http_status === 422 && !existing.cufe && !existing.matias_uuid;
+  let validationRecovery = false;
+  if (recoverable) {
+    const response = typeof existing.response_payload === 'string'
+      ? JSON.parse(existing.response_payload) : existing.response_payload;
+    validationRecovery = response?.message === 'El campo type_document_id no existe en la tabla accounting_documents';
+  }
+  if ((existing && !validationRecovery) || (recoveryRequested && !validationRecovery)) {
     await recordError('solicitud_fiscal_existente');
     return res.status(409).json({
       success: false,
       message: 'La venta ya tiene una solicitud fiscal. Consulte su estado en MATÍAS antes de intentar otra emisión.',
-      data: { estado: existing.estado, request_uuid: existing.request_uuid }
+      data: existing ? { estado: existing.estado, request_uuid: existing.request_uuid } : null
     });
   }
 
@@ -316,25 +330,41 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
   const { prefix, document_number: documentNumber } = payload;
   const payloadHash = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 
-  const [inserted] = await pool.execute<ResultSetHeader>(
-    `INSERT INTO matias_documentos
-        (empresa_id, venta_id, entorno, tipo_documento_id, tipo_operacion_id, request_uuid,
-         document_number, estado, payload_hash, request_payload, attempt_count, last_attempt_at, created_by)
-       VALUES (?, ?, 'sandbox', ?, ?, ?, ?, 'emitting', ?, ?, 1, NOW(), ?)`,
-    [empresaId, ventaId, payload.type_document_id, payload.operation_type_id,
-        requestUuid, `${prefix}${documentNumber}`, payloadHash, JSON.stringify(payload), (req as any).user?.id || null]
-  );
-  const documentId = inserted.insertId;
-
   let pat: string;
   try {
     pat = decryptAuthSecret(connection.pat_cifrado);
   } catch {
-    await pool.execute(`UPDATE matias_documentos SET estado = 'unknown', error_payload = ? WHERE id = ?`,
-      [JSON.stringify({ message: 'No se pudo descifrar PAT' }), documentId]);
-    await audit(req, empresaId, 'sandbox', 'emitir_invoice_sandbox', 'error', { venta_id: ventaId, motivo: 'pat_invalido' });
+    await recordError('pat_invalido');
     return res.status(500).json({ success: false, message: 'La conexion Matias tiene un secreto invalido' });
   }
+  if (validationRecovery) {
+    const lookup = await lookupMatiasDocument(connection.base_url, pat, connection.matias_company_uuid, existing.request_uuid);
+    if (!lookup.ok || lookup.data?.dataRecord !== null) {
+      await recordError('recuperacion_bloqueada_consulta_proveedor');
+      return res.status(409).json({ success: false, message: 'No se confirmo ausencia del documento en MATIAS; no se reenvio' });
+    }
+    await audit(req, empresaId, 'sandbox', 'recuperar_validacion_tipo', 'ok', {
+      venta_id: ventaId, documento_anterior_id: existing.id, request_uuid_anterior: existing.request_uuid,
+      request_uuid_nuevo: requestUuid, portal_absence_confirmed: true, consulta_proveedor: 'dataRecord_null'
+    });
+  }
+
+  let inserted: ResultSetHeader;
+  try {
+    [inserted] = await pool.execute<ResultSetHeader>(
+      `INSERT INTO matias_documentos
+        (empresa_id, venta_id, entorno, tipo_documento_id, tipo_operacion_id, request_uuid,
+         document_number, estado, payload_hash, request_payload, attempt_count, last_attempt_at, created_by)
+       VALUES (?, ?, 'sandbox', ?, ?, ?, ?, 'emitting', ?, ?, 1, NOW(), ?)`,
+      [empresaId, ventaId, payload.type_document_id, payload.operation_type_id,
+        requestUuid, `${prefix}${documentNumber}`, payloadHash, JSON.stringify(payload), (req as any).user?.id || null]
+    );
+  } catch (error) {
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ER_DUP_ENTRY') throw error;
+    await recordError('solicitud_fiscal_concurrente');
+    return res.status(409).json({ success: false, message: 'Ya existe una solicitud fiscal concurrente; consulte su estado. No se reenvio' });
+  }
+  const documentId = inserted.insertId;
 
   const result = await emitMatiasInvoice(connection.base_url, pat, connection.matias_company_uuid, payload);
   const responsePayload = result.data || null;

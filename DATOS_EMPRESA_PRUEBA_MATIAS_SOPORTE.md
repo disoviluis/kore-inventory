@@ -782,6 +782,26 @@ Fuentes verificadas para el mapeo:
 [catalogo Sandbox de tipos](https://sandbox-api.matias-api.com/api/ubl2.1/document-type)
 y [referencia de campos MATIAS](https://docs.matias-api.com/docs/billing-fields/).
 
+### Recuperacion autorizada de FEV-000003 (2026-11-05)
+
+El usuario confirmo que el portal sin documentos corresponde a la subcuenta
+KORE PRUEBAS MATIAS SOPORTE SAS, NIT 900999002, en Sandbox, y autorizo
+preparar/ejecutar un reintento controlado sin repetir cobro o inventario.
+
+La ruta de emision Sandbox acepta recuperacion unicamente con
+`retry_validation_document_id` y `portal_absence_confirmed: true`, si existe
+exactamente un documento previo: tipo erroneo 1, estado unknown, un intento
+HTTP 422 y el mensaje exacto de validacion de tipo, sin CUFE ni UUID proveedor.
+No se habilitan reintentos generales de timeout, rechazo DIAN ni documentos
+ya emitidos. Se consulta de nuevo el UUID anterior al proveedor y solo se
+continua ante HTTP 200 / success true / dataRecord null.
+
+La recuperacion conserva el documento/solicitud/payload/intento original y
+crea una solicitud tipo 7 con UUID nuevo, enlazada al anterior mediante
+auditoria. La restriccion unica de BD impide dos solicitudes tipo 7 concurrentes;
+si ya hay una solicitud nueva, se bloquea otro envio. Las consultas de estado
+seleccionan el registro mas reciente. Sin cambios de esquema.
+
 ### Consumidor final y documento equivalente electronico POS
 
 Que el comprador diga que no desea factura electronica a su nombre no significa

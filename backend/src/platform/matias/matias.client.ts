@@ -12,6 +12,34 @@ export interface MatiasInvoiceResult extends MatiasProbeResult {
   reference?: string;
 }
 
+export async function lookupMatiasDocument(baseUrl: string, token: string, clientUuid: string, requestUuid: string): Promise<MatiasProbeResult> {
+  const url = new URL(`${baseUrl.replace(/\/$/, '')}/documents/${encodeURIComponent(requestUuid)}`);
+  url.searchParams.set('client_uuid', clientUuid);
+  return new Promise(resolve => {
+    const request = https.request(url, {
+      method: 'GET', timeout: 15000,
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }
+    }, response => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', chunk => { body += chunk; });
+      response.on('error', error => resolve({ ok: false, status: response.statusCode || 0, error: error.message }));
+      response.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          resolve({ ok: response.statusCode === 200 && data?.success === true,
+            status: response.statusCode || 0, data });
+        } catch {
+          resolve({ ok: false, status: response.statusCode || 0, error: 'Respuesta de consulta MATIAS no es JSON valido' });
+        }
+      });
+    });
+    request.on('timeout', () => request.destroy(new Error('Tiempo agotado al consultar documento MATIAS')));
+    request.on('error', error => resolve({ ok: false, status: 0, error: error.message }));
+    request.end();
+  });
+}
+
 export async function emitMatiasInvoice(
   baseUrl: string,
   token: string,

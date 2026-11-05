@@ -209,6 +209,7 @@ test('emission sends and persists the same validated payload when withholding ha
           }));
           response.emit('end');
         });
+
       };
       return request;
     };
@@ -241,3 +242,61 @@ test('emission sends and persists the same validated payload when withholding ha
       });
     } finally { https.request = original; }
 });
+
+test('validation recovery preserves the failed document and requires explicit portal confirmation plus an empty provider lookup', async () => {
+          process.env.JWT_SECRET = 'test-secret-with-more-than-thirty-two-bytes';
+          const client = require('../dist/platform/matias/matias.client');
+          const original = { lookup: client.lookupMatiasDocument, emit: client.emitMatiasInvoice };
+          const previous = { id: 1, request_uuid: 'old-uuid', estado: 'unknown', tipo_documento_id: 1,
+            attempt_count: 1, last_http_status: 422, cufe: null, matias_uuid: null,
+            response_payload: JSON.stringify({ message: 'El campo type_document_id no existe en la tabla accounting_documents' }) };
+          try {
+            for (const scenario of ['allowed', 'not-confirmed', 'found', 'timeout', 'malformed', 'already-retried', 'other-failure', 'concurrent']) {
+              let posts = 0, lookups = 0;
+              client.lookupMatiasDocument = async () => {
+                lookups++;
+                return scenario === 'timeout' ? { ok: false, status: 0 } :
+                  { ok: true, status: 200, data: scenario === 'malformed' ? {} : { dataRecord: scenario === 'found' ? { uuid: 'found' } : null } };
+              };
+              client.emitMatiasInvoice = async (url, pat, uuid, payload) => {
+                posts++;
+                assert.equal(payload.type_document_id, 7);
+                assert.notEqual(payload.uuid, 'old-uuid');
+                return { ok: true, status: 200, data: { uuid: 'new-provider-uuid', response: { IsValid: 'true' } } };
+              };
+              await withPool(async sql => {
+                if (sql.includes('FROM matias_conexiones')) return [{
+                  base_url: 'https://sandbox-api.matias-api.com/api/ubl2.1', pat_cifrado: encryptAuthSecret('fake-test-pat'),
+                  matias_company_uuid: 'client-uuid', estado: 'configurado'
+                }];
+                if (sql.includes('FROM matias_documentos')) return scenario === 'already-retried' ? [previous, { id: 2, estado: 'emitting' }] :
+                  [{ ...previous, ...(scenario === 'other-failure' ? { last_http_status: 500 } : {}) }];
+                if (sql.startsWith('INSERT INTO matias_documentos')) {
+                  if (scenario === 'concurrent') throw Object.assign(new Error('duplicate test'), { code: 'ER_DUP_ENTRY' });
+                  return { insertId: 2 };
+                }
+                if (/^(INSERT|UPDATE)/.test(sql.trim())) return { affectedRows: 1 };
+                return fiscalQuery(sql);
+              }, async calls => {
+                const res = responseMock();
+                await emitMatiasSandboxInvoice(requestMock({
+                  params: { empresaId: '33', ventaId: '140' },
+                  body: { ...optionsForRecovery(), portal_absence_confirmed: scenario !== 'not-confirmed' }
+                }), res);
+                assert.equal(res.statusCode, scenario === 'allowed' ? 200 : 409, scenario);
+                assert.equal(posts, scenario === 'allowed' ? 1 : 0, scenario);
+                assert.equal(calls.some(c => c.sql.startsWith('DELETE')), false);
+                assert.ok(calls.filter(c => c.sql.trim().startsWith('UPDATE matias_documentos')).every(c => c.params.at(-2) === 2));
+                if (scenario === 'allowed') {
+                  assert.equal(lookups, 1);
+                  assert.ok(calls.some(c => c.params?.includes('recuperar_validacion_tipo')));
+                  assert.equal(calls.filter(c => c.sql.startsWith('INSERT INTO matias_documentos')).length, 1);
+                }
+              });
+            }
+          } finally { client.lookupMatiasDocument = original.lookup; client.emitMatiasInvoice = original.emit; }
+        });
+
+        function optionsForRecovery() {
+          return { retry_validation_document_id: 1, withholding_taxes: [{ tax_id: '7', tax_amount: 1350, taxable_amount: 135000, percent: 1 }] };
+        }

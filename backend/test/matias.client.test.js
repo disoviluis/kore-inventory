@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const https = require('node:https');
 const { EventEmitter } = require('node:events');
 const test = require('node:test');
-const { emitMatiasInvoice } = require('../dist/platform/matias/matias.client');
+const { emitMatiasInvoice, lookupMatiasDocument } = require('../dist/platform/matias/matias.client');
 
 test('invoice request includes client_uuid in the JSON body and query', async () => {
   const originalRequest = https.request;
@@ -66,4 +66,29 @@ test('invoice request is not sent without client_uuid', async () => {
   } finally {
     https.request = originalRequest;
   }
+});
+
+test('provider lookup uses GET and does not treat invalid responses as confirmed absence', async () => {
+  const original = https.request;
+  try {
+    for (const [status, text, ok] of [[200, '{"success":true,"dataRecord":null}', true],
+      [200, '<html>error</html>', false], [200, '{"success":false}', false], [500, '{"success":true,"dataRecord":null}', false]]) {
+      https.request = (url, options, callback) => {
+        assert.equal(options.method, 'GET');
+        assert.equal(url.pathname, '/api/ubl2.1/documents/old-uuid');
+        assert.equal(url.searchParams.get('client_uuid'), 'client');
+        const request = new EventEmitter();
+        request.end = () => {
+          const response = new EventEmitter();
+          response.statusCode = status;
+          response.setEncoding = () => {};
+          callback(response);
+          process.nextTick(() => { response.emit('data', text); response.emit('end'); });
+        };
+        return request;
+      };
+      const result = await lookupMatiasDocument('https://sandbox-api.matias-api.com/api/ubl2.1', 'fake-test-pat', 'client', 'old-uuid');
+      assert.equal(result.ok, ok);
+    }
+  } finally { https.request = original; }
 });
