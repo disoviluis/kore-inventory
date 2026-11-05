@@ -584,6 +584,15 @@ contrasenas, certificados o llaves privadas en este documento.
   retenciones y revisar nuevamente la previsualizacion. No repetir el cobro
   ni emitir hasta entonces. Sigue pendiente confirmar la revocacion del PAT
   expuesto anteriormente.
+- **Despliegue y verificacion (2026-11-05 21:18 UTC):** commit `5a82a46`
+  desplegado en EC2; build TypeScript correcto y 21/21 pruebas focalizadas
+  MATIAS aprobadas en local y AWS. PM2 `kore-backend` online y health correcto.
+  La previsualizacion del controlador con la venta real 140 ejecuto 8 consultas
+  SELECT, con escrituras y HTTP externo impedidos por el script de validacion.
+  Resultado esperado: HTTP 422, `ready: false`, consecutivo `2`, IVA 25650.00,
+  pago 159300.00 y cambio 10700.00; solo bloquea el desglose de retenciones.
+  Documentos fiscales antes/despues: 0/0. No se modifico la venta, no se
+  recalculo su cobro ni se emitio a MATIAS.
 - **Emision real de prueba:** el backend desplegado en AWS tiene rutas para
   configurar, probar conexion y emitir una venta en Sandbox. Antes de emitir se
   requiere PAT, `client_uuid`, resolucion/rango de prueba y validar el payload
