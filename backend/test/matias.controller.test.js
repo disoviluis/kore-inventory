@@ -310,7 +310,7 @@ test('resolution recovery changes only the confirmed resolution, snapshots histo
   const payment = await fiscalQuery('FROM venta_pagos');
   const previous = buildMatiasSandboxInvoice(fiscalSale, lines, payment, 'client-uuid', 'old-uuid', optionsForRecovery()).payload;
   const document = { id: 2, tipo_documento_id: 7, estado: 'unknown', attempt_count: 1, last_http_status: 400,
-    request_uuid: 'old-uuid', request_payload: JSON.stringify(previous), payload_hash: 'old-hash',
+    request_uuid: 'old-uuid', request_payload: JSON.stringify(Object.fromEntries(Object.entries(previous).reverse())), payload_hash: 'old-hash',
     response_payload: JSON.stringify({ message: 'La resolución de facturación: 1876000001, no existe. Empresa KORE PRUEBAS MATIAS SOPORTE SAS-900999002' }) };
   try {
     for (const scenario of ['allowed', 'found', 'concurrent', 'changed-total', 'already-retried', 'no-confirmation']) {

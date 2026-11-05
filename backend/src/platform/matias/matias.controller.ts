@@ -4,6 +4,7 @@ import { decryptAuthSecret, encryptAuthSecret } from '../../core/auth/auth.secur
 import { emitMatiasInvoice, probeMatias, lookupMatiasDocument } from './matias.client';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import crypto from 'crypto';
+import { isDeepStrictEqual } from 'util';
 import { buildMatiasSandboxInvoice, MatiasInvoiceValidationError, MatiasLine, MatiasPayment, MatiasSale } from './matias.invoice';
 import logger from '../../shared/logger';
 
@@ -344,7 +345,7 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
   const { payload } = invoice;
   const { prefix, document_number: documentNumber } = payload;
   const payloadHash = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
-  if (resolutionRecovery && JSON.stringify({ ...previousRequest, uuid: payload.uuid, resolution_number: payload.resolution_number }) !== JSON.stringify(payload)) {
+  if (resolutionRecovery && !isDeepStrictEqual({ ...previousRequest, uuid: payload.uuid, resolution_number: payload.resolution_number }, payload)) {
     await recordError('recuperacion_resolucion_payload_cambiado');
     return res.status(409).json({ success: false, message: 'Hay cambios adicionales a la resolucion; revise el documento antes de reintentar' });
   }
