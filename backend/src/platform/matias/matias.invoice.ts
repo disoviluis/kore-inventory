@@ -185,8 +185,9 @@ export function buildMatiasSandboxInvoice(
   requireInvoice(['comun', 'simplificado', 'responsable de iva', 'no responsable de iva'].includes(regime),
     'Regimen IVA del cliente no confirmado');
   const fiscalIds: Record<string, number> = { 'O-13': 1, 'O-15': 2, 'O-23': 3, 'O-47': 4, 'R-99-PN': 5 };
-  const fiscalCode = sale.responsabilidad_fiscal?.trim().toUpperCase();
-  requireInvoice(!fiscalCode || Number.isInteger(fiscalIds[fiscalCode]), 'Responsabilidad fiscal del cliente sin equivalencia MATIAS');
+  const fiscalValue = sale.responsabilidad_fiscal?.trim().toUpperCase();
+  const fiscalCode = fiscalValue?.match(/^(O-13|O-15|O-23|O-47|R-99-PN)(?:\s+[-:\u2013\u2014\u00b7]\s+.+)?$/)?.[1];
+  requireInvoice(!fiscalValue || Boolean(fiscalCode), 'Responsabilidad fiscal del cliente sin equivalencia MATIAS');
   const city = normalized(sale.ciudad || '').replace(/[.,]/g, '').replace(/\s+/g, ' ');
   const cityId = options.customer_city_id ?? (['bogota', 'bogota dc', '11001'].includes(city) ? 149 : undefined);
   requireInvoice(Number.isInteger(cityId) && Number(cityId) > 0,

@@ -85,6 +85,20 @@ test('invalid monetary inputs and unsupported adjustments block emission explici
   }
 });
 
+test('fiscal responsibility accepts an explicit catalog code with its display label, never inferring it from text', () => {
+  for (const [responsabilidad_fiscal, id] of [
+    ['R-99-PN', 5], ['R-99-PN \u2014 No aplica/Otros.', 5],
+    ['O-13 - Gran contribuyente', 1], ['o-15 : Autorretenedor', 2],
+    ['O-23 \u00b7 Agente de retencion IVA', 3], ['O-47 \u2013 Regimen simple', 4]
+  ]) {
+    assert.equal(invoice({ responsabilidad_fiscal }).payload.customer.tax_level_id, id);
+    assert.equal(invoice({ responsabilidad_fiscal }).warnings.some(w => w.includes('Responsabilidad fiscal del cliente vacia')), false);
+  }
+  for (const responsabilidad_fiscal of ['No aplica/Otros', 'R-99-PNX', 'O-13, O-23', 'O-99', 'R-99-PN O-13']) {
+    assert.throws(() => invoice({ responsabilidad_fiscal }), /Responsabilidad fiscal/);
+  }
+});
+
 test('line subtotals and current IVA rates must reconcile with the recorded sale', () => {
   assert.throws(() => invoice({}, [{ ...line, porcentaje_iva: '5.00' }]), /IVA por producto no coincide/);
   assert.throws(() => invoice({}, [{ ...line, subtotal: '134000.00' }]), /linea no cuadra/);
