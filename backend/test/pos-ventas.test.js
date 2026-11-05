@@ -228,91 +228,91 @@ test('cash report splits mixed payments, deducts historical change and excludes 
       { metodo_pago: 'efectivo', cantidad: 2, total: 188 }
     ]);
   });
+});
 
-  test('open-account items preserve zero/exempt IVA, included prices and atomic header/stock updates', async () => {
-    const original = inventory.moverStock;
-    try {
-      let stockCalls = 0;
-      inventory.moverStock = async () => { stockCalls++; };
-      for (const [product, expected] of [
-        [{ aplica_iva: 1, porcentaje_iva: 0 }, [119, 0, 0, 119]],
-        [{ aplica_iva: 1, porcentaje_iva: 19, tipo_impuesto: 'exento' }, [119, 0, 0, 119]],
-        [{ aplica_iva: 1, porcentaje_iva: 19, iva_incluido_en_precio: 1 }, [100, 19, 19, 119]]
-      ]) {
-        let detail;
-        await database((sql, params) => {
-          if (sql.includes('FROM cuentas_abiertas')) return [{ id: 1, empresa_id: 33, estado: 'abierta' }];
-          if (sql.includes('FROM productos')) return [{ id: 1943, nombre: 'Prueba', sku: 'TEST', ...product }];
-          if (sql.includes('INSERT INTO cuenta_abierta_detalle')) { detail = params; return { insertId: 5 }; }
-          if (sql.includes('COALESCE(SUM(subtotal)')) return [{ subtotal: detail[6], total_impuestos: detail[8], total: detail[11] }];
-          if (sql.startsWith('UPDATE cuentas_abiertas')) return { affectedRows: 1 };
-          assert.fail(sql);
-        }, async calls => {
-          const req = request({ producto_id: 1943, cantidad: 1, precio_unitario: 119 }); req.params.id = '1';
-          const res = response();
-          await agregarItemCuenta(req, res);
-          assert.equal(res.statusCode, 201);
-          assert.deepEqual([detail[6], detail[7], detail[8], detail[11]], expected);
-          const lock = calls.findIndex(c => c.sql.includes('SELECT estado') && c.sql.includes('FOR UPDATE'));
-          const insert = calls.findIndex(c => c.sql.includes('INSERT INTO cuenta_abierta_detalle'));
-          const header = calls.findIndex(c => c.sql.startsWith('UPDATE cuentas_abiertas'));
-          const commit = calls.findIndex(c => c.sql === 'COMMIT');
-          assert.ok(lock < insert && insert < header && header < commit);
-        });
-      }
-      assert.equal(stockCalls, 3);
-    } finally { inventory.moverStock = original; }
-  });
-
-  function shiftQuery(sql) {
-    if (sql.includes('FROM turnos_caja t')) {
-      assert.match(sql, /FOR UPDATE/);
-      return [{ estado: 'abierto', base_inicial: '0.00' }];
-    }
-    if (sql.includes('FROM ventas v LEFT JOIN')) return [{
-      id: 1, total: '119.01', forma_pago: 'contado', estado: 'pagada', metodo_pago: 'efectivo', pago_id: 1, pago_metodo: 'efectivo', monto: '150.00'
-    }];
-    if (sql.includes('FROM gastos_caja')) return [{ monto: '19.01' }];
-    if (/^(INSERT|UPDATE)/.test(sql.trim())) return { insertId: 1, affectedRows: 1 };
-    assert.fail(sql);
-  }
-
-  test('shift close locks before reading receipts, persists zero counted cash and commits totals together', async () => {
-    await database(shiftQuery, async calls => {
-      const req = request({ efectivoContado: 0 }); req.params.turnoId = '1';
-      const res = response();
-      await cerrarTurno(req, res);
-      assert.equal(res.statusCode, 200);
-      assert.equal(res.body.data.efectivo_a_entregar, 100);
-      const closing = calls.find(c => c.sql.includes('UPDATE turnos_caja'));
-      assert.deepEqual(closing.params.slice(0, 5), [119.01, 19.01, 100, 0, -100]);
-      assert.equal(calls[0].sql, 'BEGIN');
-      assert.equal(calls.at(-2).sql, 'COMMIT');
-    });
-  });
-
-  test('shift close errors roll back method totals and leave the shift open', async () => {
-    await database(sql => {
-      if (sql.includes('UPDATE turnos_caja')) throw new Error('test close failure');
-      return shiftQuery(sql);
-    }, async calls => {
-      const req = request({ efectivoContado: 100 }); req.params.turnoId = '1';
-      const res = response();
-      await cerrarTurno(req, res);
-      assert.equal(res.statusCode, 500);
-      assert.ok(calls.some(c => c.sql === 'ROLLBACK'));
-      assert.equal(calls.some(c => c.sql === 'COMMIT'), false);
-    });
-  });
-
-  test('negative or fractional-cent cash expenses are rejected before writes', async () => {
-    for (const monto of [-10, 0.001, 'NaN']) {
-      await database(() => assert.fail('invalid expense must not touch the database'), async () => {
-        const req = request({ descripcion: 'Prueba', monto }); req.params.turnoId = '1';
+test('open-account items preserve zero/exempt IVA, included prices and atomic header/stock updates', async () => {
+  const original = inventory.moverStock;
+  try {
+    let stockCalls = 0;
+    inventory.moverStock = async () => { stockCalls++; };
+    for (const [product, expected] of [
+      [{ aplica_iva: 1, porcentaje_iva: 0 }, [119, 0, 0, 119]],
+      [{ aplica_iva: 1, porcentaje_iva: 19, tipo_impuesto: 'exento' }, [119, 0, 0, 119]],
+      [{ aplica_iva: 1, porcentaje_iva: 19, iva_incluido_en_precio: 1 }, [100, 19, 19, 119]]
+    ]) {
+      let detail;
+      await database((sql, params) => {
+        if (sql.includes('FROM cuentas_abiertas')) return [{ id: 1, empresa_id: 33, estado: 'abierta' }];
+        if (sql.includes('FROM productos')) return [{ id: 1943, nombre: 'Prueba', sku: 'TEST', ...product }];
+        if (sql.includes('INSERT INTO cuenta_abierta_detalle')) { detail = params; return { insertId: 5 }; }
+        if (sql.includes('COALESCE(SUM(subtotal)')) return [{ subtotal: detail[6], total_impuestos: detail[8], total: detail[11] }];
+        if (sql.startsWith('UPDATE cuentas_abiertas')) return { affectedRows: 1 };
+        assert.fail(sql);
+      }, async calls => {
+        const req = request({ producto_id: 1943, cantidad: 1, precio_unitario: 119 }); req.params.id = '1';
         const res = response();
-        await registrarGasto(req, res);
-        assert.equal(res.statusCode, 422);
+        await agregarItemCuenta(req, res);
+        assert.equal(res.statusCode, 201);
+        assert.deepEqual([detail[6], detail[7], detail[8], detail[11]], expected);
+        const lock = calls.findIndex(c => c.sql.includes('SELECT estado') && c.sql.includes('FOR UPDATE'));
+        const insert = calls.findIndex(c => c.sql.includes('INSERT INTO cuenta_abierta_detalle'));
+        const header = calls.findIndex(c => c.sql.startsWith('UPDATE cuentas_abiertas'));
+        const commit = calls.findIndex(c => c.sql === 'COMMIT');
+        assert.ok(lock < insert && insert < header && header < commit);
       });
     }
+    assert.equal(stockCalls, 3);
+  } finally { inventory.moverStock = original; }
+});
+
+function shiftQuery(sql) {
+  if (sql.includes('FROM turnos_caja t')) {
+    assert.match(sql, /FOR UPDATE/);
+    return [{ estado: 'abierto', base_inicial: '0.00' }];
+  }
+  if (sql.includes('FROM ventas v LEFT JOIN')) return [{
+    id: 1, total: '119.01', forma_pago: 'contado', estado: 'pagada', metodo_pago: 'efectivo', pago_id: 1, pago_metodo: 'efectivo', monto: '150.00'
+  }];
+  if (sql.includes('FROM gastos_caja')) return [{ monto: '19.01' }];
+  if (/^(INSERT|UPDATE)/.test(sql.trim())) return { insertId: 1, affectedRows: 1 };
+  assert.fail(sql);
+}
+
+test('shift close locks before reading receipts, persists zero counted cash and commits totals together', async () => {
+  await database(shiftQuery, async calls => {
+    const req = request({ efectivoContado: 0 }); req.params.turnoId = '1';
+    const res = response();
+    await cerrarTurno(req, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.data.efectivo_a_entregar, 100);
+    const closing = calls.find(c => c.sql.includes('UPDATE turnos_caja'));
+    assert.deepEqual(closing.params.slice(0, 5), [119.01, 19.01, 100, 0, -100]);
+    assert.equal(calls[0].sql, 'BEGIN');
+    assert.equal(calls.at(-2).sql, 'COMMIT');
   });
+});
+
+test('shift close errors roll back method totals and leave the shift open', async () => {
+  await database(sql => {
+    if (sql.includes('UPDATE turnos_caja')) throw new Error('test close failure');
+    return shiftQuery(sql);
+  }, async calls => {
+    const req = request({ efectivoContado: 100 }); req.params.turnoId = '1';
+    const res = response();
+    await cerrarTurno(req, res);
+    assert.equal(res.statusCode, 500);
+    assert.ok(calls.some(c => c.sql === 'ROLLBACK'));
+    assert.equal(calls.some(c => c.sql === 'COMMIT'), false);
+  });
+});
+
+test('negative or fractional-cent cash expenses are rejected before writes', async () => {
+  for (const monto of [-10, 0.001, 'NaN']) {
+    await database(() => assert.fail('invalid expense must not touch the database'), async () => {
+      const req = request({ descripcion: 'Prueba', monto }); req.params.turnoId = '1';
+      const res = response();
+      await registrarGasto(req, res);
+      assert.equal(res.statusCode, 422);
+    });
+  }
 });
