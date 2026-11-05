@@ -701,6 +701,114 @@ base 135000.00 e IVA 25650.00, sin retenciones aplicables, el calculo probado
 es total 160650.00 y cambio 9350.00 al recibir 170000.00.
 No volver a cobrar la venta 140 ni emitirla como si se hubiera corregido.
 
+### Nueva prueba POS FEV-000003 (2026-11-05)
+
+El usuario confirmo que repitio la prueba. Verificacion AWS de solo lectura:
+
+| Campo | Resultado registrado |
+|---|---:|
+| Empresa interna / venta | 33 / 141 |
+| Factura local | FEV-000003 |
+| Estado / forma / medio | pagada / contado / efectivo |
+| Subtotal | 135000.00 |
+| Descuento | 0.00 |
+| IVA | 25650.00 |
+| Retenciones | 0.00 |
+| Adicionales / propina | 0.00 / 0.00 |
+| Total | 160650.00 |
+| Pago neto registrado | 160650.00 |
+
+Detalle: producto interno 1944, cantidad 1.000, precio/base 135000.00.
+Sin filas de impuestos adicionales o retenciones. El pago concilia exactamente
+con el total. El importe entregado originalmente y el cambio no se pueden
+reconstruir del pago neto guardado; no se afirma que se recibieran 170000.00
+en esta nueva prueba.
+
+Previsualizacion local MATIAS sobre venta 141: HTTP 200, `ready: true`,
+`blockingErrors: []`, prefijo FEV, consecutivo 3, IVA 25650.00 sobre 135000.00,
+total fiscal y pago 160650.00, medio efectivo. Se ejecuto el controlador
+desplegado con SQL no SELECT y solicitudes HTTP salientes bloqueados:
+6 SELECT, sin escrituras ni envio al proveedor.
+
+Advertencias antes de emitir: la responsabilidad fiscal del cliente esta vacia;
+se omite `tax_level_id` y MATIAS documenta por defecto 5 (R-99-PN). Confirmar
+que corresponde al cliente sintetico antes de emitir. El contraste de IVA usa
+las tarifas actuales de productos y no constituye certificacion tributaria.
+En esa primera verificacion la empresa 33 tenia cero documentos MATIAS. Esta factura era una venta
+POS validada y previsualizada, no un documento electronico emitido o aceptado.
+La venta 140 / FEV-000002 permanece intacta y bloqueada por separado.
+
+### Continuacion Sandbox y primer envio FEV-000003 (2026-11-05)
+
+El usuario actualizo la responsabilidad fiscal del cliente a
+`R-99-PN — No aplica/Otros.` y autorizo continuar la prueba.
+
+- La primera validacion detecto que el campo libre contenia codigo y
+  descripcion, no solo el codigo. Se corrigio el lector para aceptar un codigo
+  conocido seguido de su etiqueta (sin inferirlo desde texto libre ni cambiar
+  la ficha). Commit `a70ceab`, 22/22 pruebas MATIAS en local/AWS.
+- Nueva previsualizacion: HTTP 200, `ready: true`, `tax_level_id: 5`; sin
+  advertencia de responsabilidad vacia. Persiste la advertencia informativa
+  de contraste de IVA con tarifas actuales.
+- Se ejecuto **un solo POST** al endpoint oficial Sandbox `/invoice`, con
+  destino/subcuenta controlados y bloqueo de un segundo POST en el script.
+  No se creo otra venta ni se repitio el cobro.
+- MATIAS respondio **HTTP 422**:
+  `El campo type_document_id no existe en la tabla accounting_documents`.
+  El conector enviaba `type_document_id: 1`; el catalogo real de MATIAS usa
+  **ID 7** para factura electronica, con codigo DIAN `01`. No son el mismo
+  identificador.
+- Registro local fiscal `id 1`, venta 141, numero fiscal `FEV3`, un intento,
+  estado conservador `unknown`, sin CUFE ni UUID del proveedor. El HTTP 422
+  es un fallo de validacion API, no una confirmacion de rechazo DIAN.
+  El payload original y su tipo 1 permanecen como evidencia, sin sobrescribir.
+- Se consulto por GET `/documents/{request_uuid}` en la misma subcuenta:
+  HTTP 200, `success: true`, **`dataRecord: null`**. La consulta no encontro
+  documento para ese UUID; no equivale por si sola a una autorizacion para
+  reenviar ni demuestra que el numero este libre por otras referencias.
+- Se corrigio el mapeo para futuros envios a `type_document_id: 7` y la
+  persistencia toma el tipo/operacion del payload real. Commit `315f926`,
+  build y 22/22 pruebas focalizadas en local/AWS; PM2 online y health correcto
+  a las 22:10 UTC.
+- No se realizo un segundo envio. El bloqueo de duplicados sigue activo para
+  venta 141, y no se cambio manualmente su estado ni se elimino el intento.
+  **Pendiente:** conciliar en el portal MATIAS por subcuenta, prefijo FEV,
+  consecutivo 3 y UUID de solicitud; despues definir un reintento controlado
+  y auditable sobre la misma venta, conservando el intento inicial.
+- Venta 141 intacta: pagada, total 160650.00, retenciones 0.00. La venta 140
+  tambien sigue sin modificaciones. No hay confirmacion de factura aceptada.
+
+Fuentes verificadas para el mapeo:
+[catalogo Sandbox de tipos](https://sandbox-api.matias-api.com/api/ubl2.1/document-type)
+y [referencia de campos MATIAS](https://docs.matias-api.com/docs/billing-fields/).
+
+### Consumidor final y documento equivalente electronico POS
+
+Que el comprador diga que no desea factura electronica a su nombre no significa
+que la venta pueda quedar sin soporte fiscal ni que no se reporte a la DIAN.
+Un comercio puede usar documento equivalente electronico POS cuando corresponde,
+o factura electronica de venta, segun su operacion y obligaciones.
+El registro generico interno de Kinventory no sustituye ninguno de ellos.
+
+La DIAN contempla consumidor final y el identificador `222222222222` cuando el
+adquirente no suministra sus datos; no es un NIT real a inventar o reutilizar
+como empresa. Para soportar impuestos descontables, costos/deducciones del
+comprador se debe cumplir la identificacion y los demas requisitos aplicables.
+El POS electronico identificado tambien puede dar ese soporte: no es un
+beneficio exclusivo de la factura electronica de venta.
+
+Para Kinventory son dos integraciones fiscales diferentes: factura de venta
+MATIAS tipo 7 y equivalente POS tipo 20. Esta prueba implementa y valida la
+primera, no certifica que el equivalente POS ya este integrado. La decision
+de no pedir factura nominativa nunca debe convertirse en una opcion de
+omitir obligaciones fiscales. Confirmar el flujo de produccion con el
+responsable contable.
+
+Fuentes oficiales:
+[DIAN: documento equivalente electronico](https://micrositios.dian.gov.co/sistema-de-facturacion-electronica/documento-equivalente-electronico/),
+[DIAN: soporte tributario del POS identificado](https://www.dian.gov.co/Prensa/Paginas/NG-Comunicado-de-prensa-009-22-01-2024.aspx)
+y [doctrina DIAN sobre consumidor final, Oficio 903747 de 2022](https://normograma.dian.gov.co/dian/compilacion/docs/oficio_dian_903747_2022.htm).
+
 ### Verificacion AWS autorizada (2026-10-28)
 
 Destino comprobado: EC2 `18.191.181.99`, rama `main`, backend PM2
