@@ -802,6 +802,29 @@ auditoria. La restriccion unica de BD impide dos solicitudes tipo 7 concurrentes
 si ya hay una solicitud nueva, se bloquea otro envio. Las consultas de estado
 seleccionan el registro mas reciente. Sin cambios de esquema.
 
+Despliegue `3b41910` verificado a las 22:22 UTC: 119/119 pruebas en AWS,
+build correcto, PM2 online y health correcto. El usuario autorizo el reintento
+tras confirmar la ausencia en el portal de la subcuenta.
+
+Resultado de la ejecucion:
+
+- GET previo al proveedor: ausencia confirmada para UUID original.
+- Un solo POST nuevo, con tipo 7. MATIAS respondio **HTTP 400**:
+  `La resolucion de facturacion: 1876000001, no existe. Empresa KORE PRUEBAS MATIAS SOPORTE SAS-900999002`
+  (texto normalizado sin acentos en este resumen).
+- Documento local nuevo `id 2`, venta 141, tipo 7, numero `FEV3`, estado
+  conservador `unknown`, un intento. Sin CUFE, UUID proveedor ni estado DIAN.
+- Documento original `id 1` intacto: se compararon id, estado, UUID y hash
+  antes/despues. El nuevo registro queda relacionado por auditoria.
+- Venta 141 intacta: total 160650.00, retenciones 0.00, pagada.
+- No se hizo otro POST ni se cambio la resolucion. El mecanismo de recuperacion
+  de tipo erroneo no permite recuperar este nuevo fallo de resolucion.
+- **Bloqueo actual:** confirmar/copiar desde Resoluciones/Numeraciones de
+  la subcuenta Sandbox el numero real, prefijo FEV, tipo factura electronica,
+  rango y vigencia. El dato 1876000001 previamente documentado no esta
+  reconocido por la API para esta empresa. No crear otra venta ni asumir que
+  el error es de impuestos, cobro o numeracion local.
+
 ### Consumidor final y documento equivalente electronico POS
 
 Que el comprador diga que no desea factura electronica a su nombre no significa
