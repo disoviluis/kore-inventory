@@ -674,6 +674,17 @@ pruebas nuevas de calculo, persistencia, rollback, cuentas abiertas, caja e
 impresion. Uno de esos casos recorre 500 carritos.
 Se validaron tambien sintaxis JavaScript y diferencias sin errores de formato.
 
+Despliegue verificado en AWS (2026-11-05 21:47 UTC): correccion `31a91ce` y
+ajuste de compatibilidad de pruebas Node 22 `dfd3cf2`. La suite completa paso
+116/116 en EC2 antes del reinicio; PM2 `kore-backend` quedo online y se guardo
+su estado. Health local `localhost:3000/health` correcto. Los cuatro scripts
+publicos del POS/historial coinciden por SHA-256 con los archivos desplegados
+en `https://kinventoryservices.com`; el HTML carga las versiones nuevas.
+La API de ventas sin sesion sigue respondiendo 401.
+La comprobacion funcional en AWS uso solo la calculadora y consultas SELECT:
+total nuevo 160650.00, retenciones cero, cambio 9350.00; venta 140 intacta y
+cero documentos MATIAS de la empresa 33. No se crearon ventas ni se emitio.
+
 Consulta AWS exclusivamente de lectura para preparar revision historica:
 
 | Empresa interna | Ventas con retenciones sin desglose conciliable | Retenciones registradas |
