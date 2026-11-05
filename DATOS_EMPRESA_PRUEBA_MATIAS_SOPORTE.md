@@ -844,6 +844,25 @@ antes de cualquier envio. La recuperacion implementada solo cubre el error
 anterior de tipo de documento y no debe ampliarse quitando el bloqueo
 general ni eliminando los documentos existentes. Aun no hay CUFE confirmado.
 
+### Continuacion con resolucion corregida (2026-11-05)
+
+El usuario autorizo continuar con la prueba sobre venta 141. Se implemento
+recuperacion especifica del error HTTP 400 de resolucion: requiere confirmacion
+de ausencia, documento tipo 7 con exactamente un intento, sin CUFE/UUID proveedor,
+respuesta exacta del incidente y cambio de 1876000001 a 18760000001.
+El payload nuevo solo puede diferir en resolucion y UUID de solicitud.
+La consulta por UUID debe devolver ausencia antes del envio.
+
+Se conserva el documento tipo 7 y se registra su segundo intento. Antes de
+reemplazar el payload actual se guarda en auditoria el payload/respuesta/hash
+y UUID anteriores; el intento 1 permanece intacto. Un UPDATE condicional por
+estado, contador y hash reclama el envio, impidiendo dos recuperaciones
+concurrentes. Los siguientes intentos no quedan habilitados por este mecanismo.
+Documento tipo 1, venta, cobro e inventario no se modifican.
+Validacion local: 120/120 pruebas aprobadas, incluidas diferencias adicionales
+de payload, documento encontrado, concurrencia, confirmacion ausente y
+contador de intentos ya incrementado.
+
 ### Consumidor final y documento equivalente electronico POS
 
 Que el comprador diga que no desea factura electronica a su nombre no significa

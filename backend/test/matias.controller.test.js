@@ -300,3 +300,56 @@ test('validation recovery preserves the failed document and requires explicit po
         function optionsForRecovery() {
           return { retry_validation_document_id: 1, withholding_taxes: [{ tax_id: '7', tax_amount: 1350, taxable_amount: 135000, percent: 1 }] };
         }
+
+test('resolution recovery changes only the confirmed resolution, snapshots history and claims a single second attempt', async () => {
+  process.env.JWT_SECRET = 'test-secret-with-more-than-thirty-two-bytes';
+  const client = require('../dist/platform/matias/matias.client');
+  const { buildMatiasSandboxInvoice } = require('../dist/platform/matias/matias.invoice');
+  const original = { lookup: client.lookupMatiasDocument, emit: client.emitMatiasInvoice };
+  const lines = await fiscalQuery('SELECT p.porcentaje_iva FROM venta_detalle');
+  const payment = await fiscalQuery('FROM venta_pagos');
+  const previous = buildMatiasSandboxInvoice(fiscalSale, lines, payment, 'client-uuid', 'old-uuid', optionsForRecovery()).payload;
+  const document = { id: 2, tipo_documento_id: 7, estado: 'unknown', attempt_count: 1, last_http_status: 400,
+    request_uuid: 'old-uuid', request_payload: JSON.stringify(previous), payload_hash: 'old-hash',
+    response_payload: JSON.stringify({ message: 'La resolución de facturación: 1876000001, no existe. Empresa KORE PRUEBAS MATIAS SOPORTE SAS-900999002' }) };
+  try {
+    for (const scenario of ['allowed', 'found', 'concurrent', 'changed-total', 'already-retried', 'no-confirmation']) {
+      let posts = 0;
+      client.lookupMatiasDocument = async () => ({ ok: true, status: 200, data: { dataRecord: scenario === 'found' ? {} : null } });
+      client.emitMatiasInvoice = async (url, pat, uuid, payload) => {
+        posts++;
+        assert.equal(payload.resolution_number, '18760000001');
+        return { ok: true, status: 200, data: { response: { IsValid: 'true' } } };
+      };
+      await withPool(async sql => {
+        if (sql.includes('FROM matias_conexiones')) return [{
+          base_url: 'https://sandbox-api.matias-api.com/api/ubl2.1', pat_cifrado: encryptAuthSecret('fake-test-pat'),
+          matias_company_uuid: 'client-uuid', estado: 'configurado'
+        }];
+        if (sql.includes('FROM ventas v')) return [{ ...fiscalSale, resolucion_dian: '18760000001' }];
+        if (sql.includes('FROM matias_documentos')) return [{ ...document,
+          ...(scenario === 'already-retried' ? { attempt_count: 2 } : {}),
+          ...(scenario === 'changed-total' ? { request_payload: JSON.stringify({ ...previous, notes: 'unreviewed' }) } : {}) }];
+        if (sql.includes("SET estado = 'emitting'")) return { affectedRows: scenario === 'concurrent' ? 0 : 1 };
+        if (/^(INSERT|UPDATE)/.test(sql.trim())) return { affectedRows: 1 };
+        return fiscalQuery(sql);
+      }, async calls => {
+        const res = responseMock();
+        await emitMatiasSandboxInvoice(requestMock({ params: { empresaId: '33', ventaId: '140' },
+          body: { ...optionsForRecovery(), retry_validation_document_id: undefined, retry_resolution_document_id: 2,
+            portal_absence_confirmed: scenario !== 'no-confirmation' } }), res);
+        assert.equal(res.statusCode, scenario === 'allowed' ? 200 : 409, scenario);
+        assert.equal(posts, scenario === 'allowed' ? 1 : 0, scenario);
+        assert.equal(calls.some(c => c.sql.startsWith('INSERT INTO matias_documentos')), false);
+        if (scenario === 'allowed') {
+          const audit = calls.find(c => c.params?.includes('recuperar_resolucion'));
+          assert.deepEqual(JSON.parse(audit.params[5]).request_payload_anterior, previous);
+          const attempt = calls.find(c => c.sql.includes('INSERT INTO matias_documento_intentos'));
+          assert.deepEqual(attempt.params.slice(0, 3), [2, 33, 2]);
+          const claim = calls.find(c => c.sql.includes("SET estado = 'emitting'"));
+          assert.deepEqual(claim.params.slice(3), [2, 33, 'old-hash']);
+        }
+      });
+    }
+  } finally { client.lookupMatiasDocument = original.lookup; client.emitMatiasInvoice = original.emit; }
+});

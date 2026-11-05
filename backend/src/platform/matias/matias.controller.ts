@@ -279,7 +279,7 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
 
   const [existingRows] = await pool.execute<RowDataPacket[]>(
     `SELECT d.id, d.request_uuid, d.attempt_count, d.estado, d.tipo_documento_id,
-            d.cufe, d.matias_uuid, d.response_payload,
+            d.cufe, d.matias_uuid, d.response_payload, d.request_payload, d.payload_hash,
             (SELECT i.http_status FROM matias_documento_intentos i
              WHERE i.documento_id = d.id ORDER BY i.numero_intento DESC LIMIT 1) AS last_http_status
        FROM matias_documentos d WHERE d.empresa_id = ? AND d.venta_id = ? AND d.entorno = 'sandbox'
@@ -287,6 +287,20 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
     [empresaId, ventaId]
   );
   const existing = existingRows[0];
+  const resolutionDocument = existingRows.find(row => row.tipo_documento_id === 7);
+  const resolutionRecoveryRequested = !preview && req.body?.retry_resolution_document_id !== undefined;
+  const parsePayload = (value: string | Record<string, unknown> | null) =>
+    typeof value === 'string' ? JSON.parse(value) : value;
+  const previousRequest = resolutionDocument ? parsePayload(resolutionDocument.request_payload) : null;
+  const previousResponse = resolutionDocument ? parsePayload(resolutionDocument.response_payload) : null;
+  const resolutionRecovery = resolutionRecoveryRequested && req.body?.portal_absence_confirmed === true &&
+    resolutionDocument && Number(req.body.retry_resolution_document_id) === resolutionDocument.id &&
+    resolutionDocument.estado === 'unknown' && resolutionDocument.attempt_count === 1 &&
+    resolutionDocument.last_http_status === 400 && !resolutionDocument.cufe && !resolutionDocument.matias_uuid &&
+    previousRequest?.resolution_number === '1876000001' && sale.resolucion_dian === '18760000001' &&
+    previousResponse?.message === 'La resolución de facturación: 1876000001, no existe. Empresa KORE PRUEBAS MATIAS SOPORTE SAS-900999002' &&
+    existingRows.every(row => row.id === resolutionDocument.id || (row.tipo_documento_id === 1 &&
+      row.estado === 'unknown' && row.last_http_status === 422 && !row.cufe && !row.matias_uuid));
   const recoveryRequested = !preview && req.body?.retry_validation_document_id !== undefined;
   const recoverable = recoveryRequested && req.body?.portal_absence_confirmed === true && existingRows.length === 1 &&
     Number(req.body.retry_validation_document_id) === existing?.id &&
@@ -298,7 +312,8 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
       ? JSON.parse(existing.response_payload) : existing.response_payload;
     validationRecovery = response?.message === 'El campo type_document_id no existe en la tabla accounting_documents';
   }
-  if ((existing && !validationRecovery) || (recoveryRequested && !validationRecovery)) {
+  if ((existing && !validationRecovery && !resolutionRecovery) || (recoveryRequested && !validationRecovery) ||
+      (resolutionRecoveryRequested && !resolutionRecovery)) {
     await recordError('solicitud_fiscal_existente');
     return res.status(409).json({
       success: false,
@@ -329,6 +344,10 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
   const { payload } = invoice;
   const { prefix, document_number: documentNumber } = payload;
   const payloadHash = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  if (resolutionRecovery && JSON.stringify({ ...previousRequest, uuid: payload.uuid, resolution_number: payload.resolution_number }) !== JSON.stringify(payload)) {
+    await recordError('recuperacion_resolucion_payload_cambiado');
+    return res.status(409).json({ success: false, message: 'Hay cambios adicionales a la resolucion; revise el documento antes de reintentar' });
+  }
 
   let pat: string;
   try {
@@ -337,21 +356,37 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
     await recordError('pat_invalido');
     return res.status(500).json({ success: false, message: 'La conexion Matias tiene un secreto invalido' });
   }
-  if (validationRecovery) {
-    const lookup = await lookupMatiasDocument(connection.base_url, pat, connection.matias_company_uuid, existing.request_uuid);
+  if (validationRecovery || resolutionRecovery) {
+    const previousDocument = resolutionRecovery ? resolutionDocument : existing;
+    const lookup = await lookupMatiasDocument(connection.base_url, pat, connection.matias_company_uuid, previousDocument.request_uuid);
     if (!lookup.ok || lookup.data?.dataRecord !== null) {
       await recordError('recuperacion_bloqueada_consulta_proveedor');
       return res.status(409).json({ success: false, message: 'No se confirmo ausencia del documento en MATIAS; no se reenvio' });
     }
-    await audit(req, empresaId, 'sandbox', 'recuperar_validacion_tipo', 'ok', {
-      venta_id: ventaId, documento_anterior_id: existing.id, request_uuid_anterior: existing.request_uuid,
-      request_uuid_nuevo: requestUuid, portal_absence_confirmed: true, consulta_proveedor: 'dataRecord_null'
+    await audit(req, empresaId, 'sandbox', resolutionRecovery ? 'recuperar_resolucion' : 'recuperar_validacion_tipo', 'ok', {
+      venta_id: ventaId, documento_anterior_id: previousDocument.id, request_uuid_anterior: previousDocument.request_uuid,
+      request_uuid_nuevo: requestUuid, portal_absence_confirmed: true, consulta_proveedor: 'dataRecord_null',
+      ...(resolutionRecovery ? { request_payload_anterior: previousRequest, response_payload_anterior: previousResponse,
+        payload_hash_anterior: previousDocument.payload_hash, numero_intento_anterior: previousDocument.attempt_count } : {})
     });
   }
 
-  let inserted: ResultSetHeader;
+  let documentId: number;
+  if (resolutionRecovery) {
+    const [claimed] = await pool.execute<ResultSetHeader>(
+      `UPDATE matias_documentos SET estado = 'emitting', request_uuid = ?, request_payload = ?,
+       payload_hash = ?, attempt_count = attempt_count + 1, last_attempt_at = NOW()
+       WHERE id = ? AND empresa_id = ? AND estado = 'unknown' AND attempt_count = 1 AND payload_hash = ?`,
+      [requestUuid, JSON.stringify(payload), payloadHash, resolutionDocument.id, empresaId, resolutionDocument.payload_hash]
+    );
+    if (claimed.affectedRows !== 1) {
+      await recordError('recuperacion_resolucion_concurrente');
+      return res.status(409).json({ success: false, message: 'El documento cambio; no se reenvio' });
+    }
+    documentId = resolutionDocument.id;
+  } else {
   try {
-    [inserted] = await pool.execute<ResultSetHeader>(
+    const [inserted] = await pool.execute<ResultSetHeader>(
       `INSERT INTO matias_documentos
         (empresa_id, venta_id, entorno, tipo_documento_id, tipo_operacion_id, request_uuid,
          document_number, estado, payload_hash, request_payload, attempt_count, last_attempt_at, created_by)
@@ -359,12 +394,13 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
       [empresaId, ventaId, payload.type_document_id, payload.operation_type_id,
         requestUuid, `${prefix}${documentNumber}`, payloadHash, JSON.stringify(payload), (req as any).user?.id || null]
     );
+    documentId = inserted.insertId;
   } catch (error) {
     if (!(error instanceof Error) || !('code' in error) || error.code !== 'ER_DUP_ENTRY') throw error;
     await recordError('solicitud_fiscal_concurrente');
     return res.status(409).json({ success: false, message: 'Ya existe una solicitud fiscal concurrente; consulte su estado. No se reenvio' });
   }
-  const documentId = inserted.insertId;
+  }
 
   const result = await emitMatiasInvoice(connection.base_url, pat, connection.matias_company_uuid, payload);
   const responsePayload = result.data || null;
@@ -397,7 +433,7 @@ async function processMatiasSandboxInvoice(req: Request, res: Response, preview:
       result.reference || result.code || null, state, state, documentId, empresaId]
   );
 
-  const attemptCount = 1;
+  const attemptCount = resolutionRecovery ? 2 : 1;
   await pool.execute(
     `INSERT INTO matias_documento_intentos
       (documento_id, empresa_id, numero_intento, request_hash, http_status, provider_code, provider_message, success, response_payload)
