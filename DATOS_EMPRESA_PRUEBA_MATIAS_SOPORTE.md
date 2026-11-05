@@ -79,7 +79,7 @@ La captura del usuario muestra la empresa creada y listada en **Clientes**:
 | `client_uuid` | `486470ef-d897-11f1-a807-d843ae899220` |
 | Actividad del cliente | Sin documentos emitidos en 2026 |
 | Resoluciones activas mostradas | 11 |
-| Resolucion de factura (FEV) | `1876000001`, rango 1-1000, prefijo `FEV`, siguiente 1 |
+| Resolucion de factura (FEV), confirmada por el usuario el 2026-11-05 | `18760000001`, rango 1-1000, prefijo `FEV`; el valor anterior `1876000001` tenia un cero menos |
 | Vigencia FEV mostrada | 04/11/2026 a 19/01/2030 (interpretacion dia/mes/año de la interfaz) |
 | Preparacion DIAN mostrada | Certificado indicado como vigente hasta 04/11/2027; ambiente `Habilitacion (pruebas)` |
 
@@ -824,6 +824,25 @@ Resultado de la ejecucion:
   rango y vigencia. El dato 1876000001 previamente documentado no esta
   reconocido por la API para esta empresa. No crear otra venta ni asumir que
   el error es de impuestos, cobro o numeracion local.
+
+**Dato confirmado posteriormente por el usuario:** resolucion
+`18760000001` (un cero mas que el dato registrado), prefijo FEV,
+FACTURA ELECTRONICA DE VENTA, activa, inicio/rango 1-1000, vigencia
+04/11/2026 a 19/01/2030. El portal muestra sin clave tecnica registrada;
+no se invento una clave ni se cambio esa configuracion del proveedor.
+
+Se corrigio exclusivamente `empresas.resolucion_dian` de la empresa 33,
+de `1876000001` a `18760000001`, con condicion sobre el valor anterior y
+prefijo FEV. Consulta posterior confirma resolucion nueva, prefijo FEV y
+numeracion_actual 3 intactos. Venta 141 intacta (pagada, 160650.00,
+retenciones cero), documentos 1 y 2 intactos (un intento cada uno).
+No se hizo otro POST despues de corregir esta configuracion.
+
+**Pendiente actual:** una nueva recuperacion controlada del fallo HTTP 400 de
+resolucion, conservando el payload/intento anterior y consultando su UUID
+antes de cualquier envio. La recuperacion implementada solo cubre el error
+anterior de tipo de documento y no debe ampliarse quitando el bloqueo
+general ni eliminando los documentos existentes. Aun no hay CUFE confirmado.
 
 ### Consumidor final y documento equivalente electronico POS
 
