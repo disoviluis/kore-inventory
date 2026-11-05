@@ -514,6 +514,24 @@ contrasenas, certificados o llaves privadas en este documento.
 
 ### Estado de pruebas e implementacion local
 
+- **Conexion Sandbox probada (2026-11-05 20:45 UTC):** empresa Kinventory AWS
+  `id 33` (KORE PRUEBAS MATIAS SOPORTE), entorno Sandbox, URL
+  `https://sandbox-api.matias-api.com/api/ubl2.1`, `client_uuid` configurado y
+  PAT cifrado. `GET /auth/user` respondio correctamente: estado `configurado`,
+  sin error. Los campos "ID o referencia Matias" e "ID de token" son solo de
+  referencia interna (no se envian a MATÍAS).
+- **Correccion desplegada (commit `5f80ce7`):** la empresa 33 no tenia filas en
+  `matias_servicios` (creada despues de la migracion Fase 1), por lo que activar
+  un servicio no tenia efecto. Ahora el catalogo se crea al abrir la pestaña o
+  activar un servicio y la lista se filtra por entorno.
+- **Datos a corregir en Kinventory antes de emitir** (lectura del 2026-11-05):
+  - NIT de la empresa 33: `900999001-1`; la subcuenta MATÍAS es `900999002-7`.
+    Deben coincidir con el emisor de la subcuenta.
+  - `resolucion_dian` vacia y `prefijo_factura = FAC`; la resolucion Sandbox
+    activa es `1876000001`, prefijo `FEV`, rango 1-1000.
+  - La empresa 33 no tiene ventas; crear una venta sintetica con un cliente de
+    prueba con datos fiscales completos.
+  - Activar el servicio **Factura electronica** en Sandbox.
 - **Siguiente paso:** confirmar la revocacion del PAT expuesto y configurar el
   PAT de reemplazo y el `client_uuid` en la conexion Sandbox de Kinventory.
 - **Estado actual informado (2026-11-04):** subcuenta sintetica creada en
