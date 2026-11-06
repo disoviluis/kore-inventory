@@ -2157,6 +2157,16 @@ function mostrarFactura(venta, ventaData) {
     document.getElementById('facturaContent').innerHTML = htmlFactura;
     const modal = new bootstrap.Modal(document.getElementById('facturaModal'));
     modal.show();
+    const empresaFiscalId = ventaData.empresa_id || venta.empresa_id || currentEmpresa.id;
+    MatiasVenta.mount({
+        container: document.getElementById('matiasVentaPanel'),
+        empresaId: empresaFiscalId, venta, usuario: currentUsuario,
+        isCurrent: () => String(currentEmpresa?.id) === String(empresaFiscalId),
+        onUnauthorized: handleUnauthorized,
+        onDocument: () => {
+            document.getElementById('facturaContent').innerHTML = generarHTMLFacturaVenta(venta, ventaData);
+        }
+    });
 }
 
 function imprimirFactura() {
@@ -2243,13 +2253,16 @@ async function descargarPDF() {
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'letter');
-        const venta = ultimaVentaGuardada;
+        const venta = facturaModel_ventaParaImpresion(ultimaVentaGuardada);
         const ventaData = ultimaVentaData;
         
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         let y = margin;
+        doc.setFontSize(8);
+        doc.text(facturaModel_estadoFiscal(venta), margin, y, { maxWidth: pageWidth - margin * 2 });
+        y += 14;
 
         // ENCABEZADO
         doc.setFontSize(18);
@@ -2463,6 +2476,7 @@ function generarHTMLFacturaVenta(venta, ventaData) {
 
 // Generar plantilla formato CARTA según configuración
 function generarPlantillaCarta(venta, ventaData, config) {
+    venta = facturaModel_ventaParaImpresion(venta);
     const numeroFactura = venta.numero_factura;
     const subtotal = ventaData.subtotal;
     const descuento = ventaData.descuento || 0;
@@ -2486,6 +2500,7 @@ function generarPlantillaCarta(venta, ventaData, config) {
 
 // PLANTILLA 1: CLÁSICA
 function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    venta = facturaModel_ventaParaImpresion(venta);
     return `
 <!DOCTYPE html>
 <html>
@@ -2510,12 +2525,13 @@ function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitComple
 <body>
     <div class="encabezado">
         <h2>${currentEmpresa.nombre}</h2>
+        <p>${facturaModel_estadoFiscal(venta)}</p>
         <p>${currentEmpresa.razon_social}</p>
         <p>NIT: ${nitCompleto} | ${currentEmpresa.telefono || ''}</p>
         ${config.mostrarBadges && currentEmpresa.es_gran_contribuyente ? '<span style="background: #28a745; color: white; padding: 2mm 3mm; border-radius: 2mm; font-size: 8pt;">Gran Contribuyente</span>' : ''}
     </div>
     
-    <div class="titulo-factura">FACTURA ELECTRÓNICA<br>${numeroFactura}</div>
+    <div class="titulo-factura">COMPROBANTE LOCAL DE VENTA<br>${numeroFactura}</div>
     
     <div class="info-boxes">
         <div class="info-box"><strong>Fecha:</strong><br>${fecha}</div>
@@ -2555,7 +2571,7 @@ function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitComple
         </table>
     </div>
     
-    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${venta.cufe}</span></div>` : ''}
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${facturaModel_cufeHtml(venta)}</span></div>` : ''}
     ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
     
     <script>
@@ -2569,6 +2585,7 @@ function generarPlantillaClasicaCarta(venta, ventaData, config, fecha, nitComple
 
 // PLANTILLA 2: MODERNA
 function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    venta = facturaModel_ventaParaImpresion(venta);
     // Formatear fechas de resolución DIAN
     const formatearFecha = (fecha) => {
         if (!fecha) return 'N/A';
@@ -2606,6 +2623,7 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
 <body>
     <div class="encabezado">
         <div class="encabezado-info">
+            <p>${facturaModel_estadoFiscal(venta)}</p>
             <h2>${currentEmpresa.nombre}</h2>
             <p style="font-weight: 600; font-size: 9pt; color: ${config.colorSecundario};">${currentEmpresa.razon_social}</p>
             <p>NIT: ${nitCompleto}</p>
@@ -2616,7 +2634,7 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
     </div>
     
     <div class="titulo-factura-container">
-        <div class="titulo-factura">FACTURA ELECTRÓNICA ${numeroFactura}</div>
+        <div class="titulo-factura">COMPROBANTE LOCAL DE VENTA ${numeroFactura}</div>
     </div>
     
     ${currentEmpresa.resolucion_dian ? `
@@ -2663,7 +2681,7 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
     ${config.mostrarCUFE && venta.cufe ? `
     <div style="margin-top: 10px; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; font-size: 7pt;">
         <strong style="color: ${config.colorPrimario};">CUFE (Código Único de Factura Electrónica):</strong><br>
-        <span style="font-family: monospace; word-break: break-all; color: #334155;">${venta.cufe}</span>
+        <span style="font-family: monospace; word-break: break-all; color: #334155;">${facturaModel_cufeHtml(venta)}</span>
     </div>` : ''}
     
     <div style="display: flex; align-items: center; gap: 15px; margin-top: 10px; padding: 10px 0; border-top: 2px solid #e2e8f0;">
@@ -2674,7 +2692,7 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
         </div>` : ''}
         <div style="flex: 1; font-size: 8pt; color: #475569;">
             <p style="margin: 0 0 5px 0;"><strong style="color: ${config.colorPrimario};">¡Gracias por su compra!</strong></p>
-            <p style="margin: 0; line-height: 1.4;">Esta factura electrónica ha sido generada de acuerdo con la normativa DIAN vigente.</p>
+            <p style="margin: 0; line-height: 1.4;">${facturaModel_estadoFiscal(venta)}</p>
             ${currentEmpresa.descripcion ? `<p style="margin: 5px 0 0 0; font-style: italic; color: #64748b;">${currentEmpresa.descripcion}</p>` : ''}
         </div>
     </div>
@@ -2686,6 +2704,7 @@ function generarPlantillaModernaCarta(venta, ventaData, config, fecha, nitComple
 
 // PLANTILLA 3: MINIMALISTA
 function generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    venta = facturaModel_ventaParaImpresion(venta);
     return `
 <!DOCTYPE html>
 <html>
@@ -2709,6 +2728,7 @@ function generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCo
     <div class="encabezado">
         <h2>${currentEmpresa.nombre}</h2>
         <p style="margin: 2px 0; font-size: 8pt; color: #999;">${currentEmpresa.razon_social}</p>
+        <p>${facturaModel_estadoFiscal(venta)}</p>
         <p style="margin: 2px 0; font-size: 8pt; color: #999;">NIT: ${nitCompleto}</p>
     </div>
     
@@ -2736,7 +2756,7 @@ function generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCo
         </table>
     </div>
     
-    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${venta.cufe}</span></div>` : ''}
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${facturaModel_cufeHtml(venta)}</span></div>` : ''}
     ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
     
     <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
@@ -2746,6 +2766,7 @@ function generarPlantillaMinimalistaCarta(venta, ventaData, config, fecha, nitCo
 
 // PLANTILLA 4: CORPORATIVA (Premium)
 function generarPlantillaCorporativaCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    venta = facturaModel_ventaParaImpresion(venta);
     return `
 <!DOCTYPE html>
 <html>
@@ -2771,6 +2792,7 @@ function generarPlantillaCorporativaCarta(venta, ventaData, config, fecha, nitCo
 </head>
 <body>
     <div class="header-band">
+        <p>${facturaModel_estadoFiscal(venta)}</p>
         <h1>${currentEmpresa.nombre}</h1>
         <div class="subtitle">${currentEmpresa.razon_social} | NIT: ${nitCompleto}</div>
         <div class="subtitle">${currentEmpresa.telefono || ''} | ${currentEmpresa.email || ''}</div>
@@ -2800,7 +2822,7 @@ function generarPlantillaCorporativaCarta(venta, ventaData, config, fecha, nitCo
         </table>
     </div>
     
-    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${venta.cufe}</span></div>` : ''}
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 5mm; padding: 3mm; background: #f8f9fa; font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${facturaModel_cufeHtml(venta)}</span></div>` : ''}
     ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 3mm;"><img src="${venta.qr_code}" style="width: 80px; height: 80px;"></div>` : ''}
     
     <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
@@ -2810,6 +2832,7 @@ function generarPlantillaCorporativaCarta(venta, ventaData, config, fecha, nitCo
 
 // PLANTILLA 5: SIIGO STYLE (Premium)
 function generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto, subtotal, descuento, impuesto, total, numeroFactura) {
+    venta = facturaModel_ventaParaImpresion(venta);
     return `
 <!DOCTYPE html>
 <html>
@@ -2842,6 +2865,7 @@ function generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto
 <body>
     <div class="encabezado">
         <div class="logo-circle">${currentEmpresa.nombre.charAt(0)}</div>
+        <p>${facturaModel_estadoFiscal(venta)}</p>
         <div class="empresa-info">
             <h2>${currentEmpresa.nombre}</h2>
             <p><strong>${currentEmpresa.razon_social}</strong></p>
@@ -2880,7 +2904,7 @@ function generarPlantillaSIIGOCarta(venta, ventaData, config, fecha, nitCompleto
         </table>
     </div>
     
-    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 10px; padding: 10px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.06); font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${venta.cufe}</span></div>` : ''}
+    ${config.mostrarCUFE && venta.cufe ? `<div style="margin-top: 10px; padding: 10px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.06); font-size: 7pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br><span style="font-family: monospace;">${facturaModel_cufeHtml(venta)}</span></div>` : ''}
     ${config.mostrarQR && venta.qr_code ? `<div style="text-align: center; margin-top: 10px;"><img src="${venta.qr_code}" style="width: 80px; height: 80px; border-radius: 8px;"></div>` : ''}
     
     <script>window.onload = function() { setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 100); }, 250); };</script>
@@ -2913,6 +2937,7 @@ function generarPlantillaMediaCarta(venta, ventaData, config) {
 
 // FORMATO TIRILLA (mantiene formato térmico estándar)
 function generarPlantillaTirilla(venta, ventaData, config) {
+    venta = facturaModel_ventaParaImpresion(venta);
     const configActual = facturaModel_obtenerConfiguracionActual(configuracionPlantilla, currentEmpresa);
     const numeroFactura = venta.numero_factura || 'FACTURA';
     const subtotal = ventaData.subtotal || 0;
@@ -2922,7 +2947,7 @@ function generarPlantillaTirilla(venta, ventaData, config) {
     const total = Number(ventaData.total);
     if (ventaData.total == null || !Number.isFinite(total)) throw new Error('La factura no tiene un total valido registrado');
     const fecha = formatFechaColombia(new Date());
-    const tipoFactura = configActual.plantillaId === 5 ? 'FACTURA ELECTRÓNICA SIIGO' : 'FACTURA DE VENTA';
+    const tipoFactura = 'COMPROBANTE LOCAL DE VENTA';
 
     return `
 <!DOCTYPE html>
@@ -2954,6 +2979,7 @@ function generarPlantillaTirilla(venta, ventaData, config) {
     <div class="center" style="font-size: 8pt;">${currentEmpresa.telefono || ''}</div>
     <div class="line"></div>
     <div class="center bold" style="font-size: 10pt;">${tipoFactura}</div>
+    <div class="center" style="font-size: 7pt;">${facturaModel_estadoFiscal(venta)}</div>
     <div class="center bold" style="font-size: 10pt;">${numeroFactura}</div>
     <div class="center" style="font-size: 8pt;">${fecha}</div>
     ${venta.bodega_nombre ? `<div class="center" style="font-size: 8pt;">Punto de Venta: ${venta.bodega_nombre}</div>` : ''}
@@ -2989,7 +3015,7 @@ function generarPlantillaTirilla(venta, ventaData, config) {
     <div style="font-size: 8pt;"><strong>Medios de pago:</strong></div>
     ${ventaData.pagos.map(p => { const nombres = { efectivo:'Efectivo', tarjeta_debito:'T.D\u00e9bito', tarjeta_credito:'T.Cr\u00e9dito', transferencia:'Transfer.', nequi:'Nequi', daviplata:'Daviplata', cheque:'Cheque' }; return `<div class="totals-row" style="font-size: 8pt;"><span>${nombres[p.metodo_pago] || p.metodo_pago}${p.referencia ? ' ('+p.referencia+')' : ''}</span><span>$${facturaModel_formatearNumero(p.monto)}</span></div>`; }).join('')}
     ` : ''}
-    ${configActual.mostrarCUFE && venta.cufe ? `<div class="line"></div><div style="font-size: 6pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br>${venta.cufe}</div>` : ''}
+    ${configActual.mostrarCUFE && venta.cufe ? `<div class="line"></div><div style="font-size: 6pt; word-break: break-all; overflow-wrap: break-word;"><strong>CUFE:</strong><br>${facturaModel_cufeHtml(venta)}</div>` : ''}
     ${configActual.mostrarQR && venta.qr_code ? `<div class="center" style="margin-top: 4mm;"><img src="${venta.qr_code}" style="width: 70px; height: 70px; border-radius: 8px;"></div>` : ''}
     <div class="line"></div>
     <div class="center" style="font-size: 8pt; margin-top: 3mm;">¡Gracias por su compra!</div>

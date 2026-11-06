@@ -1030,6 +1030,69 @@ desplegó y la ruta de salud respondió correctamente. Para la prueba que falta:
 - El payload y la respuesta pueden auditarse sin secretos.
 - La consulta posterior devuelve el mismo documento local.
 
+### Continuacion de implementacion: POS e historial Sandbox (2026-11-06)
+
+El usuario confirmo que FEV3 aparece validada en el portal MATIAS Sandbox.
+Se incorpora el flujo manual de emision al comprobante del POS y al detalle
+de venta del historial, sin activar Produccion ni emitir al cobrar.
+
+**Uso de esta fase:**
+
+1. Ingresar como `super_admin` o `admin_empresa` con acceso a la empresa
+   sintetica. No se ampliaron permisos de cajeros.
+2. Abrir la factura al terminar el cobro o desde el detalle del historial.
+   El panel **Factura electronica - MATIAS Sandbox** consulta el documento
+   registrado para esa empresa, venta y entorno.
+3. En FEV-000003 debe mostrar **Aceptada en Sandbox**, su CUFE real y enlaces
+   PDF/QR de MATIAS. La emision permanece bloqueada: no reenviar esa factura.
+4. En una nueva venta pagada, sin solicitud previa, seleccionar **Emitir en
+   Sandbox**. Se vuelve a consultar el estado y se ejecuta la previsualizacion,
+   sin enviar nada al proveedor todavia. Revisar cliente/documento, bruto,
+   retenciones, neto y advertencias en la confirmacion.
+5. Confirmar solo para enviar la factura de prueba. Cancelar no emite.
+   El envio no crea otra venta, no cobra otra vez y no mueve inventario.
+   Se mantiene `send_email: false`.
+
+**Protecciones y limites:**
+
+- Cualquier solicitud fiscal previa, incluso rechazada, pendiente o incierta,
+  bloquea otro envio desde esta pantalla. No hay reintentos ni recuperaciones
+  automaticos; las recuperaciones historicas siguen siendo operaciones
+  especificas de soporte, fuera del panel.
+- El boton queda bloqueado mientras consulta/previsualiza/envia. Un marcador
+  en `sessionStorage` por empresa/venta conserva el bloqueo de un envio iniciado
+  aunque se pierda la respuesta o se recargue la pagina en esa pestaña.
+  La unicidad y validaciones del backend siguen siendo la proteccion principal
+  entre navegadores y pestañas.
+- Un error de consulta no equivale a ausencia de documento. Los errores de
+  permisos, conexion, validacion o sesion vencida se muestran explicitamente.
+  Al cambiar de contexto/cerrar el modal se descartan respuestas tardias.
+- **Consultar estado registrado** lee la trazabilidad local; no ejecuta otro
+  POST ni sincroniza automaticamente estados pendientes con el proveedor.
+  Para discrepancias o estados pendientes se revisa el portal Sandbox y
+  soporte. No se presenta un envio pendiente como aceptacion.
+- Los enlaces se abren por HTTPS solo en dominios MATIAS/DIAN, sin incrustar
+  HTML del proveedor ni interpretar el QR como imagen arbitraria. Se verifico
+  que las referencias guardadas para FEV3 son un PDF y un PNG bajo
+  `sandbox-api.matias-api.com`; no contienen credenciales en la URL.
+- El comprobante local/PDF generado por Kinventory queda identificado como
+  **COMPROBANTE LOCAL**. No muestra el CUFE/QR sintetico de `ventas` como
+  validacion fiscal. Solo un documento aceptado aporta el CUFE del proveedor;
+  Sandbox se rotula como prueba **sin validez en Produccion**. Para la
+  representacion del proveedor se usa **Abrir PDF de MATIAS**.
+- El detalle backend incorpora metadatos fiscales minimos para reimpresion,
+  sin PAT, payload completo ni cambios en los valores contables. La tabla del
+  historial usa el total persistido, sin recalcular omitiendo retenciones o
+  propina.
+
+**Validacion de esta entrega:** 135/135 pruebas locales de panel/impresion,
+backend y regresion, incluyendo compilacion TypeScript; prueba de navegador
+con respuestas simuladas (cancelacion: cero
+envios; confirmacion: un envio; aceptacion: boton bloqueado). Se conserva
+FEV3 aceptada, sin nuevos envios reales a MATIAS, cobros ni movimientos de stock.
+No se ejecuta DDL ni se cambia la configuracion de Produccion. El POS
+electronico equivalente (tipo 20) sigue fuera de esta fase.
+
 ## 7. Pruebas posteriores de soporte
 
 Ejecutar con datos sinteticos y registrar el resultado:

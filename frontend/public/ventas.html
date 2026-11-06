@@ -1081,13 +1081,14 @@
                     <h5 class="modal-title">Factura de Venta</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
+                <div id="matiasVentaPanel"></div>
                 <div class="modal-body" id="facturaContent" style="font-size: 1rem;">
                     <!-- El contenido se generará dinámicamente -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                     <button type="button" class="btn btn-success" onclick="descargarPDF()">
-                        <i class="bi bi-file-earmark-pdf me-2"></i>Descargar PDF
+                        <i class="bi bi-file-earmark-pdf me-2"></i>PDF del comprobante local
                     </button>
                     <button type="button" class="btn btn-primary" onclick="imprimirFactura()">
                         <i class="bi bi-printer me-2"></i>Imprimir
@@ -1567,13 +1568,14 @@
     <!-- jsPDF for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="assets/js/factura-modelo.js?v=20261105-calculos"></script>
+    <script src="assets/js/factura-modelo.js?v=20261106-fiscal"></script>
+    <script src="assets/js/matias-venta.js?v=20261106-fiscal"></script>
     <!-- Fecha utils -->
     <script src="assets/js/fecha-utils.js"></script>
     <!-- Custom JS -->
     <script src="assets/js/impuestos-utils.js"></script>
     <script src="assets/js/pos-calculos.js?v=20261105"></script>
-    <script src="assets/js/ventas.js?v=20261105-calculos"></script>
+    <script src="assets/js/ventas.js?v=20261106-fiscal"></script>
     <!-- Sidebar Navigation (Common) -->
     <script src="assets/js/sidebar-navigation.js?v=20260824-sidebar3"></script>
 

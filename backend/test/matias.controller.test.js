@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const pool = require('../dist/shared/database').default;
 const { getMatiasConnection, setMatiasService, matiasServiceCatalog } = require('../dist/platform/matias/matias.controller');
-const { previewMatiasSandboxInvoice, emitMatiasSandboxInvoice } = require('../dist/platform/matias/matias.controller');
+const { previewMatiasSandboxInvoice, emitMatiasSandboxInvoice, getMatiasVentaDocument } = require('../dist/platform/matias/matias.controller');
 const https = require('node:https');
 const { EventEmitter } = require('node:events');
 const { encryptAuthSecret } = require('../dist/core/auth/auth.security');
@@ -30,6 +30,33 @@ async function withPool(handler, callback) {
   try { return await callback(calls); } finally { Object.assign(pool, original); }
 }
 
+test('document lookup is read-only and binds both tenant and explicit environment', async () => {
+  await withPool(async (sql, params) => {
+    assert.match(sql, /FROM matias_documentos WHERE empresa_id = \? AND venta_id = \? AND \(\? IS NULL OR entorno = \?\)/);
+    assert.deepEqual(params, [33, 141, 'sandbox', 'sandbox']);
+    return [{ id: 2, entorno: 'sandbox', estado: 'accepted' }];
+  }, async calls => {
+    const res = responseMock();
+    await getMatiasVentaDocument(requestMock({ params: { empresaId: '33', ventaId: '141' }, query: { entorno: 'sandbox' } }), res);
+    assert.equal(res.body.data.id, 2);
+    assert.equal(calls.length, 1);
+    assert.ok(calls.every(call => call.sql.trim().startsWith('SELECT')));
+  });
+});
+
+test('document lookup rejects invalid environments and unauthorized companies before reading documents', async () => {
+  await withPool(async sql => {
+    assert.match(sql, /FROM usuario_empresa/);
+    return [];
+  }, async () => {
+    const invalid = responseMock();
+    await getMatiasVentaDocument(requestMock({ params: { empresaId: '33', ventaId: '141' }, query: { entorno: 'other' } }), invalid);
+    assert.equal(invalid.statusCode, 400);
+    const denied = responseMock();
+    await getMatiasVentaDocument(requestMock({ user: { id: 1, tipo_usuario: 'cajero' }, params: { empresaId: '33', ventaId: '141' } }), denied);
+    assert.equal(denied.statusCode, 403);
+  });
+});
 test('service toggle creates missing service rows before activating them', async () => {
   await withPool(async sql => {
     if (sql.includes('FROM matias_conexiones')) return [{ estado: 'configurado', pat_cifrado: 'x' }];

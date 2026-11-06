@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const pool = require('../dist/shared/database').default;
 const inventory = require('../dist/shared/inventario');
-const { createVenta, cerrarTurno, registrarGasto } = require('../dist/platform/ventas/ventas.controller');
+const { createVenta, getVentaById, cerrarTurno, registrarGasto } = require('../dist/platform/ventas/ventas.controller');
 const { cerrarCuenta, agregarItemCuenta } = require('../dist/platform/cuentas-abiertas/cuentas-abiertas.controller');
 const { resumenPagosTurno } = require('../dist/platform/ventas/ventas.pagos');
 
@@ -52,6 +52,24 @@ function saleQuery(sql) {
   assert.fail(`Unexpected SQL: ${sql}`);
 }
 
+test('sale detail attaches fiscal metadata scoped to the same company without exposing local CUFE as validation', async () => {
+  await database(async (sql, params) => {
+    if (sql.includes('FROM ventas v')) return [{ id: 141, empresa_id: 33, total: '160650.00', cufe: 'LOCAL' }];
+    if (sql.includes('FROM matias_documentos')) {
+      assert.deepEqual(params, ['33', 141]);
+      assert.match(sql, /empresa_id = \? AND venta_id = \?/);
+      return [{ id: 2, entorno: 'sandbox', estado: 'accepted', cufe: 'PROVIDER' }];
+    }
+    return [];
+  }, async () => {
+    const res = response();
+    await getVentaById({ params: { id: '141' }, query: { empresaId: '33' } }, res);
+    assert.equal(res.body.data.documento_fiscal.cufe, 'PROVIDER');
+    assert.equal(res.body.data.cufe, 'LOCAL');
+    assert.equal(res.body.data.total, '160650.00');
+  });
+});
+
 test('server ignores client tax flags and never withholds by legal-person status or thresholds', async () => {
   await database(saleQuery, async calls => {
     const res = response();
@@ -63,6 +81,8 @@ test('server ignores client tax flags and never withholds by legal-person status
     assert.equal(res.body.data.total, 160650);
     assert.equal(res.body.data.cambio, 9350);
     assert.equal(res.body.data.numero_factura, 'FEV-000003');
+    assert.equal(res.body.data.empresa_id, 33);
+    assert.equal(res.body.data.estado, 'pagada');
     const sale = calls.find(c => /INSERT INTO ventas \(/.test(c.sql));
     assert.deepEqual(sale.params.slice(3, 9), [135000, 0, 25650, 160650, 0, 0]);
     assert.equal(calls.find(c => c.sql.includes('INSERT INTO venta_pagos')).params[2], 160650);

@@ -293,6 +293,12 @@ export const getVentaById = async (req: Request, res: Response): Promise<Respons
     venta.productos = detalles;
     venta.impuestos = impuestos;
     venta.pagos = pagos;
+    const documentos = await query(
+      `SELECT id, entorno, estado, cufe, document_number FROM matias_documentos
+       WHERE empresa_id = ? AND venta_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1`,
+      [empresaId, venta.id]
+    );
+    venta.documento_fiscal = documentos[0] || null;
 
     return successResponse(res, 'Venta obtenida exitosamente', venta, CONSTANTS.HTTP_STATUS.OK);
 
@@ -652,6 +658,7 @@ export const createVenta = async (req: Request, res: Response): Promise<Response
 
       return {
         id: nuevaVentaId,
+        empresa_id: Number(empresa_id), estado: estadoVenta, forma_pago: forma_pago || 'contado',
         numero_factura: numeroFactura,
         cufe: cufe,
         qr_code: qrCode,

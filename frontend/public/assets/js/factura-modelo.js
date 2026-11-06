@@ -43,7 +43,31 @@ function facturaModel_obtenerLogoUrl(currentEmpresa) {
     return currentEmpresa?.logo_url || currentEmpresa?.logo || currentEmpresa?.logoUrl || currentEmpresa?.empresa_logo || null;
 }
 
+function facturaModel_ventaParaImpresion(venta) {
+    const fiscal = venta.documento_fiscal;
+    const accepted = fiscal?.estado === 'accepted' && fiscal.cufe && ['sandbox', 'produccion'].includes(fiscal.entorno);
+    return { ...venta, cufe: accepted ? fiscal.cufe : null, qr_code: null };
+}
+
+function facturaModel_estadoFiscal(venta) {
+    const fiscal = venta.documento_fiscal;
+    if (fiscal?.estado === 'accepted' && fiscal.cufe && fiscal.entorno === 'sandbox') {
+        return 'COMPROBANTE LOCAL - Referencia a factura aceptada en Sandbox. Documento de prueba, sin validez en Produccion. Consulte el PDF de MATIAS.';
+    }
+    if (fiscal?.estado === 'accepted' && fiscal.cufe && fiscal.entorno === 'produccion') {
+        return 'COMPROBANTE LOCAL - Referencia a factura electronica aceptada en Produccion. Consulte el PDF del proveedor.';
+    }
+    return 'COMPROBANTE LOCAL - No acredita una factura electronica validada. Estado fiscal pendiente de consultar o resolver.';
+}
+
+function facturaModel_cufeHtml(venta) {
+    return String(venta.cufe || '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[char]);
+}
+
 function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, configuracionPlantilla, compact = false) {
+    venta = facturaModel_ventaParaImpresion(venta);
     const config = facturaModel_obtenerConfiguracionActual(configuracionPlantilla, currentEmpresa);
     const logoUrl = facturaModel_obtenerLogoUrl(currentEmpresa);
     const fechaFormateada = formatFechaColombia(venta.fecha_venta || new Date());
@@ -74,7 +98,7 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
     const numFs     = compact ? '0.95rem' : '1.2rem';
     const bodyFs    = compact ? '8.5pt' : '10pt';
 
-    const tipoFactura = config.plantillaId === 5 ? 'FACTURA ELECTRÓNICA SIIGO' : 'FACTURA DE VENTA';
+    const tipoFactura = 'COMPROBANTE LOCAL DE VENTA';
     const headerBg = config.plantillaId === 4 ? config.colorPrimario : '#ffffff';
     const textColor = config.plantillaId === 4 ? '#ffffff' : '#000000';
     const titleBackground = config.plantillaId === 2 ? `${config.colorPrimario}20` : '#f8f9fa';
@@ -220,10 +244,11 @@ function facturaModel_generarFacturaHtmlBody(venta, ventaData, currentEmpresa, c
                 ` : ''}
 
                 <div style="margin-top: ${sectionMt}; display: flex; justify-content: space-between; flex-wrap: wrap; gap: ${gap}; align-items: center;">
-                    ${config.mostrarCUFE && venta.cufe ? `<div style="flex: 1; min-width: ${minW1}; padding: ${cardPad}; border: 1px solid #e0e0e0; border-radius: 8px; background: #f8f9fa; font-size: 0.65rem; word-break: break-all; overflow-wrap: break-word; font-family: monospace;"><strong style="font-family: sans-serif;">CUFE:</strong><br>${venta.cufe}</div>` : ''}
+                    ${config.mostrarCUFE && venta.cufe ? `<div style="flex: 1; min-width: ${minW1}; padding: ${cardPad}; border: 1px solid #e0e0e0; border-radius: 8px; background: #f8f9fa; font-size: 0.65rem; word-break: break-all; overflow-wrap: break-word; font-family: monospace;"><strong style="font-family: sans-serif;">CUFE:</strong><br>${facturaModel_cufeHtml(venta)}</div>` : ''}
                     ${config.mostrarQR && venta.qr_code ? `<div style="flex: 0 0 ${compact ? '80px' : '120px'}; text-align: center; padding: ${cardPad}; border: 1px solid #e0e0e0; border-radius: 8px; background: #f8f9fa;"><img src="${venta.qr_code}" alt="QR Code" style="width: ${compact ? '70px' : '100px'}; height: ${compact ? '70px' : '100px'}; object-fit: contain;"></div>` : ''}
                 </div>
                 <div style="margin-top: ${compact ? '12px' : '24px'}; text-align:center; color: #6c757d;">
+                    <p style="font-size: 0.8rem;">${facturaModel_estadoFiscal(venta)}</p>
                     <p style="margin-top: 8px; font-size: ${compact ? '0.8rem' : '0.95rem'};">Gracias por preferirnos.</p>
                 </div>
             </div>

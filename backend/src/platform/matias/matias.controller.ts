@@ -183,6 +183,10 @@ export async function getMatiasVentaDocument(req: Request, res: Response) {
   const ventaId = Number(req.params.ventaId);
   if (!await puedeOperarEmpresa(req, empresaId)) return res.status(403).json({ success: false, message: 'No tiene acceso a esta empresa' });
   if (!Number.isInteger(ventaId) || ventaId <= 0) return res.status(400).json({ success: false, message: 'Venta invalida' });
+  if (req.query.entorno !== undefined && !['sandbox', 'produccion'].includes(String(req.query.entorno))) {
+    return res.status(400).json({ success: false, message: 'Entorno fiscal invalido' });
+  }
+  const entorno = req.query.entorno ? String(req.query.entorno) : null;
 
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT id, empresa_id, venta_id, entorno, tipo_documento_id, request_uuid, matias_uuid,
@@ -190,9 +194,9 @@ export async function getMatiasVentaDocument(req: Request, res: Response) {
             dian_status_code, dian_status_description, dian_is_valid, warning_payload,
             error_payload, provider_reference, attempt_count, last_attempt_at, accepted_at,
             rejected_at, created_at, updated_at
-       FROM matias_documentos WHERE empresa_id = ? AND venta_id = ?
+       FROM matias_documentos WHERE empresa_id = ? AND venta_id = ? AND (? IS NULL OR entorno = ?)
        ORDER BY updated_at DESC, id DESC LIMIT 1`,
-    [empresaId, ventaId]
+    [empresaId, ventaId, entorno, entorno]
   );
   return res.json({ success: true, data: rows[0] || null });
 }

@@ -532,7 +532,7 @@ function renderVentas() {
                     ${mostrarDocumento ? `<small class="text-muted">${venta.numero_documento || 'N/A'}</small>` : ''}
                 </td>
                 <td>${venta.bodega_nombre || '<span class="text-muted">-</span>'}</td>
-                <td><strong>$${formatearNumero((parseFloat(venta.subtotal) || 0) - (parseFloat(venta.descuento) || 0) + (parseFloat(venta.impuesto) || 0) + (parseFloat(venta.impuestos_adicionales) || 0))}</strong></td>
+                <td><strong>$${formatearNumero(Number(venta.total))}</strong></td>
                 <td><span class="badge bg-secondary">${venta.metodo_pago}</span></td>
                 <td>${estadoBadge}</td>
                 <td>
@@ -710,6 +710,16 @@ function mostrarDetalleVenta(venta, detalle) {
 
     document.getElementById('detalleVentaContent').innerHTML = html;
     detalleVentaModal.show();
+    MatiasVenta.mount({
+        container: document.getElementById('matiasHistorialPanel'),
+        empresaId: venta.empresa_id || currentEmpresa.id, venta, usuario: currentUsuario,
+        isCurrent: () => String(currentEmpresa?.id) === String(venta.empresa_id),
+        onUnauthorized: () => {
+            localStorage.removeItem('token');
+            mostrarAlerta('Su sesion vencio. Vuelva a iniciar sesion.', 'warning');
+            window.location.href = 'index.html?reason=session-expired';
+        }
+    });
 }
 
 // ============================================
